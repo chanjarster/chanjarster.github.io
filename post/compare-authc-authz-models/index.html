@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+<head>
+
+  <meta charset="utf-8" />
+
+  
+  <title>多种认证、授权模型的比较</title>
+
+  
+  
+
+
+
+
+
+  
+  <meta name="author" content="颇忒脱" />
+  <meta name="description" content="本文主要列举在如今前后端分离、手机App大行其道的现状下，用户认证、授权的几种做法及对比。
+PS. 本文假设你已经理解了各种认证模式的具体细节。
+OAuth2.0的几种模式 OAuth2.0是一个被广泛采用的事实标准，它同时包含认证和授权两种模式，我们来看一下它有几种模式：
+   Grant type Client owner User context? Client type App type     Authorization Code Third-party Y confidential Web app   Authorization Code, without client secret Third-party Y public User-agent app   Authorization Code, without client secret, with PKCE Third-party Y public Native app   OAuth2 Implicit(deprecated) Third-party Y public User-agent app, Native app   Password First-party Y both Web app, User-agent app, Native app   Client Credentials Third-party N confidential Web app    名词定义：" />
+
+  
+  
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:site" content="@gohugoio" />
+    <meta name="twitter:title" content="多种认证、授权模型的比较" />
+    <meta name="twitter:description" content="本文主要列举在如今前后端分离、手机App大行其道的现状下，用户认证、授权的几种做法及对比。
+PS. 本文假设你已经理解了各种认证模式的具体细节。
+OAuth2.0的几种模式 OAuth2.0是一个被广泛采用的事实标准，它同时包含认证和授权两种模式，我们来看一下它有几种模式：
+   Grant type Client owner User context? Client type App type     Authorization Code Third-party Y confidential Web app   Authorization Code, without client secret Third-party Y public User-agent app   Authorization Code, without client secret, with PKCE Third-party Y public Native app   OAuth2 Implicit(deprecated) Third-party Y public User-agent app, Native app   Password First-party Y both Web app, User-agent app, Native app   Client Credentials Third-party N confidential Web app    名词定义：" />
+    <meta name="twitter:image" content="https://chanjarster.github.io/img/avatar.jpg" />
+  
+
+  
+  <meta property="og:type" content="article" />
+  <meta property="og:title" content="多种认证、授权模型的比较" />
+  <meta property="og:description" content="本文主要列举在如今前后端分离、手机App大行其道的现状下，用户认证、授权的几种做法及对比。
+PS. 本文假设你已经理解了各种认证模式的具体细节。
+OAuth2.0的几种模式 OAuth2.0是一个被广泛采用的事实标准，它同时包含认证和授权两种模式，我们来看一下它有几种模式：
+   Grant type Client owner User context? Client type App type     Authorization Code Third-party Y confidential Web app   Authorization Code, without client secret Third-party Y public User-agent app   Authorization Code, without client secret, with PKCE Third-party Y public Native app   OAuth2 Implicit(deprecated) Third-party Y public User-agent app, Native app   Password First-party Y both Web app, User-agent app, Native app   Client Credentials Third-party N confidential Web app    名词定义：" />
+  <meta property="og:url" content="https://chanjarster.github.io/post/compare-authc-authz-models/" />
+  <meta property="og:image" content="https://chanjarster.github.io/img/avatar.jpg" />
+
+
+
+
+<meta name="generator" content="Hugo 0.47.1" />
+
+
+<link rel="canonical" href="https://chanjarster.github.io/post/compare-authc-authz-models/" />
+
+<meta name="renderer" content="webkit" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<meta name="format-detection" content="telephone=no,email=no,adress=no" />
+<meta http-equiv="Cache-Control" content="no-transform" />
+
+
+<meta name="robots" content="index,follow" />
+<meta name="referrer" content="origin-when-cross-origin" />
+
+
+
+
+
+
+
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="颇忒脱的技术博客" />
+<meta name="msapplication-tooltip" content="颇忒脱的技术博客" />
+<meta name='msapplication-navbutton-color' content="#5fbf5e" />
+<meta name="msapplication-TileColor" content="#5fbf5e" />
+<meta name="msapplication-TileImage" content="/img/tile-image-windows.png" />
+<link rel="icon" href="https://chanjarster.github.io/img/favicon.ico" />
+<link rel="icon" type="image/png" sizes="16x16" href="https://chanjarster.github.io/img/favicon-16x16.png" />
+<link rel="icon" type="image/png" sizes="32x32" href="https://chanjarster.github.io/img/favicon-32x32.png" />
+<link rel="icon" sizes="192x192" href="https://chanjarster.github.io/img/touch-icon-android.png" />
+<link rel="apple-touch-icon" href="https://chanjarster.github.io/img/touch-icon-apple.png" />
+<link rel="mask-icon" href="https://chanjarster.github.io/img/safari-pinned-tab.svg" color="#5fbf5e" />
+
+
+
+<link rel="stylesheet" href="//cdn.bootcss.com/video.js/6.2.8/alt/video-js-cdn.min.css" />
+
+<link rel="stylesheet" href="https://chanjarster.github.io/css/bundle.7607b839b7.css" />
+
+
+  
+  <!--[if lt IE 9]>
+    <script src="//cdn.bootcss.com/html5shiv/3.7.3/html5shiv.min.js"></script>
+    <script src="//cdn.bootcss.com/respond.js/1.4.2/respond.min.js"></script>
+    <script src="//cdn.bootcss.com/video.js/6.2.8/ie8/videojs-ie8.min.js"></script>
+  <![endif]-->
+
+<!--[if lte IE 11]>
+    <script src="//cdn.bootcss.com/classlist/1.1.20170427/classList.min.js"></script>
+  <![endif]-->
+
+
+<script src="//cdn.bootcss.com/object-fit-images/3.2.3/ofi.min.js"></script>
+
+
+<script src="//cdn.bootcss.com/smooth-scroll/12.1.4/js/smooth-scroll.polyfills.min.js"></script>
+
+
+</head>
+  <body>
+    
+    <div class="suspension">
+      <a title="Go to top" class="to-top is-hide"><span class="icon icon-up"></span></a>
+      
+        
+      
+    </div>
+    
+    
+  <header class="site-header">
+  <img class="avatar" src="https://chanjarster.github.io/img/avatar2.jpg" alt="Avatar">
+  
+  <h2 class="title">颇忒脱的技术博客</h2>
+  
+  <p class="subtitle"></p>
+  <button class="menu-toggle" type="button">
+    <span class="icon icon-menu"></span>
+  </button>
+  <nav class="site-menu collapsed">
+    <h2 class="offscreen">Main Menu</h2>
+    <ul class="menu-list">
+      
+      
+      
+      
+        <li class="menu-item
+            
+            
+            
+              is-active
+            ">
+            <a href="https://chanjarster.github.io/">Home</a>
+          </li>
+      
+        <li class="menu-item
+            
+            
+            ">
+            <a href="https://github.com/chanjarster">Works</a>
+          </li>
+      
+        <li class="menu-item
+            
+            
+            ">
+            <a href="https://chanjarster.github.io/tags/">Tags</a>
+          </li>
+      
+        <li class="menu-item
+            
+            
+            ">
+            <a href="https://chanjarster.github.io/links/">Links</a>
+          </li>
+      
+    </ul>
+  </nav>
+  <nav class="social-menu collapsed">
+    <h2 class="offscreen">Social Networks</h2>
+    <ul class="social-list">
+
+      
+
+      
+      <li class="social-item">
+        <a href="//github.com/chanjarster" title="GitHub"><span class="icon icon-github"></span></a>
+      </li>
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      <li class="social-item">
+        <a rel="alternate" type="application/rss+xml" href="https://chanjarster.github.io/index.xml"><span class="icon icon-rss" title="RSS"></span></a>
+      </li>
+
+    </ul>
+  </nav>
+</header>
+
+  <section class="main post-detail">
+    <header class="post-header">
+      <h1 class="post-title">多种认证、授权模型的比较</h1>
+      <p class="post-meta">@颇忒脱 · Aug 22, 2018 · 1 min read</p>
+    </header>
+    <article class="post-content">
+
+<p>本文主要列举在如今前后端分离、手机App大行其道的现状下，用户认证、授权的几种做法及对比。</p>
+
+<p>PS. 本文假设你已经理解了各种认证模式的具体细节。</p>
+
+<h2 id="oauth2-0的几种模式">OAuth2.0的几种模式</h2>
+
+<p>OAuth2.0是一个被广泛采用的事实标准，它同时包含认证和授权两种模式，我们来看一下它有几种模式：</p>
+
+<table>
+<thead>
+<tr>
+<th>Grant type</th>
+<th>Client owner</th>
+<th>User context?</th>
+<th>Client type</th>
+<th>App type</th>
+</tr>
+</thead>
+
+<tbody>
+<tr>
+<td>Authorization Code</td>
+<td>Third-party</td>
+<td>Y</td>
+<td>confidential</td>
+<td>Web app</td>
+</tr>
+
+<tr>
+<td>Authorization Code, without client secret</td>
+<td>Third-party</td>
+<td>Y</td>
+<td>public</td>
+<td>User-agent app</td>
+</tr>
+
+<tr>
+<td>Authorization Code, without client secret, with PKCE</td>
+<td>Third-party</td>
+<td>Y</td>
+<td>public</td>
+<td>Native app</td>
+</tr>
+
+<tr>
+<td>OAuth2 Implicit(deprecated)</td>
+<td>Third-party</td>
+<td>Y</td>
+<td>public</td>
+<td>User-agent app, Native app</td>
+</tr>
+
+<tr>
+<td>Password</td>
+<td>First-party</td>
+<td>Y</td>
+<td>both</td>
+<td>Web app, User-agent app, Native app</td>
+</tr>
+
+<tr>
+<td>Client Credentials</td>
+<td>Third-party</td>
+<td>N</td>
+<td>confidential</td>
+<td>Web app</td>
+</tr>
+</tbody>
+</table>
+
+<p>名词定义：</p>
+
+<ul>
+<li><strong>User</strong>: 自然人。</li>
+<li><strong>Client</strong>: 索要Authorization Code和Access Token的程序。</li>
+</ul>
+
+<p>Client owner:</p>
+
+<ul>
+<li><strong>First-party</strong>: 第一方client，即client开发者/厂商和Resource Server是同一个人/厂商。</li>
+<li><strong>Third-party</strong>: 第三方client，即client开发者/厂商和Resource Server不是同一个人/厂商。OAuth 2.0主要解决的是第三方client的授权问题。</li>
+</ul>
+
+<p>User context:</p>
+
+<ul>
+<li><strong>Y</strong>: 代表被授权的资源是和当前User相关的。</li>
+<li><strong>N</strong>: 代表被授权的资源是和Client相关的。</li>
+</ul>
+
+<p>Client type:</p>
+
+<ul>
+<li><strong>Confidential</strong>: 这类Client和Authorization Server/Resource Server的通信是秘密进行的。</li>
+<li><strong>Public</strong>: 这类Client和Authorization Server/Resource Server的通信是公开进行的。</li>
+</ul>
+
+<p>App type:</p>
+
+<ul>
+<li><strong>web app</strong>: 这类App的代码在服务器上执行，用户通过User-Agent（浏览器）下载App渲染的HTML页面，并与之交互。比如，传统的MVC应用。</li>
+<li><strong>user-agent app</strong>: 这类App的代码是直接下载到User-Agent（浏览器）里执行的。比如，前后端分离App、SPA。</li>
+<li><strong>native app</strong>: 这类App安装在用户的设备上，可以认为这类App内部存储的credential信息是有可能被提取的。比如，手机App、桌面App。</li>
+</ul>
+
+<h2 id="仅做认证的模式">仅做认证的模式</h2>
+
+<table>
+<thead>
+<tr>
+<th>Mode</th>
+<th>Client belong</th>
+<th>User Context</th>
+<th>App type</th>
+</tr>
+</thead>
+
+<tbody>
+<tr>
+<td>Session</td>
+<td>First-party</td>
+<td>Y</td>
+<td>Web app</td>
+</tr>
+
+<tr>
+<td>SSO</td>
+<td>First-party</td>
+<td>Y</td>
+<td>Web app</td>
+</tr>
+
+<tr>
+<td>JWT</td>
+<td>First-party</td>
+<td>Y</td>
+<td>Web app, User-agent app, Native app</td>
+</tr>
+</tbody>
+</table>
+
+<p>详细说明以上三种模式：</p>
+
+<p><strong>Session模式</strong>: 就是我们传统的Web app所使用的技术，用户输入账号和密码登录系统，服务端返回一个名字叫做<code>SESSIONID</code>的<code>Cookie</code>，之后User-agent和服务端每次交互都会携带这个<code>Cookie</code>，通过这种方式来做到用户登录状态的保持。</p>
+
+<p><strong>SSO模式</strong>: 其实是<strong>Session模式</strong>的变种，只不过把认证从<strong>Session模式</strong>的本地认证变成了利用<strong>SSO服务器</strong>做认证。已知SSO类型有：CAS、SAML。</p>
+
+<p><strong>JWT模式</strong>: 它和<strong>Session模式</strong>的区别在于:</p>
+
+<ol>
+<li>用户会话信息不通过<code>Cookie</code>携带，而是放在<code>Header</code>里，这个信息我们叫做<code>Token</code>。</li>
+<li><code>Token</code>里包含了加密的、不可篡改的当前登录用户的信息，<code>SESSIONID</code>只是一个代号，是没有这个信息的。</li>
+<li>服务端可以做到无状态，因为用户信息在<code>Token</code>里已经存在，再也不需要维护Session了。</li>
+</ol>
+
+<p><strong>JWT模式</strong>可以使用SSO吗？答案是可以的，但是有条件，在SSO认证流程的最后一步——获取用户信息——的通信必须是confidential的。</p>
+
+<p>对于Web app来说只要它接入了SSO，获取用户信息的通信本来就是confidential的，它获得用户信息之后构造JWT并返回就可以了。</p>
+
+<p>对于User-agent app和Native app来说，需要为它做一个中介Web app，这个Web app和SSO通信，然后构造JWT返回给User-agent app。</p>
+
+<h2 id="参考资料">参考资料</h2>
+
+<ul>
+<li><a href="https://oauth.net/2/">OAuth 2.0 official site</a></li>
+<li><a href="https://www.oauth.com/">OAuth 2.0 - Written by Aaron Parecki</a></li>
+<li><a href="https://jwt.io/">JWT official site</a></li>
+<li><a href="https://apereo.github.io/cas/4.2.x/protocol/CAS-Protocol.html">SSO的一种 - CAS Protocol</a></li>
+</ul>
+</article>
+    <footer class="post-footer">
+      
+      <ul class="post-tags">
+        
+          <li><a href="https://chanjarster.github.io/tags/oauth"><span class="tag">Oauth</span></a></li>
+        
+          <li><a href="https://chanjarster.github.io/tags/jwt"><span class="tag">Jwt</span></a></li>
+        
+      </ul>
+      
+      <p class="post-copyright">
+        
+      </p>
+    </footer>
+    
+      
+    
+  </section>
+  <footer class="site-footer">
+  <p>© 2017-2018 颇忒脱的技术博客</p>
+  <p>Powered by <a href="https://gohugo.io/" target="_blank">Hugo</a> with theme <a href="https://github.com/laozhu/hugo-nuo" target="_blank">Nuo</a>.</p>
+  
+</footer>
+
+
+
+<script async src="//cdn.bootcss.com/video.js/6.2.8/alt/video.novtt.min.js"></script>
+<script async src="//cdn.bootcss.com/mathjax/2.7.2/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    tex2jax: {
+      inlineMath: [['$','$'], ['\\(','\\)']],
+      displayMath: [['$$','$$'], ['\\[','\\]']],
+      processEscapes: true,
+      processEnvironments: true,
+      skipTags: ['script', 'noscript', 'style', 'textarea', 'pre'],
+      TeX: { equationNumbers: { autoNumber: "AMS" },
+      extensions: ["AMSmath.js", "AMSsymbols.js"] }
+    }
+  });
+</script>
+<script type="text/x-mathjax-config">
+  // Fix <code> tags after MathJax finishes running. This is a
+  // hack to overcome a shortcoming of Markdown. Discussion at
+  // https://github.com/mojombo/jekyll/issues/199
+  MathJax.Hub.Queue(() => {
+    MathJax.Hub.getAllJax().map(v => v.SourceElement().parentNode.className += ' has-jax');
+  });
+</script>
+
+<script src="https://chanjarster.github.io/js/bundle.449f145169.js"></script>
+
+
+
+
+  </body>
+</html>
