@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+<head>
+
+  <meta charset="utf-8" />
+
+  
+  <title>Spring Cloud Config配置文件最佳实践</title>
+
+  
+  
+
+
+
+
+
+  
+  <meta name="author" content="颇忒脱" />
+  <meta name="description" content="大多数Spring Cloud项目都会使用Spring Cloud Config来管理应用启动时的配置文件，同时开发人员面临着多样化的程序启动方式：操作系统进程启动、docker启动、k8s启动。那么如何规划这些配置文件以适应多种启动方式呢？本文尝试给出一些建议
+
+" />
+
+  
+  
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:site" content="@gohugoio" />
+    <meta name="twitter:title" content="Spring Cloud Config配置文件最佳实践" />
+    <meta name="twitter:description" content="大多数Spring Cloud项目都会使用Spring Cloud Config来管理应用启动时的配置文件，同时开发人员面临着多样化的程序启动方式：操作系统进程启动、docker启动、k8s启动。那么如何规划这些配置文件以适应多种启动方式呢？本文尝试给出一些建议
+
+" />
+    <meta name="twitter:image" content="https://chanjarster.github.io/img/avatar.jpg" />
+  
+
+  
+  <meta property="og:type" content="article" />
+  <meta property="og:title" content="Spring Cloud Config配置文件最佳实践" />
+  <meta property="og:description" content="大多数Spring Cloud项目都会使用Spring Cloud Config来管理应用启动时的配置文件，同时开发人员面临着多样化的程序启动方式：操作系统进程启动、docker启动、k8s启动。那么如何规划这些配置文件以适应多种启动方式呢？本文尝试给出一些建议
+
+" />
+  <meta property="og:url" content="https://chanjarster.github.io/post/spring-cloud-config-k8s/" />
+  <meta property="og:image" content="https://chanjarster.github.io/img/avatar.jpg" />
+
+
+
+
+<meta name="generator" content="Hugo 0.47.1" />
+
+
+<link rel="canonical" href="https://chanjarster.github.io/post/spring-cloud-config-k8s/" />
+
+<meta name="renderer" content="webkit" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<meta name="format-detection" content="telephone=no,email=no,adress=no" />
+<meta http-equiv="Cache-Control" content="no-transform" />
+
+
+<meta name="robots" content="index,follow" />
+<meta name="referrer" content="origin-when-cross-origin" />
+
+
+
+
+
+
+
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="颇忒脱的技术博客" />
+<meta name="msapplication-tooltip" content="颇忒脱的技术博客" />
+<meta name='msapplication-navbutton-color' content="#5fbf5e" />
+<meta name="msapplication-TileColor" content="#5fbf5e" />
+<meta name="msapplication-TileImage" content="/img/tile-image-windows.png" />
+<link rel="icon" href="https://chanjarster.github.io/img/favicon.ico" />
+<link rel="icon" type="image/png" sizes="16x16" href="https://chanjarster.github.io/img/favicon-16x16.png" />
+<link rel="icon" type="image/png" sizes="32x32" href="https://chanjarster.github.io/img/favicon-32x32.png" />
+<link rel="icon" sizes="192x192" href="https://chanjarster.github.io/img/touch-icon-android.png" />
+<link rel="apple-touch-icon" href="https://chanjarster.github.io/img/touch-icon-apple.png" />
+<link rel="mask-icon" href="https://chanjarster.github.io/img/safari-pinned-tab.svg" color="#5fbf5e" />
+
+
+
+<link rel="stylesheet" href="//cdn.bootcss.com/video.js/6.2.8/alt/video-js-cdn.min.css" />
+
+<link rel="stylesheet" href="https://chanjarster.github.io/css/bundle.8e3aef2bc5.css" />
+
+
+  
+  <!--[if lt IE 9]>
+    <script src="//cdn.bootcss.com/html5shiv/3.7.3/html5shiv.min.js"></script>
+    <script src="//cdn.bootcss.com/respond.js/1.4.2/respond.min.js"></script>
+    <script src="//cdn.bootcss.com/video.js/6.2.8/ie8/videojs-ie8.min.js"></script>
+  <![endif]-->
+
+<!--[if lte IE 11]>
+    <script src="//cdn.bootcss.com/classlist/1.1.20170427/classList.min.js"></script>
+  <![endif]-->
+
+
+<script src="//cdn.bootcss.com/object-fit-images/3.2.3/ofi.min.js"></script>
+
+
+<script src="//cdn.bootcss.com/smooth-scroll/12.1.4/js/smooth-scroll.polyfills.min.js"></script>
+
+
+</head>
+  <body>
+    
+    <div class="suspension">
+      <a title="Go to top" class="to-top is-hide"><span class="icon icon-up"></span></a>
+      
+        
+      
+    </div>
+    
+    
+  <header class="site-header">
+  <img class="avatar" src="https://chanjarster.github.io/img/avatar2.jpg" alt="Avatar">
+  
+  <h2 class="title">颇忒脱的技术博客</h2>
+  
+  <p class="subtitle"></p>
+  <button class="menu-toggle" type="button">
+    <span class="icon icon-menu"></span>
+  </button>
+  <nav class="site-menu collapsed">
+    <h2 class="offscreen">Main Menu</h2>
+    <ul class="menu-list">
+      
+      
+      
+      
+        <li class="menu-item
+            
+            
+            
+              is-active
+            ">
+            <a href="https://chanjarster.github.io/">Home</a>
+          </li>
+      
+        <li class="menu-item
+            
+            
+            ">
+            <a href="https://github.com/chanjarster">Works</a>
+          </li>
+      
+        <li class="menu-item
+            
+            
+            ">
+            <a href="https://chanjarster.github.io/tags/">Tags</a>
+          </li>
+      
+        <li class="menu-item
+            
+            
+            ">
+            <a href="https://chanjarster.github.io/links/">Links</a>
+          </li>
+      
+    </ul>
+  </nav>
+  <nav class="social-menu collapsed">
+    <h2 class="offscreen">Social Networks</h2>
+    <ul class="social-list">
+
+      
+
+      
+      <li class="social-item">
+        <a href="//github.com/chanjarster" title="GitHub"><span class="icon icon-github"></span></a>
+      </li>
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      <li class="social-item">
+        <a rel="alternate" type="application/rss+xml" href="https://chanjarster.github.io/index.xml"><span class="icon icon-rss" title="RSS"></span></a>
+      </li>
+
+    </ul>
+  </nav>
+</header>
+
+  <section class="main post-detail">
+    <header class="post-header">
+      <h1 class="post-title">Spring Cloud Config配置文件最佳实践</h1>
+      <p class="post-meta">@颇忒脱 · Sep 10, 2018 · 1 min read</p>
+    </header>
+    <article class="post-content"><p>大多数Spring Cloud项目都会使用Spring Cloud Config来管理应用启动时的配置文件，同时开发人员面临着多样化的程序启动方式：操作系统进程启动、docker启动、k8s启动。那么如何规划这些配置文件以适应多种启动方式呢？本文尝试给出一些建议</p>
+
+<p></p>
+
+<h2 id="先讲几个规则">先讲几个规则</h2>
+
+<ol>
+<li>程序打包时，要将<code>bootstrap.properties</code>和<code>application.properties</code>（或者它们的yaml变种）打到包里。</li>
+<li><code>bootstrap.properties</code>里，要针对可变配置项做环境变量化。</li>
+<li><code>application.properties</code>里，要针对可变配置项做环境变量化。</li>
+<li>Spring Cloud应用关于Config Server的配置要放在<code>bootstrap.properties</code>里，并且要做环境变量化。</li>
+<li>Config Server所提供的<code>application-*.properties</code>里不得有环境变量。因为既然直接提供配置了，那么就不应该再使用环境变量。</li>
+</ol>
+
+<h3 id="要针对可变配置项做环境变量化">要针对可变配置项做环境变量化</h3>
+
+<p>这句话的意思是在配置文件里使用<a href="https://docs.spring.io/spring-boot/docs/current/reference/htmlsingle/#boot-features-external-config-placeholders-in-properties">placeholder</a>。下面是两种方式：</p>
+
+<pre><code>app.name=${APP_NAME}
+app.description=${APP_DESC:Default description}
+</code></pre>
+
+<p>第一种方式Spring Boot/Cloud应用在启动时，会根据<a href="https://docs.spring.io/spring-boot/docs/current/reference/htmlsingle/#boot-features-external-config">这个顺序</a>找<code>APP_NAME</code>的值，如果找不到程序启动会报错。</p>
+
+<p>第二种方式和第一种方式的不同在于如果找不到，则使用<code>application.properties</code>里定义的默认值。</p>
+
+<p>而程序在启动时应该通过环境变量的方式将这些值传递进去。</p>
+
+<p>在真实应用中应该尽量多的使用第二种方式，只有少数的配置才是程序启动时必须提供的，一般来说都是一些数据库连接字符串、用户名密码等信息。</p>
+
+<h3 id="spring-cloud应用关于config-server的配置要放在-bootstrap-properties-里-并且要做环境变量化">Spring Cloud应用关于Config Server的配置要放在<code>bootstrap.properties</code>里，并且要做环境变量化。</h3>
+
+<p>比如这样：</p>
+
+<pre><code>spring.cloud.config.enabled=${CONFIG_ENABLED:true}
+spring.cloud.config.profile=${CONFIG_PROFILE:production}
+spring.cloud.config.label=${CONFIG_LABEL:master}
+spring.cloud.config.uri=${CONFIG_SERVER_URL:http://config-server:8080/}
+</code></pre>
+
+<p>上面这个配置可以控制是否连接config server，因为在开发环境下我们可能并不需要config server。也提供了可以config server启动程序的可能。
+同时也控制了如果连接config server，应该使用哪个<code>application.properties</code>。</p>
+
+<p>需要注意的是，如果我们选择程序启动的时候连接config server，那么在程序启动时提供的环境变量就只能是和config server相关的环境变量（在这个例子里就是上面的<code>CONFIG_*</code>），这些配置用来控制如何获得<code>application.properties</code>。</p>
+
+<p>因为此时程序所使用的配置都来自于config server，如果config server提供一些，环境变量又提供一些则会造成运维上的混乱。</p>
+
+<h2 id="各种启动方式">各种启动方式</h2>
+
+<p>下面讲讲各种启动方式如何传递环境变量。</p>
+
+<h3 id="以操作系统进程启动">以操作系统进程启动</h3>
+
+<p>直接以操作系统进程启动的方法是类似于这样的：</p>
+
+<pre><code>APP_NAME=my-app APP_DESC=&quot;My App Desc&quot; java -jar spring-cloud-app.jar
+</code></pre>
+
+<h3 id="用docker启动">用Docker启动</h3>
+
+<p>用docker启动则是这样的，参见<a href="https://docs.docker.com/engine/reference/run/#env-environment-variables">Docker ENV (environment variables)</a>：</p>
+
+<pre><code>docker run --name my-app -e APP_NAME=my-app -e APP_DESC=&quot;My App Desc&quot; spring-cloud-app:latest
+</code></pre>
+
+<h3 id="在k8s里启动">在K8S里启动</h3>
+
+<p>定义ConfigMap或Secret（用在密码类配置上），然后在Deployment spec里使用<code>configMapRef</code>或者<code>secretRef</code>或者<code>configMapKeyRef</code>或者<code>secretKeyRef</code>，比如下面的例子：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-yaml" data-lang="yaml">apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: my-app
+  namespace: &lt;namespace<span style="color:#e6db74">&gt;
+</span><span style="color:#e6db74">spec:
+</span><span style="color:#e6db74">  ...
+</span><span style="color:#e6db74">  template:
+</span><span style="color:#e6db74">    ...
+</span><span style="color:#e6db74">    spec:
+</span><span style="color:#e6db74">      containers:
+</span><span style="color:#e6db74">      - name: my-app
+</span><span style="color:#e6db74">        image: &lt;image repository&gt;
+</span><span style="color:#e6db74">        ...
+</span><span style="color:#e6db74">        envFrom:
+</span><span style="color:#e6db74">        - configMapRef:
+</span><span style="color:#e6db74">            name: my-app-config
+</span><span style="color:#e6db74">        - secretRef:
+</span><span style="color:#e6db74">            name: my-app-secret
+</span><span style="color:#e6db74">        env:
+</span><span style="color:#e6db74">        - name: APP_NAME
+</span><span style="color:#e6db74">          valueFrom:
+</span><span style="color:#e6db74">            configMapKeyRef:
+</span><span style="color:#e6db74">              name: my-app-config
+</span><span style="color:#e6db74">              key: APP_NAME
+</span><span style="color:#e6db74">        - name: APP_DESC
+</span><span style="color:#e6db74">          valueFrom:
+</span><span style="color:#e6db74">            secretKeyRef:
+</span><span style="color:#e6db74">              name: my-app-secret
+</span><span style="color:#e6db74">              key: APP_DESC</span></code></pre></div>
+<p>详见<a href="https://kubernetes.io/docs/tasks/configure-pod-container/configure-pod-configmap/">Configure a Pod to Use a ConfigMap</a>、<a href="https://kubernetes.io/docs/concepts/configuration/secret/#using-secrets-as-files-from-a-pod">Secrets</a>和<a href="https://dchua.com/2017/04/21/load-env-variables-from-configmaps-and-secrets-upon-pod-boot/">Load env variables from ConfigMaps and Secrets upon Pod boot</a>。</p></article>
+    <footer class="post-footer">
+      
+      <ul class="post-tags">
+        
+          <li><a href="https://chanjarster.github.io/tags/%E5%BE%AE%E6%9C%8D%E5%8A%A1"><span class="tag">微服务</span></a></li>
+        
+          <li><a href="https://chanjarster.github.io/tags/spring-cloud"><span class="tag">Spring Cloud</span></a></li>
+        
+          <li><a href="https://chanjarster.github.io/tags/k8s"><span class="tag">K8s</span></a></li>
+        
+      </ul>
+      
+      <p class="post-copyright">
+        
+      </p>
+    </footer>
+    
+      
+    
+  </section>
+  <footer class="site-footer">
+  <p>© 2017-2018 颇忒脱的技术博客</p>
+  <p>Powered by <a href="https://gohugo.io/" target="_blank">Hugo</a> with theme <a href="https://github.com/laozhu/hugo-nuo" target="_blank">Nuo</a>.</p>
+  
+</footer>
+
+
+
+<script async src="//cdn.bootcss.com/video.js/6.2.8/alt/video.novtt.min.js"></script>
+<script async src="//cdn.bootcss.com/mathjax/2.7.2/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    tex2jax: {
+      inlineMath: [['$','$'], ['\\(','\\)']],
+      displayMath: [['$$','$$'], ['\\[','\\]']],
+      processEscapes: true,
+      processEnvironments: true,
+      skipTags: ['script', 'noscript', 'style', 'textarea', 'pre'],
+      TeX: { equationNumbers: { autoNumber: "AMS" },
+      extensions: ["AMSmath.js", "AMSsymbols.js"] }
+    }
+  });
+</script>
+<script type="text/x-mathjax-config">
+  // Fix <code> tags after MathJax finishes running. This is a
+  // hack to overcome a shortcoming of Markdown. Discussion at
+  // https://github.com/mojombo/jekyll/issues/199
+  MathJax.Hub.Queue(() => {
+    MathJax.Hub.getAllJax().map(v => v.SourceElement().parentNode.className += ' has-jax');
+  });
+</script>
+
+<script src="https://chanjarster.github.io/js/bundle.273f9ac6f0.js"></script>
+
+
+
+
+  </body>
+</html>
