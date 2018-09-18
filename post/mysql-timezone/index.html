@@ -230,7 +230,6 @@
 <h2 id="先给总结">先给总结</h2>
 
 <ul>
-<li></li>
 <li><code>DATE</code>和<code>TIME</code>类型不支持时区转换。</li>
 <li>对于<code>TIMESTAMP</code>类型，MySQL会正确的根据connection时区（对于JDBC来说就是JVM时区）/服务端时区做转换。
 
@@ -293,8 +292,7 @@ Retrieve formatted string     : 2018-09-14 02:00:00
 Retrieve data, Time Zone      : 中欧时间
 Retrieve java.util.Date       : 2018-09-14 04:00:00
 Retrieve formatted string     : 2018-09-14 02:00:00</code></pre></div>
-<p>可以看到<code>Retrieve java.util.Date</code>返回的结果根据JVM时区做了转换的。
-而<code>Retrieve formatted string</code>返回的结果则是UTC时间。</p>
+<p>可以看到<code>Retrieve java.util.Date</code>返回的结果根据JVM时区做了转换的。而<code>Retrieve formatted string</code>返回的结果则是UTC时间。</p>
 
 <h2 id="当前日期时间相关函数">当前日期时间相关函数</h2>
 
@@ -310,15 +308,15 @@ in the connection&rsquo;s current time zone, which is available as the value of 
 <p>为了验证这个结论，同样写了一段程序，分别使用<code>Asia/Shanghai</code>和<code>Europe/Paris</code>来调用<code>CURRENT_TIMESTAMP()</code>、<code>CURRENT_TIME()</code>、<code>CURRENT_DATE()</code>。</p>
 
 <p>下面是运行结果：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-txt" data-lang="txt">Call functions, Time Zone        : 中国标准时间
-Test CURRENT_DATE()              : 2018-09-17
-Test CURRENT_TIME()              : 14:17:57
-Test CURRENT_TIMESTAMP()         : 2018-09-17 14:17:57.0
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-txt" data-lang="txt">JVM Time Zone              : 中国标准时间
+Test CURRENT_DATE()        : 2018-09-18
+Test CURRENT_TIME()        : 10:55:41
+Test CURRENT_TIMESTAMP()   : 2018-09-18 10:55:41.0
 --------------------
-Call functions, Time Zone        : 中欧时间
-Test CURRENT_DATE()              : 2018-09-17
-Test CURRENT_TIME()              : 07:17:57
-Test CURRENT_TIMESTAMP()         : 2018-09-17 08:17:57.0</code></pre></div>
+JVM Time Zone              : 中欧时间
+Test CURRENT_DATE()        : 2018-09-18
+Test CURRENT_TIME()        : 03:56:02
+Test CURRENT_TIMESTAMP()   : 2018-09-18 04:56:02.0</code></pre></div>
 <p>可以看到结果是基本符合文档里的说明的，但是要注意，在<code>Europe/Paris</code>时区，<code>CURRENT_TIME()</code>和<code>CURRENT_TIMESTAMP()</code>的时间部分相差一小时。
 看上去<code>CURRENT_TIMESTAMP()</code>返回的是UTC DST offset结果，而<code>CURRENT_TIME()</code>返回的是UTC offset结果，关于这个我登记了<a href="https://bugs.mysql.com/bug.php?id=92453">Bug #92453</a>。
 关于<code>Europe/Paris</code>的DST信息可以在这里找到<a href="https://en.wikipedia.org/wiki/List_of_tz_database_time_zones">Wiki - List of tz database time zones</a>。</p>
@@ -330,6 +328,16 @@ Test CURRENT_TIMESTAMP()         : 2018-09-17 08:17:57.0</code></pre></div>
 <span style="color:#75715e">-- 设置session时区
 </span><span style="color:#75715e"></span><span style="color:#66d9ef">SET</span> time_zone <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39;Asia/Shanghai&#39;</span>;</code></pre></div>
 <p>详见：<a href="https://dev.mysql.com/doc/refman/8.0/en/time-zone-support.html">MySQL Server Time Zone Support</a></p>
+
+<h2 id="参考资料">参考资料</h2>
+
+<ul>
+<li><a href="https://dev.mysql.com/doc/refman/8.0/en/datetime.html">MySQL - The DATE, DATETIME, and TIMESTAMP Types</a></li>
+<li><a href="https://dev.mysql.com/doc/refman/8.0/en/date-and-time-functions.html">MySQL - Date and Time Functions</a></li>
+<li><a href="https://dev.mysql.com/doc/refman/8.0/en/time-zone-support.html">MySQL Server Time Zone Support</a></li>
+<li><a href="https://en.wikipedia.org/wiki/List_of_tz_database_time_zones">Wiki - List of tz database time zones</a></li>
+<li><a href="https://www.w3.org/TR/timezone/">W3C- Working with timezone</a></li>
+</ul>
 
 <h2 id="相关代码">相关代码</h2>
 
