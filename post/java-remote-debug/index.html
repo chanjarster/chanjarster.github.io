@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+<head>
+
+  <meta charset="utf-8" />
+
+  
+  <title>远程Debug Java进程的方法</title>
+
+  
+  
+
+
+
+
+
+  
+  <meta name="author" content="颇忒脱" />
+  <meta name="description" content="本文介绍了远程Debug Java进程的方法。
+
+" />
+
+  
+  
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:site" content="@gohugoio" />
+    <meta name="twitter:title" content="远程Debug Java进程的方法" />
+    <meta name="twitter:description" content="本文介绍了远程Debug Java进程的方法。
+
+" />
+    <meta name="twitter:image" content="https://chanjarster.github.io/img/avatar.jpg" />
+  
+
+  
+  <meta property="og:type" content="article" />
+  <meta property="og:title" content="远程Debug Java进程的方法" />
+  <meta property="og:description" content="本文介绍了远程Debug Java进程的方法。
+
+" />
+  <meta property="og:url" content="https://chanjarster.github.io/post/java-remote-debug/" />
+  <meta property="og:image" content="https://chanjarster.github.io/img/avatar.jpg" />
+
+
+
+
+<meta name="generator" content="Hugo 0.47.1" />
+
+
+<link rel="canonical" href="https://chanjarster.github.io/post/java-remote-debug/" />
+
+<meta name="renderer" content="webkit" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<meta name="format-detection" content="telephone=no,email=no,adress=no" />
+<meta http-equiv="Cache-Control" content="no-transform" />
+
+
+<meta name="robots" content="index,follow" />
+<meta name="referrer" content="origin-when-cross-origin" />
+
+
+
+
+
+
+
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="颇忒脱的技术博客" />
+<meta name="msapplication-tooltip" content="颇忒脱的技术博客" />
+<meta name='msapplication-navbutton-color' content="#5fbf5e" />
+<meta name="msapplication-TileColor" content="#5fbf5e" />
+<meta name="msapplication-TileImage" content="/img/tile-image-windows.png" />
+<link rel="icon" href="https://chanjarster.github.io/img/favicon.ico" />
+<link rel="icon" type="image/png" sizes="16x16" href="https://chanjarster.github.io/img/favicon-16x16.png" />
+<link rel="icon" type="image/png" sizes="32x32" href="https://chanjarster.github.io/img/favicon-32x32.png" />
+<link rel="icon" sizes="192x192" href="https://chanjarster.github.io/img/touch-icon-android.png" />
+<link rel="apple-touch-icon" href="https://chanjarster.github.io/img/touch-icon-apple.png" />
+<link rel="mask-icon" href="https://chanjarster.github.io/img/safari-pinned-tab.svg" color="#5fbf5e" />
+
+
+
+<link rel="stylesheet" href="//cdn.bootcss.com/video.js/6.2.8/alt/video-js-cdn.min.css" />
+
+<link rel="stylesheet" href="https://chanjarster.github.io/css/bundle.8e3aef2bc5.css" />
+
+
+  
+  <!--[if lt IE 9]>
+    <script src="//cdn.bootcss.com/html5shiv/3.7.3/html5shiv.min.js"></script>
+    <script src="//cdn.bootcss.com/respond.js/1.4.2/respond.min.js"></script>
+    <script src="//cdn.bootcss.com/video.js/6.2.8/ie8/videojs-ie8.min.js"></script>
+  <![endif]-->
+
+<!--[if lte IE 11]>
+    <script src="//cdn.bootcss.com/classlist/1.1.20170427/classList.min.js"></script>
+  <![endif]-->
+
+
+<script src="//cdn.bootcss.com/object-fit-images/3.2.3/ofi.min.js"></script>
+
+
+<script src="//cdn.bootcss.com/smooth-scroll/12.1.4/js/smooth-scroll.polyfills.min.js"></script>
+
+
+</head>
+  <body>
+    
+    <div class="suspension">
+      <a title="Go to top" class="to-top is-hide"><span class="icon icon-up"></span></a>
+      
+        
+      
+    </div>
+    
+    
+  <header class="site-header">
+  <img class="avatar" src="https://chanjarster.github.io/img/avatar2.jpg" alt="Avatar">
+  
+  <h2 class="title">颇忒脱的技术博客</h2>
+  
+  <p class="subtitle"></p>
+  <button class="menu-toggle" type="button">
+    <span class="icon icon-menu"></span>
+  </button>
+  <nav class="site-menu collapsed">
+    <h2 class="offscreen">Main Menu</h2>
+    <ul class="menu-list">
+      
+      
+      
+      
+        <li class="menu-item
+            
+            
+            
+              is-active
+            ">
+            <a href="https://chanjarster.github.io/">Home</a>
+          </li>
+      
+        <li class="menu-item
+            
+            
+            ">
+            <a href="https://github.com/chanjarster">Works</a>
+          </li>
+      
+        <li class="menu-item
+            
+            
+            ">
+            <a href="https://chanjarster.github.io/tags/">Tags</a>
+          </li>
+      
+        <li class="menu-item
+            
+            
+            ">
+            <a href="https://chanjarster.github.io/links/">Links</a>
+          </li>
+      
+    </ul>
+  </nav>
+  <nav class="social-menu collapsed">
+    <h2 class="offscreen">Social Networks</h2>
+    <ul class="social-list">
+
+      
+
+      
+      <li class="social-item">
+        <a href="//github.com/chanjarster" title="GitHub"><span class="icon icon-github"></span></a>
+      </li>
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      <li class="social-item">
+        <a rel="alternate" type="application/rss+xml" href="https://chanjarster.github.io/index.xml"><span class="icon icon-rss" title="RSS"></span></a>
+      </li>
+
+    </ul>
+  </nav>
+</header>
+
+  <section class="main post-detail">
+    <header class="post-header">
+      <h1 class="post-title">远程Debug Java进程的方法</h1>
+      <p class="post-meta">@颇忒脱 · Oct 9, 2018 · 2 min read</p>
+    </header>
+    <article class="post-content"><p>本文介绍了远程Debug Java进程的方法。</p>
+
+<p></p>
+
+<p>远程debug的意思是启动一个Java进程，启动一个debugger进程，将两者连接起来，利用debugger来debug Java进程。</p>
+
+<p>事实上目前所有的IDE的debug功能都是通过远程debug方式来实现的，它们都利用了一个叫做JDPA（Java Platform Debugger Architecture）的技术。</p>
+
+<p>利用JDPA我们除了能够在IDE开发的时候debug，也能够将IDE attach到一个生产环境上正在运行的Java进程做debug（事实上这两个场景在本质上是一样的）。</p>
+
+<p>下面会用两个例子来说明如何使用Intellij IDEA来debug一个Java进程。</p>
+
+<h2 id="debug一个简单的java应用">debug一个简单的Java应用</h2>
+
+<p>我们做了一个很简单的Java应用，它启动后会每隔2秒打印出一个不断增长的数字。</p>
+
+<p>源代码在<a href="https://github.com/chanjarster/java-remote-debug-and-monitor/tree/master/debug-simple-app">Github debug-simple-app</a>：</p>
+
+<ol>
+<li>执行<code>mvn clean package</code>打包</li>
+<li>执行<code>java -jar target/debug-simple-app.jar</code>运行</li>
+</ol>
+
+<p>现在我们要用IDEA远程Debug它。我们先<code>ctrl+c</code>把进程停止掉。</p>
+
+<p><strong>1）把项目导入到IDEA里，因为如果没有源码的话我们没有办法打断点</strong></p>
+
+<p><strong>2）按照下面步骤新建一个Remote Run/Debug Configuration:</strong></p>
+
+<ol>
+<li><img src="debug-01.png" alt="step-1" /></li>
+
+<li><p>选择Remote<br />
+<img src="debug-02.png" alt="step-2" /></p></li>
+
+<li><p>除了改个名字，设定Use module classpath，其余的选项不需要修改，直接用默认的就行
+<img src="debug-03.png" alt="step-3" /></p></li>
+</ol>
+
+<p>这里解释一下各种参数：</p>
+
+<p>Debugger mode：debugger的模式，有两种：attach和listen。</p>
+
+<ul>
+<li>attach的意思是debugger连接到被debug的Java进程，是主动式的。</li>
+<li>listen的意思是debugger监听由Java进程发送过来的通信，是被动式的。
+<br /></li>
+</ul>
+
+<p>Host和Port的设定了被debug的Java进程的Host和Port，实际上这也告诉我们，远程Debug是通过网络进行的。</p>
+
+<p>JDK选项可根据你的不同JDK版本来构造不同的Command line arguments for remote JVM。</p>
+
+<p>Command line arguments for remote JVM这个文本框你是不能修改的，它告诉了你如果要这个Java进程能够被远程Debug，那么必须添加这些参数才可以。
+   所以你要把这里的参数复制出来，后面会用得着。</p>
+
+<p>Use module classpath，该选项设定使用那个module的源代码来debug。</p>
+
+<p><strong>3）把刚才的Command line arguments for remote JVM添加到刚才的运行命令。</strong></p>
+
+<p>像这样：<code>java -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005 -jar target/debug-simple-app.jar</code></p>
+
+<p><strong>4）点击下图里的Debug按钮开始debug</strong></p>
+
+<p><img src="debug-04.png" alt="step-4" /></p>
+
+<p>你会发现Console里出现这么一句话<code>Connected to the target VM, address: 'localhost:5005', transport: 'socket'</code>，
+这说明debugger已经attach成功了。</p>
+
+<p><strong>5）在debug-simple-app里的代码打个断点看看效果。</strong></p>
+
+<h2 id="debug一个tomcat应用">debug一个tomcat应用</h2>
+
+<p>实际上debug一个tomcat应用和前面的例子没有什么大的区别。</p>
+
+<p>我们写了一个很简单的Servlet，它会返回<code>Hello World</code>以及被访问的次数。</p>
+
+<p>源代码在<a href="https://github.com/chanjarster/java-remote-debug-and-monitor/tree/master/debug-tomcat-app">Github debug-tomcat-app</a>：</p>
+
+<ol>
+<li>执行<code>mvn clean package</code>打包</li>
+<li>把<code>target/debug-tomcat-app.war</code>丢到tomcat</li>
+<li>然后访问<a href="http://localhost:8080/debug-tomcat-app/hello">http://localhost:8080/debug-tomcat-app/hello</a>查看结果</li>
+</ol>
+
+<p>现在我们要用IDEA来debug，那么先把tomcat停掉。</p>
+
+<p><strong>1）同样需要把项目导入到IDEA里</strong></p>
+
+<p><strong>2）执行tomcat的<code>bin/catalina.sh jpda start</code>，让tomcat可以被debug</strong></p>
+
+<p><strong>3）执行<code>jps -v | grep Bootstrap</code>找到Tomcat进程：</strong></p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-txt" data-lang="txt">   76905 Bootstrap -Djava.util.logging.config.file=... 
+   -Djava.util.logging.manager=org.apache.juli.ClassLoaderLogManager 
+   -Djdk.tls.ephemeralDHKeySize=2048 
+   -Djava.protocol.handler.pkgs=org.apache.catalina.webresources 
+   -agentlib:jdwp=transport=dt_socket,address=localhost:8000,server=y,suspend=n 
+   -Dcatalina.base=... 
+   -Dcatalina.home=... 
+   -Djava.io.tmpdir=...</code></pre></div>
+<p>注意上面的<code>-agentlib...address=localhost:8000</code>参数，记住这个端口</p>
+
+<p><strong>4）和前面的例子一样，新建一个Remote Run/Debug Configuration，把端口设定为8000，然后启动</strong></p>
+
+<p><strong>5）然后打个断点试试</strong></p>
+
+<p>如果你想改变Tomcat的端口怎么做？看看<code>bin/catalina.sh</code>你会发现这么一段注释</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-txt" data-lang="txt">JPDA_TRANSPORT  (Optional) JPDA transport used when the &#34;jpda start&#34;
+                command is executed. The default is &#34;dt_socket&#34;.
+
+JPDA_ADDRESS    (Optional) Java runtime options used when the &#34;jpda start&#34;
+                command is executed. The default is localhost:8000.
+
+JPDA_SUSPEND    (Optional) Java runtime options used when the &#34;jpda start&#34;
+                command is executed. Specifies whether JVM should suspend
+                execution immediately after startup. Default is &#34;n&#34;.
+
+JPDA_OPTS       (Optional) Java runtime options used when the &#34;jpda start&#34;
+                command is executed. If used, JPDA_TRANSPORT, JPDA_ADDRESS,
+                and JPDA_SUSPEND are ignored. Thus, all required jpda
+                options MUST be specified. The default is:
+
+                -agentlib:jdwp=transport=$JPDA_TRANSPORT,
+                    address=$JPDA_ADDRESS,server=y,suspend=$JPDA_SUSPEND</code></pre></div>
+<p>所以你只需要提供<code>JPDA_ADDRESS</code>环境变量参数就行了。比如这样：<code>JPDA_ADDRESS=5005 bin/catalina.sh jpda start</code></p>
+
+<h2 id="参考文档">参考文档</h2>
+
+<ul>
+<li><a href="https://www.techrepublic.com/article/debug-your-java-code-with-ease-using-jpda/">Debug your Java code with ease using JPDA</a></li>
+<li><a href="https://docs.oracle.com/apps/search/search.jsp?q=jpda%20connection&amp;category=java">JPDA Connection and Invocation</a></li>
+<li><a href="https://docs.oracle.com/apps/search/search.jsp?q=agentlib:jdwp&amp;category=java">Oracle VM Invocation Options</a></li>
+</ul></article>
+    <footer class="post-footer">
+      
+      <ul class="post-tags">
+        
+          <li><a href="https://chanjarster.github.io/tags/java"><span class="tag">Java</span></a></li>
+        
+          <li><a href="https://chanjarster.github.io/tags/debug"><span class="tag">Debug</span></a></li>
+        
+          <li><a href="https://chanjarster.github.io/tags/jdpa"><span class="tag">Jdpa</span></a></li>
+        
+      </ul>
+      
+      <p class="post-copyright">
+        
+      </p>
+    </footer>
+    
+      
+    
+  </section>
+  <footer class="site-footer">
+  <p>© 2017-2018 颇忒脱的技术博客</p>
+  <p>Powered by <a href="https://gohugo.io/" target="_blank">Hugo</a> with theme <a href="https://github.com/laozhu/hugo-nuo" target="_blank">Nuo</a>.</p>
+  
+</footer>
+
+
+
+<script async src="//cdn.bootcss.com/video.js/6.2.8/alt/video.novtt.min.js"></script>
+<script async src="//cdn.bootcss.com/mathjax/2.7.2/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    tex2jax: {
+      inlineMath: [['$','$'], ['\\(','\\)']],
+      displayMath: [['$$','$$'], ['\\[','\\]']],
+      processEscapes: true,
+      processEnvironments: true,
+      skipTags: ['script', 'noscript', 'style', 'textarea', 'pre'],
+      TeX: { equationNumbers: { autoNumber: "AMS" },
+      extensions: ["AMSmath.js", "AMSsymbols.js"] }
+    }
+  });
+</script>
+<script type="text/x-mathjax-config">
+  // Fix <code> tags after MathJax finishes running. This is a
+  // hack to overcome a shortcoming of Markdown. Discussion at
+  // https://github.com/mojombo/jekyll/issues/199
+  MathJax.Hub.Queue(() => {
+    MathJax.Hub.getAllJax().map(v => v.SourceElement().parentNode.className += ' has-jax');
+  });
+</script>
+
+<script src="https://chanjarster.github.io/js/bundle.273f9ac6f0.js"></script>
+
+
+
+
+  </body>
+</html>
