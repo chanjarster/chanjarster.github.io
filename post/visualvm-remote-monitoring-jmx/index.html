@@ -5,9 +5,7 @@
   <meta charset="utf-8" />
 
   
-  <title>
-  Tags | 颇忒脱的技术博客
-</title>
+  <title>利用VisualVm和JMX远程监控Java进程</title>
 
   
   
@@ -18,20 +16,28 @@
 
   
   <meta name="author" content="颇忒脱" />
-  <meta name="description" content="颇忒脱的技术博客" />
+  <meta name="description" content="在前一篇文章里我们发现通过jstatd &#43; VisualVm的方式，不能获得Java进程的CPU、线程、MBean信息，这时JMX就要登场了。
+
+" />
 
   
-  <meta name="twitter:card" content="summary" />
-  <meta name="twitter:site" content="@gohugoio" />
-  <meta name="twitter:title" content="颇忒脱的技术博客" />
-  <meta name="twitter:description" content="颇忒脱的技术博客" />
-  <meta name="twitter:image" content="https://chanjarster.github.io/img/avatar.jpg" />
+  
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:site" content="@gohugoio" />
+    <meta name="twitter:title" content="利用VisualVm和JMX远程监控Java进程" />
+    <meta name="twitter:description" content="在前一篇文章里我们发现通过jstatd &#43; VisualVm的方式，不能获得Java进程的CPU、线程、MBean信息，这时JMX就要登场了。
+
+" />
+    <meta name="twitter:image" content="https://chanjarster.github.io/img/avatar.jpg" />
+  
 
   
-  <meta property="og:type" content="website" />
-  <meta property="og:title" content="颇忒脱的技术博客" />
-  <meta property="og:description" content="颇忒脱的技术博客" />
-  <meta property="og:url" content="https://chanjarster.github.io/tags/" />
+  <meta property="og:type" content="article" />
+  <meta property="og:title" content="利用VisualVm和JMX远程监控Java进程" />
+  <meta property="og:description" content="在前一篇文章里我们发现通过jstatd &#43; VisualVm的方式，不能获得Java进程的CPU、线程、MBean信息，这时JMX就要登场了。
+
+" />
+  <meta property="og:url" content="https://chanjarster.github.io/post/visualvm-remote-monitoring-jmx/" />
   <meta property="og:image" content="https://chanjarster.github.io/img/avatar.jpg" />
 
 
@@ -40,8 +46,7 @@
 <meta name="generator" content="Hugo 0.47.1" />
 
 
-<link rel="canonical" href="https://chanjarster.github.io/tags/" />
-<link rel="alternate" type="application/rss+xml" href="https://chanjarster.github.io/tags/index.xml" title="颇忒脱的技术博客" />
+<link rel="canonical" href="https://chanjarster.github.io/post/visualvm-remote-monitoring-jmx/" />
 
 <meta name="renderer" content="webkit" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
@@ -103,6 +108,8 @@
     <div class="suspension">
       <a title="Go to top" class="to-top is-hide"><span class="icon icon-up"></span></a>
       
+        
+      
     </div>
     
     
@@ -125,6 +132,8 @@
         <li class="menu-item
             
             
+            
+              is-active
             ">
             <a href="https://chanjarster.github.io/">Home</a>
           </li>
@@ -137,8 +146,6 @@
           </li>
       
         <li class="menu-item
-            
-              is-active
             
             
             ">
@@ -211,62 +218,81 @@
   </nav>
 </header>
 
-  <section class="main post-detail terms-list">
+  <section class="main post-detail">
     <header class="post-header">
-      <h1 class="post-title">Tags</h1>
+      <h1 class="post-title">利用VisualVm和JMX远程监控Java进程</h1>
+      <p class="post-meta">@颇忒脱 · Oct 10, 2018 · 1 min read</p>
     </header>
-    <div class="tags-cloud">
+    <article class="post-content"><p>在<a href="https://chanjarster.github.io/post/visualvm-remote-monitoring/">前一篇文章</a>里我们发现通过jstatd + VisualVm的方式，不能获得Java进程的CPU、线程、MBean信息，这时JMX就要登场了。</p>
+
+<p></p>
+
+<p>自Java 6开始，Java程序启动时都会在JVM内部启动一个JMX agent，JMX agent会启动一个MBean server组件，把MBeans（Java平台标准的MBean + 你自己创建的MBean）注册到它里面，然后暴露给JMX client管理。简单来说就是每个Java程序都可以通过JMX来被JMX client管理，而且这一切都是自动发生的。而VisualVm就是一个JMX Client。</p>
+
+<p>VisualVm能够自动发现本机的Java进程，如果要监控远程主机上的Java进程则需要<strong>显式地配置JMX连接</strong>，下面讲配置方法：</p>
+
+<h2 id="第一步-已经用jstatd连接了远程主机">第一步：已经用jstatd连接了远程主机</h2>
+
+<p>已经根据<a href="https://chanjarster.github.io/post/visualvm-remote-monitoring/">利用VisualVm远程监控Java进程</a>里的方法在VisualVm里添加了远程主机。</p>
+
+<p>PS. 在实际使用过程中这个似乎不是必须的，但是如果不做，有些信息就会获取不到，因此还是做一下吧。</p>
+
+<h2 id="第二步-与启动相关的system-properties">第二步：与启动相关的System Properties</h2>
+
+<p>要给远程主机上的监控的Java进程在启动时必须带上几个JMX相关的System Properties（常用的几个）：</p>
+
+<ul>
+<li><code>com.sun.management.jmxremote.port</code>, 指定暴露的JMX端口。</li>
+<li><code>com.sun.management.jmxremote.ssl</code>, 指定是否使用SSL，在开发环境下可以是false，但是在生产环境下<strong>强烈建议</strong>为true。</li>
+<li><code>com.sun.management.jmxremote.authenticate</code>, 指定是否需要密码才能够创建JMX连接。</li>
+</ul>
+
+<p>为了演示目的，我们用Tomcat来测试，不开启ssl和authenticate，把JMX端口设置为<code>1100</code>，执行下列命令启动Tomcat：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">CATALINA_OPTS<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;-Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false -Dcom.sun.management.jmxremote.port=1100 -Djava.rmi.server.hostname=k8s-oracle&#39;</span> bin/startup.sh</code></pre></div>
+<p>PS. 使用SSL方式保护JMX连接的方法会另写文章说明。</p>
+
+<h2 id="第三步-创建jmx连接">第三步：创建JMX连接</h2>
+
+<p>在远程主机上右键，选择添加JMX连接（在下图里出现了之前启动的Tomcat进程）：</p>
+
+<p><img src="visualvm-01.png" alt="Step 1" /></p>
+
+<p>根据Java进程启动时设置的JMX System Properties配置JMX连接：</p>
+
+<p><img src="visualvm-02.png" alt="Step 2" /></p>
+
+<p>成功后你会发现多了一个进程，小图标上有JMX字样：</p>
+
+<p><img src="visualvm-03.png" alt="Step 3" /></p>
+
+<p>双击这个进程，你就能看到CPU、线程、还有MBeans了。</p>
+
+<h2 id="参考资料">参考资料</h2>
+
+<ul>
+<li><a href="https://htmlpreview.github.io/?https://raw.githubusercontent.com/visualvm/visualvm.java.net.backup/master/www/jmx_connections.html">VisualVm - Connecting to JMX Agents Explicitly</a></li>
+<li><a href="https://docs.oracle.com/javase/8/docs/technotes/guides/jmx/overview/agent.html">Using JMX Agents</a></li>
+<li><a href="https://htmlpreview.github.io/?https://raw.githubusercontent.com/visualvm/visualvm.java.net.backup/master/www/mbeans_tab.html">MBeans Tab</a></li>
+</ul></article>
+    <footer class="post-footer">
       
-      
+      <ul class="post-tags">
         
-        <a href="https://chanjarster.github.io/tags/java/" class="tag-l">java</a>
-      
+          <li><a href="https://chanjarster.github.io/tags/java"><span class="tag">Java</span></a></li>
         
-        <a href="https://chanjarster.github.io/tags/jdbc/" class="tag-m">jdbc</a>
-      
+          <li><a href="https://chanjarster.github.io/tags/visualvm"><span class="tag">Visualvm</span></a></li>
         
-        <a href="https://chanjarster.github.io/tags/visualvm/" class="tag-m">visualvm</a>
-      
+          <li><a href="https://chanjarster.github.io/tags/jmx"><span class="tag">Jmx</span></a></li>
         
-        <a href="https://chanjarster.github.io/tags/%E5%BE%AE%E6%9C%8D%E5%8A%A1/" class="tag-m">微服务</a>
+      </ul>
       
+      <p class="post-copyright">
         
-        <a href="https://chanjarster.github.io/tags/%E6%95%B0%E6%8D%AE%E5%BA%93%E6%97%B6%E5%8C%BA%E9%82%A3%E4%BA%9B%E4%BA%8B%E5%84%BF/" class="tag-m">数据库时区那些事儿</a>
+      </p>
+    </footer>
+    
       
-        
-        <a href="https://chanjarster.github.io/tags/debug/" class="tag-s">debug</a>
-      
-        
-        <a href="https://chanjarster.github.io/tags/docker/" class="tag-s">docker</a>
-      
-        
-        <a href="https://chanjarster.github.io/tags/jdpa/" class="tag-s">jdpa</a>
-      
-        
-        <a href="https://chanjarster.github.io/tags/jmx/" class="tag-s">jmx</a>
-      
-        
-        <a href="https://chanjarster.github.io/tags/jwt/" class="tag-s">jwt</a>
-      
-        
-        <a href="https://chanjarster.github.io/tags/k8s/" class="tag-s">k8s</a>
-      
-        
-        <a href="https://chanjarster.github.io/tags/mysql/" class="tag-s">mysql</a>
-      
-        
-        <a href="https://chanjarster.github.io/tags/oauth/" class="tag-s">oauth</a>
-      
-        
-        <a href="https://chanjarster.github.io/tags/oracle/" class="tag-s">oracle</a>
-      
-        
-        <a href="https://chanjarster.github.io/tags/spring-cloud/" class="tag-s">spring-cloud</a>
-      
-        
-        <a href="https://chanjarster.github.io/tags/%E5%88%86%E5%B8%83%E5%BC%8F%E6%9E%B6%E6%9E%84/" class="tag-s">分布式架构</a>
-      
-    </div>
+    
   </section>
   <footer class="site-footer">
   <p>© 2017-2018 颇忒脱的技术博客</p>
