@@ -231,29 +231,24 @@
 
 <p>VisualVm能够自动发现本机的Java进程，如果要监控远程主机上的Java进程则需要<strong>显式地配置JMX连接</strong>，下面讲配置方法：</p>
 
-<h2 id="第一步-已经用jstatd连接了远程主机">第一步：已经用jstatd连接了远程主机</h2>
-
-<p>已经根据<a href="../visualvm-remote-monitoring/">利用VisualVm远程监控Java进程</a>里的方法在VisualVm里添加了远程主机。</p>
-
-<p>PS. 在实际使用过程中这个似乎不是必须的，但是如果不做，有些信息就会获取不到，因此还是做一下吧。</p>
-
-<h2 id="第二步-与启动相关的system-properties">第二步：与启动相关的System Properties</h2>
+<h2 id="第一步-与启动相关的system-properties">第一步：与启动相关的System Properties</h2>
 
 <p>要给远程主机上的监控的Java进程在启动时必须带上几个JMX相关的System Properties（常用的几个）：</p>
 
 <ul>
 <li><code>com.sun.management.jmxremote.port</code>, 指定暴露的JMX端口。</li>
+<li><code>com.sun.management.jmxremote.rmi.port</code>, 指定RMI connector端口，可以和<code>com.sun.management.jmxremote.port</code>保持一致。</li>
 <li><code>com.sun.management.jmxremote.ssl</code>, 指定是否使用SSL，在开发环境下可以是false，但是在生产环境下<strong>强烈建议</strong>为true。</li>
 <li><code>com.sun.management.jmxremote.authenticate</code>, 指定是否需要密码才能够创建JMX连接。</li>
 </ul>
 
 <p>为了演示目的，我们用Tomcat来测试，不开启ssl和authenticate，把JMX端口设置为<code>1100</code>，执行下列命令启动Tomcat：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">CATALINA_OPTS<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;-Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false -Dcom.sun.management.jmxremote.port=1100 -Djava.rmi.server.hostname=k8s-oracle&#39;</span> bin/startup.sh</code></pre></div>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">CATALINA_OPTS<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;-Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false -Dcom.sun.management.jmxremote.port=1100 Dcom.sun.management.jmxremote.rmi.port=1100 -Djava.rmi.server.hostname=k8s-oracle&#39;</span> bin/startup.sh</code></pre></div>
 <p>注意上面有一个<code>-Djava.rmi.server.hostname=k8s-oracle</code>参数，JMX agent本质上也是一个RMI server，因此需要指定这个参数，否则就会像<a href="../visualvm-remote-monitoring/">利用VisualVm远程监控Java进程</a>里提到的一样，VisualVm无法连接到该Java进程。</p>
 
 <p>PS. 使用SSL方式保护JMX连接的方法会另写文章说明。</p>
 
-<h2 id="第三步-创建jmx连接">第三步：创建JMX连接</h2>
+<h2 id="第二步-创建jmx连接">第二步：创建JMX连接</h2>
 
 <p>在远程主机上右键，选择添加JMX连接（在下图里出现了之前启动的Tomcat进程）：</p>
 
@@ -273,6 +268,8 @@
 
 <ul>
 <li><a href="https://htmlpreview.github.io/?https://raw.githubusercontent.com/visualvm/visualvm.java.net.backup/master/www/jmx_connections.html">VisualVm - Connecting to JMX Agents Explicitly</a></li>
+<li><a href="https://stackoverflow.com/a/21552812/1287790">Why Java opens 3 ports when JMX is configured?</a></li>
+<li><a href="https://docs.oracle.com/javase/9/management/monitoring-and-management-using-jmx-technology.htm#JSMGM-GUID-F08985BB-629A-4FBF-A0CB-8762DF7590E0">JMX - Remote Monitoring and Management</a></li>
 <li><a href="https://docs.oracle.com/javase/8/docs/technotes/guides/jmx/overview/agent.html">Using JMX Agents</a></li>
 <li><a href="https://htmlpreview.github.io/?https://raw.githubusercontent.com/visualvm/visualvm.java.net.backup/master/www/mbeans_tab.html">MBeans Tab</a></li>
 </ul></article>
