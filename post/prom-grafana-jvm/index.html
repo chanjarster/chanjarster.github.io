@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+<head>
+
+  <meta charset="utf-8" />
+
+  
+  <title>使用Prometheus&#43;Grafana监控JVM</title>
+
+  
+  
+
+
+
+
+
+  
+  <meta name="author" content="颇忒脱" />
+  <meta name="description" content="本文介绍如何使用Prometheus&#43;Grafana监控JVM的方法。
+
+" />
+
+  
+  
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:site" content="@gohugoio" />
+    <meta name="twitter:title" content="使用Prometheus&#43;Grafana监控JVM" />
+    <meta name="twitter:description" content="本文介绍如何使用Prometheus&#43;Grafana监控JVM的方法。
+
+" />
+    <meta name="twitter:image" content="https://chanjarster.github.io/img/avatar.jpg" />
+  
+
+  
+  <meta property="og:type" content="article" />
+  <meta property="og:title" content="使用Prometheus&#43;Grafana监控JVM" />
+  <meta property="og:description" content="本文介绍如何使用Prometheus&#43;Grafana监控JVM的方法。
+
+" />
+  <meta property="og:url" content="https://chanjarster.github.io/post/prom-grafana-jvm/" />
+  <meta property="og:image" content="https://chanjarster.github.io/img/avatar.jpg" />
+
+
+
+
+<meta name="generator" content="Hugo 0.49.2" />
+
+
+<link rel="canonical" href="https://chanjarster.github.io/post/prom-grafana-jvm/" />
+
+<meta name="renderer" content="webkit" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<meta name="format-detection" content="telephone=no,email=no,adress=no" />
+<meta http-equiv="Cache-Control" content="no-transform" />
+
+
+<meta name="robots" content="index,follow" />
+<meta name="referrer" content="origin-when-cross-origin" />
+
+
+
+
+
+
+
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="颇忒脱的技术博客" />
+<meta name="msapplication-tooltip" content="颇忒脱的技术博客" />
+<meta name='msapplication-navbutton-color' content="#5fbf5e" />
+<meta name="msapplication-TileColor" content="#5fbf5e" />
+<meta name="msapplication-TileImage" content="/img/tile-image-windows.png" />
+<link rel="icon" href="https://chanjarster.github.io/img/favicon.ico" />
+<link rel="icon" type="image/png" sizes="16x16" href="https://chanjarster.github.io/img/favicon-16x16.png" />
+<link rel="icon" type="image/png" sizes="32x32" href="https://chanjarster.github.io/img/favicon-32x32.png" />
+<link rel="icon" sizes="192x192" href="https://chanjarster.github.io/img/touch-icon-android.png" />
+<link rel="apple-touch-icon" href="https://chanjarster.github.io/img/touch-icon-apple.png" />
+<link rel="mask-icon" href="https://chanjarster.github.io/img/safari-pinned-tab.svg" color="#5fbf5e" />
+
+
+
+<link rel="stylesheet" href="//cdn.bootcss.com/video.js/6.2.8/alt/video-js-cdn.min.css" />
+
+<link rel="stylesheet" href="https://chanjarster.github.io/css/bundle.8e3aef2bc5.css" />
+
+
+  
+  <!--[if lt IE 9]>
+    <script src="//cdn.bootcss.com/html5shiv/3.7.3/html5shiv.min.js"></script>
+    <script src="//cdn.bootcss.com/respond.js/1.4.2/respond.min.js"></script>
+    <script src="//cdn.bootcss.com/video.js/6.2.8/ie8/videojs-ie8.min.js"></script>
+  <![endif]-->
+
+<!--[if lte IE 11]>
+    <script src="//cdn.bootcss.com/classlist/1.1.20170427/classList.min.js"></script>
+  <![endif]-->
+
+
+<script src="//cdn.bootcss.com/object-fit-images/3.2.3/ofi.min.js"></script>
+
+
+<script src="//cdn.bootcss.com/smooth-scroll/12.1.4/js/smooth-scroll.polyfills.min.js"></script>
+
+
+</head>
+  <body>
+    
+    <div class="suspension">
+      <a title="Go to top" class="to-top is-hide"><span class="icon icon-up"></span></a>
+      
+        
+      
+    </div>
+    
+    
+  <header class="site-header">
+  <img class="avatar" src="https://chanjarster.github.io/img/avatar2.jpg" alt="Avatar">
+  
+  <h2 class="title">颇忒脱的技术博客</h2>
+  
+  <p class="subtitle"></p>
+  <button class="menu-toggle" type="button">
+    <span class="icon icon-menu"></span>
+  </button>
+  <nav class="site-menu collapsed">
+    <h2 class="offscreen">Main Menu</h2>
+    <ul class="menu-list">
+      
+      
+      
+      
+        <li class="menu-item
+            
+            
+            
+              is-active
+            ">
+            <a href="https://chanjarster.github.io/">Home</a>
+          </li>
+      
+        <li class="menu-item
+            
+            
+            ">
+            <a href="https://github.com/chanjarster">Works</a>
+          </li>
+      
+        <li class="menu-item
+            
+            
+            ">
+            <a href="https://chanjarster.github.io/tags/">Tags</a>
+          </li>
+      
+        <li class="menu-item
+            
+            
+            ">
+            <a href="https://chanjarster.github.io/links/">Links</a>
+          </li>
+      
+    </ul>
+  </nav>
+  <nav class="social-menu collapsed">
+    <h2 class="offscreen">Social Networks</h2>
+    <ul class="social-list">
+
+      
+
+      
+      <li class="social-item">
+        <a href="//github.com/chanjarster" title="GitHub"><span class="icon icon-github"></span></a>
+      </li>
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      <li class="social-item">
+        <a rel="alternate" type="application/rss+xml" href="https://chanjarster.github.io/index.xml"><span class="icon icon-rss" title="RSS"></span></a>
+      </li>
+
+    </ul>
+  </nav>
+</header>
+
+  <section class="main post-detail">
+    <header class="post-header">
+      <h1 class="post-title">使用Prometheus&#43;Grafana监控JVM</h1>
+      <p class="post-meta">@颇忒脱 · Oct 24, 2018 · 1 min read</p>
+    </header>
+    <article class="post-content"><p>本文介绍如何使用Prometheus+Grafana监控JVM的方法。</p>
+
+<p></p>
+
+<h2 id="摘要">摘要</h2>
+
+<p>用到的工具：</p>
+
+<ul>
+<li>Docker，本文大量使用了Docker来启动各个应用。</li>
+<li><a href="https://prometheus.io/">Prometheus</a>，负责抓取/存储指标信息，并提供查询功能。</li>
+<li><a href="https://grafana.com">Grafana</a>，负责数据可视化。</li>
+<li><a href="https://github.com/prometheus/jmx_exporter">JMX exporter</a>，提供JMX中和JVM相关的信息。</li>
+<li>Tomcat，用来模拟一个Java应用。</li>
+</ul>
+
+<p>先讲一下大致步骤：</p>
+
+<ol>
+<li>利用<a href="https://github.com/prometheus/jmx_exporter">JMX exporter</a>，在Java进程内启动一个小型的Http server</li>
+<li>配置<a href="https://prometheus.io/">Prometheus</a>抓取那个Http server提供的数据。</li>
+<li>配置<a href="https://grafana.com">Grafana</a>连接<a href="https://prometheus.io/">Prometheus</a>，配置Dashboard。</li>
+</ol>
+
+<h2 id="第一步-启动几个java应用">第一步：启动几个Java应用</h2>
+
+<p>1) 新建一个目录，名字叫做<code>prom-jvm-demo</code>。</p>
+
+<p>2) <a href="https://repo1.maven.org/maven2/io/prometheus/jmx/jmx_prometheus_javaagent/0.3.1/jmx_prometheus_javaagent-0.3.1.jar">下载JMX exporter</a>到这个目录</p>
+
+<p>3) 新建一个文件<code>simple-config.yml</code>内容如下：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-yaml" data-lang="yaml">---
+blacklistObjectNames: [<span style="color:#e6db74">&#34;*:*&#34;</span>]</code></pre></div>
+<p>4) 运行以下命令启动3个Tomcat，记得把<code>&lt;path-to-prom-jvm-demo&gt;</code>替换成正确的路径：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">docker run -d <span style="color:#ae81ff">\
+</span><span style="color:#ae81ff"></span>  --name tomcat-1 <span style="color:#ae81ff">\
+</span><span style="color:#ae81ff"></span>  -v &lt;path-to-prom-jvm-demo&gt;:/usr/local/jmx-exporter <span style="color:#ae81ff">\
+</span><span style="color:#ae81ff"></span>  -e CATALINA_OPTS<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;-Xms64m -Xmx128m -javaagent:/usr/local/jmx-exporter/jmx_prometheus_javaagent-0.3.1.jar=6060:/usr/local/jmx-exporter/simple-config.yml&#34;</span> <span style="color:#ae81ff">\
+</span><span style="color:#ae81ff"></span>  -p <span style="color:#ae81ff">6060</span>:6060 <span style="color:#ae81ff">\
+</span><span style="color:#ae81ff"></span>  -p <span style="color:#ae81ff">8080</span>:8080 <span style="color:#ae81ff">\
+</span><span style="color:#ae81ff"></span>  tomcat:8.5-alpine
+
+docker run -d <span style="color:#ae81ff">\
+</span><span style="color:#ae81ff"></span>  --name tomcat-2 <span style="color:#ae81ff">\
+</span><span style="color:#ae81ff"></span>  -v &lt;path-to-prom-jvm-demo&gt;:/usr/local/jmx-exporter <span style="color:#ae81ff">\
+</span><span style="color:#ae81ff"></span>  -e CATALINA_OPTS<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;-Xms64m -Xmx128m -javaagent:/usr/local/jmx-exporter/jmx_prometheus_javaagent-0.3.1.jar=6060:/usr/local/jmx-exporter/simple-config.yml&#34;</span> <span style="color:#ae81ff">\
+</span><span style="color:#ae81ff"></span>  -p <span style="color:#ae81ff">6061</span>:6060 <span style="color:#ae81ff">\
+</span><span style="color:#ae81ff"></span>  -p <span style="color:#ae81ff">8081</span>:8080 <span style="color:#ae81ff">\
+</span><span style="color:#ae81ff"></span>  tomcat:8.5-alpine
+
+docker run -d <span style="color:#ae81ff">\
+</span><span style="color:#ae81ff"></span>  --name tomcat-3 <span style="color:#ae81ff">\
+</span><span style="color:#ae81ff"></span>  -v &lt;path-to-prom-jvm-demo&gt;:/usr/local/jmx-exporter <span style="color:#ae81ff">\
+</span><span style="color:#ae81ff"></span>  -e CATALINA_OPTS<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;-Xms64m -Xmx128m -javaagent:/usr/local/jmx-exporter/jmx_prometheus_javaagent-0.3.1.jar=6060:/usr/local/jmx-exporter/simple-config.yml&#34;</span> <span style="color:#ae81ff">\
+</span><span style="color:#ae81ff"></span>  -p <span style="color:#ae81ff">6062</span>:6060 <span style="color:#ae81ff">\
+</span><span style="color:#ae81ff"></span>  -p <span style="color:#ae81ff">8082</span>:8080 <span style="color:#ae81ff">\
+</span><span style="color:#ae81ff"></span>  tomcat:8.5-alpine</code></pre></div>
+<p>5) 访问<code>http://localhost:8080|8081|8082</code>看看Tomcat是否启动成功。</p>
+
+<p>6) 访问对应的<code>http://localhost:6060|6061|6062</code>看看JMX exporter提供的metrics。</p>
+
+<p>备注：这里提供的<code>simple-config.yml</code>仅仅提供了JVM的信息，更复杂的配置请参考<a href="https://github.com/prometheus/jmx_exporter">JMX exporter文档</a>。</p>
+
+<h2 id="第二步-启动prometheus">第二步：启动Prometheus</h2>
+
+<p>1) 在之前新建目录<code>prom-jvm-demo</code>，新建一个文件<code>prometheus.yml</code>，内容如下：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-yaml" data-lang="yaml">crape_configs:
+  - job_name: <span style="color:#e6db74">&#39;java&#39;</span>
+    static_configs:
+    - targets:
+      - <span style="color:#e6db74">&#39;&lt;host-ip&gt;:6060&#39;</span>
+      - <span style="color:#e6db74">&#39;&lt;host-ip&gt;:6061&#39;</span>
+      - <span style="color:#e6db74">&#39;&lt;host-ip&gt;:6062&#39;</span></code></pre></div>
+<p>2) 启动Prometheus：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">docker run -d <span style="color:#ae81ff">\
+</span><span style="color:#ae81ff"></span>  --name<span style="color:#f92672">=</span>prometheus <span style="color:#ae81ff">\
+</span><span style="color:#ae81ff"></span>  -p <span style="color:#ae81ff">9090</span>:9090 <span style="color:#ae81ff">\
+</span><span style="color:#ae81ff"></span>  -v &lt;path-to-prom-jvm-demo&gt;:/prometheus-config <span style="color:#ae81ff">\
+</span><span style="color:#ae81ff"></span>  prom/prometheus --config.file<span style="color:#f92672">=</span>/prometheus-config/prom-jmx.yml</code></pre></div>
+<p>3) 访问<a href="http://localhost:9090">http://localhost:9090</a>看看Prometheus是否启动成功，在输入框里输入<code>jvm_info</code>然后执行，应该可以看到如下图的结果：</p>
+
+<p><img src="prom.png" alt="simple" /></p>
+
+<p>如果没有看到三个instance，那么等一会儿再试。</p>
+
+<h2 id="第三步-配置grafana">第三步：配置Grafana</h2>
+
+<p>1) 启动Grafana：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">docker run -d <span style="color:#ae81ff">\
+</span><span style="color:#ae81ff"></span>  --name<span style="color:#f92672">=</span>grafana <span style="color:#ae81ff">\
+</span><span style="color:#ae81ff"></span>  -p <span style="color:#ae81ff">3000</span>:3000 <span style="color:#ae81ff">\
+</span><span style="color:#ae81ff"></span>  grafana/grafana</code></pre></div>
+<p>2) 访问<a href="http://localhost:3000">http://localhost:3000</a>，使用<code>admin/admin</code>登录。</p>
+
+<p>3) 添加Prometheus数据源，如下图所示到添加数据源页面：</p>
+
+<p><img src="grafana-ds.png" alt="" /></p>
+
+<p>4) 配置数据源信息：</p>
+
+<ul>
+<li>Name：随便取</li>
+<li>Type：Prometheus</li>
+<li>URL：<code>http://&lt;host-ip&gt;:9090</code></li>
+<li>其余不要设置，点击<code>Save &amp; Test</code>，应该会返回成功结果</li>
+</ul>
+
+<p>5) 导入Dashboard。我们不需要重头自己做Dashboard，用现成的就行，按下图所示进入导入页面</p>
+
+<p><img src="grafana-dashboard-import.png" alt="" /></p>
+
+<p>6) 使用我制作的<a href="https://grafana.com/dashboards/8563">JVM Dashboard</a>，页面右侧出现的ID号是<code>8563</code>，记住这个号，填在如下图所示的位置：</p>
+
+<p><img src="grafana-dashboard-import-2.png" alt="" /></p>
+
+<p>7) 然后鼠标点击别处稍等一下，出现下图，选择一下数据源就可以了</p>
+
+<p><img src="grafana-dashboard-import-3.png" alt="" /></p>
+
+<p>8) 最后打开刚刚导入的Dashboard，如下图：</p>
+
+<p><img src="jvm-dashboard.png" alt="" /></p></article>
+    <footer class="post-footer">
+      
+      <ul class="post-tags">
+        
+          <li><a href="https://chanjarster.github.io/tags/java"><span class="tag">Java</span></a></li>
+        
+          <li><a href="https://chanjarster.github.io/tags/jmx"><span class="tag">Jmx</span></a></li>
+        
+          <li><a href="https://chanjarster.github.io/tags/prometheus"><span class="tag">Prometheus</span></a></li>
+        
+          <li><a href="https://chanjarster.github.io/tags/grafana"><span class="tag">Grafana</span></a></li>
+        
+      </ul>
+      
+      <p class="post-copyright">
+        
+      </p>
+    </footer>
+    
+      
+    
+  </section>
+  <footer class="site-footer">
+  <p>© 2017-2018 颇忒脱的技术博客</p>
+  <p>Powered by <a href="https://gohugo.io/" target="_blank">Hugo</a> with theme <a href="https://github.com/laozhu/hugo-nuo" target="_blank">Nuo</a>.</p>
+  
+</footer>
+
+
+
+<script async src="//cdn.bootcss.com/video.js/6.2.8/alt/video.novtt.min.js"></script>
+<script async src="//cdn.bootcss.com/mathjax/2.7.2/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    tex2jax: {
+      inlineMath: [['$','$'], ['\\(','\\)']],
+      displayMath: [['$$','$$'], ['\\[','\\]']],
+      processEscapes: true,
+      processEnvironments: true,
+      skipTags: ['script', 'noscript', 'style', 'textarea', 'pre'],
+      TeX: { equationNumbers: { autoNumber: "AMS" },
+      extensions: ["AMSmath.js", "AMSsymbols.js"] }
+    }
+  });
+</script>
+<script type="text/x-mathjax-config">
+  // Fix <code> tags after MathJax finishes running. This is a
+  // hack to overcome a shortcoming of Markdown. Discussion at
+  // https://github.com/mojombo/jekyll/issues/199
+  MathJax.Hub.Queue(() => {
+    MathJax.Hub.getAllJax().map(v => v.SourceElement().parentNode.className += ' has-jax');
+  });
+</script>
+
+<script src="https://chanjarster.github.io/js/bundle.273f9ac6f0.js"></script>
+
+
+
+
+  </body>
+</html>
