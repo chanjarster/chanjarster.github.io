@@ -229,6 +229,8 @@
 
 <p>本文源代码是一个spring-boot应用（在 <a href="https://github.com/chanjarster/dockerfile-examples">https://github.com/chanjarster/dockerfile-examples</a> ），不过本例子适用于所有Java应用。</p>
 
+<h2 id="要求">要求</h2>
+
 <p>这里先给出一些Docker Image制作的要求，之后我们再看怎么做。</p>
 
 <ol>
@@ -236,7 +238,7 @@
 <li>使用官方Image作为基础Image</li>
 <li>设定正确的时区</li>
 <li>Container内的程序以非root用户启动</li>
-<li>指定Web程序的接口</li>
+<li>指定Web程序的端口</li>
 <li>能够传递JVM参数、Java System Properties、程序自定义的参数</li>
 </ol>
 
@@ -273,7 +275,7 @@
 
 <h3 id="设定正确的时区">设定正确的时区</h3>
 
-<p>几乎所有的Docker Image的时区都是UTC，我们需要给我们自己制作的Docker Image设定时区（参考的是<a href="https://serverfault.com/a/683651">SO的这个回答</a>）：</p>
+<p>几乎所有的Docker Image的时区都是UTC，我们需要给我们自己制作的Docker Image设定时区：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">ENV TZ<span style="color:#f92672">=</span>Asia/Shanghai
 RUN set -eux; <span style="color:#ae81ff">\
 </span><span style="color:#ae81ff"></span>    ln -snf /usr/share/zoneinfo/$TZ /etc/localtime; <span style="color:#ae81ff">\
@@ -287,21 +289,20 @@ RUN set -eux; <span style="color:#ae81ff">\
 
 <h3 id="container内的程序以非root用户启动">Container内的程序以非root用户启动</h3>
 
-<p>在Docker Image内部，我们应该使用非root用户启动程序，这需要使用到<a href="https://github.com/tianon/gosu">gosu</a>。</p>
+<p>在Docker Image内部，我们应该使用非root用户启动程序，这需要新建用户。</p>
 
-<p>gosu的Dockerfile指南在<a href="https://github.com/tianon/gosu/blob/master/INSTALL.md">这里</a>。</p>
+<p>如果你用的是<code>openjdk:&lt;version&gt;-alpine</code>新建用户命令是这样的：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-txt" data-lang="txt">RUN set -eux; \
+    addgroup --gid 1000 java-app; \
+    adduser -S -u 1000 -g java-app -h /home/java-app/ -s /bin/sh -D java-app;</code></pre></div>
+<p>如果你用的是<code>openjdk:&lt;version&gt;-slim</code>或者<code>openjdk:&lt;version&gt;</code>新建用户命令是这样的：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-txt" data-lang="txt">RUN set -eux; \
+    addgroup --gid 1000 java-app; \
+    adduser --system --uid 1000 --gid 1000 --home=/home/java-app/ --shell=/bin/sh --disabled-password java-app;</code></pre></div>
+<p>然后使用<a href="https://docs.docker.com/engine/reference/builder/#use">Dockerfile USER指令</a></p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-txt" data-lang="txt">USER java-app
 
-<p>记得要根据不同的基础Image选择适合的安装方式。</p>
-
-<p>如果你用的是<code>openjdk:&lt;version&gt;-alpine</code>，那么直接用本项目提供的Dockerfile就行了。</p>
-
-<p>如果你用的是<code>openjdk:&lt;version&gt;-slim</code>或者<code>openjdk:&lt;version&gt;</code>，那么在Image里安装gosu的方式是这样：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-txt" data-lang="txt">RUN set -ex; \
-    apt update; \
-    apt install -y gosu; \
-    rm -rf /var/lib/apt/lists/*; \
-# verify that the binary works
-    gosu nobody true;</code></pre></div>
+# 后面的指令就都是以java-app用户身份执行了</code></pre></div>
 <h3 id="指定web程序的接口">指定Web程序的接口</h3>
 
 <p>对于联网应用而言，必须在Dockerfile中指定暴露的端口，否则该端口无法映射。</p>
@@ -348,10 +349,8 @@ RUN set -eux; <span style="color:#ae81ff">\
 
 <p>普通启动，然后访问<code>http://localhost:8080</code>：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">docker run -p <span style="color:#ae81ff">8080</span>:8080 chanjarster/dockerfile-java-examples-1:1.0-SNAPSHOT</code></pre></div>
-<p>设定JVM参数，使用<code>JVM_OPTS</code>环境变量：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">docker run -p <span style="color:#ae81ff">8080</span>:8080 -e JVM_OPTS<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;-Xmx128M -Xms128M&#39;</span> chanjarster/dockerfile-java-examples-1:1.0-SNAPSHOT</code></pre></div>
-<p>设定System Properties，使用<code>JAVA_ARGS</code>环境变量：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">docker run -p <span style="color:#ae81ff">8080</span>:8080 -e JAVA_ARGS<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;-Dabc=xyz -Ddef=uvw&#39;</span> chanjarster/dockerfile-java-examples-1:1.0-SNAPSHOT</code></pre></div>
+<p>设定JVM参数/System Properties，使用<code>JAVA_OPTS</code>环境变量：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">docker run -p <span style="color:#ae81ff">8080</span>:8080 -e JAVA_OPTS<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;-Xmx128M -Xms128M -Dabc=xyz -Ddef=uvw&#39;</span> chanjarster/dockerfile-java-examples-1:1.0-SNAPSHOT</code></pre></div>
 <p>提供程序运行参数，在后面直接添加即可：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">docker run -p <span style="color:#ae81ff">8080</span>:8080 chanjarster/dockerfile-java-examples-1:1.0-SNAPSHOT --debug</code></pre></div>
 <h2 id="参考文档">参考文档</h2>
@@ -361,7 +360,6 @@ RUN set -eux; <span style="color:#ae81ff">\
 <li><a href="https://docs.docker.com/engine/reference/builder/#entrypoint">Docker ENTRYPOINT</a></li>
 <li><a href="https://github.com/docker-library/postgres/tree/3f585c58df93e93b730c09a13e8904b96fa20c58/11">Postgres Dockerfile &amp; script</a></li>
 <li><a href="https://github.com/docker-library/mysql/tree/b39f1e5e4ec82dc8039cecc91dbf34f6c9ae5fb0/8.0">MySQL Dockerfile &amp; script</a></li>
-<li><a href="https://github.com/tianon/gosu/blob/master/INSTALL.md">gosu Intall</a></li>
 <li><a href="http://www.ruanyifeng.com/blog/2017/11/bash-set.html">Bash set命令教程</a></li>
 </ul></article>
     <footer class="post-footer">
