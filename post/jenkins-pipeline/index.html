@@ -5,11 +5,7 @@
   <meta charset="utf-8" />
 
   
-  <title>
-  Tag → jenkins
-  
-   | 颇忒脱的技术博客
-</title>
+  <title>创建Jenkins Pipeline流水账</title>
 
   
   
@@ -20,20 +16,28 @@
 
   
   <meta name="author" content="颇忒脱" />
-  <meta name="description" content="颇忒脱的技术博客" />
+  <meta name="description" content="创建Jenkins pipeline流水账。
+
+" />
 
   
-  <meta name="twitter:card" content="summary" />
-  <meta name="twitter:site" content="@gohugoio" />
-  <meta name="twitter:title" content="颇忒脱的技术博客" />
-  <meta name="twitter:description" content="颇忒脱的技术博客" />
-  <meta name="twitter:image" content="https://chanjarster.github.io/img/avatar.jpg" />
+  
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:site" content="@gohugoio" />
+    <meta name="twitter:title" content="创建Jenkins Pipeline流水账" />
+    <meta name="twitter:description" content="创建Jenkins pipeline流水账。
+
+" />
+    <meta name="twitter:image" content="https://chanjarster.github.io/img/avatar.jpg" />
+  
 
   
-  <meta property="og:type" content="website" />
-  <meta property="og:title" content="颇忒脱的技术博客" />
-  <meta property="og:description" content="颇忒脱的技术博客" />
-  <meta property="og:url" content="https://chanjarster.github.io/tags/jenkins/" />
+  <meta property="og:type" content="article" />
+  <meta property="og:title" content="创建Jenkins Pipeline流水账" />
+  <meta property="og:description" content="创建Jenkins pipeline流水账。
+
+" />
+  <meta property="og:url" content="https://chanjarster.github.io/post/jenkins-pipeline/" />
   <meta property="og:image" content="https://chanjarster.github.io/img/avatar.jpg" />
 
 
@@ -42,8 +46,7 @@
 <meta name="generator" content="Hugo 0.49.2" />
 
 
-<link rel="canonical" href="https://chanjarster.github.io/tags/jenkins/" />
-<link rel="alternate" type="application/rss+xml" href="https://chanjarster.github.io/tags/jenkins/index.xml" title="颇忒脱的技术博客" />
+<link rel="canonical" href="https://chanjarster.github.io/post/jenkins-pipeline/" />
 
 <meta name="renderer" content="webkit" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
@@ -105,6 +108,8 @@
     <div class="suspension">
       <a title="Go to top" class="to-top is-hide"><span class="icon icon-up"></span></a>
       
+        
+      
     </div>
     
     
@@ -127,6 +132,8 @@
         <li class="menu-item
             
             
+            
+              is-active
             ">
             <a href="https://chanjarster.github.io/">Home</a>
           </li>
@@ -211,44 +218,130 @@
   </nav>
 </header>
 
-  <section class="main post-list">
-    <header class="list-header offscreen">
-      <h2 class="list-label">Posts List</h2>
+  <section class="main post-detail">
+    <header class="post-header">
+      <h1 class="post-title">创建Jenkins Pipeline流水账</h1>
+      <p class="post-meta">@颇忒脱 · Nov 28, 2018 · 1 min read</p>
     </header>
-    
+    <article class="post-content"><p>创建Jenkins pipeline流水账。</p>
+
+<p></p>
+
+<p>注：本文的例子基于<a href="../jenkins-cluster">搭建Jenkins集群流水账</a>搭建的集群所写。</p>
+
+<p>注：本文是一个Maven项目流水线的例子。</p>
+
+<h1 id="创建流水线">创建流水线</h1>
+
+<p>利用Blueocean创建流水线。</p>
+
+<p><img src="new-pipeline-1.png" alt="" /></p>
+
+<p><img src="new-pipeline-2.png" alt="" /></p>
+
+<p>填写GIT仓库信息。</p>
+
+<p><img src="new-pipeline-3.png" alt="" /></p>
+
+<p>将Blueocean生成的SSH key添加到GIT server里。</p>
+
+<p><img src="new-pipeline-4.png" alt="" /></p>
+
+<p>点击创建流水线后Jenkins会拉取GIT仓库，并且尝试寻找存在<code>Jenkinsfile</code>的分支，然后构建。不过不管构建是否成功，都不要管它，我们回到经典页面做进一步配置。</p>
+
+<p><img src="new-pipeline-5.png" alt="" /></p>
+
+<h1 id="配置凭据">配置凭据</h1>
+
+<p>我们先配置一下私有Maven仓库的用户名密码。</p>
+
+<p>按照下图的顺序进入凭据管理页面</p>
+
+<p><img src="config-credential-1.png" alt="" /></p>
+
+<p>添加凭据</p>
+
+<p><img src="config-credential-2.png" alt="" /></p>
+
+<p>输入用户名密码</p>
+
+<p><img src="config-credential-3.png" alt="" /></p>
+
+<h1 id="配置config-files">配置Config Files</h1>
+
+<p>有了用户名密码还不够，还得提供Maven的settings.xml。</p>
+
+<p>进入Config Files管理页面</p>
+
+<p><img src="maven-settings-1.png" alt="" /></p>
+
+<p>添加新的Config</p>
+
+<p><img src="maven-settings-2.png" alt="" /></p>
+
+<p>选择Global Maven settings.xml</p>
+
+<p><img src="maven-settings-3.png" alt="" /></p>
+
+<p>在Server Credentials新增，ServerId填写的是pom.xml里的 project &gt; distributionManagement &gt; repository &gt; id 的值。Credential选择之前创建的凭据。</p>
+
+<p>如果你有多个repository那么就添加多个Server Credential。</p>
+
+<p><img src="maven-settings-4.png" alt="" /></p>
+
+<h1 id="配置流水线">配置流水线</h1>
+
+<p>最后还要配置一下流水线，因为默认配置还有点问题。</p>
+
+<p>点击Configure进入配置页面。</p>
+
+<p><img src="config-pipeline-1.png" alt="" /></p>
+
+<p>点击分支源Tab，点击Add property，添加“不通过SCM自动化触发”，它的意思是Branch indexing（扫描多分支流水线）不会触发构建。</p>
+
+<p><img src="config-pipeline-2.png" alt="" /></p>
+
+<p>点击“扫描多分支流水线Triggers“Tab，启用Periodically if not otherwise run，Interval选择15分钟，这是为了让该流水线能够感知到分支的删除/新建。</p>
+
+<p><img src="config-pipeline-3.png" alt="" /></p>
+
+<p>点击“Pipeline Maven Configuration“，配置Global Settings file，选择我们刚刚新建的Config file。</p>
+
+<p><img src="config-pipeline-4.png" alt="" /></p>
+
+<p>然后保存。</p>
+
+<h1 id="创建jenkinsfile">创建Jenkinsfile</h1>
+
+<p>在你的源代码的根目录里创建<code>Jenkinsfile</code>，参考<a href="https://jenkins.io/doc/book/pipeline/">Pipeline文档</a>。然后提交到GIT仓库。</p>
+
+<p>然后点击“扫描多分支流水线Now”。</p>
+
+<h1 id="查看结果">查看结果</h1>
+
+<p>点击打开Blue Ocean</p>
+
+<p><img src="final-1.png" alt="" /></p>
+
+<p>然后就能看到每个分支的构建情况了</p>
+
+<p><img src="final-2.png" alt="" /></p></article>
+    <footer class="post-footer">
+      
+      <ul class="post-tags">
+        
+          <li><a href="https://chanjarster.github.io/tags/ci/cd"><span class="tag">CI/CD</span></a></li>
+        
+          <li><a href="https://chanjarster.github.io/tags/jenkins"><span class="tag">Jenkins</span></a></li>
+        
+      </ul>
+      
+      <p class="post-copyright">
+        
+      </p>
+    </footer>
     
       
-        <article class="post-entry">
-  <header class="post-header">
-    <h3 class="post-title"><a href="https://chanjarster.github.io/post/jenkins-pipeline/" class="post-link">创建Jenkins Pipeline流水账</a></h3>
-    <p class="post-meta">@颇忒脱 · Nov 28, 2018 · 1 min read</p>
-  </header>
-  
-  <p class="post-summary">创建Jenkins pipeline流水账。
-
-</p>
-  <footer class="post-footer">
-    <a class="read-more" href="https://chanjarster.github.io/post/jenkins-pipeline/">Read More →</a>
-  </footer>
-</article>
-
-      
-        <article class="post-entry">
-  <header class="post-header">
-    <h3 class="post-title"><a href="https://chanjarster.github.io/post/jenkins-cluster/" class="post-link">搭建Jenkins集群流水账</a></h3>
-    <p class="post-meta">@颇忒脱 · Nov 23, 2018 · 1 min read</p>
-  </header>
-  
-  <p class="post-summary">搭建Jenkins集群的流水账。
-
-</p>
-  <footer class="post-footer">
-    <a class="read-more" href="https://chanjarster.github.io/post/jenkins-cluster/">Read More →</a>
-  </footer>
-</article>
-
-      
-    
     
   </section>
   <footer class="site-footer">
