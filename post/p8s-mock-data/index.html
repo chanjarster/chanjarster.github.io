@@ -5,10 +5,7 @@
   <meta charset="utf-8" />
 
   
-  <title>
-  Posts
-   | 颇忒脱的技术博客
-</title>
+  <title>安利一个造Prometheus假数据的工具</title>
 
   
   
@@ -18,23 +15,29 @@
 
 
   
-  <meta name="author" content="颇忒脱" />
-  <meta name="description" content="" />
+  <meta name="author" content="破忒脱" />
+  <meta name="description" content="学习Prometheus各种函数的时候最好能够造一些我们想要的数据来测试，但是Prometheus没有提供直接操作其数据库的功能，所以在这里安利一个工具。
+
+" />
 
   
   
     <meta name="twitter:card" content="summary" />
     <meta name="twitter:site" content="@gohugoio" />
-    <meta name="twitter:title" content="Posts" />
-    <meta name="twitter:description" content="" />
+    <meta name="twitter:title" content="安利一个造Prometheus假数据的工具" />
+    <meta name="twitter:description" content="学习Prometheus各种函数的时候最好能够造一些我们想要的数据来测试，但是Prometheus没有提供直接操作其数据库的功能，所以在这里安利一个工具。
+
+" />
     <meta name="twitter:image" content="https://chanjarster.github.io/img/avatar.jpg" />
   
 
   
   <meta property="og:type" content="article" />
-  <meta property="og:title" content="Posts" />
-  <meta property="og:description" content="" />
-  <meta property="og:url" content="https://chanjarster.github.io/post/" />
+  <meta property="og:title" content="安利一个造Prometheus假数据的工具" />
+  <meta property="og:description" content="学习Prometheus各种函数的时候最好能够造一些我们想要的数据来测试，但是Prometheus没有提供直接操作其数据库的功能，所以在这里安利一个工具。
+
+" />
+  <meta property="og:url" content="https://chanjarster.github.io/post/p8s-mock-data/" />
   <meta property="og:image" content="https://chanjarster.github.io/img/avatar.jpg" />
 
 
@@ -43,8 +46,7 @@
 <meta name="generator" content="Hugo 0.49.2" />
 
 
-<link rel="canonical" href="https://chanjarster.github.io/post/" />
-<link rel="alternate" type="application/rss+xml" href="https://chanjarster.github.io/post/index.xml" title="颇忒脱的技术博客" />
+<link rel="canonical" href="https://chanjarster.github.io/post/p8s-mock-data/" />
 
 <meta name="renderer" content="webkit" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
@@ -105,6 +107,8 @@
     
     <div class="suspension">
       <a title="Go to top" class="to-top is-hide"><span class="icon icon-up"></span></a>
+      
+        
       
     </div>
     
@@ -221,114 +225,70 @@
   </nav>
 </header>
 
-  <section class="main post-list">
-    <header class="list-header offscreen">
-      <h2 class="list-label">Posts List</h2>
+  <section class="main post-detail">
+    <header class="post-header">
+      <h1 class="post-title">安利一个造Prometheus假数据的工具</h1>
+      <p class="post-meta">@破忒脱 · Dec 28, 2018 · 1 min read</p>
     </header>
+    <article class="post-content"><p>学习Prometheus各种函数的时候最好能够造一些我们想要的数据来测试，但是Prometheus没有提供直接操作其数据库的功能，所以在这里安利一个工具。</p>
+
+<p></p>
+
+<p>下面讲一下步骤：</p>
+
+<h2 id="提供假指标数据">提供假指标数据</h2>
+
+<p>我做了一个提供假指标的工具<a href="https://github.com/chanjarster/prometheus-mock-data">prometheus-mock-data</a>。利用这个工具我们可以提供给Prometheus我们想提供给它的指标，这样便于后面的测试。</p>
+
+<p>新建一个文件<code>scrape-data.txt</code>，内容见<a href="https://gist.github.com/chanjarster/ae4b092d59fea9c7dc316e18cf7b56c7">gist</a>，这个文件里定义了每次Prometheus抓指标的时候所能抓到的值，这个工具会依次提供这些指标（当然你也可以写自己的假数据）。</p>
+
+<p>运行：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">docker run -d --rm <span style="color:#ae81ff">\
+</span><span style="color:#ae81ff"></span>  --name<span style="color:#f92672">=</span>mock-metrics <span style="color:#ae81ff">\
+</span><span style="color:#ae81ff"></span>  -v <span style="color:#66d9ef">$(</span>pwd<span style="color:#66d9ef">)</span>/scrape-data.txt:/home/java-app/etc/scrape-data.txt <span style="color:#ae81ff">\
+</span><span style="color:#ae81ff"></span>  -p <span style="color:#ae81ff">8080</span>:8080 <span style="color:#ae81ff">\
+</span><span style="color:#ae81ff"></span>  chanjarster/prometheus-mock-data:latest</code></pre></div>
+<p>用浏览器访问：<code>http://localhost:8080/metrics</code>，刷新几次，能够看到指标数据在循环显示。</p>
+
+<h2 id="启动prometheus">启动Prometheus</h2>
+
+<p>新建配置文件：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-yaml" data-lang="yaml">scrape_configs:
+  - job_name: <span style="color:#e6db74">&#39;mock&#39;</span>
+    scrape_interval: 15s
+    static_configs:
+    - targets:
+      - <span style="color:#e6db74">&#39;&lt;docker-host-machine-ip&gt;:8080&#39;</span></code></pre></div>
+<p>注意：Data point的间隔通过<code>scrape_interval</code>参数控制。</p>
+
+<p>启动：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">docker run -d <span style="color:#ae81ff">\
+</span><span style="color:#ae81ff"></span>    --name<span style="color:#f92672">=</span>prometheus <span style="color:#ae81ff">\
+</span><span style="color:#ae81ff"></span>    -p <span style="color:#ae81ff">9090</span>:9090 <span style="color:#ae81ff">\
+</span><span style="color:#ae81ff"></span>    -v <span style="color:#66d9ef">$(</span>pwd<span style="color:#66d9ef">)</span>/prom-config.yml:/prometheus-config/prom-config.yml <span style="color:#ae81ff">\
+</span><span style="color:#ae81ff"></span>    prom/prometheus --config.file<span style="color:#f92672">=</span>/prometheus-config/prom-config.yml</code></pre></div>
+<p>打开<code>http://localhost:9090</code>看看是不是抓到指标了。</p>
+
+<h2 id="启动grafana">启动Grafana</h2>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">docker run -d <span style="color:#ae81ff">\
+</span><span style="color:#ae81ff"></span>    --name<span style="color:#f92672">=</span>grafana <span style="color:#ae81ff">\
+</span><span style="color:#ae81ff"></span>    -p <span style="color:#ae81ff">3000</span>:3000 <span style="color:#ae81ff">\
+</span><span style="color:#ae81ff"></span>    grafana/grafana</code></pre></div>
+<p>在Grafana里配置Prometheus数据源，然后作图。</p></article>
+    <footer class="post-footer">
+      
+      <ul class="post-tags">
+        
+          <li><a href="https://chanjarster.github.io/tags/prometheus"><span class="tag">Prometheus</span></a></li>
+        
+      </ul>
+      
+      <p class="post-copyright">
+        
+      </p>
+    </footer>
     
-    
       
-        <article class="post-entry">
-  <header class="post-header">
-    <h3 class="post-title"><a href="https://chanjarster.github.io/post/java-dockerfile-best-practice/" class="post-link">Java程序制作Docker Image推荐方案</a></h3>
-    <p class="post-meta">@颇忒脱 · Sep 20, 2018 · 1 min read</p>
-  </header>
-  
-  <p class="post-summary">本文推荐了一种Java程序制作Docker Image的方案。
-
-</p>
-  <footer class="post-footer">
-    <a class="read-more" href="https://chanjarster.github.io/post/java-dockerfile-best-practice/">Read More →</a>
-  </footer>
-</article>
-
-      
-        <article class="post-entry">
-  <header class="post-header">
-    <h3 class="post-title"><a href="https://chanjarster.github.io/post/oracle-timezone/" class="post-link">数据库时区那些事儿 - Oracle的时区处理</a></h3>
-    <p class="post-meta">@颇忒脱 · Sep 18, 2018 · 2 min read</p>
-  </header>
-  
-  <p class="post-summary">当JVM时区和数据库时区不一致的时候，会发生什么？这个问题也许你从来没有注意过，但是当把Java程序容器化的时候，问题就浮现出来了，因为目前几乎所有的Docker Image的时区都是UTC。本文探究了Oracle及其JDBC驱动对于时区的处理方式，并尝试给出最佳实践。
-
-</p>
-  <footer class="post-footer">
-    <a class="read-more" href="https://chanjarster.github.io/post/oracle-timezone/">Read More →</a>
-  </footer>
-</article>
-
-      
-        <article class="post-entry">
-  <header class="post-header">
-    <h3 class="post-title"><a href="https://chanjarster.github.io/post/mysql-timezone/" class="post-link">数据库时区那些事儿 - MySQL的时区处理</a></h3>
-    <p class="post-meta">@颇忒脱 · Sep 17, 2018 · 2 min read</p>
-  </header>
-  
-  <p class="post-summary">当JVM时区和数据库时区不一致的时候，会发生什么？这个问题也许你从来没有注意过，但是当把Java程序容器化的时候，问题就浮现出来了，因为目前几乎所有的Docker Image的时区都是UTC。本文探究了MySQL及其JDBC驱动对于时区的处理方式，并尝试给出最佳实践。
-
-</p>
-  <footer class="post-footer">
-    <a class="read-more" href="https://chanjarster.github.io/post/mysql-timezone/">Read More →</a>
-  </footer>
-</article>
-
-      
-        <article class="post-entry">
-  <header class="post-header">
-    <h3 class="post-title"><a href="https://chanjarster.github.io/post/spring-cloud-config-best-practice/" class="post-link">Spring Cloud Config配置文件最佳实践</a></h3>
-    <p class="post-meta">@颇忒脱 · Sep 10, 2018 · 1 min read</p>
-  </header>
-  
-  <p class="post-summary">大多数Spring Cloud项目都会使用Spring Cloud Config来管理应用启动时的配置文件，同时开发人员面临着多样化的程序启动方式：操作系统进程启动、docker启动、k8s启动。那么如何规划这些配置文件以适应多种启动方式呢？本文尝试给出一些建议
-
-</p>
-  <footer class="post-footer">
-    <a class="read-more" href="https://chanjarster.github.io/post/spring-cloud-config-best-practice/">Read More →</a>
-  </footer>
-</article>
-
-      
-        <article class="post-entry">
-  <header class="post-header">
-    <h3 class="post-title"><a href="https://chanjarster.github.io/post/extract-public-service/" class="post-link">如何抽取公共服务并成功迁移</a></h3>
-    <p class="post-meta">@颇忒脱 · Aug 23, 2018 · 1 min read</p>
-  </header>
-  
-  <p class="post-summary">本文探讨了如何创建并落地一个公共服务的方法。
-
-</p>
-  <footer class="post-footer">
-    <a class="read-more" href="https://chanjarster.github.io/post/extract-public-service/">Read More →</a>
-  </footer>
-</article>
-
-      
-        <article class="post-entry">
-  <header class="post-header">
-    <h3 class="post-title"><a href="https://chanjarster.github.io/post/compare-authc-authz-models/" class="post-link">多种认证、授权模型的比较</a></h3>
-    <p class="post-meta">@颇忒脱 · Aug 22, 2018 · 1 min read</p>
-  </header>
-  
-  <p class="post-summary">本文比较了OAuth2.0的几种模式以及基于Session和JWT的认证模式。
-
-</p>
-  <footer class="post-footer">
-    <a class="read-more" href="https://chanjarster.github.io/post/compare-authc-authz-models/">Read More →</a>
-  </footer>
-</article>
-
-      
-    
-    
-      <footer class="list-footer">
-        <nav class="pagination">
-          <h3 class="offscreen">Pagination</h3>
-          
-            <a class="pagination-previous" href="https://chanjarster.github.io/post/">← Newer Posts</a>
-          
-          
-        </nav>
-      </footer>
     
   </section>
   <footer class="site-footer">
