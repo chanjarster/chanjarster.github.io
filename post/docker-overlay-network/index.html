@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+<head>
+
+  <meta charset="utf-8" />
+
+  
+  <title>一种生产环境Docker Overlay Network的配置方案</title>
+
+  
+  
+
+
+
+
+
+  
+  <meta name="author" content="颇忒脱" />
+  <meta name="description" content="介绍一种生产环境Docker overlay network的配置方案。
+
+" />
+
+  
+  
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:site" content="@gohugoio" />
+    <meta name="twitter:title" content="一种生产环境Docker Overlay Network的配置方案" />
+    <meta name="twitter:description" content="介绍一种生产环境Docker overlay network的配置方案。
+
+" />
+    <meta name="twitter:image" content="https://chanjarster.github.io/img/avatar.jpg" />
+  
+
+  
+  <meta property="og:type" content="article" />
+  <meta property="og:title" content="一种生产环境Docker Overlay Network的配置方案" />
+  <meta property="og:description" content="介绍一种生产环境Docker overlay network的配置方案。
+
+" />
+  <meta property="og:url" content="https://chanjarster.github.io/post/docker-overlay-network/" />
+  <meta property="og:image" content="https://chanjarster.github.io/img/avatar.jpg" />
+
+
+
+
+<meta name="generator" content="Hugo 0.49.2" />
+
+
+<link rel="canonical" href="https://chanjarster.github.io/post/docker-overlay-network/" />
+
+<meta name="renderer" content="webkit" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<meta name="format-detection" content="telephone=no,email=no,adress=no" />
+<meta http-equiv="Cache-Control" content="no-transform" />
+
+
+<meta name="robots" content="index,follow" />
+<meta name="referrer" content="origin-when-cross-origin" />
+
+
+
+
+
+
+
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="颇忒脱的技术博客" />
+<meta name="msapplication-tooltip" content="颇忒脱的技术博客" />
+<meta name='msapplication-navbutton-color' content="#5fbf5e" />
+<meta name="msapplication-TileColor" content="#5fbf5e" />
+<meta name="msapplication-TileImage" content="/img/tile-image-windows.png" />
+<link rel="icon" href="https://chanjarster.github.io/img/favicon.ico" />
+<link rel="icon" type="image/png" sizes="16x16" href="https://chanjarster.github.io/img/favicon-16x16.png" />
+<link rel="icon" type="image/png" sizes="32x32" href="https://chanjarster.github.io/img/favicon-32x32.png" />
+<link rel="icon" sizes="192x192" href="https://chanjarster.github.io/img/touch-icon-android.png" />
+<link rel="apple-touch-icon" href="https://chanjarster.github.io/img/touch-icon-apple.png" />
+<link rel="mask-icon" href="https://chanjarster.github.io/img/safari-pinned-tab.svg" color="#5fbf5e" />
+
+
+
+<link rel="stylesheet" href="//cdn.bootcss.com/video.js/6.2.8/alt/video-js-cdn.min.css" />
+
+<link rel="stylesheet" href="https://chanjarster.github.io/css/bundle.8e3aef2bc5.css" />
+
+
+  
+  <!--[if lt IE 9]>
+    <script src="//cdn.bootcss.com/html5shiv/3.7.3/html5shiv.min.js"></script>
+    <script src="//cdn.bootcss.com/respond.js/1.4.2/respond.min.js"></script>
+    <script src="//cdn.bootcss.com/video.js/6.2.8/ie8/videojs-ie8.min.js"></script>
+  <![endif]-->
+
+<!--[if lte IE 11]>
+    <script src="//cdn.bootcss.com/classlist/1.1.20170427/classList.min.js"></script>
+  <![endif]-->
+
+
+<script src="//cdn.bootcss.com/object-fit-images/3.2.3/ofi.min.js"></script>
+
+
+<script src="//cdn.bootcss.com/smooth-scroll/12.1.4/js/smooth-scroll.polyfills.min.js"></script>
+
+
+</head>
+  <body>
+    
+    <div class="suspension">
+      <a title="Go to top" class="to-top is-hide"><span class="icon icon-up"></span></a>
+      
+        
+      
+    </div>
+    
+    
+  <header class="site-header">
+  <img class="avatar" src="https://chanjarster.github.io/img/avatar2.jpg" alt="Avatar">
+  
+  <h2 class="title">颇忒脱的技术博客</h2>
+  
+  <p class="subtitle"></p>
+  <button class="menu-toggle" type="button">
+    <span class="icon icon-menu"></span>
+  </button>
+  <nav class="site-menu collapsed">
+    <h2 class="offscreen">Main Menu</h2>
+    <ul class="menu-list">
+      
+      
+      
+      
+        <li class="menu-item
+            
+            
+            
+              is-active
+            ">
+            <a href="https://chanjarster.github.io/">Home</a>
+          </li>
+      
+        <li class="menu-item
+            
+            
+            ">
+            <a href="https://chanjarster.github.io/tags/%E6%94%B6%E8%97%8F%E5%A4%B9/">Bookmarks</a>
+          </li>
+      
+        <li class="menu-item
+            
+            
+            ">
+            <a href="https://github.com/chanjarster">Works</a>
+          </li>
+      
+        <li class="menu-item
+            
+            
+            ">
+            <a href="https://chanjarster.github.io/tags/">Tags</a>
+          </li>
+      
+        <li class="menu-item
+            
+            
+            ">
+            <a href="https://chanjarster.github.io/links/">Links</a>
+          </li>
+      
+    </ul>
+  </nav>
+  <nav class="social-menu collapsed">
+    <h2 class="offscreen">Social Networks</h2>
+    <ul class="social-list">
+
+      
+
+      
+      <li class="social-item">
+        <a href="//github.com/chanjarster" title="GitHub"><span class="icon icon-github"></span></a>
+      </li>
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      <li class="social-item">
+        <a rel="alternate" type="application/rss+xml" href="https://chanjarster.github.io/index.xml"><span class="icon icon-rss" title="RSS"></span></a>
+      </li>
+
+    </ul>
+  </nav>
+</header>
+
+  <section class="main post-detail">
+    <header class="post-header">
+      <h1 class="post-title">一种生产环境Docker Overlay Network的配置方案</h1>
+      <p class="post-meta">@颇忒脱 · Jan 9, 2019 · 2 min read</p>
+    </header>
+    <article class="post-content"><p>介绍一种生产环境Docker overlay network的配置方案。</p>
+
+<p></p>
+
+<h2 id="概要">概要</h2>
+
+<p>先讲一下生产环境中的问题：</p>
+
+<ul>
+<li>有多个Docker host，希望能够通过Docker swarm连接起来。</li>
+<li>Docker swarm只适合于无状态应用，不适合有状态应用。</li>
+<li>因此生产环境中会同时存在
+
+<ol>
+<li>无状态应用：利用<code>docker service create</code>/<code>docker stack deploy</code>创建的。</li>
+<li>有状态应用：利用<code>docker run</code>/<code>docker compose up</code>创建的。</li>
+</ol></li>
+<li>希望两种应用能够连接到同一个overlay网络，在网络内部能够通过
+
+<ol>
+<li><code>tasks.&lt;service-name&gt;</code> DNS name 连接到无状态应用（见<a href="https://docs.docker.com/network/overlay/#container-discovery">Container discovery</a>）</li>
+<li><code>&lt;container-name&gt;</code> DNS name 连接到状态应用</li>
+</ol></li>
+</ul>
+
+<p>解决办法：</p>
+
+<ol>
+<li>创建attachable的overlay network</li>
+<li>有状态应用挂到这个overlay network上</li>
+<li>无状态应用也挂到这个overlay network上</li>
+</ol>
+
+<h2 id="步骤">步骤</h2>
+
+<p>到manager节点上创建attachable的overlay network，名字叫做prod-overlay：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">docker network create -d overlay --attachable prod-overlay</code></pre></div>
+<p>在manager节点上查看这个网络是否创建成功：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ docker network ls
+
+NETWORK ID          NAME                DRIVER              SCOPE
+fbfde97ed12a        bridge              bridge              local
+73ab6bbac970        docker_gwbridge     bridge              local
+a2adb3de5f7a        host                host                local
+nm7pgzuh6ww4        ingress             overlay             swarm
+638e550dab67        none                null                local
+qqf78g8iio10        prod-overlay        overlay             swarm</code></pre></div>
+<p>在worker节点上查看这个网络，这时你看不到这个网络，不过不要担心，当后面在worker节点上创建工作负载后就能看到了：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ docker network ls
+
+NETWORK ID          NAME                DRIVER              SCOPE
+fbfde97ed12a        bridge              bridge              local
+73ab6bbac970        docker_gwbridge     bridge              local
+a2adb3de5f7a        host                host                local
+nm7pgzuh6ww4        ingress             overlay             swarm
+638e550dab67        none                null                local</code></pre></div>
+<p>在manager上创建容器<code>c1</code>，挂到<code>prod-overlay</code> network上：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">docker run --name c1 --network prod-overlay -itd busybox</code></pre></div>
+<p>在worker上创建容器<code>c2</code>，挂到<code>prod-overlay</code> network上：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">docker run --name c2 --network prod-overlay -itd busybox</code></pre></div>
+<p>在manager上创建service <code>c</code>，挂到<code>prod-overlay</code> network上：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">docker service create -td --name c --replicas <span style="color:#ae81ff">2</span> --network prod-overlay busybox</code></pre></div>
+<h2 id="验证">验证</h2>
+
+<h3 id="查看worker节点的network">查看worker节点的network</h3>
+
+<p>之前在worker节点上没有看到<code>prod-overlay</code> network，现在你应该可以看见了：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ docker network ls
+NETWORK ID          NAME                DRIVER              SCOPE
+01180b9d4833        bridge              bridge              local
+cd94df435afc        docker_gwbridge     bridge              local
+74721e7670eb        host                host                local
+nm7pgzuh6ww4        ingress             overlay             swarm
+32e6853ea78d        none                null                local
+dw8kd2nb2yl3        prod-overlay        overlay             swarm</code></pre></div>
+<h3 id="确认容器可以互ping">确认容器可以互ping</h3>
+
+<p>到manager节点上，让<code>c1</code> ping <code>c2</code></p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ docker exec c1 ping -c <span style="color:#ae81ff">2</span> c2
+PING c2 <span style="color:#f92672">(</span><span style="color:#ae81ff">10</span>.0.2.2<span style="color:#f92672">)</span>: <span style="color:#ae81ff">56</span> data bytes
+<span style="color:#ae81ff">64</span> bytes from <span style="color:#ae81ff">10</span>.0.2.2: seq<span style="color:#f92672">=</span><span style="color:#ae81ff">0</span> ttl<span style="color:#f92672">=</span><span style="color:#ae81ff">64</span> time<span style="color:#f92672">=</span><span style="color:#ae81ff">0</span>.682 ms
+<span style="color:#ae81ff">64</span> bytes from <span style="color:#ae81ff">10</span>.0.2.2: seq<span style="color:#f92672">=</span><span style="color:#ae81ff">1</span> ttl<span style="color:#f92672">=</span><span style="color:#ae81ff">64</span> time<span style="color:#f92672">=</span><span style="color:#ae81ff">0</span>.652 ms</code></pre></div>
+<p>到manager节点上，让<code>c1</code> ping <code>tasks.c</code>，<code>tasks.c</code>是之前创建的service <code>c</code>的DNS name：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ docker exec c1 ping -c <span style="color:#ae81ff">2</span> tasks.c
+PING tasks.c <span style="color:#f92672">(</span><span style="color:#ae81ff">10</span>.0.2.8<span style="color:#f92672">)</span>: <span style="color:#ae81ff">56</span> data bytes
+<span style="color:#ae81ff">64</span> bytes from <span style="color:#ae81ff">10</span>.0.2.8: seq<span style="color:#f92672">=</span><span style="color:#ae81ff">0</span> ttl<span style="color:#f92672">=</span><span style="color:#ae81ff">64</span> time<span style="color:#f92672">=</span><span style="color:#ae81ff">2</span>.772 ms
+<span style="color:#ae81ff">64</span> bytes from <span style="color:#ae81ff">10</span>.0.2.8: seq<span style="color:#f92672">=</span><span style="color:#ae81ff">1</span> ttl<span style="color:#f92672">=</span><span style="color:#ae81ff">64</span> time<span style="color:#f92672">=</span><span style="color:#ae81ff">0</span>.694 ms</code></pre></div>
+<p>到manager节点上，让<code>c1</code> 查询 <code>tasks.c</code>的DNS name，可以看到<code>tasks.c</code>有两条记录：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ docker exec c1 nslookup -type<span style="color:#f92672">=</span>a tasks.c
+Server:		<span style="color:#ae81ff">127</span>.0.0.11
+Address:	<span style="color:#ae81ff">127</span>.0.0.11:53
+
+Non-authoritative answer:
+Name:	tasks.c
+Address: <span style="color:#ae81ff">10</span>.0.2.7
+Name:	tasks.c
+Address: <span style="color:#ae81ff">10</span>.0.2.8</code></pre></div>
+<p>到manager节点上，查看service <code>c</code>的task，看到有<code>c.1</code>、<code>c.2</code>两个task，分别部署在两个节点上：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ docker service ps c
+ID            NAME  IMAGE           NODE            DESIRED STATE  CURRENT STATE           ERROR  PORTS
+p5n70vhtnz2f  c.1   busybox:latest  docker-learn-1  Running        Running <span style="color:#ae81ff">17</span> minutes ago
+byuoox1t7cve  c.2   busybox:latest  docker-learn-2  Running        Running <span style="color:#ae81ff">17</span> minutes ago</code></pre></div>
+<p>到<code>c.1</code> task所在的节点上，查看task <code>c.1</code>的容器名：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ docker ps -f name<span style="color:#f92672">=</span>c.1
+CONTAINER ID  IMAGE           COMMAND  CREATED         STATUS         PORTS  NAMES
+795a3bd3c20a  busybox:latest  <span style="color:#e6db74">&#34;sh&#34;</span>     <span style="color:#ae81ff">21</span> minutes ago  Up <span style="color:#ae81ff">21</span> minutes         c.1.p5n70vhtnz2f5q8p2pcvbyfmw</code></pre></div>
+<p>然后在<code>c1</code>里ping task <code>c.1</code>的容器名：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ docker exec c1 ping -c <span style="color:#ae81ff">2</span> c.1.p5n70vhtnz2f5q8p2pcvbyfmw
+PING c.1.p5n70vhtnz2f5q8p2pcvbyfmw <span style="color:#f92672">(</span><span style="color:#ae81ff">10</span>.0.2.7<span style="color:#f92672">)</span>: <span style="color:#ae81ff">56</span> data bytes
+<span style="color:#ae81ff">64</span> bytes from <span style="color:#ae81ff">10</span>.0.2.7: seq<span style="color:#f92672">=</span><span style="color:#ae81ff">0</span> ttl<span style="color:#f92672">=</span><span style="color:#ae81ff">64</span> time<span style="color:#f92672">=</span><span style="color:#ae81ff">0</span>.198 ms
+<span style="color:#ae81ff">64</span> bytes from <span style="color:#ae81ff">10</span>.0.2.7: seq<span style="color:#f92672">=</span><span style="color:#ae81ff">1</span> ttl<span style="color:#f92672">=</span><span style="color:#ae81ff">64</span> time<span style="color:#f92672">=</span><span style="color:#ae81ff">0</span>.128 ms</code></pre></div>
+<p>你同样可以：</p>
+
+<ul>
+<li>在<code>c2</code>里：
+
+<ol>
+<li>ping <code>c1</code></li>
+<li>ping <code>tasks.c</code></li>
+<li>ping task <code>c.1</code>、<code>c.2</code>的容器</li>
+</ol></li>
+<li>在task <code>c.1</code>、<code>c.2</code>的容器里：
+
+<ol>
+<li>ping <code>c1</code>、<code>c2</code>；</li>
+<li>ping <code>tasks.c</code></li>
+<li>ping task <code>c.1</code>、<code>c.2</code>的容器</li>
+</ol></li>
+</ul>
+
+<h2 id="注意">注意</h2>
+
+<p>通过<code>docker run</code> / <code>docker compose up</code>创建的容器的名字，要保证在整个集群里是唯一的。docker 不会帮你检查名称冲突的情况，如果名称冲突了那么会得到错误的DNS结果。</p>
+
+<h2 id="参考资料">参考资料</h2>
+
+<ul>
+<li><a href="https://docs.docker.com/network/overlay/">Use overlay networks</a></li>
+<li><a href="https://docs.docker.com/network/network-tutorial-overlay/#use-an-overlay-network-for-standalone-containers">Use an overlay network for standalone containers</a></li>
+</ul></article>
+    <footer class="post-footer">
+      
+      <ul class="post-tags">
+        
+          <li><a href="https://chanjarster.github.io/tags/docker"><span class="tag">Docker</span></a></li>
+        
+      </ul>
+      
+      <p class="post-copyright">
+        
+      </p>
+    </footer>
+    
+      
+    
+  </section>
+  <footer class="site-footer">
+  <p>© 2017-2019 颇忒脱的技术博客</p>
+  <p>Powered by <a href="https://gohugo.io/" target="_blank">Hugo</a> with theme <a href="https://github.com/laozhu/hugo-nuo" target="_blank">Nuo</a>.</p>
+  
+</footer>
+
+
+
+<script async src="//cdn.bootcss.com/video.js/6.2.8/alt/video.novtt.min.js"></script>
+<script async src="//cdn.bootcss.com/mathjax/2.7.2/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    tex2jax: {
+      inlineMath: [['$','$'], ['\\(','\\)']],
+      displayMath: [['$$','$$'], ['\\[','\\]']],
+      processEscapes: true,
+      processEnvironments: true,
+      skipTags: ['script', 'noscript', 'style', 'textarea', 'pre'],
+      TeX: { equationNumbers: { autoNumber: "AMS" },
+      extensions: ["AMSmath.js", "AMSsymbols.js"] }
+    }
+  });
+</script>
+<script type="text/x-mathjax-config">
+  // Fix <code> tags after MathJax finishes running. This is a
+  // hack to overcome a shortcoming of Markdown. Discussion at
+  // https://github.com/mojombo/jekyll/issues/199
+  MathJax.Hub.Queue(() => {
+    MathJax.Hub.getAllJax().map(v => v.SourceElement().parentNode.className += ' has-jax');
+  });
+</script>
+
+<script src="https://chanjarster.github.io/js/bundle.273f9ac6f0.js"></script>
+
+
+
+
+  </body>
+</html>
