@@ -5,7 +5,7 @@
   <meta charset="utf-8" />
 
   
-  <title>利用VisualVm和JMX远程监控Java进程</title>
+  <title>Docker Swarm基本命令清单</title>
 
   
   
@@ -16,7 +16,7 @@
 
   
   <meta name="author" content="颇忒脱" />
-  <meta name="description" content="在前一篇文章里我们发现通过jstatd &#43; VisualVm的方式，不能获得Java进程的CPU、线程、MBean信息，这时JMX就要登场了。
+  <meta name="description" content="Docker swarm基本命令，更复杂的生产环境请仔细参阅文档。
 
 " />
 
@@ -24,8 +24,8 @@
   
     <meta name="twitter:card" content="summary" />
     <meta name="twitter:site" content="@gohugoio" />
-    <meta name="twitter:title" content="利用VisualVm和JMX远程监控Java进程" />
-    <meta name="twitter:description" content="在前一篇文章里我们发现通过jstatd &#43; VisualVm的方式，不能获得Java进程的CPU、线程、MBean信息，这时JMX就要登场了。
+    <meta name="twitter:title" content="Docker Swarm基本命令清单" />
+    <meta name="twitter:description" content="Docker swarm基本命令，更复杂的生产环境请仔细参阅文档。
 
 " />
     <meta name="twitter:image" content="https://chanjarster.github.io/img/avatar.jpg" />
@@ -33,11 +33,11 @@
 
   
   <meta property="og:type" content="article" />
-  <meta property="og:title" content="利用VisualVm和JMX远程监控Java进程" />
-  <meta property="og:description" content="在前一篇文章里我们发现通过jstatd &#43; VisualVm的方式，不能获得Java进程的CPU、线程、MBean信息，这时JMX就要登场了。
+  <meta property="og:title" content="Docker Swarm基本命令清单" />
+  <meta property="og:description" content="Docker swarm基本命令，更复杂的生产环境请仔细参阅文档。
 
 " />
-  <meta property="og:url" content="https://chanjarster.github.io/post/visualvm-remote-monitoring-jmx/" />
+  <meta property="og:url" content="https://chanjarster.github.io/post/docker/swarm-command-list/" />
   <meta property="og:image" content="https://chanjarster.github.io/img/avatar.jpg" />
 
 
@@ -46,7 +46,7 @@
 <meta name="generator" content="Hugo 0.49.2" />
 
 
-<link rel="canonical" href="https://chanjarster.github.io/post/visualvm-remote-monitoring-jmx/" />
+<link rel="canonical" href="https://chanjarster.github.io/post/docker/swarm-command-list/" />
 
 <meta name="renderer" content="webkit" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
@@ -227,92 +227,110 @@
 
   <section class="main post-detail">
     <header class="post-header">
-      <h1 class="post-title">利用VisualVm和JMX远程监控Java进程</h1>
-      <p class="post-meta">@颇忒脱 · Oct 10, 2018 · 1 min read</p>
+      <h1 class="post-title">Docker Swarm基本命令清单</h1>
+      <p class="post-meta">@颇忒脱 · Jan 9, 2019 · 1 min read</p>
     </header>
-    <article class="post-content"><p>在<a href="../visualvm-remote-monitoring/">前一篇文章</a>里我们发现通过jstatd + VisualVm的方式，不能获得Java进程的CPU、线程、MBean信息，这时JMX就要登场了。</p>
+    <article class="post-content"><p>Docker swarm基本命令，更复杂的生产环境请仔细参阅文档。</p>
 
 <p></p>
 
-<p>自Java 6开始，Java程序启动时都会在JVM内部启动一个JMX agent，JMX agent会启动一个MBean server组件，把MBeans（Java平台标准的MBean + 你自己创建的MBean）注册到它里面，然后暴露给JMX client管理。简单来说就是每个Java程序都可以通过JMX来被JMX client管理，而且这一切都是自动发生的。而VisualVm就是一个JMX Client。</p>
+<h2 id="创建swarm">创建Swarm</h2>
 
-<p>VisualVm能够自动发现本机的Java进程，如果要监控远程主机上的Java进程则需要<strong>显式地配置JMX连接</strong>，下面讲配置方法：</p>
+<p>准备两台服务器A、B</p>
 
-<h2 id="第一步-与启动相关的system-properties">第一步：与启动相关的System Properties</h2>
+<p>给服务器安装docker</p>
 
-<p>要给远程主机上的监控的Java进程在启动时必须带上几个JMX相关的System Properties（常用的几个）：</p>
+<p>确保所有服务器的防火墙开启了以下端口</p>
 
 <ul>
-<li><code>com.sun.management.jmxremote.port</code>, 指定暴露的JMX端口。</li>
-<li><code>com.sun.management.jmxremote.rmi.port</code>, 指定RMI connector端口，可以和<code>com.sun.management.jmxremote.port</code>保持一致。</li>
-<li><code>com.sun.management.jmxremote.ssl</code>, 指定是否使用SSL，在开发环境下可以是false，但是在生产环境下<strong>强烈建议</strong>为true。</li>
-<li><code>com.sun.management.jmxremote.authenticate</code>, 指定是否需要密码才能够创建JMX连接。</li>
+<li>TCP/2377</li>
+<li>TCP/7946</li>
+<li>UDP/7946</li>
+<li>UDP/4789</li>
 </ul>
 
-<p>为了演示目的，我们用Tomcat来测试，不开启ssl和authenticate，把JMX端口设置为<code>1100</code>，执行下列命令启动Tomcat：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">CATALINA_OPTS<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;-Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false -Dcom.sun.management.jmxremote.port=1100 -Dcom.sun.management.jmxremote.rmi.port=1100 -Djava.rmi.server.hostname=k8s-oracle&#39;</span> bin/startup.sh</code></pre></div>
-<p>注意上面有一个<code>-Djava.rmi.server.hostname=k8s-oracle</code>参数，JMX agent本质上也是一个RMI server，因此需要指定这个参数，否则就会像<a href="../visualvm-remote-monitoring/">利用VisualVm远程监控Java进程</a>里提到的一样，VisualVm无法连接到该Java进程。</p>
+<p>ssh到A上，执行<code>docker swarm init</code>，A将作为manager，会输出类似下列的内容：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-txt" data-lang="txt">Swarm initialized: current node (dxn1zf6l61qsb1josjja83ngz) is now a manager.
 
-<p>PS. 使用SSL方式保护JMX连接的方法会另写文章说明。</p>
+To add a worker to this swarm, run the following command:
 
-<h2 id="第二步-创建jmx连接">第二步：创建JMX连接</h2>
+    docker swarm join \
+    --token SWMTKN-1-49nj1cmql0jkz5s954yi3oex3nedyz0fb0xx14ie39trti4wxv-8vxv8rssmk743ojnwacrr2e7c \
+    &lt;ip&gt;:2377
 
-<p>在远程主机上右键，选择添加JMX连接（在下图里出现了之前启动的Tomcat进程）：</p>
+To add a manager to this swarm, run &#39;docker swarm join-token manager&#39; and follow the instructions.</code></pre></div>
+<p>ssh到B上，执行上面提到的<code>docker swarm join ...</code>指令，B将作为worker</p>
 
-<p><img src="visualvm-01.png" alt="Step 1" /></p>
+<p>执行<code>docker node ls</code>，查看Swarm集群node</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-txt" data-lang="txt">ID                            HOSTNAME            STATUS              AVAILABILITY        MANAGER STATUS      ENGINE VERSION
+yd05eu5uvcqm0pbi8g6r25b2c *   docker-learn-1      Ready               Active              Leader              18.09.0
+jkycxb3c7swrn5t37fp1d1xwb     docker-learn-2      Ready               Active                                  18.09.0</code></pre></div>
+<h2 id="node管理">node管理</h2>
 
-<p>根据Java进程启动时设置的JMX System Properties配置JMX连接：</p>
+<h3 id="添加manager">添加manager</h3>
 
-<p><img src="visualvm-02.png" alt="Step 2" /></p>
+<p>生产环境中应该有多个manager来保证高可用，manager的数量应该是单数，比如1、3、5。</p>
 
-<p>成功后你会发现多了一个进程，小图标上有JMX字样：</p>
+<p>到manager机器上，执行<code>docker swarm join-token manager</code>，得到以下输出：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-txt" data-lang="txt">To add a manager to this swarm, run the following command:
 
-<p><img src="visualvm-03.png" alt="Step 3" /></p>
+    docker swarm join --token SWMTKN-1-0tfd7v1bu05od7fdsedqdu6tuny6ozjmfrq3hiwmc1xb5yaxix-e7kpq257cyblpdna9j89cjgyw &lt;ip&gt;:2377</code></pre></div>
+<p>到新机器上执行上述指令，添加manager</p>
 
-<p>双击这个进程，你就能看到CPU、线程、还有MBeans了。</p>
+<h3 id="添加worker">添加worker</h3>
 
-<h2 id="但是visual-gc没有内容">但是Visual GC没有内容</h2>
+<p>到manager node上执行<code>docker swarm join-token worker</code>，得到以下输出：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-txt" data-lang="txt">To add a worker to this swarm, run the following command:
 
-<p>使用上面的步骤建立完JMX连接之后，你会发现Visual GC没有内容：</p>
+    docker swarm join --token SWMTKN-1-0tfd7v1bu05od7fdsedqdu6tuny6ozjmfrq3hiwmc1xb5yaxix-1fc3updzbx9tssop55yznh79w &lt;ip&gt;:2377</code></pre></div>
+<p>到新机器上执行上述指令，添加worker</p>
 
-<p><img src="no-visual-gc.png" alt="Step 1" /></p>
+<h3 id="更新节点availability">更新节点AVAILABILITY</h3>
 
-<p>解决办法要启动jstatd。</p>
-
-<p>按照<a href="../visualvm-remote-monitoring/">利用VisualVm远程监控Java进程</a>的方法先建立远程主机。</p>
-
-<p>给这个远程主机添加JMX连接：</p>
-
-<p><img src="visualvm-04.png" alt="Step 1" /></p>
-
-<p><img src="visualvm-05.png" alt="Step 2" /></p>
-
-<p>然后你会发现多了一个JMX图标的Java进程：</p>
-
-<p><img src="visualvm-06.png" alt="Step 3" /></p>
-
-<p>在这个进程里就能看到Visual GC了。</p>
-
-<p><img src="visual-gc.png" alt="Step 4" /></p>
-
-<h2 id="参考资料">参考资料</h2>
+<p>节点AVAILABILITY有三种状态：</p>
 
 <ul>
-<li><a href="https://htmlpreview.github.io/?https://raw.githubusercontent.com/visualvm/visualvm.java.net.backup/master/www/jmx_connections.html">VisualVm - Connecting to JMX Agents Explicitly</a></li>
-<li><a href="https://stackoverflow.com/a/21552812/1287790">Why Java opens 3 ports when JMX is configured?</a></li>
-<li><a href="https://docs.oracle.com/javase/9/management/monitoring-and-management-using-jmx-technology.htm#JSMGM-GUID-F08985BB-629A-4FBF-A0CB-8762DF7590E0">JMX - Remote Monitoring and Management</a></li>
-<li><a href="https://docs.oracle.com/javase/8/docs/technotes/guides/jmx/overview/agent.html">Using JMX Agents</a></li>
-<li><a href="https://htmlpreview.github.io/?https://raw.githubusercontent.com/visualvm/visualvm.java.net.backup/master/www/mbeans_tab.html">MBeans Tab</a></li>
+<li><code>ACTIVE</code>：可以安排新的工作负载到这个节点</li>
+<li><code>PAUSE</code>：不会安排新的工作负载到这个节点，但是已经存在的负载继续运行</li>
+<li><code>DRAIN</code>：不会安排新的工作负载到这个节点，已经存在的负载会被驱逐到其他node上</li>
+</ul>
+
+<p>注意，上面提到的禁止安排、驱逐工作负载仅针对于<code>docker service create ...</code>、<code>docker stack deploy ...</code>创建的工作负载。对于<code>docker run ...</code>、<code>docker compose up ...</code>的工作负载不起作用。</p>
+
+<p>运行以下命令更新节点的AVAILIBALITY：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">docker node update --availability &lt;active|pause|drain&gt; &lt;NODE-ID&gt;</code></pre></div>
+<p>比如：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">docker node update --availability drain &lt;NODE-ID&gt;</code></pre></div>
+<h3 id="禁止manager承担工作负载">禁止manager承担工作负载</h3>
+
+<p>默认情况下manager也承担工作负载，在生产环境中这样不太好，因为manager可能会因为工作负载过多而变得卡顿，导致无法工作。</p>
+
+<p>解决办法很简单，将manager的AVAILIBALITY变成<code>DRAIN</code>就行了</p>
+
+<h3 id="删除节点">删除节点</h3>
+
+<p>到服务器上执行 <code>docker swarm leave</code></p>
+
+<p>如果是manager，则可能会报warning，你只需要这样<code>docker swarm leave --force</code></p>
+
+<h3 id="清理swarm">清理swarm</h3>
+
+<p>删除所有manager和worker节点，swarm就被清理掉了。</p>
+
+<h2 id="参考文档">参考文档</h2>
+
+<ul>
+<li><a href="https://docs.docker.com/engine/swarm/swarm-tutorial/">Getting started with swarm mode</a></li>
+<li><a href="https://docs.docker.com/engine/swarm/swarm-tutorial/create-swarm/">Create a swarm</a></li>
+<li><a href="https://docs.docker.com/engine/swarm/swarm-tutorial/add-nodes/">Add nodes to the swarm</a></li>
+<li><a href="https://docs.docker.com/engine/swarm/manage-nodes/">Manage nodes in a swarm</a></li>
+<li><a href="https://docs.docker.com/engine/swarm/admin_guide/">Administer and maintain a swarm of Docker Engines</a></li>
 </ul></article>
     <footer class="post-footer">
       
       <ul class="post-tags">
         
-          <li><a href="https://chanjarster.github.io/tags/java"><span class="tag">Java</span></a></li>
-        
-          <li><a href="https://chanjarster.github.io/tags/visualvm"><span class="tag">Visualvm</span></a></li>
-        
-          <li><a href="https://chanjarster.github.io/tags/jmx"><span class="tag">Jmx</span></a></li>
+          <li><a href="https://chanjarster.github.io/tags/docker"><span class="tag">Docker</span></a></li>
         
       </ul>
       
