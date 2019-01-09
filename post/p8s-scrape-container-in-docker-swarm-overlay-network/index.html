@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+<head>
+
+  <meta charset="utf-8" />
+
+  
+  <title>Prometehus监控Docker Swarm Overlay网络中的容器</title>
+
+  
+  
+
+
+
+
+
+  
+  <meta name="author" content="颇忒脱" />
+  <meta name="description" content="介绍如何使用Prometheus的dns service discovery机制，自动发现并抓取Docker swarm overlay网络中的容器所提供的指标。
+
+" />
+
+  
+  
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:site" content="@gohugoio" />
+    <meta name="twitter:title" content="Prometehus监控Docker Swarm Overlay网络中的容器" />
+    <meta name="twitter:description" content="介绍如何使用Prometheus的dns service discovery机制，自动发现并抓取Docker swarm overlay网络中的容器所提供的指标。
+
+" />
+    <meta name="twitter:image" content="https://chanjarster.github.io/img/avatar.jpg" />
+  
+
+  
+  <meta property="og:type" content="article" />
+  <meta property="og:title" content="Prometehus监控Docker Swarm Overlay网络中的容器" />
+  <meta property="og:description" content="介绍如何使用Prometheus的dns service discovery机制，自动发现并抓取Docker swarm overlay网络中的容器所提供的指标。
+
+" />
+  <meta property="og:url" content="https://chanjarster.github.io/post/p8s-scrape-container-in-docker-swarm-overlay-network/" />
+  <meta property="og:image" content="https://chanjarster.github.io/img/avatar.jpg" />
+
+
+
+
+<meta name="generator" content="Hugo 0.49.2" />
+
+
+<link rel="canonical" href="https://chanjarster.github.io/post/p8s-scrape-container-in-docker-swarm-overlay-network/" />
+
+<meta name="renderer" content="webkit" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<meta name="format-detection" content="telephone=no,email=no,adress=no" />
+<meta http-equiv="Cache-Control" content="no-transform" />
+
+
+<meta name="robots" content="index,follow" />
+<meta name="referrer" content="origin-when-cross-origin" />
+
+
+
+
+
+
+
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="颇忒脱的技术博客" />
+<meta name="msapplication-tooltip" content="颇忒脱的技术博客" />
+<meta name='msapplication-navbutton-color' content="#5fbf5e" />
+<meta name="msapplication-TileColor" content="#5fbf5e" />
+<meta name="msapplication-TileImage" content="/img/tile-image-windows.png" />
+<link rel="icon" href="https://chanjarster.github.io/img/favicon.ico" />
+<link rel="icon" type="image/png" sizes="16x16" href="https://chanjarster.github.io/img/favicon-16x16.png" />
+<link rel="icon" type="image/png" sizes="32x32" href="https://chanjarster.github.io/img/favicon-32x32.png" />
+<link rel="icon" sizes="192x192" href="https://chanjarster.github.io/img/touch-icon-android.png" />
+<link rel="apple-touch-icon" href="https://chanjarster.github.io/img/touch-icon-apple.png" />
+<link rel="mask-icon" href="https://chanjarster.github.io/img/safari-pinned-tab.svg" color="#5fbf5e" />
+
+
+
+<link rel="stylesheet" href="//cdn.bootcss.com/video.js/6.2.8/alt/video-js-cdn.min.css" />
+
+<link rel="stylesheet" href="https://chanjarster.github.io/css/bundle.8e3aef2bc5.css" />
+
+
+  
+  <!--[if lt IE 9]>
+    <script src="//cdn.bootcss.com/html5shiv/3.7.3/html5shiv.min.js"></script>
+    <script src="//cdn.bootcss.com/respond.js/1.4.2/respond.min.js"></script>
+    <script src="//cdn.bootcss.com/video.js/6.2.8/ie8/videojs-ie8.min.js"></script>
+  <![endif]-->
+
+<!--[if lte IE 11]>
+    <script src="//cdn.bootcss.com/classlist/1.1.20170427/classList.min.js"></script>
+  <![endif]-->
+
+
+<script src="//cdn.bootcss.com/object-fit-images/3.2.3/ofi.min.js"></script>
+
+
+<script src="//cdn.bootcss.com/smooth-scroll/12.1.4/js/smooth-scroll.polyfills.min.js"></script>
+
+
+</head>
+  <body>
+    
+    <div class="suspension">
+      <a title="Go to top" class="to-top is-hide"><span class="icon icon-up"></span></a>
+      
+        
+      
+    </div>
+    
+    
+  <header class="site-header">
+  <img class="avatar" src="https://chanjarster.github.io/img/avatar2.jpg" alt="Avatar">
+  
+  <h2 class="title">颇忒脱的技术博客</h2>
+  
+  <p class="subtitle"></p>
+  <button class="menu-toggle" type="button">
+    <span class="icon icon-menu"></span>
+  </button>
+  <nav class="site-menu collapsed">
+    <h2 class="offscreen">Main Menu</h2>
+    <ul class="menu-list">
+      
+      
+      
+      
+        <li class="menu-item
+            
+            
+            
+              is-active
+            ">
+            <a href="https://chanjarster.github.io/">Home</a>
+          </li>
+      
+        <li class="menu-item
+            
+            
+            ">
+            <a href="https://chanjarster.github.io/tags/%E6%94%B6%E8%97%8F%E5%A4%B9/">Bookmarks</a>
+          </li>
+      
+        <li class="menu-item
+            
+            
+            ">
+            <a href="https://github.com/chanjarster">Works</a>
+          </li>
+      
+        <li class="menu-item
+            
+            
+            ">
+            <a href="https://chanjarster.github.io/tags/">Tags</a>
+          </li>
+      
+        <li class="menu-item
+            
+            
+            ">
+            <a href="https://chanjarster.github.io/links/">Links</a>
+          </li>
+      
+    </ul>
+  </nav>
+  <nav class="social-menu collapsed">
+    <h2 class="offscreen">Social Networks</h2>
+    <ul class="social-list">
+
+      
+
+      
+      <li class="social-item">
+        <a href="//github.com/chanjarster" title="GitHub"><span class="icon icon-github"></span></a>
+      </li>
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      <li class="social-item">
+        <a rel="alternate" type="application/rss+xml" href="https://chanjarster.github.io/index.xml"><span class="icon icon-rss" title="RSS"></span></a>
+      </li>
+
+    </ul>
+  </nav>
+</header>
+
+  <section class="main post-detail">
+    <header class="post-header">
+      <h1 class="post-title">Prometehus监控Docker Swarm Overlay网络中的容器</h1>
+      <p class="post-meta">@颇忒脱 · Jan 9, 2019 · 1 min read</p>
+    </header>
+    <article class="post-content"><p>介绍如何使用Prometheus的dns service discovery机制，自动发现并抓取Docker swarm overlay网络中的容器所提供的指标。</p>
+
+<p></p>
+
+<p>使用<code>docker service create</code>/<code>docker stack deploy</code>能够很方便管理多个docker host，并且对应用做扩缩容。那么我们如何抓取这些动态创建的容器应用所提供的指标呢？</p>
+
+<p>在<a href="../prom-grafana-jvm/">《使用Prometheus+Grafana监控JVM》</a>一文里我们使用了<code>static_config</code>静态配置指标抓取目标，这显然在docker swarm环境里是不合适的。我们需要一种动态发现容器的方法。</p>
+
+<p>解决思路如下：</p>
+
+<ol>
+<li>使用<a href="../docker-overlay-network/">《一种生产环境Docker Overlay Network的配置方案》</a>提到的方法配置overlay网络，并且把docker service、stack、standalone container都挂到这个overlay网络里。</li>
+<li>把Prometheus也挂到这个overlay网络里。</li>
+<li>使用Prometheus的DNS service discovery机制，半自动的发现容器。</li>
+</ol>
+
+<p>本文所提到的脚本可以在<a href="https://github.com/chanjarster/prometheus-learn/tree/master/docker-swarm-sd">这里</a>下载</p>
+
+<p>下面构建一个实验环境以说明方法。</p>
+
+<h2 id="第一步-构建overlay-network">第一步：构建overlay network</h2>
+
+<p>根据<a href="../docker-overlay-network/">《一种生产环境Docker Overlay Network的配置方案》</a>里提到的方法，创建Docker swarm，和一个overlay网络，名字叫做<code>test-overlay</code>：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">docker network create -d overlay --attachable test-overlay</code></pre></div>
+<h2 id="第二步-启动容器">第二步：启动容器</h2>
+
+<p>为了方便起见，使用<a href="https://github.com/chanjarster/prometheus-mock-data">prometheus-mock-data</a>来模拟一个提供指标的应用，这样就能够避免繁琐的jmx-exporter。</p>
+
+<p>1) 新建一个目录，名字叫做docker-swarm-demo</p>
+
+<p>2) 新建一个文件<code>scrape-data.txt</code>，这个文件就是我们要提供的假指标，内容如下：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-txt" data-lang="txt"># HELP x mock metric
+# TYPE x gauge
+x 1
+---
+# HELP x mock metric
+# TYPE x gauge
+x 2
+---
+# HELP x mock metric
+# TYPE x gauge
+x 3
+---
+# HELP x mock metric
+# TYPE x gauge
+x 4</code></pre></div>
+<p>3) 为了演示docker service和standalone container都能被采集到，会启动这两种形式的容器：</p>
+
+<p>4) 使用<code>docker service create</code>启动一个service，replicas=3（注意<code>--name</code>参数）：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">docker service create <span style="color:#ae81ff">\
+</span><span style="color:#ae81ff"></span>    --name mock <span style="color:#ae81ff">\
+</span><span style="color:#ae81ff"></span>    --replicas <span style="color:#ae81ff">3</span> <span style="color:#ae81ff">\
+</span><span style="color:#ae81ff"></span>    --network test-overlay <span style="color:#ae81ff">\
+</span><span style="color:#ae81ff"></span>    --limit-memory 96M <span style="color:#ae81ff">\
+</span><span style="color:#ae81ff"></span>    --mount type<span style="color:#f92672">=</span>bind,src<span style="color:#f92672">=</span><span style="color:#66d9ef">$(</span>pwd<span style="color:#66d9ef">)</span>/scrape-data.txt,dst<span style="color:#f92672">=</span>/home/java-app/etc/scrape-data.txt <span style="color:#ae81ff">\
+</span><span style="color:#ae81ff"></span>    chanjarster/prometheus-mock-data:latest</code></pre></div>
+<p>4) 使用<code>docker run</code>启动一个standalone container（注意<code>--name</code>参数）：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">docker run -d <span style="color:#ae81ff">\
+</span><span style="color:#ae81ff"></span>    -v <span style="color:#66d9ef">$(</span>pwd<span style="color:#66d9ef">)</span>/scrape-data.txt:/home/java-app/etc/scrape-data.txt <span style="color:#ae81ff">\
+</span><span style="color:#ae81ff"></span>    --network test-overlay <span style="color:#ae81ff">\
+</span><span style="color:#ae81ff"></span>    --name standalone-mock <span style="color:#ae81ff">\
+</span><span style="color:#ae81ff"></span>    chanjarster/prometheus-mock-data:latest</code></pre></div>
+<h2 id="第三步-启动prometheus">第三步：启动Prometheus</h2>
+
+<p>1) 在之前新建目录docker-swarm-demo里创建文件<code>prom-config.yml</code>，内容如下：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-yaml" data-lang="yaml">scrape_configs:
+  - job_name: <span style="color:#e6db74">&#39;swarm-service&#39;</span>
+    scrape_interval: 30s
+    dns_sd_configs:
+      - names:
+        - tasks.mock
+        - standalone-mock
+        type: A
+        port: <span style="color:#ae81ff">8080</span>
+    relabel_configs:
+      - source_labels: [<span style="color:#e6db74">&#39;__meta_dns_name&#39;</span>]
+        target_label: <span style="color:#e6db74">&#39;service&#39;</span></code></pre></div>
+<p>注意到上面的两个关键配置：</p>
+
+<ol>
+<li>设定了两个DNS A记录，<code>tasks.mock</code>和<code>standalone-mock</code>。
+<code>tasks.mock</code>是Docker自动为docker service <code>mock</code>创建的，而<code>standalone-mock</code>就是容器名。文章最开始说到的半自动就是这个意思，我们得事先知道DNS A记录有哪些，然后让Prometheus去发现这些DNS A记录背后对应的容器有哪些。</li>
+<li>把<code>__meta_dns_name</code>的值设置到指标的<code>service</code> 这个label里。</li>
+</ol>
+
+<p>2) 启动Prometheus：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">docker run -d <span style="color:#ae81ff">\
+</span><span style="color:#ae81ff"></span>    --name<span style="color:#f92672">=</span>prometheus <span style="color:#ae81ff">\
+</span><span style="color:#ae81ff"></span>    --network test-overlay <span style="color:#ae81ff">\
+</span><span style="color:#ae81ff"></span>    -p <span style="color:#ae81ff">9090</span>:9090 <span style="color:#ae81ff">\
+</span><span style="color:#ae81ff"></span>    -v <span style="color:#66d9ef">$(</span>pwd<span style="color:#66d9ef">)</span>:/prometheus-config <span style="color:#ae81ff">\
+</span><span style="color:#ae81ff"></span>    -v <span style="color:#66d9ef">$(</span>pwd<span style="color:#66d9ef">)</span>/prom-data:/prometheus <span style="color:#ae81ff">\
+</span><span style="color:#ae81ff"></span>    prom/prometheus --config.file<span style="color:#f92672">=</span>/prometheus-config/prom-config.yml</code></pre></div>
+<p>3) 访问 <a href="http://localhost:9090">http://localhost:9090</a> 看看Prometheus是否启动成功，在输入框里输入x然后执行，应该可以看到如下图的结果：</p>
+
+<p><img src="prom.png" alt="" /></p>
+
+<p>其中3个instance是属于<code>tasks.mock</code>的，还有一个则是standalone container（如果没有看到4个instance，那么等一会儿再试）。</p></article>
+    <footer class="post-footer">
+      
+      <ul class="post-tags">
+        
+          <li><a href="https://chanjarster.github.io/tags/docker"><span class="tag">Docker</span></a></li>
+        
+          <li><a href="https://chanjarster.github.io/tags/prometheus"><span class="tag">Prometheus</span></a></li>
+        
+      </ul>
+      
+      <p class="post-copyright">
+        
+      </p>
+    </footer>
+    
+      
+    
+  </section>
+  <footer class="site-footer">
+  <p>© 2017-2019 颇忒脱的技术博客</p>
+  <p>Powered by <a href="https://gohugo.io/" target="_blank">Hugo</a> with theme <a href="https://github.com/laozhu/hugo-nuo" target="_blank">Nuo</a>.</p>
+  
+</footer>
+
+
+
+<script async src="//cdn.bootcss.com/video.js/6.2.8/alt/video.novtt.min.js"></script>
+<script async src="//cdn.bootcss.com/mathjax/2.7.2/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    tex2jax: {
+      inlineMath: [['$','$'], ['\\(','\\)']],
+      displayMath: [['$$','$$'], ['\\[','\\]']],
+      processEscapes: true,
+      processEnvironments: true,
+      skipTags: ['script', 'noscript', 'style', 'textarea', 'pre'],
+      TeX: { equationNumbers: { autoNumber: "AMS" },
+      extensions: ["AMSmath.js", "AMSsymbols.js"] }
+    }
+  });
+</script>
+<script type="text/x-mathjax-config">
+  // Fix <code> tags after MathJax finishes running. This is a
+  // hack to overcome a shortcoming of Markdown. Discussion at
+  // https://github.com/mojombo/jekyll/issues/199
+  MathJax.Hub.Queue(() => {
+    MathJax.Hub.getAllJax().map(v => v.SourceElement().parentNode.className += ' has-jax');
+  });
+</script>
+
+<script src="https://chanjarster.github.io/js/bundle.273f9ac6f0.js"></script>
+
+
+
+
+  </body>
+</html>
