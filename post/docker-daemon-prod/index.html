@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+<head>
+
+  <meta charset="utf-8" />
+
+  
+  <title>Docker Daemon生产环境配置</title>
+
+  
+  
+
+
+
+
+
+  
+  <meta name="author" content="颇忒脱" />
+  <meta name="description" content="一些docker daemon生产环境中要注意的参数配置。
+
+" />
+
+  
+  
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:site" content="@gohugoio" />
+    <meta name="twitter:title" content="Docker Daemon生产环境配置" />
+    <meta name="twitter:description" content="一些docker daemon生产环境中要注意的参数配置。
+
+" />
+    <meta name="twitter:image" content="https://chanjarster.github.io/img/avatar.jpg" />
+  
+
+  
+  <meta property="og:type" content="article" />
+  <meta property="og:title" content="Docker Daemon生产环境配置" />
+  <meta property="og:description" content="一些docker daemon生产环境中要注意的参数配置。
+
+" />
+  <meta property="og:url" content="https://chanjarster.github.io/post/docker-daemon-prod/" />
+  <meta property="og:image" content="https://chanjarster.github.io/img/avatar.jpg" />
+
+
+
+
+<meta name="generator" content="Hugo 0.49.2" />
+
+
+<link rel="canonical" href="https://chanjarster.github.io/post/docker-daemon-prod/" />
+
+<meta name="renderer" content="webkit" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<meta name="format-detection" content="telephone=no,email=no,adress=no" />
+<meta http-equiv="Cache-Control" content="no-transform" />
+
+
+<meta name="robots" content="index,follow" />
+<meta name="referrer" content="origin-when-cross-origin" />
+
+
+
+
+
+
+
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="颇忒脱的技术博客" />
+<meta name="msapplication-tooltip" content="颇忒脱的技术博客" />
+<meta name='msapplication-navbutton-color' content="#5fbf5e" />
+<meta name="msapplication-TileColor" content="#5fbf5e" />
+<meta name="msapplication-TileImage" content="/img/tile-image-windows.png" />
+<link rel="icon" href="https://chanjarster.github.io/img/favicon.ico" />
+<link rel="icon" type="image/png" sizes="16x16" href="https://chanjarster.github.io/img/favicon-16x16.png" />
+<link rel="icon" type="image/png" sizes="32x32" href="https://chanjarster.github.io/img/favicon-32x32.png" />
+<link rel="icon" sizes="192x192" href="https://chanjarster.github.io/img/touch-icon-android.png" />
+<link rel="apple-touch-icon" href="https://chanjarster.github.io/img/touch-icon-apple.png" />
+<link rel="mask-icon" href="https://chanjarster.github.io/img/safari-pinned-tab.svg" color="#5fbf5e" />
+
+
+
+<link rel="stylesheet" href="//cdn.bootcss.com/video.js/6.2.8/alt/video-js-cdn.min.css" />
+
+<link rel="stylesheet" href="https://chanjarster.github.io/css/bundle.8e3aef2bc5.css" />
+
+
+  
+  <!--[if lt IE 9]>
+    <script src="//cdn.bootcss.com/html5shiv/3.7.3/html5shiv.min.js"></script>
+    <script src="//cdn.bootcss.com/respond.js/1.4.2/respond.min.js"></script>
+    <script src="//cdn.bootcss.com/video.js/6.2.8/ie8/videojs-ie8.min.js"></script>
+  <![endif]-->
+
+<!--[if lte IE 11]>
+    <script src="//cdn.bootcss.com/classlist/1.1.20170427/classList.min.js"></script>
+  <![endif]-->
+
+
+<script src="//cdn.bootcss.com/object-fit-images/3.2.3/ofi.min.js"></script>
+
+
+<script src="//cdn.bootcss.com/smooth-scroll/12.1.4/js/smooth-scroll.polyfills.min.js"></script>
+
+
+</head>
+  <body>
+    
+    <div class="suspension">
+      <a title="Go to top" class="to-top is-hide"><span class="icon icon-up"></span></a>
+      
+        
+      
+    </div>
+    
+    
+  <header class="site-header">
+  <img class="avatar" src="https://chanjarster.github.io/img/avatar2.jpg" alt="Avatar">
+  
+  <h2 class="title">颇忒脱的技术博客</h2>
+  
+  <p class="subtitle"></p>
+  <button class="menu-toggle" type="button">
+    <span class="icon icon-menu"></span>
+  </button>
+  <nav class="site-menu collapsed">
+    <h2 class="offscreen">Main Menu</h2>
+    <ul class="menu-list">
+      
+      
+      
+      
+        <li class="menu-item
+            
+            
+            
+              is-active
+            ">
+            <a href="https://chanjarster.github.io/">Home</a>
+          </li>
+      
+        <li class="menu-item
+            
+            
+            ">
+            <a href="https://chanjarster.github.io/tags/%E6%94%B6%E8%97%8F%E5%A4%B9/">Bookmarks</a>
+          </li>
+      
+        <li class="menu-item
+            
+            
+            ">
+            <a href="https://github.com/chanjarster">Works</a>
+          </li>
+      
+        <li class="menu-item
+            
+            
+            ">
+            <a href="https://chanjarster.github.io/tags/">Tags</a>
+          </li>
+      
+        <li class="menu-item
+            
+            
+            ">
+            <a href="https://chanjarster.github.io/links/">Links</a>
+          </li>
+      
+    </ul>
+  </nav>
+  <nav class="social-menu collapsed">
+    <h2 class="offscreen">Social Networks</h2>
+    <ul class="social-list">
+
+      
+
+      
+      <li class="social-item">
+        <a href="//github.com/chanjarster" title="GitHub"><span class="icon icon-github"></span></a>
+      </li>
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      <li class="social-item">
+        <a rel="alternate" type="application/rss+xml" href="https://chanjarster.github.io/index.xml"><span class="icon icon-rss" title="RSS"></span></a>
+      </li>
+
+    </ul>
+  </nav>
+</header>
+
+  <section class="main post-detail">
+    <header class="post-header">
+      <h1 class="post-title">Docker Daemon生产环境配置</h1>
+      <p class="post-meta">@颇忒脱 · Jan 11, 2019 · 2 min read</p>
+    </header>
+    <article class="post-content"><p>一些docker daemon生产环境中要注意的参数配置。</p>
+
+<p></p>
+
+<p>本文介绍一些生产环境中dockerd要特别注意的参数，这些参数可以通过在<code>dockerd</code>命令行参数形式给，也可以通过在<code>/etc/docker/daemon.json</code>里配置。本文介绍的就是<code>daemon.json</code>配置方式。</p>
+
+<p>在开始之前，请先查看<code>/etc/docker/daemon.json</code>是否存在，如果不存在则新建一个，内容是<code>{}</code>。然后你要懂JSON文件格式。</p>
+
+<h2 id="如何应用配置">如何应用配置</h2>
+
+<p>下面所讲的配置最好在Docker安装完之后马上做，如果已经有容器运行了，那么先stop掉所有容器，然后再做。</p>
+
+<p>修改完之后重启Docker daemon，比如在Ubuntu 16.04下：<code>sudo systemctl restart docker.service</code>。</p>
+
+<p>然后执行<code>docker info</code>来验证配置是否生效。</p>
+
+<h2 id="registry-mirrors"><code>registry-mirrors</code></h2>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-json" data-lang="json">{
+  <span style="color:#f92672">&#34;registry-mirrors&#34;</span>: []
+}</code></pre></div>
+<p>此参数配置的是Docker registry的镜像网站，国内访问docker hub有时候会抽风，所以配置一个国内的镜像网站能够加速Docker image的下载。</p>
+
+<p>可以使用<a href="https://www.daocloud.io/mirror#accelerator-doc">Daocloud加速器</a>（需注册，使用免费）或者其他云厂商提供的免费的加速服务。它们的原理就是修改<code>registry-mirrors</code>参数。</p>
+
+<h2 id="dns"><code>dns</code></h2>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-json" data-lang="json">{
+  <span style="color:#f92672">&#34;dns&#34;</span>: []
+}</code></pre></div>
+<p>Docker内置了一个DNS Server，它用来做两件事情：</p>
+
+<ol>
+<li>解析docker network里的容器或Service的IP地址</li>
+<li>把解析不了的交给外部DNS Server解析（<code>dns</code>参数设定的地址）</li>
+</ol>
+
+<p>默认情况下，<code>dns</code>参数值为Google DNS nameserver：<code>8.8.8.8</code>和<code>8.8.4.4</code>。我们得改成国内的DNS地址，比如：</p>
+
+<ol>
+<li><code>1.2.4.8</code></li>
+<li>阿里DNS：<code>223.5.5.5</code>和<code>223.6.6.6</code></li>
+<li>114DNS：<code>114.114.114.114</code>和<code>114.114.115.115</code></li>
+</ol>
+
+<p>比如：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-json" data-lang="json">{
+  <span style="color:#f92672">&#34;dns&#34;</span>: [<span style="color:#e6db74">&#34;223.5.5.5&#34;</span>, <span style="color:#e6db74">&#34;223.6.6.6&#34;</span>]
+}</code></pre></div>
+<h2 id="log-driver"><code>log-driver</code></h2>
+
+<p><a href="https://docs.docker.com/config/containers/logging/configure/">Log driver</a>是Docker用来接收来自容器内部<code>stdout/stderr</code>的日志的模块，Docker默认的log driver是<a href="https://docs.docker.com/config/containers/logging/json-file/">JSON File logging driver</a>。这里只讲<code>json-file</code>的配置，其他的请查阅相关文档。</p>
+
+<p><code>json-file</code>会将容器日志存储在docker host machine的<code>/var/lib/docker/containers/&lt;container id&gt;/&lt;container id&gt;-json.log</code>（需要root权限才能够读），既然日志是存在磁盘上的，那么就要磁盘消耗的问题。下面介绍两个关键参数：</p>
+
+<ol>
+<li><code>max-size</code>，单个日志文件最大尺寸，当日志文件超过此尺寸时会滚动，即不再往这个文件里写，而是写到一个新的文件里。默认值是-1，代表无限。</li>
+<li><code>max-files</code>，最多保留多少个日志文件。默认值是1。</li>
+</ol>
+
+<p>根据服务器的硬盘尺寸设定合理大小，比如：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-json" data-lang="json">{
+  <span style="color:#f92672">&#34;log-driver&#34;</span>: <span style="color:#e6db74">&#34;json-file&#34;</span>,
+  <span style="color:#f92672">&#34;log-opts&#34;</span>: {
+    <span style="color:#f92672">&#34;max-size&#34;</span>: <span style="color:#e6db74">&#34;100m&#34;</span>,
+    <span style="color:#f92672">&#34;max-files&#34;</span>:<span style="color:#e6db74">&#34;5&#34;</span>
+  }
+}</code></pre></div>
+<h2 id="storage-driver"><code>storage-driver</code></h2>
+
+<p>Docker推荐使用<a href="https://docs.docker.com/storage/storagedriver/overlayfs-driver/#configure-docker-with-the-overlay-or-overlay2-storage-driver">overlay2</a>作为Storage driver。你可以通过<code>docker info | grep Storage</code>来确认一下当前使用的是什么：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ docker info | grep <span style="color:#e6db74">&#39;Storage&#39;</span>
+Storage Driver: overlay2</code></pre></div>
+<p>如果结果不是overlay2，那你就需要配置一下了：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-json" data-lang="json">{
+  <span style="color:#f92672">&#34;storage-driver&#34;</span>: <span style="color:#e6db74">&#34;overlay2&#34;</span>
+}</code></pre></div>
+<h2 id="mtu"><code>mtu</code></h2>
+
+<p><strong>如果docker host machine的网卡MTU为1500，则不需要此步骤</strong></p>
+
+<p>MTU是一个很容易被忽略的参数，Docker默认的MTU是1500，这也是大多数网卡的MTU值。但是！在虚拟化环境下，docker host machine网卡的MTU可能不是1500，比如在openstack创建的虚拟的网卡的MTU是1450：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ ip link
+<span style="color:#ae81ff">1</span>: ens3: &lt;BROADCAST,MULTICAST,UP,LOWER_UP&gt; mtu <span style="color:#ae81ff">1450</span> qdisc pfifo_fast state UP mode DEFAULT group default qlen <span style="color:#ae81ff">1000</span>
+    link/ether fa:16:3e:71:09:f5 brd ff:ff:ff:ff:ff:ff</code></pre></div>
+<p>当Docker网络的MTU比docker host machine网卡MTU大的时候可能会发生：</p>
+
+<ol>
+<li>容器外出通信失败</li>
+<li>影响网络性能</li>
+</ol>
+
+<p>所以将Docker网络MTU设置成和host machine网卡保持一致就行了，比如：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-json" data-lang="json">{
+  <span style="color:#f92672">&#34;mtu&#34;</span>: <span style="color:#ae81ff">1450</span>
+}</code></pre></div>
+<p>验证：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ ip link
+<span style="color:#ae81ff">3</span>: docker0: &lt;NO-CARRIER,BROADCAST,MULTICAST,UP&gt; mtu <span style="color:#ae81ff">1500</span> qdisc noqueue state DOWN mode DEFAULT group default
+    link/ether <span style="color:#ae81ff">02</span>:42:6b:de:95:71 brd ff:ff:ff:ff:ff:ff</code></pre></div>
+<p>注意到docker0的MTU还是1500，不用惊慌，创建一个容器再观察就变成1450了（下面的veth是容器的虚拟网卡设备）：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ docker run -itd --name busybox --rm busybox
+$ ip link
+<span style="color:#ae81ff">3</span>: docker0: &lt;BROADCAST,MULTICAST,UP,LOWER_UP&gt; mtu <span style="color:#ae81ff">1450</span> qdisc noqueue state UP mode DEFAULT group default
+    link/ether <span style="color:#ae81ff">02</span>:42:6b:de:95:71 brd ff:ff:ff:ff:ff:ff
+<span style="color:#ae81ff">268</span>: vethdf32b1b@if267: &lt;BROADCAST,MULTICAST,UP,LOWER_UP&gt; mtu <span style="color:#ae81ff">1450</span> qdisc noqueue master docker0 state UP mode DEFAULT group default
+    link/ether 1a:d3:8a:3e:d3:dd brd ff:ff:ff:ff:ff:ff link-netnsid <span style="color:#ae81ff">2</span></code></pre></div>
+<p>在到容器里看看它的网卡，MTU也是1450：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ docker exec busybox ip link
+<span style="color:#ae81ff">267</span>: eth0@if268: &lt;BROADCAST,MULTICAST,UP,LOWER_UP,M-DOWN&gt; mtu <span style="color:#ae81ff">1450</span> qdisc noqueue
+    link/ether <span style="color:#ae81ff">02</span>:42:ac:11:00:02 brd ff:ff:ff:ff:ff:ff</code></pre></div>
+<p>关于Overlay network的MTU看<a href="../docker-overlay-network-mtu/">这篇文章</a></p>
+
+<h2 id="参考资料">参考资料</h2>
+
+<ul>
+<li><a href="https://docs.docker.com/engine/reference/commandline/dockerd/">Daemon CLI</a></li>
+<li><a href="https://docs.docker.com/config/containers/logging/configure/">Configure logging drivers</a></li>
+<li><a href="https://docs.docker.com/config/containers/logging/json-file/">JSON File logging driver</a></li>
+<li><a href="https://docs.docker.com/storage/storagedriver/overlayfs-driver/#configure-docker-with-the-overlay-or-overlay2-storage-driver">Use the OverlayFS storage driver</a></li>
+</ul></article>
+    <footer class="post-footer">
+      
+      <ul class="post-tags">
+        
+          <li><a href="https://chanjarster.github.io/tags/docker"><span class="tag">Docker</span></a></li>
+        
+      </ul>
+      
+      <p class="post-copyright">
+        
+      </p>
+    </footer>
+    
+      
+    
+  </section>
+  <footer class="site-footer">
+  <p>© 2017-2019 颇忒脱的技术博客</p>
+  <p>Powered by <a href="https://gohugo.io/" target="_blank">Hugo</a> with theme <a href="https://github.com/laozhu/hugo-nuo" target="_blank">Nuo</a>.</p>
+  
+</footer>
+
+
+
+<script async src="//cdn.bootcss.com/video.js/6.2.8/alt/video.novtt.min.js"></script>
+<script async src="//cdn.bootcss.com/mathjax/2.7.2/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    tex2jax: {
+      inlineMath: [['$','$'], ['\\(','\\)']],
+      displayMath: [['$$','$$'], ['\\[','\\]']],
+      processEscapes: true,
+      processEnvironments: true,
+      skipTags: ['script', 'noscript', 'style', 'textarea', 'pre'],
+      TeX: { equationNumbers: { autoNumber: "AMS" },
+      extensions: ["AMSmath.js", "AMSsymbols.js"] }
+    }
+  });
+</script>
+<script type="text/x-mathjax-config">
+  // Fix <code> tags after MathJax finishes running. This is a
+  // hack to overcome a shortcoming of Markdown. Discussion at
+  // https://github.com/mojombo/jekyll/issues/199
+  MathJax.Hub.Queue(() => {
+    MathJax.Hub.getAllJax().map(v => v.SourceElement().parentNode.className += ' has-jax');
+  });
+</script>
+
+<script src="https://chanjarster.github.io/js/bundle.273f9ac6f0.js"></script>
+
+
+
+
+  </body>
+</html>
