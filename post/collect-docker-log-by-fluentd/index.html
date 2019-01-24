@@ -5,7 +5,7 @@
   <meta charset="utf-8" />
 
   
-  <title>如何抽取公共服务并成功迁移</title>
+  <title>使用Fluentd收集Docker容器日志</title>
 
   
   
@@ -15,8 +15,8 @@
 
 
   
-  <meta name="author" content="颇忒脱" />
-  <meta name="description" content="本文探讨了如何创建并落地一个公共服务的方法。
+  <meta name="author" content="破忒脱" />
+  <meta name="description" content="本文介绍使用Fluentd收集standalone容器日志的方法。
 
 " />
 
@@ -24,8 +24,8 @@
   
     <meta name="twitter:card" content="summary" />
     <meta name="twitter:site" content="@gohugoio" />
-    <meta name="twitter:title" content="如何抽取公共服务并成功迁移" />
-    <meta name="twitter:description" content="本文探讨了如何创建并落地一个公共服务的方法。
+    <meta name="twitter:title" content="使用Fluentd收集Docker容器日志" />
+    <meta name="twitter:description" content="本文介绍使用Fluentd收集standalone容器日志的方法。
 
 " />
     <meta name="twitter:image" content="https://chanjarster.github.io/img/avatar.jpg" />
@@ -33,11 +33,11 @@
 
   
   <meta property="og:type" content="article" />
-  <meta property="og:title" content="如何抽取公共服务并成功迁移" />
-  <meta property="og:description" content="本文探讨了如何创建并落地一个公共服务的方法。
+  <meta property="og:title" content="使用Fluentd收集Docker容器日志" />
+  <meta property="og:description" content="本文介绍使用Fluentd收集standalone容器日志的方法。
 
 " />
-  <meta property="og:url" content="https://chanjarster.github.io/post/extract-public-service/" />
+  <meta property="og:url" content="https://chanjarster.github.io/post/collect-docker-log-by-fluentd/" />
   <meta property="og:image" content="https://chanjarster.github.io/img/avatar.jpg" />
 
 
@@ -46,7 +46,7 @@
 <meta name="generator" content="Hugo 0.49.2" />
 
 
-<link rel="canonical" href="https://chanjarster.github.io/post/extract-public-service/" />
+<link rel="canonical" href="https://chanjarster.github.io/post/collect-docker-log-by-fluentd/" />
 
 <meta name="renderer" content="webkit" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
@@ -227,94 +227,105 @@
 
   <section class="main post-detail">
     <header class="post-header">
-      <h1 class="post-title">如何抽取公共服务并成功迁移</h1>
-      <p class="post-meta">@颇忒脱 · Aug 23, 2018 · 1 min read</p>
+      <h1 class="post-title">使用Fluentd收集Docker容器日志</h1>
+      <p class="post-meta">@破忒脱 · Jan 24, 2019 · 1 min read</p>
     </header>
-    <article class="post-content"><p>本文探讨了如何创建并落地一个公共服务的方法。</p>
+    <article class="post-content"><p>本文介绍使用Fluentd收集standalone容器日志的方法。</p>
 
 <p></p>
 
-<p>在单体到微服务架构的迁移过程中，我们经常会问一个问题：在什么情况下我需要从单体中剥离一部分出来将其作为一个微服务？答案有很多，其中有一个答案就是：我发现好多单体都有相似的功能，我觉得可以把它抽出来做一个公共服务。</p>
+<p>Docker提供了很多<a href="https://docs.docker.com/config/containers/logging/configure/">logging driver</a>，默认情况下使用的<a href="https://docs.docker.com/config/containers/logging/json-file/">json-file</a>，它会把容器打到stdout/stderr的日志收集起来存到json文件中，<code>docker logs</code>所看到的日志就是来自于这些json文件。</p>
 
-<p>那么何为公共服务？公共服务就是那些专门为其他服务提供服务的服务，它的业务具有高度普适性和可复用性。比如用户服务、订单服务就是这样一类服务。</p>
+<p>当有多个docker host的时候你会希望能够把日志汇集起来，集中存放到一处，本文讲的是如何通过<a href="https://docs.docker.com/config/containers/logging/fluentd/">fluentd logging driver</a>配合<a href="https://docs.fluentd.org/v1.0/articles/quickstart">fluentd</a>来达成这一目标。</p>
 
-<p>那我们怎样才能达成这一目标呢？下面举个例子说明：</p>
-
-<p>我们发现单体A、B、C中的具有高度相似的功能F，经过初步研究发现可以抽取出一个公共服务P，于是马上安排人员开发，然后上线、迁移。
-一切似乎会很顺利，但是等等，这里有太多风险和未经验证的东西。那我们应该怎么做？</p>
-
-<p><strong>第一步：识别不兼容</strong></p>
-
-<p>我们需要深入到单体A、B、C的功能F的细节中去考察，虽然功能F在各个单体中的看起来差不多，但是细节是魔鬼。
-毕竟这三个单体是独立演进的，如果深入细节，就会发现AF、BF、CF总有一些不兼容的地方，具体表现形式可以是数据schema不一致、接口不一致，还有更糟糕的——部分业务逻辑不一致。</p>
-
-<p>这些不兼容如果一开始不识别出来，那最有可能的结果是开发人员从单体A中抽取功能F开发公共服务P，结果公共服务P只能给单体A使用，单体B、C完全无法使用。</p>
-
-<p><strong>第二步：设计并导入概念</strong></p>
-
-<p>识别出了不兼容，那么我们就需要作出一套兼容单体A、B、C的功能F的设计，在设计过程中我们需要和单体A、B、C的产品经理、需求设计人员、开发人员做详尽的沟通。
-做这些沟通最主要的目的就是将新的功能F的设计导入到相关人员的脑中，即所谓的概念导入。</p>
-
-<p>概念导入是非常重要的一步，道理很简单，如果大家对同一件事情的认知是一样的，那么这件事情就好办了，否则在推行过程中很可能出现不可预料的阻力。</p>
-
-<p><strong>第三步：开发类库</strong></p>
-
-<p>好了，咱们设计也做了，思想也统一了，为什么不直接开始开发服务P呢？这是因为虽然我们在第二步已经统一了思想，但是在真正落地的时候很可能还会存在意想不到的困难。
-因此我们要把这些困难在早期趟平，用的办法就是提供功能F的公共类库，将其替换掉原来单体A、B、C中的代码。</p>
-
-<p>这一工作完成后我能能够得到的成果有：</p>
+<p>目标：</p>
 
 <ol>
-<li>设计、概念层面形成了统一</li>
-<li>表、实体结构形成了统一</li>
-<li>接口形成了统一</li>
-<li>代码层面的复用</li>
+<li>将standalone容器打到stdout/stderror的日志收集起来</li>
+<li>收集的日志根据容器名分开存储</li>
+<li>日志文件根据每天滚动</li>
 </ol>
 
-<p>也就是说，我们做到了表里一致，有了这个基础，开发公共服务P才有了真正坚实的基础。</p>
+<h2 id="第一步-配置fluentd实例">第一步：配置Fluentd实例</h2>
 
-<p><strong>第四步：微服务架构设计</strong></p>
+<p>首先是配置文件<code>fluent.conf</code>：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-txt" data-lang="txt">&lt;source&gt;
+  @type   forward
+&lt;/source&gt;
 
-<p>公共类库的思路毕竟还是单体应用的思路，只是做到了代码层面的复用。当你要做公共服务P的时候就需要额外考虑一些额外的设计，比如：</p>
+&lt;match *&gt;
 
-<ol>
-<li>Client的认证模式。不认证、OAuth 2.0，如果用OAuth 2.0那么用哪种Grant type？</li>
-<li>通信协议。http、https、gRPC。</li>
-<li>接口协议。RESTful、SOAP。</li>
-<li>接口定义。Swagger、OpenAPI。</li>
-<li>加密方式。TLS、对称加密。</li>
-<li>是否涉及多租户，如果涉及，那么还需要设计多租户的业务、功能、数据schema。</li>
-<li>考虑服务注册、服务发现等等。</li>
-<li>弹性设计、容错设计、分布式事务等等。</li>
-<li>运维相关的日志采集、监控指标等等。</li>
-</ol>
+  @type              file
 
-<p>当然以上这些并不是说要一次性全部做到，可以一开始只实现一部分，之后通过迭代不断地完善。</p>
+  path               /fluentd/log/${tag}/${tag}
+  append             true
+  &lt;format&gt;
+    @type            single_value
+    message_key      log
+  &lt;/format&gt;
+  &lt;buffer tag,time&gt;
+    @type             file
+    timekey           1d
+    timekey_wait      10m
+    flush_mode        interval
+    flush_interval    30s
+  &lt;/buffer&gt;
+&lt;/match&gt;</code></pre></div>
+<p>新建一个目录比如<code>/home/ubuntu/container-logs</code>，并赋予权限<code>chmod 777 /home/ubuntu/container-logs</code>。</p>
 
-<p><strong>第五步：迁移</strong></p>
+<p>然后启动Fluentd实例，这里使用的Docker方式：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">docker run -it <span style="color:#ae81ff">\
+</span><span style="color:#ae81ff"></span>  -d <span style="color:#ae81ff">\
+</span><span style="color:#ae81ff"></span>  -p <span style="color:#ae81ff">24224</span>:24224 <span style="color:#ae81ff">\
+</span><span style="color:#ae81ff"></span>  -v /path/to/conf/fluent.conf:/fluentd/etc/fluent.conf <span style="color:#ae81ff">\
+</span><span style="color:#ae81ff"></span>  -v /home/ubuntu/container-logs:/fluentd/log
+  fluent/fluentd:v1.3</code></pre></div>
+<h2 id="第二步-指定容器的logging-driver">第二步：指定容器的logging driver</h2>
 
-<p>好了，我们的公共服务P已经上线了，那么如何从公共类库迁移到公共服务P呢？</p>
+<p>在启动容器的时候执行使用fluentd作为logging driver：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">docker run -d <span style="color:#ae81ff">\
+</span><span style="color:#ae81ff"></span>  ...
+  --log-driver<span style="color:#f92672">=</span>fluentd <span style="color:#ae81ff">\
+</span><span style="color:#ae81ff"></span>  --log-opt fluentd-address<span style="color:#f92672">=</span>&lt;fluentdhost&gt;:24224 <span style="color:#ae81ff">\
+</span><span style="color:#ae81ff"></span>  --log-opt mode<span style="color:#f92672">=</span>non-blocking <span style="color:#ae81ff">\
+</span><span style="color:#ae81ff"></span>  --log-opt tag<span style="color:#f92672">={{</span>.Name<span style="color:#f92672">}}</span> <span style="color:#ae81ff">\
+</span><span style="color:#ae81ff"></span>  &lt;image&gt;</code></pre></div>
+<h2 id="第三步-观察日志">第三步：观察日志</h2>
 
-<p>其实到这一步就很简单了，在制作公共类库的时候我们应该定义了良好的接口，并且提供了一套基于单体架构的实现。
-现在我们只需提供一套基于公共服务的实现然后替换上去就可以了。举个例子，公共类库有一个接口叫做<code>UserRepository</code>，它有一个实现是查询本地数据库的，我们只需提供另一个实现是查询RESTful接口的就可以了。</p>
+<p>到<code>/home/ubuntu/container-logs</code>目录下能够看到类似这样的目录结构：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-txt" data-lang="txt">.
+└── &lt;container-name&gt;
+    └── &lt;container-name&gt;.20190123.log</code></pre></div>
+<h2 id="参考文档">参考文档</h2>
 
-<p>当然，这个查询RESTful接口的实现最好也由公共服务P的开发团队提供，这样可以避免单体A、B、C开发团队的重复劳动。</p>
+<ul>
+<li><a href="https://docs.docker.com/config/containers/logging/configure/">Configure logging drivers</a></li>
+<li><a href="https://docs.docker.com/config/containers/logging/log_tags/">Customize log driver output</a></li>
+<li><a href="https://docs.docker.com/config/containers/logging/fluentd/">Use Fluentd logging driver</a></li>
+<li><a href="https://docs.docker.com/engine/reference/commandline/run/">Docker CLI - run</a></li>
+<li><a href="https://docs.fluentd.org/v1.0/articles/quickstart">Fluentd</a>
 
-<p><strong>第六步：没有第六步</strong></p>
-
-<p>到此为止大功告成。</p></article>
+<ul>
+<li><a href="https://docs.fluentd.org/v1.0/articles/out_file">Fluentd - out_file</a></li>
+<li><a href="https://docs.fluentd.org/v1.0/articles/formatter_single_value">Fluentd - formatter_single_value</a></li>
+<li><a href="https://docs.fluentd.org/v1.0/articles/buf_file">Fluentd - buf_file</a></li>
+<li><a href="https://docs.fluentd.org/v1.0/articles/buffer-section">Fluentd - buffer</a></li>
+</ul></li>
+</ul></article>
     <footer class="post-footer">
       
       <ul class="post-tags">
         
-          <li><a href="https://chanjarster.github.io/tags/%E5%BE%AE%E6%9C%8D%E5%8A%A1"><span class="tag">微服务</span></a></li>
+          <li><a href="https://chanjarster.github.io/tags/docker"><span class="tag">Docker</span></a></li>
         
-          <li><a href="https://chanjarster.github.io/tags/%E5%88%86%E5%B8%83%E5%BC%8F%E6%9E%B6%E6%9E%84"><span class="tag">分布式架构</span></a></li>
+          <li><a href="https://chanjarster.github.io/tags/%E8%BF%90%E7%BB%B4"><span class="tag">运维</span></a></li>
+        
+          <li><a href="https://chanjarster.github.io/tags/fluentd"><span class="tag">Fluentd</span></a></li>
         
       </ul>
       
       <p class="post-copyright">
-        This post was published <strong>153</strong> days ago, content in the post may be inaccurate, even wrong now, please take risk yourself.
+        
       </p>
     </footer>
     
