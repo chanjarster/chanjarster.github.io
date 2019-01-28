@@ -288,7 +288,7 @@ Classloader for this class: sun.misc.Launcher$AppClassLoader@18b4aac2</code></pr
 <p>Returns the class loader for the class. Some implementations may use null to represent the bootstrap class loader. This method will return null in such implementations if this class was loaded by the bootstrap class loader.</p>
 </blockquote>
 
-<h3 id="array类的classloader">Array类的ClassLoader</h3>
+<h3 id="数组类的classloader">数组类的ClassLoader</h3>
 
 <blockquote>
 <p>Class objects for array classes are not created by class loaders, but are created automatically as required by the Java runtime. The class loader for an array class, as returned by Class.getClassLoader() is the same as the class loader for its element type; if the element type is a primitive type, then the array class has no class loader.</p>
@@ -297,9 +297,9 @@ Classloader for this class: sun.misc.Launcher$AppClassLoader@18b4aac2</code></pr
 <p>简单来说说了三点：</p>
 
 <ol>
-<li>Array也是类，但是它的Class对象不是由ClassLoader创建的，而是由Java runtime根据需要自动创建的。</li>
-<li><code>Array.getClassLoader()</code>的结果同其元素类型的ClassLoader</li>
-<li>如果元素是基础类型，则Array类没有ClassLoader</li>
+<li>数组也是类，但是它的Class对象不是由ClassLoader创建的，而是由Java runtime根据需要自动创建的。</li>
+<li>数组的<code>getClassLoader()</code>的结果同其元素类型的ClassLoader</li>
+<li>如果元素是基础类型，则数组类没有ClassLoader</li>
 </ol>
 
 <p>下面是一段实验代码：</p>
@@ -337,7 +337,7 @@ ClassLoader for this Object[][] of this class[]: null</code></pre></div>
 <p>注意第四行的结果，我们构建了一个<code>Object[][]</code>，里面放的是<code>PrintArrayArrayClassLoader[]</code>，但结果依然是null。所以：</p>
 
 <ol>
-<li>二维数组的ClassLoader和其定义的类型的ClassLoader相同。</li>
+<li>二维数组的ClassLoader和其定义的类型（元素类型）的ClassLoader相同。</li>
 <li>与其实际内部存放的类型无关。</li>
 </ol>
 
@@ -363,7 +363,7 @@ ClassLoader for this class&#39;s ClassLoader: null
 ClassLoader for custom ClassLoader: null</code></pre></div>
 <h2 id="classloader解决了什么问题">ClassLoader解决了什么问题</h2>
 
-<p>简单来说ClassLoader就是解决类加载问题的，当然这是一句废话。JDK里的ClassLoader是一个抽象类，这样做的目的是能够让应用开发者定制自己的ClassLoader实现（比如添加解密/加密），我认为这才是ClassLoader存在的最大意义。</p>
+<p>简单来说ClassLoader就是解决类加载问题的，当然这是一句废话。JDK里的ClassLoader是一个抽象类，这样做的目的是能够让应用开发者定制自己的ClassLoader实现（比如添加解密/加密）、动态插入字节码等，我认为这才是ClassLoader存在的最大意义。</p>
 
 <h2 id="classloader的工作原理">ClassLoader的工作原理</h2>
 
@@ -411,64 +411,61 @@ ClassLoader for custom ClassLoader: null</code></pre></div>
 </span><span style="color:#75715e"></span>    Class<span style="color:#f92672">&lt;?&gt;</span> c <span style="color:#f92672">=</span> findLoadedClass<span style="color:#f92672">(</span>name<span style="color:#f92672">);</span>
     <span style="color:#66d9ef">if</span> <span style="color:#f92672">(</span>c <span style="color:#f92672">==</span> <span style="color:#66d9ef">null</span><span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
       <span style="color:#75715e">// ...
-</span><span style="color:#75715e"></span>    <span style="color:#f92672">}</span>
+</span><span style="color:#75715e"></span>      <span style="color:#66d9ef">try</span> <span style="color:#f92672">{</span>
+        <span style="color:#66d9ef">if</span> <span style="color:#f92672">(</span>parent <span style="color:#f92672">!=</span> <span style="color:#66d9ef">null</span><span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+            c <span style="color:#f92672">=</span> parent<span style="color:#f92672">.</span><span style="color:#a6e22e">loadClass</span><span style="color:#f92672">(</span>name<span style="color:#f92672">,</span> <span style="color:#66d9ef">false</span><span style="color:#f92672">);</span>
+        <span style="color:#f92672">}</span> <span style="color:#66d9ef">else</span> <span style="color:#f92672">{</span>
+            c <span style="color:#f92672">=</span> findBootstrapClassOrNull<span style="color:#f92672">(</span>name<span style="color:#f92672">);</span>
+        <span style="color:#f92672">}</span>
+      <span style="color:#f92672">}</span> <span style="color:#66d9ef">catch</span> <span style="color:#f92672">(</span>ClassNotFoundException e<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+        <span style="color:#75715e">// ClassNotFoundException thrown if class not found
+</span><span style="color:#75715e"></span>        <span style="color:#75715e">// from the non-null parent class loader
+</span><span style="color:#75715e"></span>      <span style="color:#f92672">}</span>
+
+      <span style="color:#66d9ef">if</span> <span style="color:#f92672">(</span>c <span style="color:#f92672">==</span> <span style="color:#66d9ef">null</span><span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+        <span style="color:#75715e">// If still not found, then invoke findClass in order
+</span><span style="color:#75715e"></span>        <span style="color:#75715e">// to find the class.
+</span><span style="color:#75715e"></span>        <span style="color:#75715e">// ...
+</span><span style="color:#75715e"></span>        c <span style="color:#f92672">=</span> findClass<span style="color:#f92672">(</span>name<span style="color:#f92672">);</span>
+
+        <span style="color:#75715e">// ...
+</span><span style="color:#75715e"></span>      <span style="color:#f92672">}</span>
+    <span style="color:#f92672">}</span>
     <span style="color:#75715e">// ...
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">return</span> c<span style="color:#f92672">;</span>
   <span style="color:#f92672">}</span>
 <span style="color:#f92672">}</span></code></pre></div>
-<p>如果一个类被两个不同的ClassLoader加载会怎样呢？结果就是会得到两个不同的Class，同时这个类所使用的其他类也会是两份，见这段代码：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#66d9ef">public</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">ClassUniqueness</span> <span style="color:#f92672">{</span>
+<p>如果一个类被两个不同的ClassLoader加载会怎样呢？看下面代码：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#75715e">// 把这个项目打包然后放到/tmp目录下
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">public</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">ClassUniqueness</span> <span style="color:#f92672">{</span>
 
   <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">static</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">main</span><span style="color:#f92672">(</span>String<span style="color:#f92672">[]</span> args<span style="color:#f92672">)</span> <span style="color:#66d9ef">throws</span> Exception <span style="color:#f92672">{</span>
+    Class<span style="color:#f92672">&lt;?&gt;</span> fooClass1 <span style="color:#f92672">=</span> Class<span style="color:#f92672">.</span><span style="color:#a6e22e">forName</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34;me.chanjar.javarelearn.classloader.ClassUniqueness&#34;</span><span style="color:#f92672">);</span>
+    System<span style="color:#f92672">.</span><span style="color:#a6e22e">out</span><span style="color:#f92672">.</span><span style="color:#a6e22e">println</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34;1st ClassUniqueness&#39;s ClassLoader: &#34;</span> <span style="color:#f92672">+</span> fooClass1<span style="color:#f92672">.</span><span style="color:#a6e22e">getClassLoader</span><span style="color:#f92672">());</span>
 
-    System<span style="color:#f92672">.</span><span style="color:#a6e22e">out</span><span style="color:#f92672">.</span><span style="color:#a6e22e">println</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34;1st Foo class: loaded by application class loader&#34;</span><span style="color:#f92672">);</span>
-    Class<span style="color:#f92672">&lt;?&gt;</span> fooClass1 <span style="color:#f92672">=</span> Class<span style="color:#f92672">.</span><span style="color:#a6e22e">forName</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34;me.chanjar.javarelearn.classloader.Foo&#34;</span><span style="color:#f92672">);</span>
-    fooClass1<span style="color:#f92672">.</span><span style="color:#a6e22e">newInstance</span><span style="color:#f92672">();</span>
-
-    System<span style="color:#f92672">.</span><span style="color:#a6e22e">out</span><span style="color:#f92672">.</span><span style="color:#a6e22e">println</span><span style="color:#f92672">();</span>
-
-    System<span style="color:#f92672">.</span><span style="color:#a6e22e">out</span><span style="color:#f92672">.</span><span style="color:#a6e22e">println</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34;2st Foo class: loaded by URLClassLoader&#34;</span><span style="color:#f92672">);</span>
     <span style="color:#75715e">// 故意将parent class loader设置为null，否则就是SystemClassLoader（即ApplicationClassLoader）
 </span><span style="color:#75715e"></span>    URLClassLoader ucl <span style="color:#f92672">=</span> <span style="color:#66d9ef">new</span> URLClassLoader<span style="color:#f92672">(</span><span style="color:#66d9ef">new</span> URL<span style="color:#f92672">[]</span> <span style="color:#f92672">{</span> <span style="color:#66d9ef">new</span> URL<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;file:///tmp/classloader.jar&#34;</span><span style="color:#f92672">)</span> <span style="color:#f92672">},</span> <span style="color:#66d9ef">null</span><span style="color:#f92672">);</span>
-    Class<span style="color:#f92672">&lt;?&gt;</span> fooClass2 <span style="color:#f92672">=</span> ucl<span style="color:#f92672">.</span><span style="color:#a6e22e">loadClass</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34;me.chanjar.javarelearn.classloader.Foo&#34;</span><span style="color:#f92672">);</span>
-    fooClass2<span style="color:#f92672">.</span><span style="color:#a6e22e">newInstance</span><span style="color:#f92672">();</span>
+    Class<span style="color:#f92672">&lt;?&gt;</span> fooClass2 <span style="color:#f92672">=</span> ucl<span style="color:#f92672">.</span><span style="color:#a6e22e">loadClass</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34;me.chanjar.javarelearn.classloader.ClassUniqueness&#34;</span><span style="color:#f92672">);</span>
+    System<span style="color:#f92672">.</span><span style="color:#a6e22e">out</span><span style="color:#f92672">.</span><span style="color:#a6e22e">println</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34;2nd ClassUniqueness&#39;s ClassLoader: &#34;</span> <span style="color:#f92672">+</span> fooClass2<span style="color:#f92672">.</span><span style="color:#a6e22e">getClassLoader</span><span style="color:#f92672">());</span>
 
-    System<span style="color:#f92672">.</span><span style="color:#a6e22e">out</span><span style="color:#f92672">.</span><span style="color:#a6e22e">println</span><span style="color:#f92672">();</span>
-
-    System<span style="color:#f92672">.</span><span style="color:#a6e22e">out</span><span style="color:#f92672">.</span><span style="color:#a6e22e">println</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34;1st Foo class == 2nd Foo class? : &#34;</span> <span style="color:#f92672">+</span> fooClass1<span style="color:#f92672">.</span><span style="color:#a6e22e">equals</span><span style="color:#f92672">(</span>fooClass2<span style="color:#f92672">));</span>
+    System<span style="color:#f92672">.</span><span style="color:#a6e22e">out</span><span style="color:#f92672">.</span><span style="color:#a6e22e">println</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34;Two ClassUniqueness class equals? &#34;</span> <span style="color:#f92672">+</span> fooClass1<span style="color:#f92672">.</span><span style="color:#a6e22e">equals</span><span style="color:#f92672">(</span>fooClass2<span style="color:#f92672">));</span>
   <span style="color:#f92672">}</span>
 
-<span style="color:#f92672">}</span>
-
-<span style="color:#66d9ef">public</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">Foo</span> <span style="color:#f92672">{</span>
-
-  <span style="color:#66d9ef">public</span> <span style="color:#a6e22e">Foo</span><span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
-    System<span style="color:#f92672">.</span><span style="color:#a6e22e">out</span><span style="color:#f92672">.</span><span style="color:#a6e22e">println</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34;Foo&#39;s ClassLoader: &#34;</span> <span style="color:#f92672">+</span> Foo<span style="color:#f92672">.</span><span style="color:#a6e22e">class</span><span style="color:#f92672">.</span><span style="color:#a6e22e">getClassLoader</span><span style="color:#f92672">());</span>
-    System<span style="color:#f92672">.</span><span style="color:#a6e22e">out</span><span style="color:#f92672">.</span><span style="color:#a6e22e">println</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34;Bar&#39;s ClassLoader: &#34;</span> <span style="color:#f92672">+</span> Bar<span style="color:#f92672">.</span><span style="color:#a6e22e">class</span><span style="color:#f92672">.</span><span style="color:#a6e22e">getClassLoader</span><span style="color:#f92672">());</span>
-  <span style="color:#f92672">}</span>
-
-<span style="color:#f92672">}</span>
-
-<span style="color:#66d9ef">public</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">Bar</span> <span style="color:#f92672">{</span>
 <span style="color:#f92672">}</span></code></pre></div>
-<p>结果你会发现Foo和Bar的ClassLoader分别是Application class loader和我们自己使用的URLClassLoader，并且两者并不相同：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-txt" data-lang="txt">1st Foo class: loaded by application class loader
-Foo&#39;s ClassLoader: sun.misc.Launcher$AppClassLoader@18b4aac2
-Bar&#39;s ClassLoader: sun.misc.Launcher$AppClassLoader@18b4aac2
-
-2st Foo class: loaded by URLClassLoader
-Foo&#39;s ClassLoader: java.net.URLClassLoader@66d3c617
-Bar&#39;s ClassLoader: java.net.URLClassLoader@66d3c617
-
-1st Foo class == 2nd Foo class? : false</code></pre></div>
-<p>通过上面代码可以观察到两点：</p>
+<p>运行结果是：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-txt" data-lang="txt">1st ClassUniqueness&#39;s ClassLoader: sun.misc.Launcher$AppClassLoader@18b4aac2
+2nd ClassUniqueness&#39;s ClassLoader: java.net.URLClassLoader@66d3c617
+Two ClassUniqueness class equals? false```</code></pre></div>
+<p>观察到两点：</p>
 
 <ol>
-<li>一个Class的唯一性不仅仅是其全限定名（Fully-qualified-name），而是 加载其的ClassLoader + 其全限定名。</li>
-<li>除非特别指定，否则一个Class所使用的其他类型的ClassLoader与加载其的ClassLoader相同。</li>
+<li>虽然是同一个类，但是加载它们的ClassLoader不同。</li>
+<li>虽然是同一个类，但是它们并不相等。</li>
 </ol>
 
-<p>这种机制对于解决诸如类冲突问题非常有用，类冲突问题就是在运行时存在同一个类的两个不同版本，同时代码里又都需要使用这两个不同版本的类。解决这个问题的思路就是使用不同的ClassLoader加载这两个版本的类。事实上OSGi或者Web容器就是这样做的。</p>
+<p>由此可以得出结论：一个Class的唯一性不仅仅是其全限定名（Fully-qualified-name），而是由【加载其的ClassLoader + 其全限定名】联合保证唯一。</p>
+
+<p>这种机制对于解决诸如类冲突问题非常有用，类冲突问题就是在运行时存在同一个类的两个不同版本，同时代码里又都需要使用这两个不同版本的类。解决这个问题的思路就是使用不同的ClassLoader加载这两个版本的类。事实上OSGi或者Web容器就是这样做的（它们不是严格遵照委托模型，而是先自己找，找不到了再委托给parent ClassLoader）。</p>
 
 <h2 id="参考文档">参考文档</h2>
 
@@ -488,6 +485,8 @@ Bar&#39;s ClassLoader: java.net.URLClassLoader@66d3c617
           <li><a href="https://chanjarster.github.io/tags/%E9%87%8D%E5%AD%A6java"><span class="tag">重学Java</span></a></li>
         
           <li><a href="https://chanjarster.github.io/tags/classloader"><span class="tag">ClassLoader</span></a></li>
+        
+          <li><a href="https://chanjarster.github.io/tags/jvm"><span class="tag">JVM</span></a></li>
         
       </ul>
       
