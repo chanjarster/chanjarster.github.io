@@ -5,7 +5,7 @@
   <meta charset="utf-8" />
 
   
-  <title>使用Diskbenchmark测试硬盘性能</title>
+  <title>Stateful Service Design Consideration for the Kubernetes Stack</title>
 
   
   
@@ -16,28 +16,25 @@
 
   
   <meta name="author" content="颇忒脱" />
-  <meta name="description" content="使用diskbenchmark测试硬盘性能。
-
+  <meta name="description" content="
 " />
 
   
   
     <meta name="twitter:card" content="summary" />
     <meta name="twitter:site" content="@gohugoio" />
-    <meta name="twitter:title" content="使用Diskbenchmark测试硬盘性能" />
-    <meta name="twitter:description" content="使用diskbenchmark测试硬盘性能。
-
+    <meta name="twitter:title" content="Stateful Service Design Consideration for the Kubernetes Stack" />
+    <meta name="twitter:description" content="
 " />
     <meta name="twitter:image" content="https://chanjarster.github.io/img/avatar.jpg" />
   
 
   
   <meta property="og:type" content="article" />
-  <meta property="og:title" content="使用Diskbenchmark测试硬盘性能" />
-  <meta property="og:description" content="使用diskbenchmark测试硬盘性能。
-
+  <meta property="og:title" content="Stateful Service Design Consideration for the Kubernetes Stack" />
+  <meta property="og:description" content="
 " />
-  <meta property="og:url" content="https://chanjarster.github.io/post/intro-diskbenchmark/" />
+  <meta property="og:url" content="https://chanjarster.github.io/post/arts/arts-r-stateful-service-design-consideration-for-the-k8s-stack/" />
   <meta property="og:image" content="https://chanjarster.github.io/img/avatar.jpg" />
 
 
@@ -46,7 +43,7 @@
 <meta name="generator" content="Hugo 0.49.2" />
 
 
-<link rel="canonical" href="https://chanjarster.github.io/post/intro-diskbenchmark/" />
+<link rel="canonical" href="https://chanjarster.github.io/post/arts/arts-r-stateful-service-design-consideration-for-the-k8s-stack/" />
 
 <meta name="renderer" content="webkit" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
@@ -227,78 +224,91 @@
 
   <section class="main post-detail">
     <header class="post-header">
-      <h1 class="post-title">使用Diskbenchmark测试硬盘性能</h1>
-      <p class="post-meta">@颇忒脱 · Oct 19, 2018 · 1 min read</p>
+      <h1 class="post-title">Stateful Service Design Consideration for the Kubernetes Stack</h1>
+      <p class="post-meta">@颇忒脱 · Jan 30, 2019 · 1 min read</p>
     </header>
-    <article class="post-content"><p>使用<a href="https://github.com/ongardie/diskbenchmark">diskbenchmark</a>测试硬盘性能。</p>
+    <article class="post-content"><p></p>
 
-<p></p>
+<p><a href="https://www.infoq.com/articles/stateful-service-design-kubernetes">原文地址</a></p>
 
-<p><strong>本文使用的是Ubuntu服务器</strong></p>
+<p>关键词：Cloud-native stateful service，Akka</p>
 
-<p><strong>无法在虚拟机上运行此工具</strong></p>
+<h2 id="大纲">大纲</h2>
 
-<p><strong>第1步：下载项目</strong></p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">git clone https://github.com/ongardie/diskbenchmark.git</code></pre></div>
-<p><strong>第2步：安装必要的软件包</strong></p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">sudo apt install -y gcc r-base-core r-cran-ggplot2 r-cran-plyr r-cran-scales</code></pre></div>
-<p><strong>第3步：编译项目</strong></p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">make bench</code></pre></div>
-<p><strong>第4步：benchmark配置文件</strong></p>
+<p>Stateful service不可避免：</p>
 
-<p>在<code>machines</code>目录下新建配置文件，比如<code>machine-a</code>：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-txt" data-lang="txt">disks=&#34;&lt;硬盘名称&gt;:&lt;硬盘在/dev下的名称&gt;:&lt;测试文件写的目录&gt;&#34;
-rootcmd () {
-    sudo $*
-}
-cmd () {
-    $*
-}
-sendfile () {
-    cp $1 ~/
-}</code></pre></div>
-<p>比如下面这样：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-txt" data-lang="txt">disks=&#34;mydisk:sda2:/tmp&#34;
-rootcmd () {
-    sudo $*
-}
-cmd () {
-    $*
-}
-sendfile () {
-    cp $1 ~/
-}</code></pre></div>
-<p><code>&lt;硬盘在/dev下的名称&gt;</code>可以通过<code>sudo fdisk -l</code>得到。</p>
+<ol>
+<li>stateless service在k8s上部署已经被证明是成功的。</li>
+<li>将state从stateful service中剥离出来，使其成为stateless service是一种成功的做法。</li>
+<li>但是这些stateless service依然大多依赖于，老的架构、设计、习惯、模式、实践和工具，而这些东西都是为运行“全能”的RDBMS之上的单体单节点系统所发展出来的。</li>
+<li>当前的service越来越data-centric和data-driven，将service和data紧密贴合显得更为重要，因为这样做能够高效率、高性能，可靠的管理、处理、转换、丰富data。</li>
+<li>service无法承受在data访问时与数据库 or 存储的round-trip，并需要持续处理接近实时的data，从永无止境的数据流中挖掘知识。而这份data在被存储之前，也时常需要被分布式地处理——以实现可扩展性、低延迟、高吞吐。</li>
+</ol>
 
-<p><strong>第5步：执行</strong></p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">./runner.sh</code></pre></div>
-<p><strong>第6步：制作图表</strong></p>
+<p>实施stateful service的难点：</p>
 
-<p>压测需要很长时间，我所测试的硬盘配置如下的情况下，跑了大约2小时：</p>
+<ol>
+<li>stateful 实例不是能够简单替换的，因为它有自己的状态，在替换的时候要考虑进去。</li>
+<li>部署stateful 副本必须要求副本之间协作，比如启动依赖顺序、版本升级、schema变动等。</li>
+<li>replication需要时间，一个正在处理replication的机器会获得比平时更高的负载。如果开启一个新副本，有可能会down掉整个数据库or服务。</li>
+</ol>
+
+<p>k8s对于stateful service的方案：</p>
+
+<ol>
+<li>k8s对于不是cloud-native stateful service的方案是StatefulSet</li>
+<li>每个pod有一个稳定的标识符（namespace + name）以及一个专用的即使Pod重启也不会丢失的磁盘，甚至Pod重新调度到另一台机器上也不会丢失。</li>
+<li>开发人员需要新一代的能够构建<strong>cloud-native的stateful service</strong>工具，而这些service只需要k8s为stateless service提供的基础设施。</li>
+</ol>
+
+<p>设计cloud-native stateful service的难点：</p>
+
+<ol>
+<li>难点不在于设计和实现这些service，而是管理它们之间的空间。难点有：数据一致性保证、可靠通信、数据复制与故障转移、组件失败侦测、恢复、分片、路由、共识算法等等。</li>
+<li>对于不同的service来说End-to-end的正确性、一致性、安全性是不同的，是完全依赖于用例的，是不能外包给基础设施的。我们需要一种编程模型，配合一个把重活都包了的运行时，让我们专注于实现业务价值，而不是陷入错综复杂的网络编程与failure mode里。<strong>Akka与K8S就是上述问题的解决方案</strong></li>
+</ol>
+
+<p><a href="https://akka.io/">Akka</a>简介：</p>
+
+<ol>
+<li>基于<a href="https://www.reactivemanifesto.org/">Reactive Manifesto</a>构建，是面向today和tomorrow的架构。</li>
+<li>Akka的unit of work和state被称为actor，是stateful、fault-tolerant、isolated、autonomous的component or entity。</li>
+<li>actor/entity是非常轻量级的，在一台机器上可以轻易运行百万个，并且它们之间使用异步通信。它们内置自动自我恢复机制，同时distributable and location transparent by default。也就意味着它们<strong>可以根据需要在集群里扩展、复制、移动，而这对于actor/entity的用户来说是透明的</strong>。</li>
+<li>Akka和K8S的配合方式：K8S负责容器，粗粒度，负责资源。Akka负责应用层，细粒度，负责如何在给定资源下分发工作。</li>
+</ol>
+
+<p>Akka的“let it crash”哲学：</p>
+
+<ol>
+<li>传统基于线程的编程模型只给了你对于单个线程的控制，如果线程异常崩溃你就麻烦了，所以你需要显式地在这个线程内部做异常处理。异常不会在线程间传播，不会跨网络，没有办法在外部知道这个线程已经失败了。但是丢失这个线程又是代价极高的，最坏情况下，如果用了同步协议，会将这个错误波及到整个应用。</li>
+<li>Akk把你的应用设计为“supervisor hierarchies”，actor们彼此注意健康、彼此管理失败。如果一个actor失败了，它的错误会被隔离并被包起来，以异步消息的方式发送到它的supervising actor（可能通过网络）。supervising actor能够在安全健康的上下文中处理异常，并且根据声明式定义规则自动重启失败的actor。</li>
+<li>和K8S有点像，不过是在application stack层面。</li>
+</ol>
+
+<h2 id="延伸阅读">延伸阅读</h2>
 
 <ul>
-<li>6 * 1.2TB 10K RPM SAS 12Gbps 512n 2.5英寸热插拔硬盘</li>
-<li>PERC H730P+ RAID 控制器, 2Gb NV 缓存</li>
-<li>RAID 5 开启回写，预读</li>
-</ul>
-
-<p>完成后会得到<code>results.csv</code>文件。</p>
-
-<p>使用如下命令制作图表，获得<code>results.svg</code>文件：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">R -e <span style="color:#e6db74">&#34;source(&#39;post.R&#39;); ggsave(&#39;results.svg&#39;, g, width=10, height=7)&#34;</span></code></pre></div>
-<p>用浏览器打开：</p>
-
-<p><img src="result.png" alt="demo" /></p></article>
+<li><a href="https://www.infoq.com/news/2017/03/microliths-microsystems">microliths</a></li>
+<li><a href="https://www.infoq.com/news/2018/07/boner-events-first-microservices">Designing Events-First Microservices</a></li>
+</ul></article>
     <footer class="post-footer">
       
       <ul class="post-tags">
         
-          <li><a href="https://chanjarster.github.io/tags/%E8%BF%90%E7%BB%B4"><span class="tag">运维</span></a></li>
+          <li><a href="https://chanjarster.github.io/tags/arts"><span class="tag">ARTS</span></a></li>
+        
+          <li><a href="https://chanjarster.github.io/tags/arts-r"><span class="tag">ARTS-R</span></a></li>
+        
+          <li><a href="https://chanjarster.github.io/tags/akka"><span class="tag">Akka</span></a></li>
+        
+          <li><a href="https://chanjarster.github.io/tags/%E6%9E%B6%E6%9E%84"><span class="tag">架构</span></a></li>
+        
+          <li><a href="https://chanjarster.github.io/tags/k8s"><span class="tag">K8s</span></a></li>
         
       </ul>
       
       <p class="post-copyright">
-        This post was published <strong>103</strong> days ago, content in the post may be inaccurate, even wrong now, please take risk yourself.
+        
       </p>
     </footer>
     
