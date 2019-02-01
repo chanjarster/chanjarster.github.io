@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+<head>
+
+  <meta charset="utf-8" />
+
+  
+  <title>如何在Docker Swarm部署应用</title>
+
+  
+  
+
+
+
+
+
+  
+  <meta name="author" content="颇忒脱" />
+  <meta name="description" content="
+" />
+
+  
+  
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:site" content="@gohugoio" />
+    <meta name="twitter:title" content="如何在Docker Swarm部署应用" />
+    <meta name="twitter:description" content="
+" />
+    <meta name="twitter:image" content="https://chanjarster.github.io/img/avatar.jpg" />
+  
+
+  
+  <meta property="og:type" content="article" />
+  <meta property="og:title" content="如何在Docker Swarm部署应用" />
+  <meta property="og:description" content="
+" />
+  <meta property="og:url" content="https://chanjarster.github.io/post/deploy-app-on-docker-swarm-steps/" />
+  <meta property="og:image" content="https://chanjarster.github.io/img/avatar.jpg" />
+
+
+
+
+<meta name="generator" content="Hugo 0.49.2" />
+
+
+<link rel="canonical" href="https://chanjarster.github.io/post/deploy-app-on-docker-swarm-steps/" />
+
+<meta name="renderer" content="webkit" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<meta name="format-detection" content="telephone=no,email=no,adress=no" />
+<meta http-equiv="Cache-Control" content="no-transform" />
+
+
+<meta name="robots" content="index,follow" />
+<meta name="referrer" content="origin-when-cross-origin" />
+
+
+
+
+
+
+
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="颇忒脱的技术博客" />
+<meta name="msapplication-tooltip" content="颇忒脱的技术博客" />
+<meta name='msapplication-navbutton-color' content="#5fbf5e" />
+<meta name="msapplication-TileColor" content="#5fbf5e" />
+<meta name="msapplication-TileImage" content="/img/tile-image-windows.png" />
+<link rel="icon" href="https://chanjarster.github.io/img/favicon.ico" />
+<link rel="icon" type="image/png" sizes="16x16" href="https://chanjarster.github.io/img/favicon-16x16.png" />
+<link rel="icon" type="image/png" sizes="32x32" href="https://chanjarster.github.io/img/favicon-32x32.png" />
+<link rel="icon" sizes="192x192" href="https://chanjarster.github.io/img/touch-icon-android.png" />
+<link rel="apple-touch-icon" href="https://chanjarster.github.io/img/touch-icon-apple.png" />
+<link rel="mask-icon" href="https://chanjarster.github.io/img/safari-pinned-tab.svg" color="#5fbf5e" />
+
+
+
+<link rel="stylesheet" href="//cdn.bootcss.com/video.js/6.2.8/alt/video-js-cdn.min.css" />
+
+<link rel="stylesheet" href="https://chanjarster.github.io/css/bundle.8e3aef2bc5.css" />
+
+
+  
+  <!--[if lt IE 9]>
+    <script src="//cdn.bootcss.com/html5shiv/3.7.3/html5shiv.min.js"></script>
+    <script src="//cdn.bootcss.com/respond.js/1.4.2/respond.min.js"></script>
+    <script src="//cdn.bootcss.com/video.js/6.2.8/ie8/videojs-ie8.min.js"></script>
+  <![endif]-->
+
+<!--[if lte IE 11]>
+    <script src="//cdn.bootcss.com/classlist/1.1.20170427/classList.min.js"></script>
+  <![endif]-->
+
+
+<script src="//cdn.bootcss.com/object-fit-images/3.2.3/ofi.min.js"></script>
+
+
+<script src="//cdn.bootcss.com/smooth-scroll/12.1.4/js/smooth-scroll.polyfills.min.js"></script>
+
+
+</head>
+  <body>
+    
+    <div class="suspension">
+      <a title="Go to top" class="to-top is-hide"><span class="icon icon-up"></span></a>
+      
+        
+      
+    </div>
+    
+    
+  <header class="site-header">
+  <img class="avatar" src="https://chanjarster.github.io/img/avatar2.jpg" alt="Avatar">
+  
+  <h2 class="title">颇忒脱的技术博客</h2>
+  
+  <p class="subtitle"></p>
+  <button class="menu-toggle" type="button">
+    <span class="icon icon-menu"></span>
+  </button>
+  <nav class="site-menu collapsed">
+    <h2 class="offscreen">Main Menu</h2>
+    <ul class="menu-list">
+      
+      
+      
+      
+        <li class="menu-item
+            
+            
+            
+              is-active
+            ">
+            <a href="https://chanjarster.github.io/">Home</a>
+          </li>
+      
+        <li class="menu-item
+            
+            
+            ">
+            <a href="https://chanjarster.github.io/tags/%E6%94%B6%E8%97%8F%E5%A4%B9/">Bookmarks</a>
+          </li>
+      
+        <li class="menu-item
+            
+            
+            ">
+            <a href="https://github.com/chanjarster">Works</a>
+          </li>
+      
+        <li class="menu-item
+            
+            
+            ">
+            <a href="https://chanjarster.github.io/tags/">Tags</a>
+          </li>
+      
+        <li class="menu-item
+            
+            
+            ">
+            <a href="https://chanjarster.github.io/links/">Links</a>
+          </li>
+      
+    </ul>
+  </nav>
+  <nav class="social-menu collapsed">
+    <h2 class="offscreen">Social Networks</h2>
+    <ul class="social-list">
+
+      
+
+      
+      <li class="social-item">
+        <a href="//github.com/chanjarster" title="GitHub"><span class="icon icon-github"></span></a>
+      </li>
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      <li class="social-item">
+        <a rel="alternate" type="application/rss+xml" href="https://chanjarster.github.io/index.xml"><span class="icon icon-rss" title="RSS"></span></a>
+      </li>
+
+    </ul>
+  </nav>
+</header>
+
+  <section class="main post-detail">
+    <header class="post-header">
+      <h1 class="post-title">如何在Docker Swarm部署应用</h1>
+      <p class="post-meta">@颇忒脱 · Feb 1, 2019 · 2 min read</p>
+    </header>
+    <article class="post-content"><p></p>
+
+<h2 id="大纲">大纲</h2>
+
+<p>本文只是一种实际部署方案的例子，涉及到的技术有（除Docker/Docker Swarm外）：</p>
+
+<ol>
+<li>Docker <a href="https://docs.docker.com/network/overlay/">overlay network</a></li>
+<li><a href="https://docs.fluentd.org/v1.0/articles/quickstart">Fluentd</a></li>
+<li>Prometheus stack</li>
+<li><a href="https://github.com/vegasbrianc/prometheus/">vegasbrianc的Prometheus监控方案</a></li>
+</ol>
+
+<p>步骤大纲：</p>
+
+<ol>
+<li>部署Docker machine
+
+<ol>
+<li>基本配置</li>
+<li>配置网络</li>
+<li>启动Fluentd日志服务</li>
+</ol></li>
+<li>部署Docker swarm集群
+
+<ol>
+<li>配置网络</li>
+<li>添加Node</li>
+</ol></li>
+<li>部署Prometheus stack
+
+<ol>
+<li>给Node打Label</li>
+<li>创建监控网络</li>
+<li>启动service</li>
+</ol></li>
+<li>部署应用
+
+<ol>
+<li>识别stateless与stateful</li>
+<li>创建应用网络</li>
+<li>给Node打Label</li>
+<li>启动service</li>
+</ol></li>
+</ol>
+
+<h2 id="1-部署docker-machine">1 部署Docker machine</h2>
+
+<h3 id="1-1-基本配置">1.1 基本配置</h3>
+
+<p>准备若干Linux服务器（本例使用Ubuntu 16.04），参照<a href="https://yq.aliyun.com/articles/110806">Docker CE 镜像源站</a>提到的步骤安装Docker CE。</p>
+
+<p>参照<a href="../docker-daemon-prod/">Docker Daemon生产环境配置</a>。</p>
+
+<h3 id="1-2-配置bridge网络">1.2 配置bridge网络</h3>
+
+<p>参照<a href="../docker-daemon-prod/">Docker Daemon生产环境配置</a>中的mtu和子网章节。</p>
+
+<h3 id="1-3-启动fluentd日志服务">1.3 启动Fluentd日志服务</h3>
+
+<p>参考<a href="../collect-docker-log-by-fluentd/">使用Fluentd收集Docker容器日志</a>。</p>
+
+<h2 id="2-部署docker-swarm集群">2 部署Docker swarm集群</h2>
+
+<p>到一台机器上执行<code>docker swarm init</code>，这个机器将作为manager node。</p>
+
+<p>执行<code>docker node ls</code>会看到类似下面的结果：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ docker node ls
+
+ID                           HOSTNAME  STATUS  AVAILABILITY  MANAGER STATUS
+dxn1zf6l61qsb1josjja83ngz *  manager1  Ready   Active        Leader</code></pre></div>
+<p>如果你计划不会把工作负载跑在manager node上，那么使用<code>docker drain</code>：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">docker node update --availability drain &lt;node-id&gt;</code></pre></div>
+<p>可参考<a href="../swarm-command-list/">Docker Swarm基本命令清单</a>。</p>
+
+<h3 id="2-1-配置网络mtu和子网">2.1 配置网络MTU和子网</h3>
+
+<p>参考<a href="../docker-overlay-network-mtu">Docker Overlay网络的MTU</a>。</p>
+
+<p><strong>特别注意</strong></p>
+
+<p>观察<code>docker_gwbridge</code>和<code>ingress</code>的子网是否与已有网络冲突：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ docker network inspect -f <span style="color:#e6db74">&#39;{{json .IPAM}}&#39;</span> docker_gwbridge
+<span style="color:#f92672">{</span><span style="color:#e6db74">&#34;Driver&#34;</span>:<span style="color:#e6db74">&#34;default&#34;</span>,<span style="color:#e6db74">&#34;Options&#34;</span>:null,<span style="color:#e6db74">&#34;Config&#34;</span>:<span style="color:#f92672">[{</span><span style="color:#e6db74">&#34;Subnet&#34;</span>:<span style="color:#e6db74">&#34;172.18.0.0/16&#34;</span>,<span style="color:#e6db74">&#34;Gateway&#34;</span>:<span style="color:#e6db74">&#34;172.18.0.1&#34;</span><span style="color:#f92672">}]}</span>
+
+$ docker network inspect -f <span style="color:#e6db74">&#39;{{json .IPAM}}&#39;</span> ingress
+<span style="color:#f92672">{</span><span style="color:#e6db74">&#34;Driver&#34;</span>:<span style="color:#e6db74">&#34;default&#34;</span>,<span style="color:#e6db74">&#34;Options&#34;</span>:null,<span style="color:#e6db74">&#34;Config&#34;</span>:<span style="color:#f92672">[{</span><span style="color:#e6db74">&#34;Subnet&#34;</span>:<span style="color:#e6db74">&#34;10.255.0.0/16&#34;</span>,<span style="color:#e6db74">&#34;Gateway&#34;</span>:<span style="color:#e6db74">&#34;10.255.0.1&#34;</span><span style="color:#f92672">}]}</span></code></pre></div>
+<p>如果有冲突则参考<a href="../docker-overlay-network-mtu">Docker Overlay网络的MTU</a>中的方法修改子网。</p>
+
+<h3 id="2-2-添加node">2.2 添加Node</h3>
+
+<p>参考<a href="../swarm-command-list/">Docker Swarm基本命令清单</a>。</p>
+
+<h2 id="3-部署prometheus-stack">3 部署Prometheus stack</h2>
+
+<p>使用的是<a href="https://github.com/vegasbrianc/prometheus/">vegasbrianc的Prometheus监控方案</a>。</p>
+
+<p>整个监控方案包含一下几个组件：</p>
+
+<ol>
+<li>Prometheus</li>
+<li>Node-exporter，运行在每个node上</li>
+<li>Alertmanager</li>
+<li>cAdvisor，运行在每个node上</li>
+<li>Grafana</li>
+</ol>
+
+<h3 id="3-1-给node打label">3.1 给Node打Label</h3>
+
+<p>挑选一台Node作为运行监控服务的机器。给这个node打上label：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ docker node update --label-add <span style="color:#66d9ef">for</span>-monitor-stack<span style="color:#f92672">=</span><span style="color:#ae81ff">1</span> &lt;node-id&gt;</code></pre></div>
+<h3 id="3-2-创建监控网络">3.2 创建监控网络</h3>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ docker network create -d overlay --attachable monitor-net</code></pre></div>
+<p>参考参考<a href="../docker-overlay-network-mtu">Docker Overlay网络的MTU</a>检查子网与MTU是否配置正确。</p>
+
+<h3 id="3-3-启动service">3.3 启动service</h3>
+
+<p>clone <a href="https://github.com/vegasbrianc/prometheus/">vegasbrianc的Prometheus监控方案</a> 项目代码。</p>
+
+<p>使用我修改过的<a href="https://gist.github.com/chanjarster/21fb7707246a7970eb89a116ea61f205">docker-stack.yml</a></p>
+
+<p>启动service：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ docker stack deploy <span style="color:#ae81ff">\
+</span><span style="color:#ae81ff"></span>  --with-registry-auth <span style="color:#ae81ff">\
+</span><span style="color:#ae81ff"></span>  --prune <span style="color:#ae81ff">\
+</span><span style="color:#ae81ff"></span>  -c docker-stack.yml <span style="color:#ae81ff">\
+</span><span style="color:#ae81ff"></span>  p8s-monitor-stack</code></pre></div>
+<p>访问地址：</p>
+
+<ul>
+<li>Prometheus：<code>http://&lt;任意swarm node ip&gt;:9000</code></li>
+<li>Node-exporter：<code>http://&lt;任意swarm node ip&gt;:9010</code></li>
+<li>Alertmanager：<code>http://&lt;任意swarm node ip&gt;:9020</code></li>
+<li>cAdvisor：<code>http://&lt;任意swarm node ip&gt;:9030</code></li>
+<li>Grafana：<code>http://&lt;任意swarm node ip&gt;:9040</code>，用户名admin，密码foobar</li>
+</ul>
+
+<h2 id="4-部署应用">4 部署应用</h2>
+
+<h3 id="4-1-识别stateless与stateful">4.1 识别stateless与stateful</h3>
+
+<p>如果你的应用由多个组件（service）组成，那么在部署它们之前你得识别出哪些是stateless service哪些是stateful service。</p>
+
+<p>针对每个service你自问以下三个问题：</p>
+
+<ol>
+<li>这个service崩溃之后，是不是只需要重启它就可以了，而不需要关心数据恢复？</li>
+<li>这个service是否可以在node之间任意迁移，且不需要分布式存储？</li>
+<li>这个service是否无需固定IP？</li>
+</ol>
+
+<p>如果上述回答都是Yes，那么这个service就是stateless的，只要有一个是No，则这个service是stateful的。</p>
+
+<p>对于stateless service，你可以：</p>
+
+<ol>
+<li>用<code>docker stack deploy</code>部署</li>
+<li>用<code>docker service create</code>部署</li>
+</ol>
+
+<p>对于stateful service，你可以：</p>
+
+<ol>
+<li>用<code>docker run</code>部署</li>
+<li>用<code>docker-compose up</code>部署</li>
+<li>如果没有固定IP的要求，那么你也可以用<code>docker stack deploy</code>/<code>docker service create</code>部署，前提是你得保证这个service只会固定在一台机器上运行。</li>
+</ol>
+
+<p>有时候你的应用既有stateless service又有stateful service，这时需要把他们挂载到同一个overlay网络里，这样它们之间就能够互相通信了。</p>
+
+<h3 id="4-2-创建应用网络">4.2 创建应用网络</h3>
+
+<p>创建<code>app-net</code>（你也可以改成自己的名字）</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ docker network create -d overlay --attachable app-net</code></pre></div>
+<p>参考<a href="../docker-overlay-network-mtu">Docker Overlay网络的MTU</a>检查子网与MTU是否配置正确。</p>
+
+<h3 id="4-3-给node打label">4.3 给Node打Label</h3>
+
+<p>如果你对于Service部署在哪个Node上有要求，那么你得给Node打上Label：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ docker node update --label-add &lt;your-label&gt;<span style="color:#f92672">=</span><span style="color:#ae81ff">1</span> &lt;node-id&gt;</code></pre></div>
+<p>然后在<code>docker-compose.yaml</code>里添加约束条件：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-yaml" data-lang="yaml">version: <span style="color:#e6db74">&#34;3.7&#34;</span>
+services:
+  busybox:
+    image: busybox
+    deploy:
+      placement:
+        constraints:
+          - node.labels.&lt;your-label<span style="color:#e6db74">&gt; == 1</span></code></pre></div>
+<h3 id="4-4-启动service">4.4 启动service</h3>
+
+<p>对于stateless service，编写<code>docker-compose.yaml</code>，里面写了同时挂载<code>app-net</code>和<code>monitor-net</code>，比如：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-yaml" data-lang="yaml">version: <span style="color:#e6db74">&#34;3.7&#34;</span>
+services:
+  busybox:
+    image: busybox
+    networks:
+      app-net:
+      monitor-net:
+        aliases:
+          - busybox
+...
+networks:
+  app-net:
+    external: <span style="color:#66d9ef">true</span>
+  monitor-net:
+    external: <span style="color:#66d9ef">true</span></code></pre></div>
+<p>注意上面设置了busybox service在monitor-net中的别名，这是因为如果你用<code>docker stack deploy</code>部署，那么busybox的名字默认是<code>&lt;stack-name&gt;_busybox</code>，这样对于prometheus而言此名字不稳定，不便于配置详见<a href="../p8s-scrape-container-in-docker-swarm-overlay-network/">Prometehus监控Docker Swarm Overlay网络中的容器</a>。</p>
+
+<p>然后用<code>docker stack deploy</code>部署：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ docker stack deploy <span style="color:#ae81ff">\
+</span><span style="color:#ae81ff"></span>  --with-registry-auth <span style="color:#ae81ff">\
+</span><span style="color:#ae81ff"></span>  --prune <span style="color:#ae81ff">\
+</span><span style="color:#ae81ff"></span>  -c docker-compose.yaml
+  &lt;stack-name&gt;</code></pre></div>
+<p>如果用<code>docker service create</code>则：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ docker service create <span style="color:#ae81ff">\
+</span><span style="color:#ae81ff"></span> --network app-net <span style="color:#ae81ff">\
+</span><span style="color:#ae81ff"></span> --network monitor-net <span style="color:#ae81ff">\
+</span><span style="color:#ae81ff"></span> --name &lt;name&gt; <span style="color:#ae81ff">\
+</span><span style="color:#ae81ff"></span> ... 其他参数
+ &lt;image&gt;</code></pre></div>
+<p>下面举例<code>docker run</code>启动stateful service的方法：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ docker run -d <span style="color:#ae81ff">\
+</span><span style="color:#ae81ff"></span>  --name &lt;name&gt; <span style="color:#ae81ff">\
+</span><span style="color:#ae81ff"></span>  --network app-net <span style="color:#ae81ff">\
+</span><span style="color:#ae81ff"></span>  ... 其他参数 <span style="color:#ae81ff">\
+</span><span style="color:#ae81ff"></span>  &lt;image&gt;
+  
+<span style="color:#75715e"># 然后再挂载到monitor-net上
+</span><span style="color:#75715e"></span>$ docker network connect monitor-net &lt;name&gt;</code></pre></div></article>
+    <footer class="post-footer">
+      
+      <ul class="post-tags">
+        
+          <li><a href="https://chanjarster.github.io/tags/docker"><span class="tag">Docker</span></a></li>
+        
+          <li><a href="https://chanjarster.github.io/tags/tagb"><span class="tag">TagB</span></a></li>
+        
+          <li><a href="https://chanjarster.github.io/tags/%E8%BF%90%E7%BB%B4"><span class="tag">运维</span></a></li>
+        
+      </ul>
+      
+      <p class="post-copyright">
+        
+      </p>
+    </footer>
+    
+      
+    
+  </section>
+  <footer class="site-footer">
+  <p>© 2017-2019 颇忒脱的技术博客</p>
+  <p>Powered by <a href="https://gohugo.io/" target="_blank">Hugo</a> with theme <a href="https://github.com/laozhu/hugo-nuo" target="_blank">Nuo</a>.</p>
+  
+</footer>
+
+
+
+<script async src="//cdn.bootcss.com/video.js/6.2.8/alt/video.novtt.min.js"></script>
+<script async src="//cdn.bootcss.com/mathjax/2.7.2/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    tex2jax: {
+      inlineMath: [['$','$'], ['\\(','\\)']],
+      displayMath: [['$$','$$'], ['\\[','\\]']],
+      processEscapes: true,
+      processEnvironments: true,
+      skipTags: ['script', 'noscript', 'style', 'textarea', 'pre'],
+      TeX: { equationNumbers: { autoNumber: "AMS" },
+      extensions: ["AMSmath.js", "AMSsymbols.js"] }
+    }
+  });
+</script>
+<script type="text/x-mathjax-config">
+  // Fix <code> tags after MathJax finishes running. This is a
+  // hack to overcome a shortcoming of Markdown. Discussion at
+  // https://github.com/mojombo/jekyll/issues/199
+  MathJax.Hub.Queue(() => {
+    MathJax.Hub.getAllJax().map(v => v.SourceElement().parentNode.className += ' has-jax');
+  });
+</script>
+
+<script src="https://chanjarster.github.io/js/bundle.273f9ac6f0.js"></script>
+
+
+
+
+  </body>
+</html>
