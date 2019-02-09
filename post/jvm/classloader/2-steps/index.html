@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+<head>
+
+  <meta charset="utf-8" />
+
+  
+  <title>ClassLoader（二）- 加载过程</title>
+
+  
+  
+
+
+
+
+
+  
+  <meta name="author" content="颇忒脱" />
+  <meta name="description" content="
+" />
+
+  
+  
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:site" content="@gohugoio" />
+    <meta name="twitter:title" content="ClassLoader（二）- 加载过程" />
+    <meta name="twitter:description" content="
+" />
+    <meta name="twitter:image" content="https://chanjarster.github.io/img/avatar.jpg" />
+  
+
+  
+  <meta property="og:type" content="article" />
+  <meta property="og:title" content="ClassLoader（二）- 加载过程" />
+  <meta property="og:description" content="
+" />
+  <meta property="og:url" content="https://chanjarster.github.io/post/jvm/classloader/2-steps/" />
+  <meta property="og:image" content="https://chanjarster.github.io/img/avatar.jpg" />
+
+
+
+
+<meta name="generator" content="Hugo 0.49.2" />
+
+
+<link rel="canonical" href="https://chanjarster.github.io/post/jvm/classloader/2-steps/" />
+
+<meta name="renderer" content="webkit" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<meta name="format-detection" content="telephone=no,email=no,adress=no" />
+<meta http-equiv="Cache-Control" content="no-transform" />
+
+
+<meta name="robots" content="index,follow" />
+<meta name="referrer" content="origin-when-cross-origin" />
+
+
+
+
+
+
+
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="颇忒脱的技术博客" />
+<meta name="msapplication-tooltip" content="颇忒脱的技术博客" />
+<meta name='msapplication-navbutton-color' content="#5fbf5e" />
+<meta name="msapplication-TileColor" content="#5fbf5e" />
+<meta name="msapplication-TileImage" content="/img/tile-image-windows.png" />
+<link rel="icon" href="https://chanjarster.github.io/img/favicon.ico" />
+<link rel="icon" type="image/png" sizes="16x16" href="https://chanjarster.github.io/img/favicon-16x16.png" />
+<link rel="icon" type="image/png" sizes="32x32" href="https://chanjarster.github.io/img/favicon-32x32.png" />
+<link rel="icon" sizes="192x192" href="https://chanjarster.github.io/img/touch-icon-android.png" />
+<link rel="apple-touch-icon" href="https://chanjarster.github.io/img/touch-icon-apple.png" />
+<link rel="mask-icon" href="https://chanjarster.github.io/img/safari-pinned-tab.svg" color="#5fbf5e" />
+
+
+
+<link rel="stylesheet" href="//cdn.bootcss.com/video.js/6.2.8/alt/video-js-cdn.min.css" />
+
+<link rel="stylesheet" href="https://chanjarster.github.io/css/bundle.8e3aef2bc5.css" />
+
+
+  
+  <!--[if lt IE 9]>
+    <script src="//cdn.bootcss.com/html5shiv/3.7.3/html5shiv.min.js"></script>
+    <script src="//cdn.bootcss.com/respond.js/1.4.2/respond.min.js"></script>
+    <script src="//cdn.bootcss.com/video.js/6.2.8/ie8/videojs-ie8.min.js"></script>
+  <![endif]-->
+
+<!--[if lte IE 11]>
+    <script src="//cdn.bootcss.com/classlist/1.1.20170427/classList.min.js"></script>
+  <![endif]-->
+
+
+<script src="//cdn.bootcss.com/object-fit-images/3.2.3/ofi.min.js"></script>
+
+
+<script src="//cdn.bootcss.com/smooth-scroll/12.1.4/js/smooth-scroll.polyfills.min.js"></script>
+
+
+</head>
+  <body>
+    
+    <div class="suspension">
+      <a title="Go to top" class="to-top is-hide"><span class="icon icon-up"></span></a>
+      
+        
+      
+    </div>
+    
+    
+  <header class="site-header">
+  <img class="avatar" src="https://chanjarster.github.io/img/avatar2.jpg" alt="Avatar">
+  
+  <h2 class="title">颇忒脱的技术博客</h2>
+  
+  <p class="subtitle"></p>
+  <button class="menu-toggle" type="button">
+    <span class="icon icon-menu"></span>
+  </button>
+  <nav class="site-menu collapsed">
+    <h2 class="offscreen">Main Menu</h2>
+    <ul class="menu-list">
+      
+      
+      
+      
+        <li class="menu-item
+            
+            
+            
+              is-active
+            ">
+            <a href="https://chanjarster.github.io/">Home</a>
+          </li>
+      
+        <li class="menu-item
+            
+            
+            ">
+            <a href="https://chanjarster.github.io/tags/%E6%94%B6%E8%97%8F%E5%A4%B9/">Bookmarks</a>
+          </li>
+      
+        <li class="menu-item
+            
+            
+            ">
+            <a href="https://github.com/chanjarster">Works</a>
+          </li>
+      
+        <li class="menu-item
+            
+            
+            ">
+            <a href="https://chanjarster.github.io/tags/">Tags</a>
+          </li>
+      
+        <li class="menu-item
+            
+            
+            ">
+            <a href="https://chanjarster.github.io/links/">Links</a>
+          </li>
+      
+    </ul>
+  </nav>
+  <nav class="social-menu collapsed">
+    <h2 class="offscreen">Social Networks</h2>
+    <ul class="social-list">
+
+      
+
+      
+      <li class="social-item">
+        <a href="//github.com/chanjarster" title="GitHub"><span class="icon icon-github"></span></a>
+      </li>
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      <li class="social-item">
+        <a rel="alternate" type="application/rss+xml" href="https://chanjarster.github.io/index.xml"><span class="icon icon-rss" title="RSS"></span></a>
+      </li>
+
+    </ul>
+  </nav>
+</header>
+
+  <section class="main post-detail">
+    <header class="post-header">
+      <h1 class="post-title">ClassLoader（二）- 加载过程</h1>
+      <p class="post-meta">@颇忒脱 · Jan 25, 2019 · 6 min read</p>
+    </header>
+    <article class="post-content"><p></p>
+
+<p>本文源代码在<a href="https://github.com/chanjarster/java-relearn/tree/master/classloader">Github</a>。</p>
+
+<p>在前一篇文章<a href="../class-loader">初步了解ClassLoader</a>里提到了委托模型（又称双亲委派模型），解释了ClassLoader hierarchy（层级）处理类加载的过程。那么class文件是如何变成Class对象的呢？</p>
+
+<h2 id="class的加载过程">Class的加载过程</h2>
+
+<p>Class加载分为这几步：</p>
+
+<ol>
+<li>创建和加载（Creation and Loading）</li>
+<li>链接（Linking）
+
+<ol>
+<li>验证（Verification）</li>
+<li>准备（Preparation）</li>
+<li>解析（Resolution），此步骤可选</li>
+</ol></li>
+<li>初始化（Initialization）</li>
+</ol>
+
+<p>注: 前面说了数组类是虚拟机直接创建的，以上过程不适用于数组类。</p>
+
+<h2 id="创建和加载-creation-and-loading">创建和加载（Creation and Loading）</h2>
+
+<p>何时会触发一个类的加载？</p>
+
+<p><a href="https://docs.oracle.com/javase/specs/jls/se8/html/jls-12.html#jls-12.1.1">Java Language Specification - 12.1.1. Load the Class Test</a>：</p>
+
+<blockquote>
+<p>The initial attempt to execute the method <code>main</code> of class <code>Test</code> discovers that the class <code>Test</code> is not loaded - that is, that the Java Virtual Machine does not currently contain a binary representation for this class. The Java Virtual Machine then uses a class loader to attempt to find such a binary representation.</p>
+</blockquote>
+
+<p>也就是说，当要用到一个类，JVM发现还没有包含这个类的二进制形式（字节）时，就会使用ClassLoader尝试查找这个类的二进制形式。</p>
+
+<p>我们知道ClassLoader委托模型，也就是说实际触发加载的ClassLoader和真正加载的ClassLoader可能不是同一个，JVM将它们称之为<code>initiating loader</code>和<code>defining loader</code>（<a href="https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-5.html#jvms-5.3">Java Virtual Machine Specification - 5.3. Creation and Loading</a>）：</p>
+
+<blockquote>
+<p>A class loader <code>L</code> may create C by defining it directly or by delegating to another class loader. If <code>L</code> creates C directly, we say that <code>L</code> defines C or, equivalently, that <code>L</code> is the <em>defining loader</em> of C.</p>
+
+<p>When one class loader delegates to another class loader, the loader that initiates the loading is not necessarily the same loader that completes the loading and defines the class. If <code>L</code> creates C, either by defining it directly or by delegation, we say that <code>L</code> initiates loading of C or, equivalently, that <code>L</code> is an <em>initiating loader</em> of C.</p>
+</blockquote>
+
+<p>那么当A类使用B类的时候，B类使用的是哪个ClassLoader呢？</p>
+
+<p><a href="https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-5.html#jvms-5.3">Java Virtual Machine Specification - 5.3. Creation and Loading</a>：</p>
+
+<blockquote>
+<p>The Java Virtual Machine uses one of three procedures to create class or interface C denoted by N:</p>
+
+<ul>
+<li>If <code>N</code> denotes a nonarray class or an interface, one of the two following methods is used to load and thereby create C:
+
+<ul>
+<li>If D was defined by the bootstrap class loader, then the bootstrap class loader initiates loading of C (§5.3.1).</li>
+<li>If D was defined by a user-defined class loader, then that same user-defined class loader initiates loading of C (§5.3.2).</li>
+</ul></li>
+<li>Otherwise <code>N</code> denotes an array class. An array class is created directly by the Java Virtual Machine (§5.3.3), not by a class loader. However, the defining class loader of D is used in the process of creating array class C.</li>
+</ul>
+
+<p>注：上文的C和D都是类，N则是C的名字。</p>
+</blockquote>
+
+<p>也就说如果D用到C，且C还没有被加载，且C不是数组，那么：</p>
+
+<ol>
+<li>如果D的defining loader是bootstrap class loader，那么C的initiating loader就是bootstrap class loader。</li>
+<li>如果D的defining loader是自定义的class loader X，那么C的initiating loader就是X。</li>
+</ol>
+
+<p>再总结一下就是：如果D用到C，且C还没有被加载，且C不是数组，那么C的initiating loader就是D的defining loader。</p>
+
+<p>用下面的代码观察一下：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#75715e">// 把这个项目打包然后放到/tmp目录下
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">public</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">CreationAndLoading</span> <span style="color:#f92672">{</span>
+  <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">static</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">main</span><span style="color:#f92672">(</span>String<span style="color:#f92672">[]</span> args<span style="color:#f92672">)</span> <span style="color:#66d9ef">throws</span> Exception <span style="color:#f92672">{</span>
+    <span style="color:#75715e">// ucl1的parent是bootstrap class loader
+</span><span style="color:#75715e"></span>    URLClassLoader ucl1 <span style="color:#f92672">=</span> <span style="color:#66d9ef">new</span> NamedURLClassLoader<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;user-defined 1&#34;</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">new</span> URL<span style="color:#f92672">[]</span> <span style="color:#f92672">{</span> <span style="color:#66d9ef">new</span> URL<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;file:///tmp/classloader.jar&#34;</span><span style="color:#f92672">)</span> <span style="color:#f92672">},</span> <span style="color:#66d9ef">null</span><span style="color:#f92672">);</span>
+    <span style="color:#75715e">// ucl1是ucl2的parent
+</span><span style="color:#75715e"></span>    URLClassLoader ucl2 <span style="color:#f92672">=</span> <span style="color:#66d9ef">new</span> NamedURLClassLoader<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;user-defined 2&#34;</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">new</span> URL<span style="color:#f92672">[</span>0<span style="color:#f92672">],</span> ucl1<span style="color:#f92672">);</span>
+    Class<span style="color:#f92672">&lt;?&gt;</span> fooClass2 <span style="color:#f92672">=</span> ucl2<span style="color:#f92672">.</span><span style="color:#a6e22e">loadClass</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34;me.chanjar.javarelearn.classloader.Foo&#34;</span><span style="color:#f92672">);</span>
+    fooClass2<span style="color:#f92672">.</span><span style="color:#a6e22e">newInstance</span><span style="color:#f92672">();</span>
+  <span style="color:#f92672">}</span>
+<span style="color:#f92672">}</span>
+
+<span style="color:#66d9ef">public</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">Foo</span> <span style="color:#f92672">{</span>
+  <span style="color:#66d9ef">public</span> <span style="color:#a6e22e">Foo</span><span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
+    System<span style="color:#f92672">.</span><span style="color:#a6e22e">out</span><span style="color:#f92672">.</span><span style="color:#a6e22e">println</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34;Foo&#39;s classLoader: &#34;</span> <span style="color:#f92672">+</span> Foo<span style="color:#f92672">.</span><span style="color:#a6e22e">class</span><span style="color:#f92672">.</span><span style="color:#a6e22e">getClassLoader</span><span style="color:#f92672">());</span>
+    System<span style="color:#f92672">.</span><span style="color:#a6e22e">out</span><span style="color:#f92672">.</span><span style="color:#a6e22e">println</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34;Bar&#39;s classLoader: &#34;</span> <span style="color:#f92672">+</span> Bar<span style="color:#f92672">.</span><span style="color:#a6e22e">class</span><span style="color:#f92672">.</span><span style="color:#a6e22e">getClassLoader</span><span style="color:#f92672">());</span>
+  <span style="color:#f92672">}</span>
+<span style="color:#f92672">}</span>
+
+<span style="color:#66d9ef">public</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">NamedURLClassLoader</span> <span style="color:#66d9ef">extends</span> URLClassLoader <span style="color:#f92672">{</span>
+  <span style="color:#66d9ef">private</span> String name<span style="color:#f92672">;</span>
+  <span style="color:#66d9ef">public</span> <span style="color:#a6e22e">NamedURLClassLoader</span><span style="color:#f92672">(</span>String name<span style="color:#f92672">,</span> URL<span style="color:#f92672">[]</span> urls<span style="color:#f92672">,</span> ClassLoader parent<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+    <span style="color:#66d9ef">super</span><span style="color:#f92672">(</span>urls<span style="color:#f92672">,</span> parent<span style="color:#f92672">);</span>
+    <span style="color:#66d9ef">this</span><span style="color:#f92672">.</span><span style="color:#a6e22e">name</span> <span style="color:#f92672">=</span> name<span style="color:#f92672">;</span>
+  <span style="color:#f92672">}</span>
+  <span style="color:#a6e22e">@Override</span>
+  <span style="color:#66d9ef">protected</span> Class<span style="color:#f92672">&lt;?&gt;</span> findClass<span style="color:#f92672">(</span>String name<span style="color:#f92672">)</span> <span style="color:#66d9ef">throws</span> ClassNotFoundException <span style="color:#f92672">{</span>
+    System<span style="color:#f92672">.</span><span style="color:#a6e22e">out</span><span style="color:#f92672">.</span><span style="color:#a6e22e">println</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34;ClassLoader: &#34;</span> <span style="color:#f92672">+</span> <span style="color:#66d9ef">this</span><span style="color:#f92672">.</span><span style="color:#a6e22e">name</span> <span style="color:#f92672">+</span> <span style="color:#e6db74">&#34; findClass(&#34;</span> <span style="color:#f92672">+</span> name <span style="color:#f92672">+</span> <span style="color:#e6db74">&#34;)&#34;</span><span style="color:#f92672">);</span>
+    <span style="color:#66d9ef">return</span> <span style="color:#66d9ef">super</span><span style="color:#f92672">.</span><span style="color:#a6e22e">findClass</span><span style="color:#f92672">(</span>name<span style="color:#f92672">);</span>
+  <span style="color:#f92672">}</span>
+  <span style="color:#a6e22e">@Override</span>
+  <span style="color:#66d9ef">public</span> Class<span style="color:#f92672">&lt;?&gt;</span> loadClass<span style="color:#f92672">(</span>String name<span style="color:#f92672">)</span> <span style="color:#66d9ef">throws</span> ClassNotFoundException <span style="color:#f92672">{</span>
+    System<span style="color:#f92672">.</span><span style="color:#a6e22e">out</span><span style="color:#f92672">.</span><span style="color:#a6e22e">println</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34;ClassLoader: &#34;</span> <span style="color:#f92672">+</span> <span style="color:#66d9ef">this</span><span style="color:#f92672">.</span><span style="color:#a6e22e">name</span> <span style="color:#f92672">+</span> <span style="color:#e6db74">&#34; loadClass(&#34;</span> <span style="color:#f92672">+</span> name <span style="color:#f92672">+</span> <span style="color:#e6db74">&#34;)&#34;</span><span style="color:#f92672">);</span>
+    <span style="color:#66d9ef">return</span> <span style="color:#66d9ef">super</span><span style="color:#f92672">.</span><span style="color:#a6e22e">loadClass</span><span style="color:#f92672">(</span>name<span style="color:#f92672">);</span>
+  <span style="color:#f92672">}</span>
+  <span style="color:#a6e22e">@Override</span>
+  <span style="color:#66d9ef">public</span> String <span style="color:#a6e22e">toString</span><span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
+    <span style="color:#66d9ef">return</span> name<span style="color:#f92672">;</span>
+  <span style="color:#f92672">}</span>
+<span style="color:#f92672">}</span></code></pre></div>
+<p>运行结果是：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-txt" data-lang="txt">ClassLoader: user-defined 2 loadClass(me.chanjar.javarelearn.classloader.Foo)
+ClassLoader: user-defined 1 findClass(me.chanjar.javarelearn.classloader.Foo)
+ClassLoader: user-defined 1 loadClass(java.lang.Object)
+ClassLoader: user-defined 1 loadClass(java.lang.System)
+ClassLoader: user-defined 1 loadClass(java.lang.StringBuilder)
+ClassLoader: user-defined 1 loadClass(java.lang.Class)
+ClassLoader: user-defined 1 loadClass(java.io.PrintStream)
+Foo&#39;s classLoader: user-defined 1
+ClassLoader: user-defined 1 loadClass(me.chanjar.javarelearn.classloader.Bar)
+ClassLoader: user-defined 1 findClass(me.chanjar.javarelearn.classloader.Bar)
+Bar&#39;s classLoader: user-defined 1</code></pre></div>
+<p>可以注意到<code>Foo</code>的initiating loader是user-defined 2，但是defining loader是user-defined 1。而<code>Bar</code>的initiating loader与defining loader则直接是user-defined 1，绕过了user-defined 2。观察结果符合预期。</p>
+
+<h2 id="链接">链接</h2>
+
+<h3 id="验证-verification">验证（Verification）</h3>
+
+<p>验证类的二进制形式在结构上是否正确。</p>
+
+<h3 id="准备-preparation">准备（Preparation）</h3>
+
+<p>为类创建静态字段，并且为这些静态字段初始化默认值。</p>
+
+<h3 id="解析-resolution">解析（Resolution）</h3>
+
+<p>JVM在运行时会为每个类维护一个run-time constant pool，run-time constant pool构建自类的二进制形式里的<code>constant_pool</code>表。run-time constant pool里的所有引用一开始都是符号引用（symbolic reference）（见<a href="https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-5.html#jvms-5.1">Java Virutal Machine Specification - 5.1. The Run-Time Constant Pool</a>）。符号引用就是并非真正引用（即引用内存地址），只是指向了一个名字而已（就是字符串）。解析阶段做的事情就是将符号引用转变成实际引用）。</p>
+
+<p><a href="https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-5.html#jvms-5.5">Java Virutal Machine Specification - 5.4. Linking</a>：</p>
+
+<blockquote>
+<p>This specification allows an implementation flexibility as to when linking activities (and, because of recursion, loading) take place, provided that all of the following properties are maintained:</p>
+
+<ol>
+<li><p>A class or interface is completely loaded before it is linked.</p></li>
+
+<li><p>A class or interface is completely verified and prepared before it is initialized.</p></li>
+</ol>
+</blockquote>
+
+<p>也就是说仅要求：</p>
+
+<ol>
+<li>一个类在被链接之前得是完全加载的。</li>
+<li>一个类在被初始化之前得是被完全验证和准备的。</li>
+</ol>
+
+<p>所以对于解析的时机JVM Spec没有作出太多规定，只说了以下JVM指令在执行之前需要解析符号引用：<em>anewarray</em>, <em>checkcast</em>, <em>getfield</em>, <em>getstatic</em>, <em>instanceof</em>, <em>invokedynamic</em>, <em>invokeinterface</em>, <em>invokespecial</em>, <em>invokestatic</em>, <em>invokevirtual</em>, <em>ldc</em>, <em>ldc_w</em>, <em>multianewarray</em>, <em>new</em>, <em>putfield</em> 和 <em>putstatic</em> 。</p>
+
+<p>看不懂没关系，大致意思就是，用到字段、用到方法、用到静态方法、new类等时候需要解析符号引用。</p>
+
+<h2 id="初始化">初始化</h2>
+
+<p>如果直接赋值的静态字段被 final 所修饰，并且它的类型是基本类型或字符串时，那么该字段便会被 Java 编译器标记成常量值（ConstantValue），其初始化直接由 Java 虚拟机完成。除此之外的直接赋值操作，以及所有静态代码块中的代码，则会被 Java 编译器置于同一方法中，并把它命为 <code>&lt;clinit&gt;</code>（<strong>cl</strong>ass <strong>init</strong>）。</p>
+
+<p>JVM 规范枚举了下述类的初始化时机是：</p>
+
+<ol>
+<li>当虚拟机启动时，初始化用户指定的主类；</li>
+<li>new 某个类的时候</li>
+<li>调用某类的静态方法时</li>
+<li>访问某类的静态字段时</li>
+<li>子类初始化会触发父类初始化</li>
+<li>用反射API对某个类进行调用时</li>
+<li>一个接口定义了default方法（原文是non-abstract、non-static方法），某个实现了这个接口的类被初始化，那么这个接口也会被初始化</li>
+<li>初次调用 MethodHandle 实例时</li>
+</ol>
+
+<p>注意：这里没有提到new 数组的情况，所以new 数组的时候不会初始化类。</p>
+
+<p>同时类的初始化过程是线程安全的，下面是一个利用上述时机4和线程安全特性做的延迟加载的Singleton的例子：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#66d9ef">public</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">Singleton</span> <span style="color:#f92672">{</span>
+  <span style="color:#66d9ef">private</span> <span style="color:#a6e22e">Singleton</span><span style="color:#f92672">()</span> <span style="color:#f92672">{}</span>
+  <span style="color:#66d9ef">private</span> <span style="color:#66d9ef">static</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">LazyHolder</span> <span style="color:#f92672">{</span>
+    <span style="color:#66d9ef">static</span> <span style="color:#66d9ef">final</span> Singleton INSTANCE <span style="color:#f92672">=</span> <span style="color:#66d9ef">new</span> Singleton<span style="color:#f92672">();</span>
+  <span style="color:#f92672">}</span>
+  <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">static</span> Singleton <span style="color:#a6e22e">getInstance</span><span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
+    <span style="color:#66d9ef">return</span> LazyHolder<span style="color:#f92672">.</span><span style="color:#a6e22e">INSTANCE</span><span style="color:#f92672">;</span>
+  <span style="color:#f92672">}</span>
+<span style="color:#f92672">}</span></code></pre></div>
+<p>这种做法被称为<a href="https://en.wikipedia.org/wiki/Initialization-on-demand_holder_idiom">Initialization-on-demand holder idiom</a>。</p>
+
+<h2 id="类加载常见异常">类加载常见异常</h2>
+
+<h3 id="classnotfoundexception">ClassNotFoundException</h3>
+
+<p><a href="https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-5.html#jvms-5.3.1">Java Virutal Machine Specification - 5.3.1. Loading Using the Bootstrap Class Loader</a>：</p>
+
+<blockquote>
+<p>If no purported representation of C is found, loading throws an instance of <code>ClassNotFoundException</code>.</p>
+</blockquote>
+
+<p><a href="https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-5.html#jvms-5.3.2">Java Virutal Machine Specification - 5.3.2. Loading Using a User-defined Class Loader</a>：</p>
+
+<blockquote>
+<p>When the <code>loadClass</code> method of the class loader <code>L</code> is invoked with the name <code>N</code> of a class or interface C to be loaded, <code>L</code> must perform one of the following two operations in order to load C:</p>
+
+<ol>
+<li><p>The class loader <code>L</code> can create an array of bytes representing C as the bytes of a ClassFile structure (§4.1); it then must invoke the method <code>defineClass</code> of class ClassLoader. Invoking defineClass causes the Java Virtual Machine to derive a class or interface denoted by <code>N</code> using <code>L</code> from the array of bytes using the algorithm found in §5.3.5.</p></li>
+
+<li><p>The class loader <code>L</code> can delegate the loading of C to some other class loader L&rsquo;. This is accomplished by passing the argument <code>N</code> directly or indirectly to an invocation of a method on <code>L'</code> (typically the <code>loadClass</code> method). The result of the invocation is C.</p></li>
+</ol>
+
+<p>In either (1) or (2), if the class loader <code>L</code> is unable to load a class or interface denoted by <code>N</code> for any reason, it must throw an instance of ClassNotFoundException.</p>
+</blockquote>
+
+<p>所以，<code>ClassNotFoundException</code>发生在【加载阶段】：</p>
+
+<ol>
+<li>如果用的是bootstrap class loader，则当找不到其该类的二进制形式时抛出<code>ClassNotFoundException</code></li>
+<li>如果用的是用户自定义class loader，不管是自己创建二进制（这里包括从文件读取或者内存中创建），还是代理给其他class loader，只要出现无法加载的情况，都要抛出<code>ClassNotFoundException</code></li>
+</ol>
+
+<h3 id="noclassdeffounderror">NoClassDefFoundError</h3>
+
+<p><a href="https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-5.html#jvms-5.3">Java Virtual Machine Specification - 5.3. Creation and Loading</a></p>
+
+<blockquote>
+<p>If the Java Virtual Machine ever attempts to load a class C during verification (§5.4.1) or resolution (§5.4.3) (but not initialization (§5.5)), and the class loader that is used to initiate loading of C throws an instance of <code>ClassNotFoundException</code>, then the Java Virtual Machine must throw an instance of <code>NoClassDefFoundError</code> whose cause is the instance of <code>ClassNotFoundException</code>.</p>
+
+<p>(A subtlety here is that recursive class loading to load superclasses is performed as part of resolution (§5.3.5, step 3). Therefore, a <code>ClassNotFoundException</code> that results from a class loader failing to load a superclass must be wrapped in a <code>NoClassDefFoundError</code>.)</p>
+</blockquote>
+
+<p><a href="https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-5.html#jvms-5.3.5">Java Virtual Machine Specification - 5.3.5. Deriving a Class from a class File Representation</a></p>
+
+<blockquote>
+<p>Otherwise, if the purported representation does not actually represent a class named <code>N</code>, loading throws an instance of <code>NoClassDefFoundError</code> or an instance of one of its subclasses.</p>
+</blockquote>
+
+<p><a href="https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-5.html#jvms-5.5">Java Virtual Machine Specification - 5.5. Initialization</a></p>
+
+<blockquote>
+<p>If the Class object for C is in an erroneous state, then initialization is not possible. Release <code>LC</code> and throw a <code>NoClassDefFoundError</code>.</p>
+</blockquote>
+
+<p>所以，<code>NoClassDefFoundError</code>发生在：</p>
+
+<ol>
+<li>【加载阶段】，因其他类的【验证】or【解析】触发对C类的【加载】，此时发生了<code>ClassNotFoundException</code>，那么就要抛出<code>NoClassDefFoundError</code>，cause 是<code>ClassNotFoundException</code>。</li>
+<li>【加载阶段】，在【解析】superclass的过程中发生的<code>ClassNotFoundException</code>也必须包在<code>NoClassDefFoundError</code>里。</li>
+<li>【加载阶段】，发现找到的二进制里的类名和要找的类名不一致时，抛出<code>NoClassDefFoundError</code></li>
+<li>【初始化阶段】，如果C类的Class对象处于错误状态，那么抛出<code>NoClassDefFoundError</code></li>
+</ol>
+
+<h2 id="追踪类的加载">追踪类的加载</h2>
+
+<p>可以在JVM启动时添加<code>-verbose:class</code>来打印类加载过程。</p>
+
+<h2 id="参考资料">参考资料</h2>
+
+<ul>
+<li><a href="https://docs.oracle.com/javase/specs/jls/se8/html/jls-12.html">Java Language Specification - Chapter 12. Execution</a></li>
+<li><a href="https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-5.html">Java Virtual Machine Specification - Chapter 5. Loading, Linking, and Initializing</a></li>
+<li><a href="https://time.geekbang.org/column/article/11523">极客时间 - 深入拆解Java虚拟机 - 03 Java虚拟机是如何加载Java类的?</a>（专栏文章，需付费购买）</li>
+<li><a href="https://cyc2018.github.io/CS-Notes/#/notes/Java%20%E8%99%9A%E6%8B%9F%E6%9C%BA?id=%E5%9B%9B%E3%80%81%E7%B1%BB%E5%8A%A0%E8%BD%BD%E6%9C%BA%E5%88%B6">CS-Note 类加载机制</a></li>
+<li><a href="https://blog.csdn.net/u010425776/article/details/51251430">深入理解JVM(八)——类加载的时机</a></li>
+<li><a href="https://blog.csdn.net/u010425776/article/details/51254858">深入理解JVM(九)——类加载的过程</a></li>
+</ul></article>
+    <footer class="post-footer">
+      
+      <ul class="post-tags">
+        
+          <li><a href="https://chanjarster.github.io/tags/classloader"><span class="tag">ClassLoader</span></a></li>
+        
+          <li><a href="https://chanjarster.github.io/tags/jvm"><span class="tag">JVM</span></a></li>
+        
+          <li><a href="https://chanjarster.github.io/tags/arts"><span class="tag">ARTS</span></a></li>
+        
+          <li><a href="https://chanjarster.github.io/tags/arts-t"><span class="tag">ARTS-T</span></a></li>
+        
+      </ul>
+      
+      <p class="post-copyright">
+        
+      </p>
+    </footer>
+    
+      
+    
+  </section>
+  <footer class="site-footer">
+  <p>© 2017-2019 颇忒脱的技术博客</p>
+  <p>Powered by <a href="https://gohugo.io/" target="_blank">Hugo</a> with theme <a href="https://github.com/laozhu/hugo-nuo" target="_blank">Nuo</a>.</p>
+  
+</footer>
+
+
+
+<script async src="//cdn.bootcss.com/video.js/6.2.8/alt/video.novtt.min.js"></script>
+<script async src="//cdn.bootcss.com/mathjax/2.7.2/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    tex2jax: {
+      inlineMath: [['$','$'], ['\\(','\\)']],
+      displayMath: [['$$','$$'], ['\\[','\\]']],
+      processEscapes: true,
+      processEnvironments: true,
+      skipTags: ['script', 'noscript', 'style', 'textarea', 'pre'],
+      TeX: { equationNumbers: { autoNumber: "AMS" },
+      extensions: ["AMSmath.js", "AMSsymbols.js"] }
+    }
+  });
+</script>
+<script type="text/x-mathjax-config">
+  // Fix <code> tags after MathJax finishes running. This is a
+  // hack to overcome a shortcoming of Markdown. Discussion at
+  // https://github.com/mojombo/jekyll/issues/199
+  MathJax.Hub.Queue(() => {
+    MathJax.Hub.getAllJax().map(v => v.SourceElement().parentNode.className += ' has-jax');
+  });
+</script>
+
+<script src="https://chanjarster.github.io/js/bundle.273f9ac6f0.js"></script>
+
+
+
+
+  </body>
+</html>
