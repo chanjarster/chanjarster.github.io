@@ -5,7 +5,7 @@
   <meta charset="utf-8" />
 
   
-  <title>K8s如何安全地关闭Node</title>
+  <title>From Microliths to Microsystems</title>
 
   
   
@@ -16,28 +16,25 @@
 
   
   <meta name="author" content="颇忒脱" />
-  <meta name="description" content="本文介绍如何安全地关闭Node。
-
+  <meta name="description" content="
 " />
 
   
   
     <meta name="twitter:card" content="summary" />
     <meta name="twitter:site" content="@gohugoio" />
-    <meta name="twitter:title" content="K8s如何安全地关闭Node" />
-    <meta name="twitter:description" content="本文介绍如何安全地关闭Node。
-
+    <meta name="twitter:title" content="From Microliths to Microsystems" />
+    <meta name="twitter:description" content="
 " />
     <meta name="twitter:image" content="https://chanjarster.github.io/img/avatar.jpg" />
   
 
   
   <meta property="og:type" content="article" />
-  <meta property="og:title" content="K8s如何安全地关闭Node" />
-  <meta property="og:description" content="本文介绍如何安全地关闭Node。
-
+  <meta property="og:title" content="From Microliths to Microsystems" />
+  <meta property="og:description" content="
 " />
-  <meta property="og:url" content="https://chanjarster.github.io/post/k8s-how-to-shutdown-node-safely/" />
+  <meta property="og:url" content="https://chanjarster.github.io/post/from-microliths-to-microsystems/" />
   <meta property="og:image" content="https://chanjarster.github.io/img/avatar.jpg" />
 
 
@@ -46,7 +43,7 @@
 <meta name="generator" content="Hugo 0.49.2" />
 
 
-<link rel="canonical" href="https://chanjarster.github.io/post/k8s-how-to-shutdown-node-safely/" />
+<link rel="canonical" href="https://chanjarster.github.io/post/from-microliths-to-microsystems/" />
 
 <meta name="renderer" content="webkit" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
@@ -227,42 +224,95 @@
 
   <section class="main post-detail">
     <header class="post-header">
-      <h1 class="post-title">K8s如何安全地关闭Node</h1>
-      <p class="post-meta">@颇忒脱 · Oct 22, 2018 · 1 min read</p>
+      <h1 class="post-title">From Microliths to Microsystems</h1>
+      <p class="post-meta">@颇忒脱 · Feb 10, 2019 · 1 min read</p>
     </header>
-    <article class="post-content"><p>本文介绍如何安全地关闭Node。</p>
+    <article class="post-content"><p></p>
 
-<p></p>
+<p><a href="https://www.infoq.com/news/2017/03/microliths-microsystems">原文地址</a> | <a href="https://www.youtube.com/watch?v=NotiE8Mm8F4">Presentation</a> | <a href="https://www.slideshare.net/jboner/from-microliths-to-microsystems">Slides</a></p>
 
-<p>虽然我们可以直接将Node关机，让K8S自己将这个Node上的Pod在别的Node上重新创建，但是这样可能会对K8S集群造成冲击。</p>
+<p>关键词：微服务、event-first DDD、Reactive</p>
 
-<p>我们设想中的顺序应该是这样的：</p>
+<h2 id="大纲">大纲</h2>
 
-<ol>
-<li>禁止有新的Pod安排到Node上</li>
-<li>把Node上的Pod迁移到别处</li>
-<li>把Node关掉</li>
-</ol>
+<ul>
+<li>避免构建mini-moniliths，即microliths。</li>
+<li>构建resilient和elastic的系统。</li>
+<li>最小化系统内部的耦合度，最小化系统内部的通信。</li>
+<li>使用reactive programming，reactive system design，eventual consistency。</li>
+<li>把无状态行为从有状态实体分离出来，更容易扩展性。</li>
+<li>实践event-first DDD。</li>
+</ul>
 
-<p>我们可以利用<a href="https://kubernetes.io/docs/tasks/administer-cluster/safely-drain-node/#use-kubectl-drain-to-remove-a-node-from-service"><code>kubectl drain</code></a>来做到前面的两点，大致方式如下：</p>
+<blockquote>
+<p><strong>Each</strong> microservice needs to be designed as a distributed system: a microsystem. We need to move from microliths to microsystems.</p>
+</blockquote>
 
-<ol>
-<li><code>kubectl get nodes</code>找到Node</li>
-<li><code>kubectl drain &lt;node-name&gt;</code></li>
-<li>然后关机就行了</li>
-</ol>
+<p>microliths既非resilient也不elastic。根据<a href="http://www.reactivemanifesto.org/">The Reactive Manifesto</a>，要达成resilient和elastic需要：</p>
 
-<p>当这个Node后来又启动了，那么只需要<code>kubectl uncordon &lt;node name&gt;</code>。</p></article>
+<ul>
+<li>Decentralised architecture</li>
+<li>Bulkheading</li>
+<li>Replication</li>
+<li>Failure detection</li>
+<li>Supervision</li>
+<li>Gossip protocols</li>
+<li>Self-organisation</li>
+<li>Location transparency</li>
+</ul>
+
+<p>一切信息都有延迟，我们总是通过分布式系统通信来窥视过去发生的事情。开发者应尽量减少耦合与通信，并拥抱最终一致性。</p>
+
+<p>作者推荐了两个设计微服务系统的工具：</p>
+
+<p><strong>工具一：Reactive desgin</strong></p>
+
+<ul>
+<li>Reactive programming，比如RxJava，可以帮助让单个服务实例高性能以及高效。</li>
+<li>基于异步消息的Reactive系统可以帮助构建elastic and resilient的分布式系统。</li>
+<li>实现异步和非阻塞微服务可以更有效的利用资源，降低共享资源的争用。</li>
+<li>总是使用<a href="http://www.reactivemanifesto.org/glossary#Back-Pressure">back-pressure</a>，一个快速系统不应该是慢速系统过载。</li>
+</ul>
+
+<p><strong>工具二：Event-first <a href="https://www.infoq.com/minibooks/domain-driven-design-quickly">DDD</a></strong></p>
+
+<ul>
+<li>每一个微服务应该被设计成为一个微系统，无状态行为要从有状态实体中剥离出来，使得独立服务能够具有扩展性。</li>
+<li>实体可以称为确定性和一致性的安全岛，但是扩展无状态行为易，扩展有状态实体难。</li>
+<li>开发者应该实践event-first DDD，从一致性边界的角度思考<a href="https://blog.acolyer.org/2016/09/13/data-on-the-outside-versus-data-on-the-inside/">data on the inside</a>代表现在，data from the outside代表过去，而command则代表未来的动作。</li>
+</ul>
+
+<blockquote>
+<p>Don&rsquo;t focus on the things - the nouns. Focus on what happens - the events! Let the events define the bounded context.</p>
+</blockquote>
+
+<p>一个微服务应该包含一切可变状态并发布事实，所谓事实就是event。event log应该是一个“代表过去的数据库”，<a href="https://queue.acm.org/detail.cfm?id=2884038">single immutable source of truth</a>。event logging可以避免臭名昭著的<a href="https://en.wikipedia.org/wiki/Object-relational_impedance_mismatch">object-relational impedance mismatch</a>，读写问题可以通过<a href="https://martinfowler.com/bliki/CQRS.html">CQRS</a>与<a href="https://martinfowler.com/eaaDev/EventSourcing.html">Event sourcing</a>解开。开发者不应该基于<a href="http://queue.acm.org/detail.cfm?id=3025012">assuming distributed transactions</a>来构建大型可扩展应用，而应该使用“guess, apoligize, compensate”（和TCC、Saga类似）协议。</p>
+
+<h2 id="延伸阅读">延伸阅读</h2>
+
+<ul>
+<li><a href="https://www.youtube.com/watch?v=NotiE8Mm8F4">Youtube - From Microliths to Microsystems</a></li>
+<li><a href="http://www.reactivemanifesto.org/">The Reactive Manifesto</a></li>
+<li><a href="https://blog.acolyer.org/2016/09/13/data-on-the-outside-versus-data-on-the-inside/">Data on the Outside versus Data on the Inside</a></li>
+<li><a href="https://queue.acm.org/detail.cfm?id=2884038">Immutability Changes Everything</a></li>
+<li><a href="http://queue.acm.org/detail.cfm?id=3025012">Life Beyond Distributed Transactions</a></li>
+<li><a href="https://martinfowler.com/bliki/CQRS.html">CQRS</a></li>
+<li><a href="https://martinfowler.com/eaaDev/EventSourcing.html">Event sourcing</a></li>
+</ul></article>
     <footer class="post-footer">
       
       <ul class="post-tags">
         
-          <li><a href="https://chanjarster.github.io/tags/k8s"><span class="tag">K8s</span></a></li>
+          <li><a href="https://chanjarster.github.io/tags/arts"><span class="tag">ARTS</span></a></li>
+        
+          <li><a href="https://chanjarster.github.io/tags/arts-r"><span class="tag">ARTS-R</span></a></li>
+        
+          <li><a href="https://chanjarster.github.io/tags/%E5%BE%AE%E6%9C%8D%E5%8A%A1"><span class="tag">微服务</span></a></li>
         
       </ul>
       
       <p class="post-copyright">
-        This post was published <strong>111</strong> days ago, content in the post may be inaccurate, even wrong now, please take risk yourself.
+        
       </p>
     </footer>
     
