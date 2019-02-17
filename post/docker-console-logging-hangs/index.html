@@ -5,7 +5,7 @@
   <meta charset="utf-8" />
 
   
-  <title>如何抽取公共服务并成功迁移</title>
+  <title>容器打印日志到控制台阻塞的排障</title>
 
   
   
@@ -16,7 +16,7 @@
 
   
   <meta name="author" content="颇忒脱" />
-  <meta name="description" content="本文探讨了如何创建并落地一个公共服务的方法。
+  <meta name="description" content="记一次容器打印到控制台阻塞，且容器停止响应的问题。
 
 " />
 
@@ -24,8 +24,8 @@
   
     <meta name="twitter:card" content="summary" />
     <meta name="twitter:site" content="@gohugoio" />
-    <meta name="twitter:title" content="如何抽取公共服务并成功迁移" />
-    <meta name="twitter:description" content="本文探讨了如何创建并落地一个公共服务的方法。
+    <meta name="twitter:title" content="容器打印日志到控制台阻塞的排障" />
+    <meta name="twitter:description" content="记一次容器打印到控制台阻塞，且容器停止响应的问题。
 
 " />
     <meta name="twitter:image" content="https://chanjarster.github.io/img/avatar.jpg" />
@@ -33,11 +33,11 @@
 
   
   <meta property="og:type" content="article" />
-  <meta property="og:title" content="如何抽取公共服务并成功迁移" />
-  <meta property="og:description" content="本文探讨了如何创建并落地一个公共服务的方法。
+  <meta property="og:title" content="容器打印日志到控制台阻塞的排障" />
+  <meta property="og:description" content="记一次容器打印到控制台阻塞，且容器停止响应的问题。
 
 " />
-  <meta property="og:url" content="https://chanjarster.github.io/post/extract-public-service/" />
+  <meta property="og:url" content="https://chanjarster.github.io/post/docker-console-logging-hangs/" />
   <meta property="og:image" content="https://chanjarster.github.io/img/avatar.jpg" />
 
 
@@ -46,7 +46,7 @@
 <meta name="generator" content="Hugo 0.49.2" />
 
 
-<link rel="canonical" href="https://chanjarster.github.io/post/extract-public-service/" />
+<link rel="canonical" href="https://chanjarster.github.io/post/docker-console-logging-hangs/" />
 
 <meta name="renderer" content="webkit" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
@@ -227,94 +227,74 @@
 
   <section class="main post-detail">
     <header class="post-header">
-      <h1 class="post-title">如何抽取公共服务并成功迁移</h1>
-      <p class="post-meta">@颇忒脱 · Aug 23, 2018 · 1 min read</p>
+      <h1 class="post-title">容器打印日志到控制台阻塞的排障</h1>
+      <p class="post-meta">@颇忒脱 · Feb 17, 2019 · 1 min read</p>
     </header>
-    <article class="post-content"><p>本文探讨了如何创建并落地一个公共服务的方法。</p>
+    <article class="post-content"><p>记一次容器打印到控制台阻塞，且容器停止响应的问题。</p>
 
 <p></p>
 
-<p>在单体到微服务架构的迁移过程中，我们经常会问一个问题：在什么情况下我需要从单体中剥离一部分出来将其作为一个微服务？答案有很多，其中有一个答案就是：我发现好多单体都有相似的功能，我觉得可以把它抽出来做一个公共服务。</p>
+<p>今日生产环境发现有些容器停止响应了，但是容器没有死，<code>docker exec -it &lt;container-name&gt; /bin/bash</code>也能正常使用。</p>
 
-<p>那么何为公共服务？公共服务就是那些专门为其他服务提供服务的服务，它的业务具有高度普适性和可复用性。比如用户服务、订单服务就是这样一类服务。</p>
+<p>在容器内部使用<code>jstack &lt;pid&gt;</code>发现log4j2的Console Appender一直处于运行状态：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-txt" data-lang="txt">&#34;AsyncAppender-asyncConsole&#34; #21 daemon prio=5 os_prio=0 tid=0x00007fd968d07000 nid=0x1f runnable [0x00007fd91bffd000]
+   java.lang.Thread.State: RUNNABLE
+	at java.io.FileOutputStream.writeBytes(Native Method)
+	at java.io.FileOutputStream.write(FileOutputStream.java:326)
+	at java.io.BufferedOutputStream.write(BufferedOutputStream.java:122)
+	- locked &lt;0x00000000f002b408&gt; (a java.io.BufferedOutputStream)
+	at java.io.PrintStream.write(PrintStream.java:480)
+	- locked &lt;0x00000000f002b3e8&gt; (a java.io.PrintStream)
+	at org.apache.logging.log4j.core.util.CloseShieldOutputStream.write(CloseShieldOutputStream.java:53)
+	at org.apache.logging.log4j.core.appender.OutputStreamManager.writeToDestination(OutputStreamManager.java:262)
+	- locked &lt;0x00000000f021d848&gt; (a org.apache.logging.log4j.core.appender.OutputStreamManager)
+	at org.apache.logging.log4j.core.appender.OutputStreamManager.flushBuffer(OutputStreamManager.java:294)
+	- locked &lt;0x00000000f021d848&gt; (a org.apache.logging.log4j.core.appender.OutputStreamManager)
+	at org.apache.logging.log4j.core.appender.OutputStreamManager.drain(OutputStreamManager.java:351)
+	at org.apache.logging.log4j.core.layout.TextEncoderHelper.drainIfByteBufferFull(TextEncoderHelper.java:260)
+	- locked &lt;0x00000000f021d848&gt; (a org.apache.logging.log4j.core.appender.OutputStreamManager)
+	at org.apache.logging.log4j.core.layout.TextEncoderHelper.writeAndEncodeAsMuchAsPossible(TextEncoderHelper.java:199)
+	at org.apache.logging.log4j.core.layout.TextEncoderHelper.encodeChunkedText(TextEncoderHelper.java:159)
+	- locked &lt;0x00000000f021d848&gt; (a org.apache.logging.log4j.core.appender.OutputStreamManager)
+	at org.apache.logging.log4j.core.layout.TextEncoderHelper.encodeText(TextEncoderHelper.java:58)
+	at org.apache.logging.log4j.core.layout.StringBuilderEncoder.encode(StringBuilderEncoder.java:68)
+	at org.apache.logging.log4j.core.layout.StringBuilderEncoder.encode(StringBuilderEncoder.java:32)
+	at org.apache.logging.log4j.core.layout.PatternLayout.encode(PatternLayout.java:220)
+	at org.apache.logging.log4j.core.layout.PatternLayout.encode(PatternLayout.java:58)
+	at org.apache.logging.log4j.core.appender.AbstractOutputStreamAppender.directEncodeEvent(AbstractOutputStreamAppender.java:177)
+	at org.apache.logging.log4j.core.appender.AbstractOutputStreamAppender.tryAppend(AbstractOutputStreamAppender.java:170)
+	at org.apache.logging.log4j.core.appender.AbstractOutputStreamAppender.append(AbstractOutputStreamAppender.java:161)
+	at org.apache.logging.log4j.core.config.AppenderControl.tryCallAppender(AppenderControl.java:156)
+	at org.apache.logging.log4j.core.config.AppenderControl.callAppender0(AppenderControl.java:129)
+	at org.apache.logging.log4j.core.config.AppenderControl.callAppenderPreventRecursion(AppenderControl.java:120)
+	at org.apache.logging.log4j.core.config.AppenderControl.callAppender(AppenderControl.java:84)
+	at org.apache.logging.log4j.core.appender.AsyncAppender$AsyncThread.callAppenders(AsyncAppender.java:459)
+	at org.apache.logging.log4j.core.appender.AsyncAppender$AsyncThread.run(AsyncAppender.java:412)</code></pre></div>
+<p>但用<code>docker logs -f &lt;container-name&gt;</code>没有发现有新的日志输出，且访问该应用肯定会输出日志的接口也是没有任何日志输出，因此怀疑log4j2阻塞住了。</p>
 
-<p>那我们怎样才能达成这一目标呢？下面举个例子说明：</p>
+<p>Google到有人在log4j提出了类似了问题<a href="https://jira.apache.org/jira/browse/LOG4J2-2239">LOG4J2-2239</a>，官方给出的解释是问题出在log4j2之外。</p>
 
-<p>我们发现单体A、B、C中的具有高度相似的功能F，经过初步研究发现可以抽取出一个公共服务P，于是马上安排人员开发，然后上线、迁移。
-一切似乎会很顺利，但是等等，这里有太多风险和未经验证的东西。那我们应该怎么做？</p>
+<p>于是查一下logback是否也有类似问题，找到<a href="https://jira.qos.ch/browse/LOGBACK-1422">LOGBACK-1422</a>，同样给出的解释是问题出在logback之外。</p>
 
-<p><strong>第一步：识别不兼容</strong></p>
+<p>两个问题的共通点都是用docker运行，于是把应用直接进程方式运行，没有出现问题。</p>
 
-<p>我们需要深入到单体A、B、C的功能F的细节中去考察，虽然功能F在各个单体中的看起来差不多，但是细节是魔鬼。
-毕竟这三个单体是独立演进的，如果深入细节，就会发现AF、BF、CF总有一些不兼容的地方，具体表现形式可以是数据schema不一致、接口不一致，还有更糟糕的——部分业务逻辑不一致。</p>
+<p>于是Google搜索<code>docker logging to stdout hangs</code>，找到SO的这个<a href="https://stackoverflow.com/a/52619471/1287790">回答</a>，以及这个<a href="https://github.com/moby/moby/issues/35865#issuecomment-407641385">issue</a>，解决方案将Docker升级到18.06。</p>
 
-<p>这些不兼容如果一开始不识别出来，那最有可能的结果是开发人员从单体A中抽取功能F开发公共服务P，结果公共服务P只能给单体A使用，单体B、C完全无法使用。</p>
-
-<p><strong>第二步：设计并导入概念</strong></p>
-
-<p>识别出了不兼容，那么我们就需要作出一套兼容单体A、B、C的功能F的设计，在设计过程中我们需要和单体A、B、C的产品经理、需求设计人员、开发人员做详尽的沟通。
-做这些沟通最主要的目的就是将新的功能F的设计导入到相关人员的脑中，即所谓的概念导入。</p>
-
-<p>概念导入是非常重要的一步，道理很简单，如果大家对同一件事情的认知是一样的，那么这件事情就好办了，否则在推行过程中很可能出现不可预料的阻力。</p>
-
-<p><strong>第三步：开发类库</strong></p>
-
-<p>好了，咱们设计也做了，思想也统一了，为什么不直接开始开发服务P呢？这是因为虽然我们在第二步已经统一了思想，但是在真正落地的时候很可能还会存在意想不到的困难。
-因此我们要把这些困难在早期趟平，用的办法就是提供功能F的公共类库，将其替换掉原来单体A、B、C中的代码。</p>
-
-<p>这一工作完成后我能能够得到的成果有：</p>
-
-<ol>
-<li>设计、概念层面形成了统一</li>
-<li>表、实体结构形成了统一</li>
-<li>接口形成了统一</li>
-<li>代码层面的复用</li>
-</ol>
-
-<p>也就是说，我们做到了表里一致，有了这个基础，开发公共服务P才有了真正坚实的基础。</p>
-
-<p><strong>第四步：微服务架构设计</strong></p>
-
-<p>公共类库的思路毕竟还是单体应用的思路，只是做到了代码层面的复用。当你要做公共服务P的时候就需要额外考虑一些额外的设计，比如：</p>
-
-<ol>
-<li>Client的认证模式。不认证、OAuth 2.0，如果用OAuth 2.0那么用哪种Grant type？</li>
-<li>通信协议。http、https、gRPC。</li>
-<li>接口协议。RESTful、SOAP。</li>
-<li>接口定义。Swagger、OpenAPI。</li>
-<li>加密方式。TLS、对称加密。</li>
-<li>是否涉及多租户，如果涉及，那么还需要设计多租户的业务、功能、数据schema。</li>
-<li>考虑服务注册、服务发现等等。</li>
-<li>弹性设计、容错设计、分布式事务等等。</li>
-<li>运维相关的日志采集、监控指标等等。</li>
-</ol>
-
-<p>当然以上这些并不是说要一次性全部做到，可以一开始只实现一部分，之后通过迭代不断地完善。</p>
-
-<p><strong>第五步：迁移</strong></p>
-
-<p>好了，我们的公共服务P已经上线了，那么如何从公共类库迁移到公共服务P呢？</p>
-
-<p>其实到这一步就很简单了，在制作公共类库的时候我们应该定义了良好的接口，并且提供了一套基于单体架构的实现。
-现在我们只需提供一套基于公共服务的实现然后替换上去就可以了。举个例子，公共类库有一个接口叫做<code>UserRepository</code>，它有一个实现是查询本地数据库的，我们只需提供另一个实现是查询RESTful接口的就可以了。</p>
-
-<p>当然，这个查询RESTful接口的实现最好也由公共服务P的开发团队提供，这样可以避免单体A、B、C开发团队的重复劳动。</p>
-
-<p><strong>第六步：没有第六步</strong></p>
-
-<p>到此为止大功告成。</p></article>
+<p>查看生产环境的docker版本是18.03，升级到18.09后问题解决。</p></article>
     <footer class="post-footer">
       
       <ul class="post-tags">
         
-          <li><a href="https://chanjarster.github.io/tags/%E5%BE%AE%E6%9C%8D%E5%8A%A1"><span class="tag">微服务</span></a></li>
+          <li><a href="https://chanjarster.github.io/tags/arts"><span class="tag">ARTS</span></a></li>
         
-          <li><a href="https://chanjarster.github.io/tags/%E5%88%86%E5%B8%83%E5%BC%8F%E6%9E%B6%E6%9E%84"><span class="tag">分布式架构</span></a></li>
+          <li><a href="https://chanjarster.github.io/tags/arts-t"><span class="tag">ARTS-T</span></a></li>
+        
+          <li><a href="https://chanjarster.github.io/tags/docker"><span class="tag">Docker</span></a></li>
         
       </ul>
       
       <p class="post-copyright">
-        This post was published <strong>177</strong> days ago, content in the post may be inaccurate, even wrong now, please take risk yourself.
+        
       </p>
     </footer>
     
