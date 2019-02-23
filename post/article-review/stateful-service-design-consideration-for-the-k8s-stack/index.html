@@ -5,7 +5,7 @@
   <meta charset="utf-8" />
 
   
-  <title>如何抽取公共服务并成功迁移</title>
+  <title>Stateful Service Design Consideration for the Kubernetes Stack</title>
 
   
   
@@ -16,28 +16,25 @@
 
   
   <meta name="author" content="颇忒脱" />
-  <meta name="description" content="本文探讨了如何创建并落地一个公共服务的方法。
-
+  <meta name="description" content="
 " />
 
   
   
     <meta name="twitter:card" content="summary" />
     <meta name="twitter:site" content="@gohugoio" />
-    <meta name="twitter:title" content="如何抽取公共服务并成功迁移" />
-    <meta name="twitter:description" content="本文探讨了如何创建并落地一个公共服务的方法。
-
+    <meta name="twitter:title" content="Stateful Service Design Consideration for the Kubernetes Stack" />
+    <meta name="twitter:description" content="
 " />
     <meta name="twitter:image" content="https://chanjarster.github.io/img/avatar.jpg" />
   
 
   
   <meta property="og:type" content="article" />
-  <meta property="og:title" content="如何抽取公共服务并成功迁移" />
-  <meta property="og:description" content="本文探讨了如何创建并落地一个公共服务的方法。
-
+  <meta property="og:title" content="Stateful Service Design Consideration for the Kubernetes Stack" />
+  <meta property="og:description" content="
 " />
-  <meta property="og:url" content="https://chanjarster.github.io/post/extract-public-service/" />
+  <meta property="og:url" content="https://chanjarster.github.io/post/article-review/stateful-service-design-consideration-for-the-k8s-stack/" />
   <meta property="og:image" content="https://chanjarster.github.io/img/avatar.jpg" />
 
 
@@ -46,7 +43,7 @@
 <meta name="generator" content="Hugo 0.49.2" />
 
 
-<link rel="canonical" href="https://chanjarster.github.io/post/extract-public-service/" />
+<link rel="canonical" href="https://chanjarster.github.io/post/article-review/stateful-service-design-consideration-for-the-k8s-stack/" />
 
 <meta name="renderer" content="webkit" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
@@ -227,94 +224,91 @@
 
   <section class="main post-detail">
     <header class="post-header">
-      <h1 class="post-title">如何抽取公共服务并成功迁移</h1>
-      <p class="post-meta">@颇忒脱 · Aug 23, 2018 · 1 min read</p>
+      <h1 class="post-title">Stateful Service Design Consideration for the Kubernetes Stack</h1>
+      <p class="post-meta">@颇忒脱 · Jan 30, 2019 · 1 min read</p>
     </header>
-    <article class="post-content"><p>本文探讨了如何创建并落地一个公共服务的方法。</p>
+    <article class="post-content"><p></p>
 
-<p></p>
+<p><a href="https://www.infoq.com/articles/stateful-service-design-kubernetes">原文地址</a></p>
 
-<p>在单体到微服务架构的迁移过程中，我们经常会问一个问题：在什么情况下我需要从单体中剥离一部分出来将其作为一个微服务？答案有很多，其中有一个答案就是：我发现好多单体都有相似的功能，我觉得可以把它抽出来做一个公共服务。</p>
+<p>关键词：微服务、Cloud-native stateful service、Akka</p>
 
-<p>那么何为公共服务？公共服务就是那些专门为其他服务提供服务的服务，它的业务具有高度普适性和可复用性。比如用户服务、订单服务就是这样一类服务。</p>
+<h2 id="大纲">大纲</h2>
 
-<p>那我们怎样才能达成这一目标呢？下面举个例子说明：</p>
-
-<p>我们发现单体A、B、C中的具有高度相似的功能F，经过初步研究发现可以抽取出一个公共服务P，于是马上安排人员开发，然后上线、迁移。
-一切似乎会很顺利，但是等等，这里有太多风险和未经验证的东西。那我们应该怎么做？</p>
-
-<p><strong>第一步：识别不兼容</strong></p>
-
-<p>我们需要深入到单体A、B、C的功能F的细节中去考察，虽然功能F在各个单体中的看起来差不多，但是细节是魔鬼。
-毕竟这三个单体是独立演进的，如果深入细节，就会发现AF、BF、CF总有一些不兼容的地方，具体表现形式可以是数据schema不一致、接口不一致，还有更糟糕的——部分业务逻辑不一致。</p>
-
-<p>这些不兼容如果一开始不识别出来，那最有可能的结果是开发人员从单体A中抽取功能F开发公共服务P，结果公共服务P只能给单体A使用，单体B、C完全无法使用。</p>
-
-<p><strong>第二步：设计并导入概念</strong></p>
-
-<p>识别出了不兼容，那么我们就需要作出一套兼容单体A、B、C的功能F的设计，在设计过程中我们需要和单体A、B、C的产品经理、需求设计人员、开发人员做详尽的沟通。
-做这些沟通最主要的目的就是将新的功能F的设计导入到相关人员的脑中，即所谓的概念导入。</p>
-
-<p>概念导入是非常重要的一步，道理很简单，如果大家对同一件事情的认知是一样的，那么这件事情就好办了，否则在推行过程中很可能出现不可预料的阻力。</p>
-
-<p><strong>第三步：开发类库</strong></p>
-
-<p>好了，咱们设计也做了，思想也统一了，为什么不直接开始开发服务P呢？这是因为虽然我们在第二步已经统一了思想，但是在真正落地的时候很可能还会存在意想不到的困难。
-因此我们要把这些困难在早期趟平，用的办法就是提供功能F的公共类库，将其替换掉原来单体A、B、C中的代码。</p>
-
-<p>这一工作完成后我能能够得到的成果有：</p>
+<p>Stateful service不可避免：</p>
 
 <ol>
-<li>设计、概念层面形成了统一</li>
-<li>表、实体结构形成了统一</li>
-<li>接口形成了统一</li>
-<li>代码层面的复用</li>
+<li>stateless service在k8s上部署已经被证明是成功的。</li>
+<li>将state从stateful service中剥离出来，使其成为stateless service是一种成功的做法。</li>
+<li>但是这些stateless service依然大多依赖于，老的架构、设计、习惯、模式、实践和工具，而这些东西都是为运行“全能”的RDBMS之上的单体单节点系统所发展出来的。</li>
+<li>当前的service越来越data-centric和data-driven，将service和data紧密贴合显得更为重要，因为这样做能够高效率、高性能，可靠的管理、处理、转换、丰富data。</li>
+<li>service无法承受在data访问时与数据库 or 存储的round-trip，并需要持续处理接近实时的data，从永无止境的数据流中挖掘知识。而这份data在被存储之前，也时常需要被分布式地处理——以实现可扩展性、低延迟、高吞吐。</li>
 </ol>
 
-<p>也就是说，我们做到了表里一致，有了这个基础，开发公共服务P才有了真正坚实的基础。</p>
-
-<p><strong>第四步：微服务架构设计</strong></p>
-
-<p>公共类库的思路毕竟还是单体应用的思路，只是做到了代码层面的复用。当你要做公共服务P的时候就需要额外考虑一些额外的设计，比如：</p>
+<p>实施stateful service的难点：</p>
 
 <ol>
-<li>Client的认证模式。不认证、OAuth 2.0，如果用OAuth 2.0那么用哪种Grant type？</li>
-<li>通信协议。http、https、gRPC。</li>
-<li>接口协议。RESTful、SOAP。</li>
-<li>接口定义。Swagger、OpenAPI。</li>
-<li>加密方式。TLS、对称加密。</li>
-<li>是否涉及多租户，如果涉及，那么还需要设计多租户的业务、功能、数据schema。</li>
-<li>考虑服务注册、服务发现等等。</li>
-<li>弹性设计、容错设计、分布式事务等等。</li>
-<li>运维相关的日志采集、监控指标等等。</li>
+<li>stateful 实例不是能够简单替换的，因为它有自己的状态，在替换的时候要考虑进去。</li>
+<li>部署stateful 副本必须要求副本之间协作，比如启动依赖顺序、版本升级、schema变动等。</li>
+<li>replication需要时间，一个正在处理replication的机器会获得比平时更高的负载。如果开启一个新副本，有可能会down掉整个数据库or服务。</li>
 </ol>
 
-<p>当然以上这些并不是说要一次性全部做到，可以一开始只实现一部分，之后通过迭代不断地完善。</p>
+<p>k8s对于stateful service的方案：</p>
 
-<p><strong>第五步：迁移</strong></p>
+<ol>
+<li>k8s对于不是cloud-native stateful service的方案是StatefulSet</li>
+<li>每个pod有一个稳定的标识符（namespace + name）以及一个专用的即使Pod重启也不会丢失的磁盘，甚至Pod重新调度到另一台机器上也不会丢失。</li>
+<li>开发人员需要新一代的能够构建<strong>cloud-native的stateful service</strong>工具，而这些service只需要k8s为stateless service提供的基础设施。</li>
+</ol>
 
-<p>好了，我们的公共服务P已经上线了，那么如何从公共类库迁移到公共服务P呢？</p>
+<p>设计cloud-native stateful service的难点：</p>
 
-<p>其实到这一步就很简单了，在制作公共类库的时候我们应该定义了良好的接口，并且提供了一套基于单体架构的实现。
-现在我们只需提供一套基于公共服务的实现然后替换上去就可以了。举个例子，公共类库有一个接口叫做<code>UserRepository</code>，它有一个实现是查询本地数据库的，我们只需提供另一个实现是查询RESTful接口的就可以了。</p>
+<ol>
+<li>难点不在于设计和实现这些service，而是管理它们之间的空间。难点有：数据一致性保证、可靠通信、数据复制与故障转移、组件失败侦测、恢复、分片、路由、共识算法等等。</li>
+<li>对于不同的service来说End-to-end的正确性、一致性、安全性是不同的，是完全依赖于用例的，是不能外包给基础设施的。我们需要一种编程模型，配合一个把重活都包了的运行时，让我们专注于实现业务价值，而不是陷入错综复杂的网络编程与failure mode里。<strong>Akka与K8S就是上述问题的解决方案</strong></li>
+</ol>
 
-<p>当然，这个查询RESTful接口的实现最好也由公共服务P的开发团队提供，这样可以避免单体A、B、C开发团队的重复劳动。</p>
+<p><a href="https://akka.io/">Akka</a>简介：</p>
 
-<p><strong>第六步：没有第六步</strong></p>
+<ol>
+<li>基于<a href="https://www.reactivemanifesto.org/">Reactive Manifesto</a>构建，是面向today和tomorrow的架构。</li>
+<li>Akka的unit of work和state被称为actor，是stateful、fault-tolerant、isolated、autonomous的component or entity。</li>
+<li>actor/entity是非常轻量级的，在一台机器上可以轻易运行百万个，并且它们之间使用异步通信。它们内置自动自我恢复机制，同时distributable and location transparent by default。也就意味着它们<strong>可以根据需要在集群里扩展、复制、移动，而这对于actor/entity的用户来说是透明的</strong>。</li>
+<li>Akka和K8S的配合方式：K8S负责容器，粗粒度，负责资源。Akka负责应用层，细粒度，负责如何在给定资源下分发工作。</li>
+</ol>
 
-<p>到此为止大功告成。</p></article>
+<p>Akka的“let it crash”哲学：</p>
+
+<ol>
+<li>传统基于线程的编程模型只给了你对于单个线程的控制，如果线程异常崩溃你就麻烦了，所以你需要显式地在这个线程内部做异常处理。异常不会在线程间传播，不会跨网络，没有办法在外部知道这个线程已经失败了。但是丢失这个线程又是代价极高的，最坏情况下，如果用了同步协议，会将这个错误波及到整个应用。</li>
+<li>Akk把你的应用设计为“supervisor hierarchies”，actor们彼此注意健康、彼此管理失败。如果一个actor失败了，它的错误会被隔离并被包起来，以异步消息的方式发送到它的supervising actor（可能通过网络）。supervising actor能够在安全健康的上下文中处理异常，并且根据声明式定义规则自动重启失败的actor。</li>
+<li>和K8S有点像，不过是在application stack层面。</li>
+</ol>
+
+<h2 id="延伸阅读">延伸阅读</h2>
+
+<ul>
+<li><a href="https://www.infoq.com/news/2017/03/microliths-microsystems">microliths</a></li>
+<li><a href="https://www.infoq.com/news/2018/07/boner-events-first-microservices">Designing Events-First Microservices</a></li>
+</ul></article>
     <footer class="post-footer">
       
       <ul class="post-tags">
         
+          <li><a href="https://chanjarster.github.io/tags/arts"><span class="tag">ARTS</span></a></li>
+        
+          <li><a href="https://chanjarster.github.io/tags/arts-r"><span class="tag">ARTS-R</span></a></li>
+        
+          <li><a href="https://chanjarster.github.io/tags/akka"><span class="tag">Akka</span></a></li>
+        
           <li><a href="https://chanjarster.github.io/tags/%E5%BE%AE%E6%9C%8D%E5%8A%A1"><span class="tag">微服务</span></a></li>
         
-          <li><a href="https://chanjarster.github.io/tags/%E5%88%86%E5%B8%83%E5%BC%8F%E6%9E%B6%E6%9E%84"><span class="tag">分布式架构</span></a></li>
+          <li><a href="https://chanjarster.github.io/tags/k8s"><span class="tag">K8s</span></a></li>
         
       </ul>
       
       <p class="post-copyright">
-        This post was published <strong>183</strong> days ago, content in the post may be inaccurate, even wrong now, please take risk yourself.
+        
       </p>
     </footer>
     
