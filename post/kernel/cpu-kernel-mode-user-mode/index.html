@@ -5,7 +5,7 @@
   <meta charset="utf-8" />
 
   
-  <title>利用VisualVm和JMX远程监控Java进程</title>
+  <title>操作系统Kernel mode和User mode</title>
 
   
   
@@ -16,28 +16,25 @@
 
   
   <meta name="author" content="颇忒脱" />
-  <meta name="description" content="在前一篇文章里我们发现通过jstatd &#43; VisualVm的方式，不能获得Java进程的CPU、线程、MBean信息，这时JMX就要登场了。
-
+  <meta name="description" content="
 " />
 
   
   
     <meta name="twitter:card" content="summary" />
     <meta name="twitter:site" content="@gohugoio" />
-    <meta name="twitter:title" content="利用VisualVm和JMX远程监控Java进程" />
-    <meta name="twitter:description" content="在前一篇文章里我们发现通过jstatd &#43; VisualVm的方式，不能获得Java进程的CPU、线程、MBean信息，这时JMX就要登场了。
-
+    <meta name="twitter:title" content="操作系统Kernel mode和User mode" />
+    <meta name="twitter:description" content="
 " />
     <meta name="twitter:image" content="https://chanjarster.github.io/img/avatar.jpg" />
   
 
   
   <meta property="og:type" content="article" />
-  <meta property="og:title" content="利用VisualVm和JMX远程监控Java进程" />
-  <meta property="og:description" content="在前一篇文章里我们发现通过jstatd &#43; VisualVm的方式，不能获得Java进程的CPU、线程、MBean信息，这时JMX就要登场了。
-
+  <meta property="og:title" content="操作系统Kernel mode和User mode" />
+  <meta property="og:description" content="
 " />
-  <meta property="og:url" content="https://chanjarster.github.io/post/visualvm-remote-monitoring-jmx/" />
+  <meta property="og:url" content="https://chanjarster.github.io/post/kernel/cpu-kernel-mode-user-mode/" />
   <meta property="og:image" content="https://chanjarster.github.io/img/avatar.jpg" />
 
 
@@ -46,7 +43,7 @@
 <meta name="generator" content="Hugo 0.49.2" />
 
 
-<link rel="canonical" href="https://chanjarster.github.io/post/visualvm-remote-monitoring-jmx/" />
+<link rel="canonical" href="https://chanjarster.github.io/post/kernel/cpu-kernel-mode-user-mode/" />
 
 <meta name="renderer" content="webkit" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
@@ -227,97 +224,68 @@
 
   <section class="main post-detail">
     <header class="post-header">
-      <h1 class="post-title">利用VisualVm和JMX远程监控Java进程</h1>
-      <p class="post-meta">@颇忒脱 · Oct 10, 2018 · 1 min read</p>
+      <h1 class="post-title">操作系统Kernel mode和User mode</h1>
+      <p class="post-meta">@颇忒脱 · Feb 27, 2019 · 1 min read</p>
     </header>
-    <article class="post-content"><p>在<a href="../visualvm-remote-monitoring/">前一篇文章</a>里我们发现通过jstatd + VisualVm的方式，不能获得Java进程的CPU、线程、MBean信息，这时JMX就要登场了。</p>
+    <article class="post-content"><p></p>
 
-<p></p>
+<h2 id="cpu-modes">CPU modes</h2>
 
-<p>自Java 6开始，Java程序启动时都会在JVM内部启动一个JMX agent，JMX agent会启动一个MBean server组件，把MBeans（Java平台标准的MBean + 你自己创建的MBean）注册到它里面，然后暴露给JMX client管理。简单来说就是每个Java程序都可以通过JMX来被JMX client管理，而且这一切都是自动发生的。而VisualVm就是一个JMX Client。</p>
+<p>又称process modes, CPU states, CPU privilege levels，CPU modes是为了能够让某些计算机架构的CPU限制正在被CPU运行的进程所能执行的操作的类型和范围。得益于它操作系统才能够以比应用程序更高的privilege（特权）来运行。</p>
 
-<p>VisualVm能够自动发现本机的Java进程，如果要监控远程主机上的Java进程则需要<strong>显式地配置JMX连接</strong>，下面讲配置方法：</p>
-
-<h2 id="第一步-与启动相关的system-properties">第一步：与启动相关的System Properties</h2>
-
-<p>要给远程主机上的监控的Java进程在启动时必须带上几个JMX相关的System Properties（常用的几个）：</p>
+<p>CPU modes分为两类：</p>
 
 <ul>
-<li><code>com.sun.management.jmxremote.port</code>, 指定暴露的JMX端口。</li>
-<li><code>com.sun.management.jmxremote.rmi.port</code>, 指定RMI connector端口，可以和<code>com.sun.management.jmxremote.port</code>保持一致。</li>
-<li><code>com.sun.management.jmxremote.ssl</code>, 指定是否使用SSL，在开发环境下可以是false，但是在生产环境下<strong>强烈建议</strong>为true。</li>
-<li><code>com.sun.management.jmxremote.authenticate</code>, 指定是否需要密码才能够创建JMX连接。</li>
+<li>kernel mode，不受任何限制的做任何事情</li>
+<li>user modes，受限模式，注意user modes可以有多个模式</li>
 </ul>
 
-<p>为了演示目的，我们用Tomcat来测试，不开启ssl和authenticate，把JMX端口设置为<code>1100</code>，执行下列命令启动Tomcat：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">CATALINA_OPTS<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;-Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false -Dcom.sun.management.jmxremote.port=1100 -Dcom.sun.management.jmxremote.rmi.port=1100 -Djava.rmi.server.hostname=k8s-oracle&#39;</span> bin/startup.sh</code></pre></div>
-<p>注意上面有一个<code>-Djava.rmi.server.hostname=k8s-oracle</code>参数，JMX agent本质上也是一个RMI server，因此需要指定这个参数，否则就会像<a href="../visualvm-remote-monitoring/">利用VisualVm远程监控Java进程</a>里提到的一样，VisualVm无法连接到该Java进程。</p>
+<h2 id="protection-ring">Protection ring</h2>
 
-<p>PS. 使用SSL方式保护JMX连接的方法会另写文章说明。</p>
+<p>Protection ring又称hierarchical protection domains，是一种保护数据和功能免于遭受错误和恶意行为的机制。</p>
 
-<h2 id="第二步-创建jmx连接">第二步：创建JMX连接</h2>
+<p>一个Protection ring由一个或多个分级式levels or layers of privilege组成。
+通常来说protection ring是硬件强制的，是由一些CPU架构在硬件或微代码层面提供不同的CPU modes来达成的。Protection ring本身也是层级的，由最具特权开始（编号0）到具有最少特权的（编号更大）。在大多数操作系统中，Ring 0是最具特权的，能够直接物理硬件（如CPU、内存）交互。</p>
 
-<p>在远程主机上右键，选择添加JMX连接（在下图里出现了之前启动的Tomcat进程）：</p>
+<p>x86架构的protection ring：Ring 0（kernel）、Ring 1-2（Device drivers）、Ring 3（Applications）。下图：</p>
 
-<p><img src="visualvm-01.png" alt="Step 1" /></p>
+<p><img src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/2f/Priv_rings.svg/320px-Priv_rings.svg.png" alt="" /></p>
 
-<p>根据Java进程启动时设置的JMX System Properties配置JMX连接：</p>
+<p>各个CPU的架构提供的ring数不同，有的多达8个。操作系统为了适配更多的CPU架构，不会使用所有的ring，即使硬件支持更多的CPU modes。比如Windows Server 2008系统只用了Ring 0和Ring 3。</p>
 
-<p><img src="visualvm-02.png" alt="Step 2" /></p>
+<p>当处理器在某个ring发生错误时，会影响到所有低权限ring。所以当错误发生在ring 0时，整个系统都会崩溃。</p>
 
-<p>成功后你会发现多了一个进程，小图标上有JMX字样：</p>
+<h2 id="system-call-系统调用">System call（系统调用）</h2>
 
-<p><img src="visualvm-03.png" alt="Step 3" /></p>
+<p>Linux、macOS、Windows之类的单体内核（monolithic kernel）操作系统，操作系统运行在kernel mode（supervisor mode），应用程序运行在user mode。</p>
 
-<p>双击这个进程，你就能看到CPU、线程、还有MBeans了。</p>
+<p>运行在user mode的代码必须使用system call才能够使用到操作系统内核kernel所提供的服务。</p>
 
-<h2 id="但是visual-gc没有内容">但是Visual GC没有内容</h2>
+<p>因为针对不同CPU架构，system call的汇编码是不同的，因此操作系统会提供库（如glibc）将system call包一层，方便应用程序使用。System call发生时会将控制权交给kernel，调用结束时则将控制权交还给user mode的进程。</p>
 
-<p>使用上面的步骤建立完JMX连接之后，你会发现Visual GC没有内容：</p>
-
-<p><img src="no-visual-gc.png" alt="Step 1" /></p>
-
-<p>解决办法要启动jstatd。</p>
-
-<p>按照<a href="../visualvm-remote-monitoring/">利用VisualVm远程监控Java进程</a>的方法先建立远程主机。</p>
-
-<p>给这个远程主机添加JMX连接：</p>
-
-<p><img src="visualvm-04.png" alt="Step 1" /></p>
-
-<p><img src="visualvm-05.png" alt="Step 2" /></p>
-
-<p>然后你会发现多了一个JMX图标的Java进程：</p>
-
-<p><img src="visualvm-06.png" alt="Step 3" /></p>
-
-<p>在这个进程里就能看到Visual GC了。</p>
-
-<p><img src="visual-gc.png" alt="Step 4" /></p>
+<p>System call一般不要求context switch，因为system call发生在同一进程里。</p>
 
 <h2 id="参考资料">参考资料</h2>
 
 <ul>
-<li><a href="https://htmlpreview.github.io/?https://raw.githubusercontent.com/visualvm/visualvm.java.net.backup/master/www/jmx_connections.html">VisualVm - Connecting to JMX Agents Explicitly</a></li>
-<li><a href="https://stackoverflow.com/a/21552812/1287790">Why Java opens 3 ports when JMX is configured?</a></li>
-<li><a href="https://docs.oracle.com/javase/9/management/monitoring-and-management-using-jmx-technology.htm#JSMGM-GUID-F08985BB-629A-4FBF-A0CB-8762DF7590E0">JMX - Remote Monitoring and Management</a></li>
-<li><a href="https://docs.oracle.com/javase/8/docs/technotes/guides/jmx/overview/agent.html">Using JMX Agents</a></li>
-<li><a href="https://htmlpreview.github.io/?https://raw.githubusercontent.com/visualvm/visualvm.java.net.backup/master/www/mbeans_tab.html">MBeans Tab</a></li>
+<li><a href="https://en.wikipedia.org/wiki/CPU_modes">CPU modes</a></li>
+<li><a href="https://en.wikipedia.org/wiki/Protection_ring">Protection rings</a></li>
+<li><a href="https://en.wikipedia.org/wiki/System_call">System call</a></li>
 </ul></article>
     <footer class="post-footer">
       
       <ul class="post-tags">
         
-          <li><a href="https://chanjarster.github.io/tags/java"><span class="tag">Java</span></a></li>
+          <li><a href="https://chanjarster.github.io/tags/arts"><span class="tag">ARTS</span></a></li>
         
-          <li><a href="https://chanjarster.github.io/tags/visualvm"><span class="tag">Visualvm</span></a></li>
+          <li><a href="https://chanjarster.github.io/tags/arts-t"><span class="tag">ARTS-T</span></a></li>
         
-          <li><a href="https://chanjarster.github.io/tags/jmx"><span class="tag">Jmx</span></a></li>
+          <li><a href="https://chanjarster.github.io/tags/kernel"><span class="tag">Kernel</span></a></li>
         
       </ul>
       
       <p class="post-copyright">
-        This post was published <strong>140</strong> days ago, content in the post may be inaccurate, even wrong now, please take risk yourself.
+        
       </p>
     </footer>
     
