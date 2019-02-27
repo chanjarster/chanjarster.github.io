@@ -5,7 +5,7 @@
   <meta charset="utf-8" />
 
   
-  <title>K8s如何安全地关闭Node</title>
+  <title>Docker Image CI/CD实践</title>
 
   
   
@@ -16,28 +16,25 @@
 
   
   <meta name="author" content="颇忒脱" />
-  <meta name="description" content="本文介绍如何安全地关闭Node。
-
+  <meta name="description" content="
 " />
 
   
   
     <meta name="twitter:card" content="summary" />
     <meta name="twitter:site" content="@gohugoio" />
-    <meta name="twitter:title" content="K8s如何安全地关闭Node" />
-    <meta name="twitter:description" content="本文介绍如何安全地关闭Node。
-
+    <meta name="twitter:title" content="Docker Image CI/CD实践" />
+    <meta name="twitter:description" content="
 " />
     <meta name="twitter:image" content="https://chanjarster.github.io/img/avatar.jpg" />
   
 
   
   <meta property="og:type" content="article" />
-  <meta property="og:title" content="K8s如何安全地关闭Node" />
-  <meta property="og:description" content="本文介绍如何安全地关闭Node。
-
+  <meta property="og:title" content="Docker Image CI/CD实践" />
+  <meta property="og:description" content="
 " />
-  <meta property="og:url" content="https://chanjarster.github.io/post/k8s-how-to-shutdown-node-safely/" />
+  <meta property="og:url" content="https://chanjarster.github.io/post/docker-image-ci-cd-practice/" />
   <meta property="og:image" content="https://chanjarster.github.io/img/avatar.jpg" />
 
 
@@ -46,7 +43,7 @@
 <meta name="generator" content="Hugo 0.49.2" />
 
 
-<link rel="canonical" href="https://chanjarster.github.io/post/k8s-how-to-shutdown-node-safely/" />
+<link rel="canonical" href="https://chanjarster.github.io/post/docker-image-ci-cd-practice/" />
 
 <meta name="renderer" content="webkit" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
@@ -227,42 +224,63 @@
 
   <section class="main post-detail">
     <header class="post-header">
-      <h1 class="post-title">K8s如何安全地关闭Node</h1>
-      <p class="post-meta">@颇忒脱 · Oct 22, 2018 · 1 min read</p>
+      <h1 class="post-title">Docker Image CI/CD实践</h1>
+      <p class="post-meta">@颇忒脱 · Feb 27, 2019 · 1 min read</p>
     </header>
-    <article class="post-content"><p>本文介绍如何安全地关闭Node。</p>
+    <article class="post-content"><p></p>
 
-<p></p>
+<h2 id="image-tag是不稳定的">Image tag是不稳定的</h2>
 
-<p>虽然我们可以直接将Node关机，让K8S自己将这个Node上的Pod在别的Node上重新创建，但是这样可能会对K8S集群造成冲击。</p>
+<p>Docker image的tag是不稳定的，这句话的意思是<strong>就算tag不变，其所代表的image并非一成不变</strong>，例如<code>openjdk:8</code>在去年代表jdk 8u161今年则代表jdk 8u191。就算你使用<code>openjdk:8u181</code>也不能保证这个image是不变的，为什么这么说？</p>
 
-<p>我们设想中的顺序应该是这样的：</p>
-
-<ol>
-<li>禁止有新的Pod安排到Node上</li>
-<li>把Node上的Pod迁移到别处</li>
-<li>把Node关掉</li>
-</ol>
-
-<p>我们可以利用<a href="https://kubernetes.io/docs/tasks/administer-cluster/safely-drain-node/#use-kubectl-drain-to-remove-a-node-from-service"><code>kubectl drain</code></a>来做到前面的两点，大致方式如下：</p>
+<p>一个Docker image大致是由4部分组成的：</p>
 
 <ol>
-<li><code>kubectl get nodes</code>找到Node</li>
-<li><code>kubectl drain &lt;node-name&gt;</code></li>
-<li>然后关机就行了</li>
+<li>其依赖的基础镜像，由Dockerfile的<code>FROM</code>指令所指定</li>
+<li>其所包含的软件，在这个例子里就是 openjdk 8u181</li>
+<li>Dockerfile的其他脚本</li>
+<li>启动入口，比如<code>docker-entrypoint.sh</code></li>
 </ol>
 
-<p>当这个Node后来又启动了，那么只需要<code>kubectl uncordon &lt;node name&gt;</code>。</p></article>
+<p>就算软件不发生变化，另外3个也是有可能发生变化的，而构建的新image的tag依然是<code>openjdk:8u181</code>。而且要注意到一般采用的是软件的版本号作为tag，而不是commit、构建日期作为tag。如果你是Java程序员，可以类比docker image tag为maven的<a href="https://maven.apache.org/guides/getting-started/index.html#What_is_a_SNAPSHOT_version">SNAPSHOT</a>。</p>
+
+<p>那这意味着什么？</p>
+
+<ul>
+<li>从docker image使用方角度，每次启动之前都需要pull一下，确保使用了新的image</li>
+<li>从docker image提供方角度，就算你的软件版本已经冻结，你仍然需要定期构建image并发布仓库上</li>
+</ul>
+
+<h2 id="docker-image的ci-cd">Docker image的CI/CD</h2>
+
+<p>和Maven的版本定义一样，你的软件应该分为两种：</p>
+
+<ul>
+<li>stable版，即一旦发布其版本号对应的代码不会再做修改</li>
+<li>snapshot版，又称nightly-build版，即该版本号对应的代码是不稳定的</li>
+</ul>
+
+<p>对于stable版，你应该定期对其构建image。比如你有版本1.0、1.1、1.2，那你应该定期从软件仓库中下载这三个版本的构建物，然后对为它们构建image。以Maven举例，定期从Maven仓库下载它们的Jar，然后为它们构建image。</p>
+
+<p>对于snapshot版，你应该将构建image的过程融入到软件的构建过程中。以Maven为例，使用<a href="https://github.com/spotify/dockerfile-maven">spotify-dockerfile-plugin</a>，<code>mvn clean install dockerfile:build dockerfile:push</code>。</p>
+
+<p>不论是stable版还是snapshot版，都应该利用CI/CD工具（如Jenkins）将image构建工作自动化。</p></article>
     <footer class="post-footer">
       
       <ul class="post-tags">
         
-          <li><a href="https://chanjarster.github.io/tags/k8s"><span class="tag">K8s</span></a></li>
+          <li><a href="https://chanjarster.github.io/tags/arts"><span class="tag">ARTS</span></a></li>
+        
+          <li><a href="https://chanjarster.github.io/tags/arts-t"><span class="tag">ARTS-T</span></a></li>
+        
+          <li><a href="https://chanjarster.github.io/tags/docker"><span class="tag">Docker</span></a></li>
+        
+          <li><a href="https://chanjarster.github.io/tags/ci_cd"><span class="tag">CI_CD</span></a></li>
         
       </ul>
       
       <p class="post-copyright">
-        This post was published <strong>127</strong> days ago, content in the post may be inaccurate, even wrong now, please take risk yourself.
+        
       </p>
     </footer>
     
