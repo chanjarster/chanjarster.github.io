@@ -232,19 +232,65 @@
 <p>原文：<a href="https://lwn.net/Articles/250967/">What every programmer should know about memory, Part 1
 , RAM</a></p>
 
-<h1 id="2-commodity-hardware-today">2 Commodity Hardware Today</h1>
+<h1 id="1-introduction">1 Introduction</h1>
+
+<p>如今的计算机架构中CPU和main memory的访问速度的差异是很大的，解决这一瓶颈有这么几种形式：</p>
 
 <ul>
-<li>所有CPU通过<a href="https://en.wikipedia.org/wiki/Front-side_bus">FSB</a>连接到北桥，北桥包含内存控制器（memory controller），连接到RAM</li>
+<li>RAM硬件设计的改善（速度和并行）</li>
+<li>Memory controller设计</li>
+<li>CPU caches</li>
+<li>给设备用的Direct memory access（DMA）</li>
 </ul>
 
-<p>TODO，重新看文章，重新总结。</p>
+<h1 id="2-commodity-hardware-today">2 Commodity Hardware Today</h1>
+
+<h2 id="大众架构">大众架构</h2>
 
 <p><img src="https://static.lwn.net/images/cpumemory/cpumemory.4.png" alt="" /></p>
 
+<p><strong>Figure 2.1: Structure with Northbridge and Southbridge</strong></p>
+
+<ul>
+<li>所有CPU通过<a href="https://en.wikipedia.org/wiki/Front-side_bus">FSB</a>连接到北桥，北桥包含内存控制器（memory controller），连接到RAM。不同的内存类型如SRAM、DRAM有不同的内存控制器。</li>
+<li>南桥又称I/O桥，如果要访问其他系统设备，北桥必须和南桥通信。南桥连接着各种不同的bus</li>
+</ul>
+
+<p>这个架构要注意：</p>
+
+<ul>
+<li>CPU之间的所有数据通信必须经过FSB，而这个FSB也是CPU和北桥通信的bus。</li>
+<li>所有和RAM的通信都必须经过北桥</li>
+<li>RAM只有一个端口（port）</li>
+<li>CPU和挂接到南桥设备的通信则有北桥路由</li>
+</ul>
+
+<p>可以发现瓶颈：</p>
+
+<ul>
+<li>为设备去访问RAM的瓶颈。解决办法是DMA，让设备直接通过北桥访问RAM，而不需要CPU的介入。如今挂到任一bus的所有高性能设备都能利用DMA。虽然DMA减少了CPU的工作量，但是争用了北桥的带宽</li>
+<li>北桥到RAM的瓶颈。老的系统里只有一条通往所有RAM芯片的bus。现在的RAM类型要求有两条独立的bus，所以倍增了带宽（DDR2里称为channel）。北桥通过多个channel交替访问内存。</li>
+</ul>
+
+<h2 id="多内存控制器">多内存控制器</h2>
+
+<p>比较贵的系统北桥自己不包含内存控制器，而是外接内存控制器：</p>
+
 <p><img src="https://static.lwn.net/images/cpumemory/cpumemory.5.png" alt="" /></p>
 
+<p><strong>Figure 2.2: Northbridge with External Controllers</strong></p>
+
+<p>在这种架构里有多个内存bus，大大增加了带宽。在并发内存访问的时候，可以同时访问不同的memory bank（我理解为就是内存条）。而这个架构的瓶颈则是北桥内部的带宽。</p>
+
+<h2 id="numa">NUMA</h2>
+
+<p>除了使用多个内存控制器，还可以采用下面的架构增加内存带宽。做法就是把内存控制器内置在CPU里。每个CPU访问自己的本地RAM。</p>
+
 <p><img src="https://static.lwn.net/images/cpumemory/cpumemory.6.png" alt="" /></p>
+
+<p><strong>Figure 2.3: Integrated Memory Controller</strong></p>
+
+<p>这个架构同样也有缺点：因为这种系统里的所有CPU还是要能够访问所有的RAM，所以the memory is not uniform anymore (hence the name NUMA - Non-Uniform Memory Architecture - for such an architecture)。访问本地内存速度是正常的，访问别的CPU的内存就不一样了，CPU之间必须interconnect才行。在上图中CPU<sub>1</sub>访问CPU<sub>4</sub>的时候就要用到两条interconnect。</p>
 
 <h2 id="2-1-ram-types">2.1 RAM Types</h2>
 
@@ -254,30 +300,65 @@
 <li>访问SRAM没有延迟，但SRAM贵，容量小。</li>
 </ul>
 
-<h3 id="2-1-3-dram-access">2.1.3 DRAM Access</h3>
+<p><img src="https://static.lwn.net/images/cpumemory/cpumemory.7.png" alt="" /></p>
+
+<p><strong>Figure 2.4: 6-T Static RAM</strong></p>
+
+<p>电路图就不解释了。</p>
+
+<h3 id="2-2-1-dynamic-ram">2.2.1 Dynamic RAM</h3>
+
+<p><img src="https://static.lwn.net/images/cpumemory/cpumemory.8.png" alt="" /></p>
+
+<p><strong>Figure 2.5: 1-T Dynamic RAM</strong></p>
+
+<p>电路图就不解释了。</p>
 
 <ul>
 <li>DRAM物理结构：若干RAM chip，RAM chip下有若干RAM cell，每个RAM cell的状态代表1 bit。</li>
 <li>访问DRAM有延迟（等待电容充放电），但DRAM便宜，容量大。商业机器普遍使用DRAM，DDR之类的就是DRAM。</li>
 </ul>
 
-<h2 id="2-2-dram-access-technical-details">2.2 DRAM Access Technical Details</h2>
-
-<ul>
-<li>访问DRAM的步骤：1）RAS（Row address selection）2）CAS（Column address selection）2）传输数据。RAS和CAS都需要消耗时钟频率，如果每次都需要重新RAS-CAS则性能会低。如果一次性把一行的数据都传输，则速度很快。</li>
-</ul>
+<h3 id="2-1-3-dram-access">2.1.3 DRAM Access</h3>
 
 <p><img src="https://static.lwn.net/images/cpumemory/cpumemory.9.png" alt="" /></p>
+
+<p><strong>Figure 2.7: Dynamic RAM Schematic</strong></p>
+
+<p>访问DRAM的步骤：</p>
+
+<ol>
+<li>RAS（Row address selection）</li>
+<li>CAS（Column address selection）</li>
+<li>传输数据</li>
+</ol>
+
+<p>RAS和CAS都需要消耗时钟频率，如果每次都需要重新RAS-CAS则性能会低。如果一次性把一行的数据都传输，则速度很快。</p>
+
+<h3 id="2-1-4-conclusions">2.1.4 Conclusions</h3>
+
+<ul>
+<li>不是所有内存都是SRAM是有原因的（成本原因）</li>
+<li>memory cell必须被单独选择才能够使用</li>
+<li>address line的数目直接影响到内存控制器、主板、DRAM module、DRAM chip的成本</li>
+<li>需要等待一段时间才能得到读、写操作的结果</li>
+</ul>
+
+<h2 id="2-2-dram-access-technical-details">2.2 DRAM Access Technical Details</h2>
+
+<p>略。</p>
 
 <h3 id="2-2-4-memory-types">2.2.4 Memory Types</h3>
 
 <ul>
-<li>现代DRAM会内置I/O buffer增加每次传输的数据量。</li>
+<li>现代DRAM内置I/O buffer增加每次传输的数据量。</li>
 </ul>
 
 <p><img src="https://static.lwn.net/images/cpumemory/cpumemory.47.png" alt="" /></p>
 
 <p><strong>Figure 2.14: DDR3 SDRAM Operation</strong></p>
+
+<h3 id="2-2-5-conclusions">2.2.5 Conclusions</h3>
 
 <ul>
 <li>假如DRAM的时钟频率为200MHz，I/O buffer每次传送4份数据（商业宣传其FSB为800MHz），你的CPU是2GHz，那么两者时钟频率则是1:10，意味着内存延迟1个时钟频率，那么CPU就要等待10个时钟频率。</li>
@@ -286,7 +367,12 @@
 <h2 id="2-3-other-main-memory-users">2.3 Other Main Memory Users</h2>
 
 <ul>
-<li>用到内存的不仅仅是CPU，使用DMA（Direct memory access）的设备、没有独立显存的系统（会使用内存作为显寸）都会对FSB产生争用，意味着会导致内存访问延迟。</li>
+<li>网络控制器、大存储控制器，使用DMA访问内存。</li>
+<li>PCI-E卡也能通过南桥-北桥访问内存。</li>
+<li>USB也用到FSB。</li>
+<li>高DMA流量会占用FSB，导致CPU访问内存的时候等待时间变长。</li>
+<li>在NUMA架构中，可以CPU使用的内存不被DMA影响。在Section 6会详细讨论。</li>
+<li>没有独立显存的系统（会使用内存作为显寸），这种系统对于RAM的访问会很频繁，造成占用FSB带宽，影响系统性能。</li>
 </ul></article>
     <footer class="post-footer">
       
