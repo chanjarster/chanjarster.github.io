@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+<head>
+
+  <meta charset="utf-8" />
+
+  
+  <title>如何估算吞吐量以及线程池大小</title>
+
+  
+  
+
+
+
+
+
+  
+  <meta name="author" content="颇忒脱" />
+  <meta name="description" content="
+" />
+
+  
+  
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:site" content="@gohugoio" />
+    <meta name="twitter:title" content="如何估算吞吐量以及线程池大小" />
+    <meta name="twitter:description" content="
+" />
+    <meta name="twitter:image" content="https://chanjarster.github.io/img/avatar.jpg" />
+  
+
+  
+  <meta property="og:type" content="article" />
+  <meta property="og:title" content="如何估算吞吐量以及线程池大小" />
+  <meta property="og:description" content="
+" />
+  <meta property="og:url" content="https://chanjarster.github.io/post/concurrent-programming/throughput-and-thread-pool-size/" />
+  <meta property="og:image" content="https://chanjarster.github.io/img/avatar.jpg" />
+
+
+
+
+<meta name="generator" content="Hugo 0.49.2" />
+
+
+<link rel="canonical" href="https://chanjarster.github.io/post/concurrent-programming/throughput-and-thread-pool-size/" />
+
+<meta name="renderer" content="webkit" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<meta name="format-detection" content="telephone=no,email=no,adress=no" />
+<meta http-equiv="Cache-Control" content="no-transform" />
+
+
+<meta name="robots" content="index,follow" />
+<meta name="referrer" content="origin-when-cross-origin" />
+
+
+
+
+
+
+
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="颇忒脱的技术博客" />
+<meta name="msapplication-tooltip" content="颇忒脱的技术博客" />
+<meta name='msapplication-navbutton-color' content="#5fbf5e" />
+<meta name="msapplication-TileColor" content="#5fbf5e" />
+<meta name="msapplication-TileImage" content="/img/tile-image-windows.png" />
+<link rel="icon" href="https://chanjarster.github.io/img/favicon.ico" />
+<link rel="icon" type="image/png" sizes="16x16" href="https://chanjarster.github.io/img/favicon-16x16.png" />
+<link rel="icon" type="image/png" sizes="32x32" href="https://chanjarster.github.io/img/favicon-32x32.png" />
+<link rel="icon" sizes="192x192" href="https://chanjarster.github.io/img/touch-icon-android.png" />
+<link rel="apple-touch-icon" href="https://chanjarster.github.io/img/touch-icon-apple.png" />
+<link rel="mask-icon" href="https://chanjarster.github.io/img/safari-pinned-tab.svg" color="#5fbf5e" />
+
+
+
+<link rel="stylesheet" href="//cdn.bootcss.com/video.js/6.2.8/alt/video-js-cdn.min.css" />
+
+<link rel="stylesheet" href="https://chanjarster.github.io/css/bundle.8e3aef2bc5.css" />
+
+
+  
+  <!--[if lt IE 9]>
+    <script src="//cdn.bootcss.com/html5shiv/3.7.3/html5shiv.min.js"></script>
+    <script src="//cdn.bootcss.com/respond.js/1.4.2/respond.min.js"></script>
+    <script src="//cdn.bootcss.com/video.js/6.2.8/ie8/videojs-ie8.min.js"></script>
+  <![endif]-->
+
+<!--[if lte IE 11]>
+    <script src="//cdn.bootcss.com/classlist/1.1.20170427/classList.min.js"></script>
+  <![endif]-->
+
+
+<script src="//cdn.bootcss.com/object-fit-images/3.2.3/ofi.min.js"></script>
+
+
+<script src="//cdn.bootcss.com/smooth-scroll/12.1.4/js/smooth-scroll.polyfills.min.js"></script>
+
+
+</head>
+  <body>
+    
+    <div class="suspension">
+      <a title="Go to top" class="to-top is-hide"><span class="icon icon-up"></span></a>
+      
+        
+      
+    </div>
+    
+    
+  <header class="site-header">
+  <img class="avatar" src="https://chanjarster.github.io/img/avatar2.jpg" alt="Avatar">
+  
+  <h2 class="title">颇忒脱的技术博客</h2>
+  
+  <p class="subtitle"></p>
+  <button class="menu-toggle" type="button">
+    <span class="icon icon-menu"></span>
+  </button>
+  <nav class="site-menu collapsed">
+    <h2 class="offscreen">Main Menu</h2>
+    <ul class="menu-list">
+      
+      
+      
+      
+        <li class="menu-item
+            
+            
+            
+              is-active
+            ">
+            <a href="https://chanjarster.github.io/">Home</a>
+          </li>
+      
+        <li class="menu-item
+            
+            
+            ">
+            <a href="https://chanjarster.github.io/tags/%E6%94%B6%E8%97%8F%E5%A4%B9/">Bookmarks</a>
+          </li>
+      
+        <li class="menu-item
+            
+            
+            ">
+            <a href="https://github.com/chanjarster">Works</a>
+          </li>
+      
+        <li class="menu-item
+            
+            
+            ">
+            <a href="https://chanjarster.github.io/tags/">Tags</a>
+          </li>
+      
+        <li class="menu-item
+            
+            
+            ">
+            <a href="https://chanjarster.github.io/links/">Links</a>
+          </li>
+      
+    </ul>
+  </nav>
+  <nav class="social-menu collapsed">
+    <h2 class="offscreen">Social Networks</h2>
+    <ul class="social-list">
+
+      
+
+      
+      <li class="social-item">
+        <a href="//github.com/chanjarster" title="GitHub"><span class="icon icon-github"></span></a>
+      </li>
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      <li class="social-item">
+        <a rel="alternate" type="application/rss+xml" href="https://chanjarster.github.io/index.xml"><span class="icon icon-rss" title="RSS"></span></a>
+      </li>
+
+    </ul>
+  </nav>
+</header>
+
+  <section class="main post-detail">
+    <header class="post-header">
+      <h1 class="post-title">如何估算吞吐量以及线程池大小</h1>
+      <p class="post-meta">@颇忒脱 · Mar 21, 2019 · 1 min read</p>
+    </header>
+    <article class="post-content"><p></p>
+
+<h2 id="估算吞吐量">估算吞吐量</h2>
+
+<p>现在有一个task，它的执行时间分为2部分，第一部分做数学运算，第二部分等待IO。这两部分就是所谓的计算操作与等待操作。</p>
+
+<p>那么现在要求估算在CPU火力全开的情况下，执行这个task能够达到的吞吐量峰值是多少？</p>
+
+<p>那么我们要先知道执行这个task总共需要多少时间，计算部分花费多少时间，等待部分花费多少时间。</p>
+
+<p>假设这个task的计算部分花费1秒，等待部分花费9秒，并且开了10个线程执行10个task，在单核CPU的情况下可以得到下面的执行图：</p>
+
+<p><img src="1-core.png" alt="" /></p>
+
+<p>图中的蓝色线条是等待调度，橙色线条是执行计算任务，绿色线条是CPU等待花费的时间。</p>
+
+<p>可以得益于开了10个线程，每个task可以利用其他task的等待时间里执行自己的计算操作，同时使得CPU始终处于忙碌状态，即利用率100%。这也告诉你，就算你开11个线程也不会得到更多好处。</p>
+
+<p>上面这个图的计算任务是按顺序执行的，这只是一个假想情况，实际中操作系统会将这10个线程交替运行，见图中的红色线，操作系统可以在这个范围内对这10个task的计算任务做任意调度。如果去除线程调度的开销，花费的总时间其实还是等于10秒的。</p>
+
+<p>这个图的吞吐量就显而易见了：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-txt" data-lang="txt">throughput = 10 tasks / (10 * computing time + wait time) 
+           = 10 tasks / (10 * 1s + 9s) 
+           = 10 / 19s = 0.526 tasks/s</code></pre></div>
+<p>如果我们现在有一个双核CPU，那么会怎样呢？</p>
+
+<p><img src="2-cores.png" alt="" /></p>
+
+<p>可以看到因为有了2个CPU核心，计算任务可以重叠，进而花费的时间减半，吞吐量为：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-txt" data-lang="txt">throughput = 10 tasks / (10 * computing time / 2 + wait time) 
+           = 10 tasks / (10 * 1s / 2 + 9s) 
+           = 10 / 14s = 0.7142 tasks/s</code></pre></div>
+<p>那么总结一下吞吐量计算公式：</p>
+
+<ul>
+<li>Throughput：吞吐量。</li>
+<li>Tn：task数量。</li>
+<li>C：CPU数量。可以有小数，比如0.5，代表只提供一半的算力。</li>
+<li>Tc：task计算所花费的时间。</li>
+<li>Tw：task等待花费的时间。</li>
+<li>E：最后一个task完成所消耗的时间。</li>
+</ul>
+
+<p><img src="throughput-formula.png" alt="" /></p>
+
+<p>公式中C=1的意思是CPU 100%的全速工作，如果C=0.5那么意思就是CPU有50%的空闲时间，如果C=2则代表启动了两颗CPU全速运行。</p>
+
+<p>可以看到想要提升吞吐量有：</p>
+
+<ul>
+<li>提高C，这个下面会讲。</li>
+<li>降低Tc</li>
+<li>降低Tw</li>
+</ul>
+
+<p>总的来说就是使用更多的CPU核，让task运行时间更短。</p>
+
+<p>也许你觉得还可以通过提升Tn来提高吞吐量，比如下面这个图：</p>
+
+<p><img src="task-number-throughput.png" alt="" /></p>
+
+<p>可以看到吞吐量随着任务数量的上升而上升，那么是不是会一直长呢？答案是不会的，当Tn越来越大的时候，Tn * Tc / C 也会越来越大，那么可以忽略掉Tw，公式就变成了 C / Tc，这值就是理论上的吞吐量上界，增加Tn只会无限趋近于这个值。</p>
+
+<p>实际上这个是不可能的，如果</p>
+
+<h2 id="估算线程池大小">估算线程池大小</h2>
+
+<p>那么问题来了，如何知道要开多少个线程能够让CPU达到目标利用率？</p>
+
+<p>这个要看下面的公式：</p>
+
+<ul>
+<li>N：CPU数量。</li>
+<li>U：CPU利用率，0.1代表10%，1代表100%。</li>
+<li>C：用到CPU的时间。</li>
+<li>W：等待时间。</li>
+</ul>
+
+<p><img src="thread-pool-formula.png" alt="" /></p>
+
+<p>注：本公式里的 N * U = 吞吐量公式中的C。</p>
+
+<p>如果U=1（利用率100%），决定线程数量的是W与C的比，当W越高时则需要越多的线程，当W=0时，只需要与N同样的线程即可。</p>
+
+<p>这个公式也告诉我们开启更多的线程不会带来额外的好处，还会造成反效果（增加的线程调度开销），所以在实践中都会使用具有上界的线程池。</p>
+
+<p>而且在实际做性能调优的时候，会在计算得到的数字左右调整线程池大小，以达到最好效果。</p>
+
+<h2 id="参考资料">参考资料</h2>
+
+<ul>
+<li><a href="http://yuanhsh.blogspot.com/2015/07/how-to-decide-pool-size-for-thread-pools.html">How to decide pool size for Thread Pools?</a></li>
+</ul></article>
+    <footer class="post-footer">
+      
+      <ul class="post-tags">
+        
+          <li><a href="https://chanjarster.github.io/tags/arts"><span class="tag">ARTS</span></a></li>
+        
+          <li><a href="https://chanjarster.github.io/tags/arts-t"><span class="tag">ARTS-T</span></a></li>
+        
+          <li><a href="https://chanjarster.github.io/tags/%E5%B9%B6%E5%8F%91%E7%BC%96%E7%A8%8B"><span class="tag">并发编程</span></a></li>
+        
+      </ul>
+      
+      <p class="post-copyright">
+        
+      </p>
+    </footer>
+    
+      
+    
+  </section>
+  <footer class="site-footer">
+  <p>© 2017-2019 颇忒脱的技术博客</p>
+  <p>Powered by <a href="https://gohugo.io/" target="_blank">Hugo</a> with theme <a href="https://github.com/laozhu/hugo-nuo" target="_blank">Nuo</a>.</p>
+  
+</footer>
+
+
+
+<script async src="//cdn.bootcss.com/video.js/6.2.8/alt/video.novtt.min.js"></script>
+<script async src="//cdn.bootcss.com/mathjax/2.7.2/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    tex2jax: {
+      inlineMath: [['$','$'], ['\\(','\\)']],
+      displayMath: [['$$','$$'], ['\\[','\\]']],
+      processEscapes: true,
+      processEnvironments: true,
+      skipTags: ['script', 'noscript', 'style', 'textarea', 'pre'],
+      TeX: { equationNumbers: { autoNumber: "AMS" },
+      extensions: ["AMSmath.js", "AMSsymbols.js"] }
+    }
+  });
+</script>
+<script type="text/x-mathjax-config">
+  // Fix <code> tags after MathJax finishes running. This is a
+  // hack to overcome a shortcoming of Markdown. Discussion at
+  // https://github.com/mojombo/jekyll/issues/199
+  MathJax.Hub.Queue(() => {
+    MathJax.Hub.getAllJax().map(v => v.SourceElement().parentNode.className += ' has-jax');
+  });
+</script>
+
+<script src="https://chanjarster.github.io/js/bundle.273f9ac6f0.js"></script>
+
+
+
+
+  </body>
+</html>
