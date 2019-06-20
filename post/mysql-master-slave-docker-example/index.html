@@ -292,6 +292,7 @@ mysql&gt; CHANGE MASTER TO
   MASTER_PORT<span style="color:#f92672">=</span><span style="color:#ae81ff">3307</span>,
   MASTER_USER<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;repl&#39;</span>,
   MASTER_PASSWORD<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;password&#39;</span>,
+  GET_MASTER_PUBLIC_KEY<span style="color:#f92672">=</span><span style="color:#ae81ff">1</span>,
   MASTER_AUTO_POSITION<span style="color:#f92672">=</span><span style="color:#ae81ff">1</span>;</code></pre></div>
 <p>注意<code>MASTER_HOST</code>写的是Master所在的Host的IP，<code>MASTER_PORT</code>写的是Master暴露在Host上的端口，<code>MASTER_USER</code>和<code>MASTER_PASSWORD</code>则是Replication用户的信息。</p>
 
@@ -316,32 +317,58 @@ mysql&gt; show databases;
 <span style="color:#ae81ff">5</span> rows in set <span style="color:#f92672">(</span><span style="color:#ae81ff">0</span>.01 sec<span style="color:#f92672">)</span></code></pre></div>
 <p>如果有就说明my_database从Master复制到了Slave上。</p>
 
-<h2 id="已知问题">已知问题</h2>
+<h2 id="docker-compose版本">docker-compose版本</h2>
 
-<h3 id="slave无法使用hostname来链接master">Slave无法使用hostname来链接Master</h3>
+<p>在<a href="https://github.com/chanjarster/mysql-master-slave-docker-example">github</a>上也提供了docker-compose.yaml，操作过程和上述一致，只不过容器名字会有变化。</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash"><span style="color:#75715e"># 拉起Master和Slave
+</span><span style="color:#75715e"></span>$ docker-compose -p mysql-repl up
+<span style="color:#75715e"># 连接Master
+</span><span style="color:#75715e"></span>$ docker exec -it mysql-repl_mysql-master_1 mysql -u root -p
+<span style="color:#75715e"># 连接Slave
+</span><span style="color:#75715e"></span>$ docker exec -it mysql-repl_mysql-slave_1 mysql -u root -p</code></pre></div>
+<p>并且<code>CHANGE MASTER TO</code>语句有所不同，使用的是Master的Service Name：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">CHANGE MASTER TO 
+  MASTER_HOST<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;mysql-master&#39;</span>,
+  MASTER_PORT<span style="color:#f92672">=</span><span style="color:#ae81ff">3306</span>,
+  MASTER_USER<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;repl&#39;</span>,
+  MASTER_PASSWORD<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;password&#39;</span>,
+  GET_MASTER_PUBLIC_KEY<span style="color:#f92672">=</span><span style="color:#ae81ff">1</span>,
+  MASTER_AUTO_POSITION<span style="color:#f92672">=</span><span style="color:#ae81ff">1</span>;</code></pre></div>
+<h2 id="troubleshooting">Troubleshooting</h2>
 
-<p>本例子中使用的MySQL Docker镜像自带了一个配置文件位置在<code>/etc/mysql/conf.d/docker.cnf</code>，它里面配置了：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-txt" data-lang="txt">[mysqld]
-skip-host-cache
-skip-name-resolve</code></pre></div>
-<p>注意<code>skip-name-resolve</code>，因为这个配置，在<code>MASTER_HOST</code>里只能写IP，不能写hostname，否则就解析不到。这个可以观察Slave的日志看到：<code>docker logs -f mysql-slave-1</code>。</p>
-
-<h3 id="本例在mac上无法工作">本例在Mac上无法工作</h3>
+<h3 id="docker-run版本在mac上无法工作">docker run版本在Mac上无法工作</h3>
 
 <p>这个是因为Slave容器无法访问到Master的host。解决办法我也不知道。</p>
 
-<h2 id="备选方案">备选方案</h2>
+<h3 id="关于-get-master-public-key">关于<code>GET_MASTER_PUBLIC_KEY</code></h3>
 
-<p><a href="https://hub.docker.com/r/bitnami/mysql">Bitnami MySQL Docker</a>能够通过环境变量来配置Master-Slave Replication，不过它还不支持GTID。</p>
+<p>在做本例子时出现过Slave无法连接到Master的情况：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-txt" data-lang="txt">2019-06-19T01:34:24.361566Z 8 [System] [MY-010597] [Repl] &#39;CHANGE MASTER TO FOR CHANNEL &#39;&#39; executed&#39;. Previous state master_host=&#39;&#39;, master_port= 3306, master_log_file=&#39;&#39;, master_log_pos= 4, master_bind=&#39;&#39;. New state master_host=&#39;mysql-master&#39;, master_port= 3306, master_log_file=&#39;&#39;, master_log_pos= 4, master_bind=&#39;&#39;.
+2019-06-19T01:34:28.274728Z 9 [Warning] [MY-010897] [Repl] Storing MySQL user name or password information in the master info repository is not secure and is therefore not recommended. Please consider using the USER and PASSWORD connection options for START SLAVE; see the &#39;START SLAVE Syntax&#39; in the MySQL Manual for more information.
+2019-06-19T01:34:28.330825Z 9 [ERROR] [MY-010584] [Repl] Slave I/O for channel &#39;&#39;: error connecting to master &#39;repl@mysql-master:3306&#39; - retry-time: 60  retries: 1, Error_code: MY-002061
+2019-06-19T01:35:28.333735Z 9 [ERROR] [MY-010584] [Repl] Slave I/O for channel &#39;&#39;: error connecting to master &#39;repl@mysql-master:3306&#39; - retry-time: 60  retries: 2, Error_code: MY-002061
+2019-06-19T01:36:28.335525Z 9 [ERROR] [MY-010584] [Repl] Slave I/O for channel &#39;&#39;: error connecting to master &#39;repl@mysql-master:3306&#39; - retry-time: 60  retries: 3, Error_code: MY-002061
+...</code></pre></div>
+<p>详细细节可见这个<a href="https://github.com/docker-library/mysql/issues/572">issue</a>，这是因为MySQL 8默认启用了caching_sha2_password authentication plugin，issue中提到了一个办法：在启动Slave的时候添加<code>--default-auth=mysql_native_password</code>参数。不过我感觉这个不太好，查阅相关文档后发现可以在<code>CHANGE MASTER TO</code>添加<code>GET_MASTER_PUBLIC_KEY=1</code>参数来解决这个问题。</p>
+
+<p>更多详情参考<a href="https://dev.mysql.com/doc/refman/8.0/en/upgrading-from-previous-series.html#upgrade-caching-sha2-password-replication">caching_sha2_password and Replication</a>和<a href="https://dev.mysql.com/doc/refman/8.0/en/change-master-to.html">CHANGE MASTER TO Syntax</a>。</p>
 
 <h2 id="参考资料">参考资料</h2>
 
 <ul>
-<li><a href="https://dev.mysql.com/doc/refman/8.0/en/replication-gtids-howto.html">Setting Up Replication Using GTIDs</a></li>
-<li><a href="https://dev.mysql.com/doc/refman/8.0/en/replication-options-binary-log.html">Binary Logging Options and Variables</a></li>
-<li><a href="https://dev.mysql.com/doc/refman/8.0/en/replication-options-slave.html">Replication Slave Options and Variables</a></li>
-<li><a href="https://dev.mysql.com/doc/refman/8.0/en/host-cache.html">DNS Lookup Optimization and the Host Cache</a></li>
-<li><a href="https://dev.mysql.com/doc/refman/8.0/en/change-master-to.html">CHANGE MASTER TO Syntax</a></li>
+<li><p><a href="https://dev.mysql.com/doc/refman/8.0/en/replication-gtids-howto.html">Setting Up Replication Using GTIDs</a></p></li>
+
+<li><p><a href="https://dev.mysql.com/doc/refman/8.0/en/replication-options-binary-log.html">Binary Logging Options and Variables</a></p></li>
+
+<li><p><a href="https://dev.mysql.com/doc/refman/8.0/en/replication-options-slave.html">Replication Slave Options and Variables</a></p></li>
+
+<li><p><a href="https://dev.mysql.com/doc/refman/8.0/en/host-cache.html">DNS Lookup Optimization and the Host Cache</a></p></li>
+
+<li><p><a href="https://dev.mysql.com/doc/refman/8.0/en/change-master-to.html">CHANGE MASTER TO Syntax</a></p></li>
+
+<li><p><a href="https://dev.mysql.com/doc/refman/8.0/en/upgrading-from-previous-series.html#upgrade-caching-sha2-password-replication">caching_sha2_password and Replication</a></p></li>
+
+<li><p><a href="https://hub.docker.com/r/bitnami/mysql">Bitnami MySQL Docker</a>, Bitnami制作的MySQL镜像，支持通过环境变量来配置Master-Slave Replication，不过它不支持GTID，只支持基于Binary Log的Replication。</p></li>
 </ul></article>
     <footer class="post-footer">
       
