@@ -5,7 +5,7 @@
   <meta charset="utf-8" />
 
   
-  <title>收藏夹 - 博客</title>
+  <title>Redis Cluster节点故障探测算法笔记</title>
 
   
   
@@ -16,25 +16,28 @@
 
   
   <meta name="author" content="颇忒脱" />
-  <meta name="description" content="
+  <meta name="description" content="本笔记是对Redis Cluster Spec - Failure Detection的归纳总结
+
 " />
 
   
   
     <meta name="twitter:card" content="summary" />
     <meta name="twitter:site" content="@gohugoio" />
-    <meta name="twitter:title" content="收藏夹 - 博客" />
-    <meta name="twitter:description" content="
+    <meta name="twitter:title" content="Redis Cluster节点故障探测算法笔记" />
+    <meta name="twitter:description" content="本笔记是对Redis Cluster Spec - Failure Detection的归纳总结
+
 " />
     <meta name="twitter:image" content="https://chanjarster.github.io/img/avatar.jpg" />
   
 
   
   <meta property="og:type" content="article" />
-  <meta property="og:title" content="收藏夹 - 博客" />
-  <meta property="og:description" content="
+  <meta property="og:title" content="Redis Cluster节点故障探测算法笔记" />
+  <meta property="og:description" content="本笔记是对Redis Cluster Spec - Failure Detection的归纳总结
+
 " />
-  <meta property="og:url" content="https://chanjarster.github.io/post/bookmarks/bookmarks-blog/" />
+  <meta property="og:url" content="https://chanjarster.github.io/post/redis-cluster-node-failure-detection-state-transition/" />
   <meta property="og:image" content="https://chanjarster.github.io/img/avatar.jpg" />
 
 
@@ -43,7 +46,7 @@
 <meta name="generator" content="Hugo 0.49.2" />
 
 
-<link rel="canonical" href="https://chanjarster.github.io/post/bookmarks/bookmarks-blog/" />
+<link rel="canonical" href="https://chanjarster.github.io/post/redis-cluster-node-failure-detection-state-transition/" />
 
 <meta name="renderer" content="webkit" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
@@ -224,31 +227,69 @@
 
   <section class="main post-detail">
     <header class="post-header">
-      <h1 class="post-title">收藏夹 - 博客</h1>
-      <p class="post-meta">@颇忒脱 · Jan 24, 2019 · 1 min read</p>
+      <h1 class="post-title">Redis Cluster节点故障探测算法笔记</h1>
+      <p class="post-meta">@颇忒脱 · Jul 9, 2019 · 1 min read</p>
     </header>
-    <article class="post-content"><p></p>
+    <article class="post-content"><p>本笔记是对<a href="https://redis.io/topics/cluster-spec#failure-detection">Redis Cluster Spec - Failure Detection</a>的归纳总结</p>
+
+<p></p>
+
+<h2 id="状态转换图">状态转换图</h2>
 
 <ul>
-<li><a href="https://mercyblitz.github.io/about/">小马哥技术博客</a>。Java、Spring Cloud Alibaba、Apache Dubbo。</li>
+<li>每个Node在本地维护了一张其他Node的状态表，并根据Failure Detection算法更新这张表里的Node的状态</li>
+<li>每个Node可以自行把其他Node的状态设置为GOOD（这个状态在文档和源码中均不存在，等价于不是PFAIL也不是FAIL）、PFAIL。</li>
+<li>如果要把其他Node的状态设置为FAIL则需要大多数Master Node同意才行，一旦设置成功要将这个消息传播给所有其他能连接的Node，其他Node收到这个信息后也要更新本地Node状态表，将Failed Node的状态更新为FAIL。</li>
 </ul>
 
-<p>操作系统/内核方面：</p>
+<p>下面是状态转换图，例举的是Node A观察Node B的例子：</p>
 
-<ul>
-<li><a href="http://www.brendangregg.com/index.html">Brendan D. Gregg</a>，许多内核检测工具的创建者，可以详细地看到如何使用perf、eBPF、FlameGraph分析各种性能问题。强烈推荐。</li>
-<li><a href="http://codecapsule.com/">Code Capsule</a>，另一个对操作系统/内核具有深刻理解的工程师。</li>
-</ul></article>
+<p><img src="state-transition.png" alt="" /></p>
+
+<h2 id="少数派和多数派">少数派和多数派</h2>
+
+<p>多数派：拥有多数Master的一方，可含有Slave。</p>
+
+<p>少数派：拥有少数Master的一方，可含有Slave。</p>
+
+<h3 id="少数派视角">少数派视角</h3>
+
+<p>少数派只会看到大多数Master处于PFAIL/FAIL状态，0-所有Slave处于PFAIL/FAIL状态。</p>
+
+<h3 id="多数派视角">多数派视角</h3>
+
+<p>多数派只会看到少数Master处于PFAIL/FAIL状态，0-所有Slave处于PFAIL/FAIL状态。</p>
+
+<p>不会存在以下情况：多数派看到大多数Master处于FAIL状态，因为大多数Master处于FAIL就意味着活着的Master们变成了少数派，这就矛盾了。</p>
+
+<h2 id="一些自问自答">一些自问自答</h2>
+
+<p>Q：为何少数派能够看到Master处于FAIL状态？不是说要大多数Master同意才能变成FAIL状态吗？
+A：考虑这个情况，在Partition发生的前一秒某些Master被决定为FAIL，随即Partition发生，那么在少数派眼里这些Master依然是处于FAIL状态的。</p>
+
+<p>Q：这里的每个Node是Slave还是Master呢？
+A：随便，只要是Node就行。</p>
+
+<p>Q：既然每个Master独占的负责Slots，那么少数派继续工作为啥不可以，反正各自管各自的。
+A：因为在多数派方，这个Master有可能会被Slave顶替，如果允许少数派继续工作，那么就会形成两个Master，造成split brain</p>
+
+<p>Q：少数派节点是如何知道自己应该停止工作的？
+A：它发现大多数Master变成了PFAIL / FAIL 状态时，就知道自己不能工作了，<a href="https://github.com/antirez/redis/blob/fc0c9c8097/src/cluster.c#L3786-L3813">Redis源码里是这么写的</a>。</p>
+
+<p>Q：多数派节点时如何知道自己应该停止工作的？
+A：如果这个Cluster要求所有Slots被覆盖，那么当有一个Master处于FAIL状态时，便停止工作，见<a href="https://github.com/antirez/redis/blob/fc0c9c8097/src/cluster.c#L3770-L3779">源码</a>。如果不要求，则继续工作，只不过部分Slots的操作会报错。</p></article>
     <footer class="post-footer">
       
       <ul class="post-tags">
         
-          <li><a href="https://chanjarster.github.io/tags/%E6%94%B6%E8%97%8F%E5%A4%B9"><span class="tag">收藏夹</span></a></li>
+          <li><a href="https://chanjarster.github.io/tags/redis"><span class="tag">Redis</span></a></li>
+        
+          <li><a href="https://chanjarster.github.io/tags/%E5%88%86%E5%B8%83%E5%BC%8F"><span class="tag">分布式</span></a></li>
         
       </ul>
       
       <p class="post-copyright">
-        This post was published <strong>166</strong> days ago, content in the post may be inaccurate, even wrong now, please take risk yourself.
+        
       </p>
     </footer>
     
