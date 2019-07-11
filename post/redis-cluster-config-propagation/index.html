@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+<head>
+
+  <meta charset="utf-8" />
+
+  
+  <title>Redis Cluster配置传播及故障恢复笔记</title>
+
+  
+  
+
+
+
+
+
+  
+  <meta name="author" content="颇忒脱" />
+  <meta name="description" content="研究Redis Cluster Spec - Configuration handling, propagation, and failovers中提到的Epoch时记录的笔记。
+
+" />
+
+  
+  
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:site" content="@gohugoio" />
+    <meta name="twitter:title" content="Redis Cluster配置传播及故障恢复笔记" />
+    <meta name="twitter:description" content="研究Redis Cluster Spec - Configuration handling, propagation, and failovers中提到的Epoch时记录的笔记。
+
+" />
+    <meta name="twitter:image" content="https://chanjarster.github.io/img/avatar.jpg" />
+  
+
+  
+  <meta property="og:type" content="article" />
+  <meta property="og:title" content="Redis Cluster配置传播及故障恢复笔记" />
+  <meta property="og:description" content="研究Redis Cluster Spec - Configuration handling, propagation, and failovers中提到的Epoch时记录的笔记。
+
+" />
+  <meta property="og:url" content="https://chanjarster.github.io/post/redis-cluster-config-propagation/" />
+  <meta property="og:image" content="https://chanjarster.github.io/img/avatar.jpg" />
+
+
+
+
+<meta name="generator" content="Hugo 0.49.2" />
+
+
+<link rel="canonical" href="https://chanjarster.github.io/post/redis-cluster-config-propagation/" />
+
+<meta name="renderer" content="webkit" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<meta name="format-detection" content="telephone=no,email=no,adress=no" />
+<meta http-equiv="Cache-Control" content="no-transform" />
+
+
+<meta name="robots" content="index,follow" />
+<meta name="referrer" content="origin-when-cross-origin" />
+
+
+
+
+
+
+
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="颇忒脱的技术博客" />
+<meta name="msapplication-tooltip" content="颇忒脱的技术博客" />
+<meta name='msapplication-navbutton-color' content="#5fbf5e" />
+<meta name="msapplication-TileColor" content="#5fbf5e" />
+<meta name="msapplication-TileImage" content="/img/tile-image-windows.png" />
+<link rel="icon" href="https://chanjarster.github.io/img/favicon.ico" />
+<link rel="icon" type="image/png" sizes="16x16" href="https://chanjarster.github.io/img/favicon-16x16.png" />
+<link rel="icon" type="image/png" sizes="32x32" href="https://chanjarster.github.io/img/favicon-32x32.png" />
+<link rel="icon" sizes="192x192" href="https://chanjarster.github.io/img/touch-icon-android.png" />
+<link rel="apple-touch-icon" href="https://chanjarster.github.io/img/touch-icon-apple.png" />
+<link rel="mask-icon" href="https://chanjarster.github.io/img/safari-pinned-tab.svg" color="#5fbf5e" />
+
+
+
+<link rel="stylesheet" href="//cdn.bootcss.com/video.js/6.2.8/alt/video-js-cdn.min.css" />
+
+<link rel="stylesheet" href="https://chanjarster.github.io/css/bundle.8e3aef2bc5.css" />
+
+
+  
+  <!--[if lt IE 9]>
+    <script src="//cdn.bootcss.com/html5shiv/3.7.3/html5shiv.min.js"></script>
+    <script src="//cdn.bootcss.com/respond.js/1.4.2/respond.min.js"></script>
+    <script src="//cdn.bootcss.com/video.js/6.2.8/ie8/videojs-ie8.min.js"></script>
+  <![endif]-->
+
+<!--[if lte IE 11]>
+    <script src="//cdn.bootcss.com/classlist/1.1.20170427/classList.min.js"></script>
+  <![endif]-->
+
+
+<script src="//cdn.bootcss.com/object-fit-images/3.2.3/ofi.min.js"></script>
+
+
+<script src="//cdn.bootcss.com/smooth-scroll/12.1.4/js/smooth-scroll.polyfills.min.js"></script>
+
+
+</head>
+  <body>
+    
+    <div class="suspension">
+      <a title="Go to top" class="to-top is-hide"><span class="icon icon-up"></span></a>
+      
+        
+      
+    </div>
+    
+    
+  <header class="site-header">
+  <img class="avatar" src="https://chanjarster.github.io/img/avatar2.jpg" alt="Avatar">
+  
+  <h2 class="title">颇忒脱的技术博客</h2>
+  
+  <p class="subtitle"></p>
+  <button class="menu-toggle" type="button">
+    <span class="icon icon-menu"></span>
+  </button>
+  <nav class="site-menu collapsed">
+    <h2 class="offscreen">Main Menu</h2>
+    <ul class="menu-list">
+      
+      
+      
+      
+        <li class="menu-item
+            
+            
+            
+              is-active
+            ">
+            <a href="https://chanjarster.github.io/">Home</a>
+          </li>
+      
+        <li class="menu-item
+            
+            
+            ">
+            <a href="https://chanjarster.github.io/tags/%E6%94%B6%E8%97%8F%E5%A4%B9/">Bookmarks</a>
+          </li>
+      
+        <li class="menu-item
+            
+            
+            ">
+            <a href="https://github.com/chanjarster">Works</a>
+          </li>
+      
+        <li class="menu-item
+            
+            
+            ">
+            <a href="https://chanjarster.github.io/tags/">Tags</a>
+          </li>
+      
+        <li class="menu-item
+            
+            
+            ">
+            <a href="https://chanjarster.github.io/links/">Links</a>
+          </li>
+      
+    </ul>
+  </nav>
+  <nav class="social-menu collapsed">
+    <h2 class="offscreen">Social Networks</h2>
+    <ul class="social-list">
+
+      
+
+      
+      <li class="social-item">
+        <a href="//github.com/chanjarster" title="GitHub"><span class="icon icon-github"></span></a>
+      </li>
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      <li class="social-item">
+        <a rel="alternate" type="application/rss+xml" href="https://chanjarster.github.io/index.xml"><span class="icon icon-rss" title="RSS"></span></a>
+      </li>
+
+    </ul>
+  </nav>
+</header>
+
+  <section class="main post-detail">
+    <header class="post-header">
+      <h1 class="post-title">Redis Cluster配置传播及故障恢复笔记</h1>
+      <p class="post-meta">@颇忒脱 · Jul 10, 2019 · 1 min read</p>
+    </header>
+    <article class="post-content"><p>研究<a href="https://redis.io/topics/cluster-spec#configuration-handling-propagation-and-failovers">Redis Cluster Spec - Configuration handling, propagation, and failovers</a>中提到的Epoch时记录的笔记。</p>
+
+<p></p>
+
+<h2 id="什么是epoch">什么是Epoch？</h2>
+
+<ul>
+<li>可以把Epoch当作是一个版本号，是一个64位无符号整形</li>
+<li>每个Node自己有一份Cluster.currentEpoch、MySelf.configEpoch、其他Node.configEpoch，详见<a href="https://redis.io/commands/cluster-nodes">文档</a>。</li>
+<li>每个Master有自己的ConfigEpoch且在整个Cluster中唯一</li>
+<li>Slave的ConfigEpoch随其Master</li>
+<li>Cluster.currentEpoch，该值等于所有Node中最大的ConfigEpoch的值</li>
+<li>Master的ConfigEpoch初始值是0，也就是说Cluster.CurrentEpoch的初始值也是0</li>
+<li>Node之间Gossip传输消息时，Receiver发现Sender的ConfigEpoch比自己大，那么就更新自己的Cluster.CurrentEpoch为该值，随时间收敛，所有Node的Cluster.CurrentEpoch都变成一样。</li>
+</ul>
+
+<h2 id="slave-promotion">Slave Promotion</h2>
+
+<h3 id="slave的动作">Slave的动作</h3>
+
+<p>下面是总结的在发生Slave Promotion时，Slave做的事情。</p>
+
+<p><img src="slave-promotion.png" alt="" /></p>
+
+<h3 id="master的动作">Master的动作</h3>
+
+<p>下面是总结的在发生Slave Promotion时，Master做的事情。</p>
+
+<p><img src="master-voting.png" alt="" /></p>
+
+<h2 id="传播slots的配置">传播Slots的配置</h2>
+
+<p>Slave赢得选举之后会在己侧更新Slots上的归属信息，然后在定时的PING/PONG中将这个信息传播出去。</p>
+
+<p>PING/PONG总是会携带上Slots所属Master的信息（包括ConfigEpoch）</p>
+
+<p>PING的Reciever如果发现Sender的某个Slot上的Master.ConfigEpoch比自己这里记录的小，那么就会返回<code>UPDATE</code>告诉Sender更新Slots归属信息。</p>
+
+<p>下面是两个规则：</p>
+
+<ol>
+<li>如果一个Slot不属于任何Master，然后有一个Master宣称拥有它，那么就修改己侧的Slots信息把这个Slot关联到这个Master上。</li>
+<li>如果一个Slot已经归属一个Master，然后又有一个Master宣称拥有它，那么就看谁的ConfigEpoch大，大的那个赢</li>
+</ol>
+
+<h2 id="node复活后遇到的问题">Node复活后遇到的问题</h2>
+
+<p>Node A有两个Slot，然后它死了，它被顶替了，等它复活时发现两个Slot一个被Node B接管，另一个被Node C接管了，那么它：</p>
+
+<ol>
+<li>因为自己的ConfigEpoch已经很旧了，所以它复活后不负责任何Slot</li>
+<li>然后它会成为最后一个Slot的Master的Slave</li>
+</ol>
+
+<h2 id="slave迁移算法">Slave迁移算法</h2>
+
+<p>Slave迁移时一个自动过程。</p>
+
+<p>举个例子，现在有Master A、B，它们对应的Slave有A1、B1、B2。现在A死了，A1顶替上去，不过这个时候A1就是一个光棍Master（它没有Slave），B有富余的Slave（B1和B2），把其中一个匀给A1当Slave。</p>
+
+<p>这个过程不需要共识，因为只是修改Slave的归属，也不会修改ConfigEpoch。</p>
+
+<p>Slave迁移有两个规则：</p>
+
+<ol>
+<li>当有多个Slave富余时，选择NodeID字典顺最小的那个来迁移</li>
+<li>只有当Master的Slave数量&gt;=<code>cluster-migration-barrier</code>时，才会挑选它的Slave做Migration</li>
+</ol>
+
+<h2 id="两个跳过共识修改configepoch的操作">两个跳过共识修改ConfigEpoch的操作</h2>
+
+<p>下面两个操作比较危险，最好确定一个成功后再执行另一个：</p>
+
+<ul>
+<li><code>CLUSTER_FAILOVER TAKEOVER</code>（手动Failover）直接将一个Slave提升为Master，不需要大多数Master同意。</li>
+<li>Slot Migration同样不需要大多数Master同意。</li>
+</ul>
+
+<p>所以就有可能出现同一个Slot有两个相同ConfigEpoch的Master宣称由自己负责，这种冲突的解决算法是：</p>
+
+<ul>
+<li>如果Master A发现Master B也宣称了对Slot X的主权，并且两者的ConfigEpoch一样</li>
+<li>如果Master A的NodeID的字典顺比Master B的小</li>
+<li>那么Master A就把己侧的CurrentEpoch+1，同时ConfigEpoch改成和CurrentEpoch一样</li>
+</ul>
+
+<h2 id="node重制">Node重制</h2>
+
+<p>略，见<a href="https://redis.io/topics/cluster-spec#node-resets">文档</a>。</p>
+
+<h2 id="移除node">移除Node</h2>
+
+<p>略，见<a href="https://redis.io/topics/cluster-spec#removing-nodes-from-a-cluster">文档</a>。</p>
+
+<h2 id="一些自问自答">一些自问自答</h2>
+
+<p>Q：ConfigEpoch何时变化？</p>
+
+<p>A：Slave Promotion时、手动Failover时、Slot Migration时</p>
+
+<p>Q：ConfigEpoch怎么变化？</p>
+
+<p>A：Node-&gt;ConfigEpoch = Cluster-&gt;CurrentEpoch + 1，结果也就是Cluster-&gt;CurrentEpoch加1了。<a href="https://github.com/antirez/redis/blob/5.0.0/src/cluster.c#L983-L1029">源码见这里</a>。</p>
+
+<p>Q：两个Master的ConfigEpoch一样怎么办？</p>
+
+<p>A：这个会出现在两个Slave同时Promotion时，解决办法是NodeID字典序比较小的那个会再一次Bump ConfigEpoch，<a href="https://github.com/antirez/redis/blob/5.0.0/src/cluster.c#L1031-L1092">源码见这里</a>。</p>
+
+<p>Q：ConfigEpoch有什么用？</p>
+
+<p>A：当有两个Master宣称自己拥有同一个/批Slot时，ConfigEpoch大的那个赢，因为大的那个代表最新信息，其他Node只会采用赢的那方所宣称的信息。</p>
+
+<p>Q：CurrentEpoch有什么用？</p>
+
+<p>A：1）用来判定Node所获得的Cluster信息的新旧。2）当Node要变更ConfigEpoch时派用处。</p>
+
+<h3 id="参考资料">参考资料</h3>
+
+<p>官方文档，有些不是太清楚：</p>
+
+<ul>
+<li><a href="https://redis.io/topics/cluster-spec#configuration-handling-propagation-and-failovers">Redis Cluster Spec - Configuration handling, propagation, and failovers</a></li>
+</ul>
+
+<p>下面是饿了么工程师写的文章，比较透彻</p>
+
+<ul>
+<li><a href="https://zhuanlan.zhihu.com/p/25060071">Redis Cluster 原理与管理</a></li>
+</ul>
+
+<p>下面是两篇阿里工程师的，写的没有上面的好</p>
+
+<ul>
+<li><a href="https://yq.aliyun.com/articles/638627">深入理解redis cluster的failover机制</a></li>
+<li><a href="https://yq.aliyun.com/articles/680237">深入解析redis cluster gossip机制</a></li>
+</ul></article>
+    <footer class="post-footer">
+      
+      <ul class="post-tags">
+        
+          <li><a href="https://chanjarster.github.io/tags/redis"><span class="tag">Redis</span></a></li>
+        
+          <li><a href="https://chanjarster.github.io/tags/%E5%88%86%E5%B8%83%E5%BC%8F%E7%AE%97%E6%B3%95"><span class="tag">分布式算法</span></a></li>
+        
+      </ul>
+      
+      <p class="post-copyright">
+        
+      </p>
+    </footer>
+    
+      
+    
+  </section>
+  <footer class="site-footer">
+  <p>© 2017-2019 颇忒脱的技术博客</p>
+  <p>Powered by <a href="https://gohugo.io/" target="_blank">Hugo</a> with theme <a href="https://github.com/laozhu/hugo-nuo" target="_blank">Nuo</a>.</p>
+  
+</footer>
+
+
+
+<script async src="//cdn.bootcss.com/video.js/6.2.8/alt/video.novtt.min.js"></script>
+<script async src="//cdn.bootcss.com/mathjax/2.7.2/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    tex2jax: {
+      inlineMath: [['$','$'], ['\\(','\\)']],
+      displayMath: [['$$','$$'], ['\\[','\\]']],
+      processEscapes: true,
+      processEnvironments: true,
+      skipTags: ['script', 'noscript', 'style', 'textarea', 'pre'],
+      TeX: { equationNumbers: { autoNumber: "AMS" },
+      extensions: ["AMSmath.js", "AMSsymbols.js"] }
+    }
+  });
+</script>
+<script type="text/x-mathjax-config">
+  // Fix <code> tags after MathJax finishes running. This is a
+  // hack to overcome a shortcoming of Markdown. Discussion at
+  // https://github.com/mojombo/jekyll/issues/199
+  MathJax.Hub.Queue(() => {
+    MathJax.Hub.getAllJax().map(v => v.SourceElement().parentNode.className += ' has-jax');
+  });
+</script>
+
+<script src="https://chanjarster.github.io/js/bundle.273f9ac6f0.js"></script>
+
+
+
+
+  </body>
+</html>
