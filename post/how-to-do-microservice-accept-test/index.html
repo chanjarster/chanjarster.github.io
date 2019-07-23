@@ -5,7 +5,7 @@
   <meta charset="utf-8" />
 
   
-  <title>安利一个造Prometheus假数据的工具</title>
+  <title>如何给微服务架构的项目做验收测试？</title>
 
   
   
@@ -15,29 +15,26 @@
 
 
   
-  <meta name="author" content="破忒脱" />
-  <meta name="description" content="学习Prometheus各种函数的时候最好能够造一些我们想要的数据来测试，但是Prometheus没有提供直接操作其数据库的功能，所以在这里安利一个工具。
-
+  <meta name="author" content="颇忒脱" />
+  <meta name="description" content="
 " />
 
   
   
     <meta name="twitter:card" content="summary" />
     <meta name="twitter:site" content="@gohugoio" />
-    <meta name="twitter:title" content="安利一个造Prometheus假数据的工具" />
-    <meta name="twitter:description" content="学习Prometheus各种函数的时候最好能够造一些我们想要的数据来测试，但是Prometheus没有提供直接操作其数据库的功能，所以在这里安利一个工具。
-
+    <meta name="twitter:title" content="如何给微服务架构的项目做验收测试？" />
+    <meta name="twitter:description" content="
 " />
     <meta name="twitter:image" content="https://chanjarster.github.io/img/avatar.jpg" />
   
 
   
   <meta property="og:type" content="article" />
-  <meta property="og:title" content="安利一个造Prometheus假数据的工具" />
-  <meta property="og:description" content="学习Prometheus各种函数的时候最好能够造一些我们想要的数据来测试，但是Prometheus没有提供直接操作其数据库的功能，所以在这里安利一个工具。
-
+  <meta property="og:title" content="如何给微服务架构的项目做验收测试？" />
+  <meta property="og:description" content="
 " />
-  <meta property="og:url" content="https://chanjarster.github.io/post/p8s-mock-data/" />
+  <meta property="og:url" content="https://chanjarster.github.io/post/how-to-do-microservice-accept-test/" />
   <meta property="og:image" content="https://chanjarster.github.io/img/avatar.jpg" />
 
 
@@ -46,7 +43,7 @@
 <meta name="generator" content="Hugo 0.49.2" />
 
 
-<link rel="canonical" href="https://chanjarster.github.io/post/p8s-mock-data/" />
+<link rel="canonical" href="https://chanjarster.github.io/post/how-to-do-microservice-accept-test/" />
 
 <meta name="renderer" content="webkit" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
@@ -227,64 +224,30 @@
 
   <section class="main post-detail">
     <header class="post-header">
-      <h1 class="post-title">安利一个造Prometheus假数据的工具</h1>
-      <p class="post-meta">@破忒脱 · Dec 28, 2018 · 1 min read</p>
+      <h1 class="post-title">如何给微服务架构的项目做验收测试？</h1>
+      <p class="post-meta">@颇忒脱 · Jul 23, 2019 · 1 min read</p>
     </header>
-    <article class="post-content"><p>学习Prometheus各种函数的时候最好能够造一些我们想要的数据来测试，但是Prometheus没有提供直接操作其数据库的功能，所以在这里安利一个工具。</p>
+    <article class="post-content"><p></p>
 
-<p></p>
+<p>本人发表在Apache ServiceComb的文章：</p>
 
-<p>下面讲一下步骤：</p>
+<p><a href="http://servicecomb.apache.org/cn/docs/how-to-do-microservice-accept-test/">http://servicecomb.apache.org/cn/docs/how-to-do-microservice-accept-test/</a></p>
 
-<h2 id="提供假指标数据">提供假指标数据</h2>
+<p>同样转载在微服务蜂巢公众号</p>
 
-<p>我做了一个提供假指标的工具<a href="https://github.com/chanjarster/prometheus-mock-data">prometheus-mock-data</a>。利用这个工具我们可以提供给Prometheus我们想提供给它的指标，这样便于后面的测试。</p>
-
-<p>新建一个文件<code>scrape-data.txt</code>，内容见<a href="https://gist.github.com/chanjarster/ae4b092d59fea9c7dc316e18cf7b56c7">gist</a>，这个文件里定义了每次Prometheus抓指标的时候所能抓到的值，这个工具会依次提供这些指标（当然你也可以写自己的假数据）。</p>
-
-<p>运行：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">docker run -d --rm <span style="color:#ae81ff">\
-</span><span style="color:#ae81ff"></span>  --name<span style="color:#f92672">=</span>mock-metrics <span style="color:#ae81ff">\
-</span><span style="color:#ae81ff"></span>  -v <span style="color:#66d9ef">$(</span>pwd<span style="color:#66d9ef">)</span>/scrape-data.txt:/home/java-app/etc/scrape-data.txt <span style="color:#ae81ff">\
-</span><span style="color:#ae81ff"></span>  -p <span style="color:#ae81ff">8080</span>:8080 <span style="color:#ae81ff">\
-</span><span style="color:#ae81ff"></span>  chanjarster/prometheus-mock-data:latest</code></pre></div>
-<p>用浏览器访问：<code>http://localhost:8080/metrics</code>，刷新几次，能够看到指标数据在循环显示。</p>
-
-<h2 id="启动prometheus">启动Prometheus</h2>
-
-<p>新建配置文件：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-yaml" data-lang="yaml">scrape_configs:
-  - job_name: <span style="color:#e6db74">&#39;mock&#39;</span>
-    scrape_interval: 15s
-    static_configs:
-    - targets:
-      - <span style="color:#e6db74">&#39;&lt;docker-host-machine-ip&gt;:8080&#39;</span></code></pre></div>
-<p>注意：Data point的间隔通过<code>scrape_interval</code>参数控制。</p>
-
-<p>启动：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">docker run -d <span style="color:#ae81ff">\
-</span><span style="color:#ae81ff"></span>    --name<span style="color:#f92672">=</span>prometheus <span style="color:#ae81ff">\
-</span><span style="color:#ae81ff"></span>    -p <span style="color:#ae81ff">9090</span>:9090 <span style="color:#ae81ff">\
-</span><span style="color:#ae81ff"></span>    -v <span style="color:#66d9ef">$(</span>pwd<span style="color:#66d9ef">)</span>/prom-config.yml:/prometheus-config/prom-config.yml <span style="color:#ae81ff">\
-</span><span style="color:#ae81ff"></span>    prom/prometheus --config.file<span style="color:#f92672">=</span>/prometheus-config/prom-config.yml</code></pre></div>
-<p>打开<code>http://localhost:9090</code>看看是不是抓到指标了。</p>
-
-<h2 id="启动grafana">启动Grafana</h2>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">docker run -d <span style="color:#ae81ff">\
-</span><span style="color:#ae81ff"></span>    --name<span style="color:#f92672">=</span>grafana <span style="color:#ae81ff">\
-</span><span style="color:#ae81ff"></span>    -p <span style="color:#ae81ff">3000</span>:3000 <span style="color:#ae81ff">\
-</span><span style="color:#ae81ff"></span>    grafana/grafana</code></pre></div>
-<p>在Grafana里配置Prometheus数据源，然后作图。</p></article>
+<p><a href="https://mp.weixin.qq.com/s/jHNmi9z3HIrjVEMhTHXKfw">https://mp.weixin.qq.com/s/jHNmi9z3HIrjVEMhTHXKfw</a></p></article>
     <footer class="post-footer">
       
       <ul class="post-tags">
         
-          <li><a href="https://chanjarster.github.io/tags/prometheus"><span class="tag">Prometheus</span></a></li>
+          <li><a href="https://chanjarster.github.io/tags/ci_cd"><span class="tag">Ci_cd</span></a></li>
+        
+          <li><a href="https://chanjarster.github.io/tags/%E5%BE%AE%E6%9C%8D%E5%8A%A1"><span class="tag">微服务</span></a></li>
         
       </ul>
       
       <p class="post-copyright">
-        This post was published <strong>206</strong> days ago, content in the post may be inaccurate, even wrong now, please take risk yourself.
+        
       </p>
     </footer>
     
