@@ -225,7 +225,7 @@
   <section class="main post-detail">
     <header class="post-header">
       <h1 class="post-title">Cracking Coding Interview - 1.7 Rotate Matrix</h1>
-      <p class="post-meta">@颇忒脱 · Aug 8, 2019 · 1 min read</p>
+      <p class="post-meta">@颇忒脱 · Aug 8, 2019 · 2 min read</p>
     </header>
     <article class="post-content"><p></p>
 
@@ -253,7 +253,87 @@
 11 12 13 4  -&gt;  8  15 12 1
 10 15 14 5      7  14 13 2
 9  8  7  6      6  5  4  3</code></pre></div>
-<p>从最外圈到里圈变动，格子里的数字 = (原数字+步进) % 周长</p></article>
+<p>从最外圈到里圈变动，格子里的数字 = (原数字+步进) % 周长</p>
+
+<p>结果，这个分析失败了，因为缺少坐标关系，后面很难弄，不过给后面带来了思路</p>
+
+<h2 id="继续分析">继续分析</h2>
+
+<p>这次把坐标填上：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-txt" data-lang="txt">(0,0)  (0,1)  (0,2)
+(1,0)  (1,1)  (1,2)
+(2,0)  (2,2)  (2,2)</code></pre></div>
+<p>其实旋转可以看成是从四个顶点开始，都按照顺时针方向，挨个把自己的弄到90度的位置上去比如：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-txt" data-lang="txt">        --&gt;
+   o          o
+
+^                |
+|                v
+
+   o          o
+       &lt;--</code></pre></div>
+<p>如果我们知道了左上角的第一个顶点的位置，那么就能够知道其他3个顶点的位置：</p>
+
+<pre><code>   (r, [c]++)        （[r]++, c+n-1)
+   
+   
+   ([r+n-1]--,c)      (r+n-1, [c+n-1]--)
+</code></pre>
+
+<p>上面这个图中r=行，c=列，都是从0开始，边长为n，<code>[]</code>里的代表遍历时变动的维度，<code>++/--</code>代表变动的方式。</p>
+
+<p>然后怎么把整个替换掉，我们可以从最外圈旋转，然后再旋转里圈的：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-txt" data-lang="txt">           第一步             第二步
+0  1  2  3       9  10 11 0       9  10 11 0
+11 12 13 4  --&gt;  8  12 13 1  --&gt;  8  15 12 1
+10 15 14 5       7  15 14 2       7  14 13 2
+9  8  7  6       6  5  4  3       6  5  4  3</code></pre></div>
+<p>而且第layer层的周长=n - 2 * layer，layer从0开始。</p>
+
+<h2 id="解法1">解法1</h2>
+
+<p>一共有几圈=n/2，第一圈的左上角是<code>(0,0)</code>，第二圈的左上角是<code>(1,1)</code>，以此类推：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#66d9ef">public</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">rotateMatrix</span><span style="color:#f92672">(</span><span style="color:#66d9ef">int</span><span style="color:#f92672">[][]</span> matrix<span style="color:#f92672">,</span> <span style="color:#66d9ef">int</span> n<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+  <span style="color:#66d9ef">for</span> <span style="color:#f92672">(</span><span style="color:#66d9ef">int</span> i <span style="color:#f92672">=</span> 0<span style="color:#f92672">;</span> i <span style="color:#f92672">&lt;</span> n <span style="color:#f92672">/</span> 2<span style="color:#f92672">;</span> i<span style="color:#f92672">++)</span> <span style="color:#f92672">{</span>
+    <span style="color:#66d9ef">int</span> length <span style="color:#f92672">=</span> n <span style="color:#f92672">-</span> 2 <span style="color:#f92672">*</span> i<span style="color:#f92672">;</span>
+    <span style="color:#66d9ef">int</span> firstRow <span style="color:#f92672">=</span> i<span style="color:#f92672">;</span>
+    <span style="color:#66d9ef">int</span> firstCol <span style="color:#f92672">=</span> i<span style="color:#f92672">;</span>
+    <span style="color:#66d9ef">int</span> lastRow <span style="color:#f92672">=</span> firstRow <span style="color:#f92672">+</span> length <span style="color:#f92672">-</span> 1<span style="color:#f92672">;</span>
+    <span style="color:#66d9ef">int</span> lastCol <span style="color:#f92672">=</span> firstCol <span style="color:#f92672">+</span> length <span style="color:#f92672">-</span> 1<span style="color:#f92672">;</span>
+    <span style="color:#66d9ef">for</span> <span style="color:#f92672">(</span><span style="color:#66d9ef">int</span> j <span style="color:#f92672">=</span> 0<span style="color:#f92672">;</span> j <span style="color:#f92672">&lt;</span> length <span style="color:#f92672">-</span> 1<span style="color:#f92672">;</span> j<span style="color:#f92672">++)</span> <span style="color:#f92672">{</span>
+      <span style="color:#66d9ef">int</span> leftTop <span style="color:#f92672">=</span> matrix<span style="color:#f92672">[</span>firstRow<span style="color:#f92672">][</span>firstCol <span style="color:#f92672">+</span> j<span style="color:#f92672">];</span>
+      <span style="color:#75715e">// leftBottom -&gt; leftTop
+</span><span style="color:#75715e"></span>      matrix<span style="color:#f92672">[</span>firstRow<span style="color:#f92672">][</span>firstCol <span style="color:#f92672">+</span> j<span style="color:#f92672">]</span> <span style="color:#f92672">=</span> matrix<span style="color:#f92672">[</span>lastRow <span style="color:#f92672">-</span> j<span style="color:#f92672">][</span>firstCol<span style="color:#f92672">];</span>
+      <span style="color:#75715e">// rightBottom -&gt; leftBottom;
+</span><span style="color:#75715e"></span>      matrix<span style="color:#f92672">[</span>lastRow <span style="color:#f92672">-</span> j<span style="color:#f92672">][</span>firstCol<span style="color:#f92672">]</span> <span style="color:#f92672">=</span> matrix<span style="color:#f92672">[</span>lastRow<span style="color:#f92672">][</span>lastCol <span style="color:#f92672">-</span> j<span style="color:#f92672">];</span>
+      <span style="color:#75715e">// rightTop -&gt; rightBottom
+</span><span style="color:#75715e"></span>      matrix<span style="color:#f92672">[</span>lastRow<span style="color:#f92672">][</span>lastCol <span style="color:#f92672">-</span> j<span style="color:#f92672">]</span> <span style="color:#f92672">=</span> matrix<span style="color:#f92672">[</span>firstRow <span style="color:#f92672">+</span> j<span style="color:#f92672">][</span>lastCol<span style="color:#f92672">];</span>
+      <span style="color:#75715e">// leftTop -&gt; rightTop
+</span><span style="color:#75715e"></span>      matrix<span style="color:#f92672">[</span>firstRow <span style="color:#f92672">+</span> j<span style="color:#f92672">][</span>lastCol<span style="color:#f92672">]</span> <span style="color:#f92672">=</span> leftTop<span style="color:#f92672">;</span>
+    <span style="color:#f92672">}</span>
+  <span style="color:#f92672">}</span>
+<span style="color:#f92672">}</span></code></pre></div>
+<p>注意上面的 <code>j &lt; length -1</code>，因为一条边的最后一个元素就是另一条边的第一个元素，所以我们不能遍历到它。</p>
+
+<h2 id="解法2优化">解法2优化</h2>
+
+<p>可以发现<code>firstRow==firstCol</code>和<code>lastRow==lastCol</code>，因此可以省去一些变量：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#66d9ef">for</span> <span style="color:#f92672">(</span><span style="color:#66d9ef">int</span> i <span style="color:#f92672">=</span> 0<span style="color:#f92672">;</span> i <span style="color:#f92672">&lt;</span> n <span style="color:#f92672">/</span> 2<span style="color:#f92672">;</span> i<span style="color:#f92672">++)</span> <span style="color:#f92672">{</span>
+  <span style="color:#66d9ef">int</span> length <span style="color:#f92672">=</span> n <span style="color:#f92672">-</span> 2 <span style="color:#f92672">*</span> i<span style="color:#f92672">;</span>
+  <span style="color:#66d9ef">int</span> first <span style="color:#f92672">=</span> i<span style="color:#f92672">;</span>
+  <span style="color:#66d9ef">int</span> last <span style="color:#f92672">=</span> first <span style="color:#f92672">+</span> length <span style="color:#f92672">-</span> 1<span style="color:#f92672">;</span>
+  <span style="color:#66d9ef">for</span> <span style="color:#f92672">(</span><span style="color:#66d9ef">int</span> j <span style="color:#f92672">=</span> 0<span style="color:#f92672">;</span> j <span style="color:#f92672">&lt;</span> length <span style="color:#f92672">-</span> 1<span style="color:#f92672">;</span> j<span style="color:#f92672">++)</span> <span style="color:#f92672">{</span>
+    <span style="color:#66d9ef">int</span> leftTop <span style="color:#f92672">=</span> matrix<span style="color:#f92672">[</span>first<span style="color:#f92672">][</span>first <span style="color:#f92672">+</span> j<span style="color:#f92672">];</span>
+    <span style="color:#75715e">// leftBottom -&gt; leftTop
+</span><span style="color:#75715e"></span>    matrix<span style="color:#f92672">[</span>first<span style="color:#f92672">][</span>first <span style="color:#f92672">+</span> j<span style="color:#f92672">]</span> <span style="color:#f92672">=</span> matrix<span style="color:#f92672">[</span>last <span style="color:#f92672">-</span> j<span style="color:#f92672">][</span>first<span style="color:#f92672">];</span>
+    <span style="color:#75715e">// rightBottom -&gt; leftBottom;
+</span><span style="color:#75715e"></span>    matrix<span style="color:#f92672">[</span>last <span style="color:#f92672">-</span> j<span style="color:#f92672">][</span>first<span style="color:#f92672">]</span> <span style="color:#f92672">=</span> matrix<span style="color:#f92672">[</span>last<span style="color:#f92672">][</span>last <span style="color:#f92672">-</span> j<span style="color:#f92672">];</span>
+    <span style="color:#75715e">// rightTop -&gt; rightBottom
+</span><span style="color:#75715e"></span>    matrix<span style="color:#f92672">[</span>last<span style="color:#f92672">][</span>last <span style="color:#f92672">-</span> j<span style="color:#f92672">]</span> <span style="color:#f92672">=</span> matrix<span style="color:#f92672">[</span>first <span style="color:#f92672">+</span> j<span style="color:#f92672">][</span>last<span style="color:#f92672">];</span>
+    <span style="color:#75715e">// leftTop -&gt; rightTop
+</span><span style="color:#75715e"></span>    matrix<span style="color:#f92672">[</span>first <span style="color:#f92672">+</span> j<span style="color:#f92672">][</span>last<span style="color:#f92672">]</span> <span style="color:#f92672">=</span> leftTop<span style="color:#f92672">;</span>
+  <span style="color:#f92672">}</span>
+<span style="color:#f92672">}</span></code></pre></div></article>
     <footer class="post-footer">
       
       <ul class="post-tags">
