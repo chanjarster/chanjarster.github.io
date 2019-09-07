@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+<head>
+
+  <meta charset="utf-8" />
+
+  
+  <title>K8S中的TLS证书管理方案</title>
+
+  
+  
+
+
+
+
+
+  
+  <meta name="author" content="颇忒脱" />
+  <meta name="description" content="本文介绍几种在K8S中管理TLS证书的方案。
+
+" />
+
+  
+  
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:site" content="@gohugoio" />
+    <meta name="twitter:title" content="K8S中的TLS证书管理方案" />
+    <meta name="twitter:description" content="本文介绍几种在K8S中管理TLS证书的方案。
+
+" />
+    <meta name="twitter:image" content="https://chanjarster.github.io/img/avatar.jpg" />
+  
+
+  
+  <meta property="og:type" content="article" />
+  <meta property="og:title" content="K8S中的TLS证书管理方案" />
+  <meta property="og:description" content="本文介绍几种在K8S中管理TLS证书的方案。
+
+" />
+  <meta property="og:url" content="https://chanjarster.github.io/post/k8s/k8s-how-to-manage-tls-certs/" />
+  <meta property="og:image" content="https://chanjarster.github.io/img/avatar.jpg" />
+
+
+
+
+<meta name="generator" content="Hugo 0.49.2" />
+
+
+<link rel="canonical" href="https://chanjarster.github.io/post/k8s/k8s-how-to-manage-tls-certs/" />
+
+<meta name="renderer" content="webkit" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<meta name="format-detection" content="telephone=no,email=no,adress=no" />
+<meta http-equiv="Cache-Control" content="no-transform" />
+
+
+<meta name="robots" content="index,follow" />
+<meta name="referrer" content="origin-when-cross-origin" />
+
+
+
+
+
+
+
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="颇忒脱的技术博客" />
+<meta name="msapplication-tooltip" content="颇忒脱的技术博客" />
+<meta name='msapplication-navbutton-color' content="#5fbf5e" />
+<meta name="msapplication-TileColor" content="#5fbf5e" />
+<meta name="msapplication-TileImage" content="/img/tile-image-windows.png" />
+<link rel="icon" href="https://chanjarster.github.io/img/favicon.ico" />
+<link rel="icon" type="image/png" sizes="16x16" href="https://chanjarster.github.io/img/favicon-16x16.png" />
+<link rel="icon" type="image/png" sizes="32x32" href="https://chanjarster.github.io/img/favicon-32x32.png" />
+<link rel="icon" sizes="192x192" href="https://chanjarster.github.io/img/touch-icon-android.png" />
+<link rel="apple-touch-icon" href="https://chanjarster.github.io/img/touch-icon-apple.png" />
+<link rel="mask-icon" href="https://chanjarster.github.io/img/safari-pinned-tab.svg" color="#5fbf5e" />
+
+
+
+<link rel="stylesheet" href="//cdn.bootcss.com/video.js/6.2.8/alt/video-js-cdn.min.css" />
+
+<link rel="stylesheet" href="https://chanjarster.github.io/css/bundle.8e3aef2bc5.css" />
+
+
+  
+  <!--[if lt IE 9]>
+    <script src="//cdn.bootcss.com/html5shiv/3.7.3/html5shiv.min.js"></script>
+    <script src="//cdn.bootcss.com/respond.js/1.4.2/respond.min.js"></script>
+    <script src="//cdn.bootcss.com/video.js/6.2.8/ie8/videojs-ie8.min.js"></script>
+  <![endif]-->
+
+<!--[if lte IE 11]>
+    <script src="//cdn.bootcss.com/classlist/1.1.20170427/classList.min.js"></script>
+  <![endif]-->
+
+
+<script src="//cdn.bootcss.com/object-fit-images/3.2.3/ofi.min.js"></script>
+
+
+<script src="//cdn.bootcss.com/smooth-scroll/12.1.4/js/smooth-scroll.polyfills.min.js"></script>
+
+
+</head>
+  <body>
+    
+    <div class="suspension">
+      <a title="Go to top" class="to-top is-hide"><span class="icon icon-up"></span></a>
+      
+        
+      
+    </div>
+    
+    
+  <header class="site-header">
+  <img class="avatar" src="https://chanjarster.github.io/img/avatar2.jpg" alt="Avatar">
+  
+  <h2 class="title">颇忒脱的技术博客</h2>
+  
+  <p class="subtitle"></p>
+  <button class="menu-toggle" type="button">
+    <span class="icon icon-menu"></span>
+  </button>
+  <nav class="site-menu collapsed">
+    <h2 class="offscreen">Main Menu</h2>
+    <ul class="menu-list">
+      
+      
+      
+      
+        <li class="menu-item
+            
+            
+            
+              is-active
+            ">
+            <a href="https://chanjarster.github.io/">Home</a>
+          </li>
+      
+        <li class="menu-item
+            
+            
+            ">
+            <a href="https://chanjarster.github.io/tags/%E6%94%B6%E8%97%8F%E5%A4%B9/">Bookmarks</a>
+          </li>
+      
+        <li class="menu-item
+            
+            
+            ">
+            <a href="https://chanjarster.github.io/post/jvm/jvm-index/">JVM</a>
+          </li>
+      
+        <li class="menu-item
+            
+            
+            ">
+            <a href="https://github.com/chanjarster">Works</a>
+          </li>
+      
+        <li class="menu-item
+            
+            
+            ">
+            <a href="https://chanjarster.github.io/tags/">Tags</a>
+          </li>
+      
+        <li class="menu-item
+            
+            
+            ">
+            <a href="https://chanjarster.github.io/links/">Links</a>
+          </li>
+      
+    </ul>
+  </nav>
+  <nav class="social-menu collapsed">
+    <h2 class="offscreen">Social Networks</h2>
+    <ul class="social-list">
+
+      
+
+      
+      <li class="social-item">
+        <a href="//github.com/chanjarster" title="GitHub"><span class="icon icon-github"></span></a>
+      </li>
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      <li class="social-item">
+        <a rel="alternate" type="application/rss+xml" href="https://chanjarster.github.io/index.xml"><span class="icon icon-rss" title="RSS"></span></a>
+      </li>
+
+    </ul>
+  </nav>
+</header>
+
+  <section class="main post-detail">
+    <header class="post-header">
+      <h1 class="post-title">K8S中的TLS证书管理方案</h1>
+      <p class="post-meta">@颇忒脱 · Sep 4, 2019 · 1 min read</p>
+    </header>
+    <article class="post-content"><p>本文介绍几种在K8S中管理TLS证书的方案。</p>
+
+<p></p>
+
+<h2 id="证书申请方案">证书申请方案</h2>
+
+<p>先看如何申请证书。</p>
+
+<h3 id="cert-manager">cert-manager</h3>
+
+<p><a href="https://docs.cert-manager.io/en/latest">cert-manager</a>是一个集成在k8s中的工具，它可以做到自动从Let&rsquo;s encrypt申请证书、自动更新证书、与Ingress无缝结合。</p>
+
+<p>大多数情况下建议与Ingress集成的方式使用它，后面会讲。如果你仅需要签发功能，不需要和Ingress集成，则可参考<a href="http://docs.cert-manager.io/en/latest/tasks/issuers/index.html">Setting up Issuers</a>和<a href="http://docs.cert-manager.io/en/latest/tasks/issuing-certificates/index.html">Issuing Certificates</a>。</p>
+
+<p>优点：</p>
+
+<ol>
+<li>自动签发</li>
+<li>自动续期</li>
+<li>与K8S集成良好</li>
+<li>免费</li>
+</ol>
+
+<p>缺点：</p>
+
+<ol>
+<li>只能签发Server Auth证书，不能签发Client Auth证书</li>
+<li>证书仅用做认证，没有商业版证书更高级的功能</li>
+</ol>
+
+<h3 id="阿里云平台购买">阿里云平台购买</h3>
+
+<p>比如你可以在阿里云上<a href="https://www.aliyun.com/product/cas">购买SSL证书</a>，一个账号的<a href="https://help.aliyun.com/document_detail/90792.html">最多申请100个证书</a></p>
+
+<p>优点：</p>
+
+<ol>
+<li>多种类型证书可以供选择，有免费的有收费的</li>
+<li>可在平台上管理</li>
+<li>申请的证书可用在其他产品上，比如SLB</li>
+</ol>
+
+<p>缺点：</p>
+
+<ol>
+<li>与K8S集成不好，需要手动导入到Secret中才能使用</li>
+<li>只能签发Server Auth证书，不能签发Client Auth证书</li>
+</ol>
+
+<h3 id="用cfssl自签发">用CFSSL自签发</h3>
+
+<p>你可以使用CFSSL自签发证书，有一篇<a href="https://github.com/chanjarster/tls-client-auth-samples/blob/master/certs/index.md">参考文档</a>。</p>
+
+<p>优点：</p>
+
+<ol>
+<li>可签发Client Auth证书</li>
+</ol>
+
+<p>缺点：</p>
+
+<ol>
+<li>手动管理证书</li>
+<li>与K8S集成不好，需要手动导入到Secret中才能使用</li>
+<li>自签发的Server Auth证书在浏览器端会报警告</li>
+</ol>
+
+<h3 id="总结">总结</h3>
+
+<p>对于Server Auth证书：</p>
+
+<ul>
+<li>如果只是开发或者演示环境，cert-manager方案更适合你</li>
+<li>如果是生产环境或者对证书有更高要求的，可以采用从平台购买的方案</li>
+</ul>
+
+<p>对于Client Auth证书：</p>
+
+<ul>
+<li>你只能选择用CFSSL自签发的方式</li>
+</ul>
+
+<h2 id="证书部署方案">证书部署方案</h2>
+
+<p>下面介绍几种部署方案。</p>
+
+<h3 id="部署在阿里云slb上">部署在阿里云SLB上</h3>
+
+<p>虽然本小节讲的是部署在阿里云的SLB的产品上，但是它的思路和优缺点在其他云平台上基本是一致的。</p>
+
+<p>做法是在SLB上<a href="https://help.aliyun.com/document_detail/86438.html">配置HTTPS监听</a>，ACK（阿里云Kubernetes）在创建集群的时候会自动创建几个SLB实例，不要在这几个实例上配置HTTPS监听，因为在ACK中创建Type=LoadBalancer的Service的时候<a href="https://help.aliyun.com/document_detail/86531.html">会把你做的配置刷新掉</a>。</p>
+
+<p>支持：</p>
+
+<ol>
+<li>Server Auth</li>
+<li>Client Auth</li>
+</ol>
+
+<p>优点：</p>
+
+<ol>
+<li>可利用阿里云的SSL证书管理功能</li>
+<li>可用在阿里云的其他产品上，比如ECS</li>
+</ol>
+
+<p>缺点：</p>
+
+<ol>
+<li><p>不支持SNI，如果你有多个域名，因为一个SLB只会有一个公网IP，此时你就有两种选择：</p>
+
+<ul>
+<li><p>在一个SLB上配置多个监听端口，这样URL中就会携带端口</p></li>
+
+<li><p>配置多个SLB，避免前面一个方案的问题</p></li>
+</ul></li>
+
+<li><p>要自己手动配置服务器组之类的信息</p></li>
+
+<li><p>K8S Service类型得是Node Port，意味着在同一VPC子网内部流量不受保护</p></li>
+
+<li><p>K8S集群内部流量不受保护</p></li>
+</ol>
+
+<h3 id="loadbalancer-service">LoadBalancer Service</h3>
+
+<p><a href="https://help.aliyun.com/document_detail/86531.html">创建Type=LoadBalancer的Service</a>来暴露服务，然后在Deployment/StatefulSets里部署证书。</p>
+
+<p>支持：</p>
+
+<ol>
+<li>Server Auth</li>
+<li>Client Auth</li>
+</ol>
+
+<p>优点：</p>
+
+<ol>
+<li>集群内部流量受保护</li>
+<li>VPC子网内部流量受保护</li>
+</ol>
+
+<p>缺点：</p>
+
+<ol>
+<li>不支持SNI，而且因为你只可能有一个公网IP，因此URL中必定要携带端口</li>
+<li>在应用中配置证书，且方式方法与应用所使用<a href="https://github.com/chanjarster/tls-client-auth-samples">架构/类库</a>有关</li>
+</ol>
+
+<h3 id="ingress配合cert-manager">Ingress配合cert-manager</h3>
+
+<p>前面说过cert-manager支持与Ingress集成，你很少的工作能够配置Server Auth，和一个稍微复杂一点的步骤配置Client Auth，详情可参考<a href="https://github.com/chanjarster/tls-client-auth-samples/blob/master/server/ingress-nginx/index.md">这篇文章</a>。</p>
+
+<p>支持：</p>
+
+<ol>
+<li>TLS Server Auth</li>
+<li>TLS Client Auth</li>
+<li>SNI，即一个443端口对应多个域名</li>
+</ol>
+
+<p>优点：</p>
+
+<ol>
+<li>Server Auth证书自动签发、自动续期</li>
+<li>Client Auth手动配置</li>
+<li>对应用的侵入性为0</li>
+</ol>
+
+<p>缺点：</p>
+
+<ol>
+<li>集群内部流量不受保护，这个问题可以通过Network Policy做namespace隔离来缓解</li>
+</ol>
+
+<h3 id="总结-1">总结</h3>
+
+<p>优先考虑Ingress配合cert-manager的方案。</p>
+
+<p>如果你对安全性有很高的要求，那么考虑LoadBalancer Service。</p></article>
+    <footer class="post-footer">
+      
+      <ul class="post-tags">
+        
+          <li><a href="https://chanjarster.github.io/tags/k8s"><span class="tag">K8s</span></a></li>
+        
+          <li><a href="https://chanjarster.github.io/tags/tls"><span class="tag">Tls</span></a></li>
+        
+      </ul>
+      
+      <p class="post-copyright">
+        
+      </p>
+    </footer>
+    
+      
+    
+  </section>
+  <footer class="site-footer">
+  <p>© 2017-2019 颇忒脱的技术博客</p>
+  <p>Powered by <a href="https://gohugo.io/" target="_blank">Hugo</a> with theme <a href="https://github.com/laozhu/hugo-nuo" target="_blank">Nuo</a>.</p>
+  
+</footer>
+
+
+
+<script async src="//cdn.bootcss.com/video.js/6.2.8/alt/video.novtt.min.js"></script>
+<script async src="//cdn.bootcss.com/mathjax/2.7.2/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    tex2jax: {
+      inlineMath: [['$','$'], ['\\(','\\)']],
+      displayMath: [['$$','$$'], ['\\[','\\]']],
+      processEscapes: true,
+      processEnvironments: true,
+      skipTags: ['script', 'noscript', 'style', 'textarea', 'pre'],
+      TeX: { equationNumbers: { autoNumber: "AMS" },
+      extensions: ["AMSmath.js", "AMSsymbols.js"] }
+    }
+  });
+</script>
+<script type="text/x-mathjax-config">
+  // Fix <code> tags after MathJax finishes running. This is a
+  // hack to overcome a shortcoming of Markdown. Discussion at
+  // https://github.com/mojombo/jekyll/issues/199
+  MathJax.Hub.Queue(() => {
+    MathJax.Hub.getAllJax().map(v => v.SourceElement().parentNode.className += ' has-jax');
+  });
+</script>
+
+<script src="https://chanjarster.github.io/js/bundle.273f9ac6f0.js"></script>
+
+
+
+
+  </body>
+</html>
