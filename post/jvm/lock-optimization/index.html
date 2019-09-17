@@ -5,7 +5,7 @@
   <meta charset="utf-8" />
 
   
-  <title>利用VisualVm远程监控Java进程</title>
+  <title>JVM - 锁优化</title>
 
   
   
@@ -16,28 +16,25 @@
 
   
   <meta name="author" content="颇忒脱" />
-  <meta name="description" content="本文介绍利用VisualVm和jstatd来远程监控Java进程的方法。
-
+  <meta name="description" content="
 " />
 
   
   
     <meta name="twitter:card" content="summary" />
     <meta name="twitter:site" content="@gohugoio" />
-    <meta name="twitter:title" content="利用VisualVm远程监控Java进程" />
-    <meta name="twitter:description" content="本文介绍利用VisualVm和jstatd来远程监控Java进程的方法。
-
+    <meta name="twitter:title" content="JVM - 锁优化" />
+    <meta name="twitter:description" content="
 " />
     <meta name="twitter:image" content="https://chanjarster.github.io/img/avatar.jpg" />
   
 
   
   <meta property="og:type" content="article" />
-  <meta property="og:title" content="利用VisualVm远程监控Java进程" />
-  <meta property="og:description" content="本文介绍利用VisualVm和jstatd来远程监控Java进程的方法。
-
+  <meta property="og:title" content="JVM - 锁优化" />
+  <meta property="og:description" content="
 " />
-  <meta property="og:url" content="https://chanjarster.github.io/post/visualvm-remote-monitoring/" />
+  <meta property="og:url" content="https://chanjarster.github.io/post/jvm/lock-optimization/" />
   <meta property="og:image" content="https://chanjarster.github.io/img/avatar.jpg" />
 
 
@@ -46,7 +43,7 @@
 <meta name="generator" content="Hugo 0.49.2" />
 
 
-<link rel="canonical" href="https://chanjarster.github.io/post/visualvm-remote-monitoring/" />
+<link rel="canonical" href="https://chanjarster.github.io/post/jvm/lock-optimization/" />
 
 <meta name="renderer" content="webkit" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
@@ -234,77 +231,26 @@
 
   <section class="main post-detail">
     <header class="post-header">
-      <h1 class="post-title">利用VisualVm远程监控Java进程</h1>
-      <p class="post-meta">@颇忒脱 · Oct 10, 2018 · 1 min read</p>
+      <h1 class="post-title">JVM - 锁优化</h1>
+      <p class="post-meta">@颇忒脱 · Sep 17, 2019 · 0 min read</p>
     </header>
-    <article class="post-content"><p>本文介绍利用<a href="https://visualvm.github.io/">VisualVm</a>和<a href="https://docs.oracle.com/javase/8/docs/technotes/tools/unix/jstatd.html">jstatd</a>来远程监控Java进程的方法。</p>
+    <article class="post-content"><p></p>
 
-<p></p>
-
-<p>要实现远程监控Java进程，必须在远程主机（运行Java程序的主机）上跑一个<a href="https://docs.oracle.com/javase/8/docs/technotes/tools/unix/jstatd.html">jstatd</a>进程，这个进程相当于一个agent，用来收集远程主机上的JVM运行情况，然后用<a href="https://visualvm.github.io/">VisualVm</a>连接到这个<a href="https://docs.oracle.com/javase/8/docs/technotes/tools/unix/jstatd.html">jstatd</a>，从而实现远程监控的目的。</p>
-
-<h2 id="第一步-在远程主机上启动jstatd">第一步：在远程主机上启动jstatd</h2>
-
-<p>要注意的是，<a href="https://docs.oracle.com/javase/8/docs/technotes/tools/unix/jstatd.html">jstatd</a>是一个RMI server application，因此在启动时支持<a href="https://docs.oracle.com/javase/8/docs/technotes/guides/rmi/javarmiproperties.html">java.rmi properties</a>。</p>
-
-<p>根据<a href="https://docs.oracle.com/javase/8/docs/technotes/tools/unix/jstatd.html">jstatd</a>文档，我们需要在启动<a href="https://docs.oracle.com/javase/8/docs/technotes/tools/unix/jstatd.html">jstatd</a>时提供一个security policy文件：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-txt" data-lang="txt">grant codebase &#34;file:${java.home}/../lib/tools.jar&#34; {   
-    permission java.security.AllPermission;
-};</code></pre></div>
-<p>然后运行下面命令启动：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">jstatd -J-Djava.security.policy<span style="color:#f92672">=</span>jstatd.all.policy</code></pre></div>
-<p><strong>不过这里有一个陷阱</strong>，见SO上的这个提问：<a href="https://stackoverflow.com/a/33219226/1287790">VisualVm connect to remote jstatd not showing applications</a>。在启动时还得指定rmi server hostname，否则VisualVm无法看到远程主机上的Java进程。所以正确的命令应该是这样：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">jstatd -J-Djava.security.policy<span style="color:#f92672">=</span>jstatd.all.policy -J-Djava.rmi.server.hostname<span style="color:#f92672">=</span>&lt;host or ip&gt;</code></pre></div>
-<p>远程主机的hostname可以随便填，只要VisualVm能够ping通这个hostname就行了。所以说下面这几种情况都是可行的：</p>
-
-<ul>
-<li>远程主机没有DNS name，但VisualVm所在主机的<code>/etc/hosts</code>里配置了<code>some-name &lt;ip-to-remote-host&gt;</code>。jstatd启动时指定<code>-J-Djava.rmi.server.hostname=some-name</code>，VisualVm连接<code>some-name</code>。</li>
-<li>远程主机经过层层NAT，它的内部ip比如是<code>192.168.xxx.xxx</code>，它的对外的NAT地址是<code>172.100.xxx.xxx</code>。jstatd启动时指定<code>-J-Djava.rmi.server.hostname=172.100.xxx.xxx</code>，VisualVm连接<code>172.100.xxx.xxx</code>。</li>
-<li>上面两种方式混合，即在VisualVm所在主机的<code>/etc/hosts</code>里配置<code>some-name &lt;ip-to-remote-host-nat-address&gt;</code>。jstatd启动时指定<code>-J-Djava.rmi.server.hostname=some-name</code>，VisualVm连接<code>some-name</code>。</li>
-</ul>
-
-<p>还有要注意一点，运行<code>jstatd</code>的用户必须和运行Java程序的用户相同，或者是root，否则会监控不到远程主机上的Java进程。</p>
-
-<h2 id="第二步-启动visualvm">第二步：启动VisualVm</h2>
-
-<p>在你的机器上运行<code>jvisualvm</code>启动VisualVm。按照下面步骤添加远程主机：</p>
-
-<p><strong>第一步</strong></p>
-
-<p><img src="jvisualvm-01.png" alt="step 1" /></p>
-
-<p><strong>第二步</strong></p>
-
-<p><img src="jvisualvm-02.png" alt="step 2" /></p>
-
-<p><strong>第三步</strong></p>
-
-<p><img src="jvisualvm-03.png" alt="step 3" /></p>
-
-<p>你就能看到远程主机上的Java进程了。</p>
-
-<p>需要注意的是如果你点开一个远程进程，那么你会发现有些信息是没有的，比如：CPU、线程、和MBeans。这是正常的，如果需要这些信息（就像监控本地Java进程一样），那么就需要用JMX，相关内容会在另一篇文章中讲解。</p>
-
-<h2 id="参考资料">参考资料</h2>
-
-<ul>
-<li><a href="https://htmlpreview.github.io/?https://raw.githubusercontent.com/visualvm/visualvm.java.net.backup/master/www/applications_remote.html">VisualVm - Working with Remote Applications</a></li>
-<li><a href="https://docs.oracle.com/javase/8/docs/technotes/tools/unix/jstatd.html">jstatd</a></li>
-<li><a href="https://docs.oracle.com/javase/8/docs/technotes/guides/rmi/javarmiproperties.html">java.rmi Properties</a></li>
-<li><a href="https://stackoverflow.com/a/33219226/1287790">VisualVm connect to remote jstatd not showing applications</a></li>
-</ul></article>
+<p><img src="lock-optimization.png" alt="" /></p></article>
     <footer class="post-footer">
       
       <ul class="post-tags">
         
-          <li><a href="https://chanjarster.github.io/tags/java"><span class="tag">Java</span></a></li>
+          <li><a href="https://chanjarster.github.io/tags/arts"><span class="tag">ARTS</span></a></li>
         
-          <li><a href="https://chanjarster.github.io/tags/visualvm"><span class="tag">Visualvm</span></a></li>
+          <li><a href="https://chanjarster.github.io/tags/arts-t"><span class="tag">ARTS-T</span></a></li>
+        
+          <li><a href="https://chanjarster.github.io/tags/jvm"><span class="tag">Jvm</span></a></li>
         
       </ul>
       
       <p class="post-copyright">
-        This post was published <strong>342</strong> days ago, content in the post may be inaccurate, even wrong now, please take risk yourself.
+        
       </p>
     </footer>
     
