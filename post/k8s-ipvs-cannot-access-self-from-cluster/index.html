@@ -5,7 +5,7 @@
   <meta charset="utf-8" />
 
   
-  <title>操作系统Kernel mode和User mode</title>
+  <title>启用IPVS的K8S集群无法从Pod经外部访问自己的排障</title>
 
   
   
@@ -16,25 +16,28 @@
 
   
   <meta name="author" content="颇忒脱" />
-  <meta name="description" content="
+  <meta name="description" content="阿里云上的启用IPVS的K8S集群，无法从Pod经外部访问自己的排障流水账。
+
 " />
 
   
   
     <meta name="twitter:card" content="summary" />
     <meta name="twitter:site" content="@gohugoio" />
-    <meta name="twitter:title" content="操作系统Kernel mode和User mode" />
-    <meta name="twitter:description" content="
+    <meta name="twitter:title" content="启用IPVS的K8S集群无法从Pod经外部访问自己的排障" />
+    <meta name="twitter:description" content="阿里云上的启用IPVS的K8S集群，无法从Pod经外部访问自己的排障流水账。
+
 " />
     <meta name="twitter:image" content="https://chanjarster.github.io/img/avatar.jpg" />
   
 
   
   <meta property="og:type" content="article" />
-  <meta property="og:title" content="操作系统Kernel mode和User mode" />
-  <meta property="og:description" content="
+  <meta property="og:title" content="启用IPVS的K8S集群无法从Pod经外部访问自己的排障" />
+  <meta property="og:description" content="阿里云上的启用IPVS的K8S集群，无法从Pod经外部访问自己的排障流水账。
+
 " />
-  <meta property="og:url" content="https://chanjarster.github.io/post/kernel/cpu-kernel-mode-user-mode/" />
+  <meta property="og:url" content="https://chanjarster.github.io/post/k8s-ipvs-cannot-access-self-from-cluster/" />
   <meta property="og:image" content="https://chanjarster.github.io/img/avatar.jpg" />
 
 
@@ -43,7 +46,7 @@
 <meta name="generator" content="Hugo 0.49.2" />
 
 
-<link rel="canonical" href="https://chanjarster.github.io/post/kernel/cpu-kernel-mode-user-mode/" />
+<link rel="canonical" href="https://chanjarster.github.io/post/k8s-ipvs-cannot-access-self-from-cluster/" />
 
 <meta name="renderer" content="webkit" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
@@ -238,68 +241,106 @@
 
   <section class="main post-detail">
     <header class="post-header">
-      <h1 class="post-title">操作系统Kernel mode和User mode</h1>
-      <p class="post-meta">@颇忒脱 · Feb 27, 2019 · 1 min read</p>
+      <h1 class="post-title">启用IPVS的K8S集群无法从Pod经外部访问自己的排障</h1>
+      <p class="post-meta">@颇忒脱 · Oct 21, 2019 · 1 min read</p>
     </header>
-    <article class="post-content"><p></p>
+    <article class="post-content"><p>阿里云上的启用IPVS的K8S集群，无法从Pod经外部访问自己的排障流水账。</p>
 
-<h2 id="cpu-modes">CPU modes</h2>
+<p></p>
 
-<p>又称process modes, CPU states, CPU privilege levels，CPU modes是为了能够让某些计算机架构的CPU限制正在被CPU运行的进程所能执行的操作的类型和范围。得益于它操作系统才能够以比应用程序更高的privilege（特权）来运行。</p>
-
-<p>CPU modes分为两类：</p>
+<p>问题描述：</p>
 
 <ul>
-<li>kernel mode，不受任何限制的做任何事情</li>
-<li>user modes，受限模式，注意user modes可以有多个模式</li>
+<li>阿里云上的托管版K8S集群（下面简称ACK），启用了IPVS</li>
+<li>集群中有两个应用Foo和Bar，Bar使用Ingress暴露外网地址，bar.xxx.com</li>
+<li>Foo应用无法访问 bar.xxx.com ，得到的错误是 Connection refused</li>
 </ul>
 
-<h2 id="protection-ring">Protection ring</h2>
+<h2 id="初步排障">初步排障</h2>
 
-<p>Protection ring又称hierarchical protection domains，是一种保护数据和功能免于遭受错误和恶意行为的机制。</p>
+<h3 id="在集群外部测试">在集群外部测试</h3>
 
-<p>一个Protection ring由一个或多个分级式levels or layers of privilege组成。
-通常来说protection ring是硬件强制的，是由一些CPU架构在硬件或微代码层面提供不同的CPU modes来达成的。Protection ring本身也是层级的，由最具特权开始（编号0）到具有最少特权的（编号更大）。在大多数操作系统中，Ring 0是最具特权的，能够直接物理硬件（如CPU、内存）交互。</p>
+<p>curl <a href="http://bar.xx.com">http://bar.xx.com</a> 能够返回结果</p>
 
-<p>x86架构的protection ring：Ring 0（kernel）、Ring 1-2（Device drivers）、Ring 3（Applications）。下图：</p>
-
-<p><img src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/2f/Priv_rings.svg/320px-Priv_rings.svg.png" alt="" /></p>
-
-<p>各个CPU的架构提供的ring数不同，有的多达8个。操作系统为了适配更多的CPU架构，不会使用所有的ring，即使硬件支持更多的CPU modes。比如Windows Server 2008系统只用了Ring 0和Ring 3。</p>
-
-<p>当处理器在某个ring发生错误时，会影响到所有低权限ring。所以当错误发生在ring 0时，整个系统都会崩溃。</p>
-
-<h2 id="system-call-系统调用">System call（系统调用）</h2>
-
-<p>Linux、macOS、Windows之类的单体内核（monolithic kernel）操作系统，操作系统运行在kernel mode（supervisor mode），应用程序运行在user mode。</p>
-
-<p>运行在user mode的代码必须使用system call才能够使用到操作系统内核kernel所提供的服务。</p>
-
-<p>因为针对不同CPU架构，system call的汇编码是不同的，因此操作系统会提供库（如glibc）将system call包一层，方便应用程序使用。System call发生时会将控制权交给kernel，调用结束时则将控制权交还给user mode的进程。</p>
-
-<p>System call一般不要求context switch，因为system call发生在同一进程里。</p>
-
-<h2 id="参考资料">参考资料</h2>
+<p>ping bar.xxx.com，能够ping通：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-txt" data-lang="txt">PING xxx.bar.com (&lt;SLB-IP&gt;): 56 data bytes
+64 bytes from &lt;SLB-IP&gt;: icmp_seq=0 ttl=91 time=3.091 ms
+64 bytes from &lt;SLB-IP&gt;: icmp_seq=1 ttl=91 time=3.212 ms
+64 bytes from &lt;SLB-IP&gt;: icmp_seq=2 ttl=91 time=3.267 ms</code></pre></div>
+<p>注意：</p>
 
 <ul>
-<li><a href="https://en.wikipedia.org/wiki/CPU_modes">CPU modes</a></li>
-<li><a href="https://en.wikipedia.org/wiki/Protection_ring">Protection rings</a></li>
-<li><a href="https://en.wikipedia.org/wiki/System_call">System call</a></li>
-</ul></article>
+<li>解析得到的IP是ACK创建时自动创建的SLB实例的公网IP。
+
+<br /></li>
+</ul>
+
+<h3 id="在集群内部测试">在集群内部测试</h3>
+
+<p>在K8S集群中启动一个临时Pod，nicolaka/netshoot</p>
+
+<p>curl <a href="http://bar.xxx.com">http://bar.xxx.com</a></p>
+
+<p>得到错误：<code>curl: (7) Failed to connect to bar.xxx.com port 80: Connection refused</code></p>
+
+<p>ping bar.xxx.com，能够ping通，得到结果</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-txt" data-lang="txt">PING xxx.bar.com (&lt;SLB-IP&gt;) 56(84) bytes of data.
+64 bytes from nginx-ingress-lb.kube-system.svc.cluster.local (&lt;SLB-IP&gt;): icmp_seq=1 ttl=64 time=0.035 ms
+64 bytes from nginx-ingress-lb.kube-system.svc.cluster.local (&lt;SLB-IP&gt;): icmp_seq=2 ttl=64 time=0.036 ms</code></pre></div>
+<p>注意：</p>
+
+<ul>
+<li>得到的IP同样是SLB实例的公网IP</li>
+<li>解析得到名字是Ingress Controller在集群内部的SVC的DNS Name。</li>
+</ul>
+
+<p>用tcpdump抓包：</p>
+
+<p>tcpdump -nn host bar.xxx.com，得到 port 80 unreachable的结果</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-txt" data-lang="txt">02:23:25.524028 IP 172.20.1.88.57138 &gt; &lt;SLB-IP&gt;.80: Flags [S], seq 1634983746, win 29200, options [mss 1460,sackOK,TS val 3961214492 ecr 0,nop,wscale 9], length 0
+02:23:25.525043 IP &lt;SLB-IP&gt; &gt; 172.20.1.88: ICMP 139.224.167.163 tcp port 80 unreachable, length 68</code></pre></div>
+<h2 id="和阿里同学沟通">和阿里同学沟通</h2>
+
+<p>建了工单描述了情况，得到的反馈如下：</p>
+
+<p>Ingress Controller Service的externalTrafficPolicy这个为Local（ACK初始化的默认值）的时候跨节点访问SVC SLB地址就是不行，这个和Nginx Ingress Controller没有关系。<strong>这个行为在ipvs和kube-proxy实现的service集群上行为是一致的</strong>，如果之前是好的，现在不行了，只有一种可能，就是之前访问Ingress入口Url的Pod和两个Nginx Ingress Controller Pod在一个节点上。建议把externalTrafficPolicy改成Cluster。</p>
+
+<h2 id="解决办法">解决办法</h2>
+
+<p>把externalTrafficPolicy改成Cluster之后的确解决了这个问题。</p>
+
+<p>不过<a href="https://kubernetes.io/zh/docs/tutorials/services/source-ip/">K8S文档</a>里说到如果这样设置，那么Pod就得不到客户端的源IP了，要得到客户端源IP只能设置为Local，但是Local又有无法访问的问题。</p>
+
+<p>阿里的同学说到过：</p>
+
+<blockquote>
+<p>如果之前是好的，现在不行了，只有一种可能，就是之前访问Ingress入口Url的Pod和两个Nginx Ingress Controller Pod在一个节点上</p>
+</blockquote>
+
+<p>就是说如果发起请求的Pod和Ingress Controller的Pod在同一个节点上的话，访问是没有问题的。我实验了一下果然如此。</p>
+
+<p>于是我<strong>把Ingress Controller从Deployment改成DaemonSet</strong>，让每个节点上都跑一个Ingress Controller Pod，于是问题解决。</p>
+
+<h2 id="其他资料">其他资料</h2>
+
+<p>关于这个问题又找了一些资料，不过看不太明白：</p>
+
+<ul>
+<li><a href="https://segmentfault.com/a/1190000016033076#articleHeader2"><a href="https://segmentfault.com/a/1190000016033076">从service的externalTrafficPolicy到podAntiAffinity</a></a></li>
+<li><a href="https://imroc.io/posts/kubernetes/troubleshooting-with-kubernetes-network/#%E8%AE%BF%E9%97%AE-externaltrafficpolicy-%E4%B8%BA-local-%E7%9A%84-service-%E5%AF%B9%E5%BA%94-lb-%E6%9C%89%E6%97%B6%E8%B6%85%E6%97%B6">访问 externalTrafficPolicy 为 Local 的 Service 对应 LB 有时超时</a></li>
+</ul>
+
+<p>另外注意到，用Rancher部署的K8S集群的Ingress Controller都是DaemonSet的。</p></article>
     <footer class="post-footer">
       
       <ul class="post-tags">
         
-          <li><a href="https://chanjarster.github.io/tags/arts"><span class="tag">ARTS</span></a></li>
-        
-          <li><a href="https://chanjarster.github.io/tags/arts-t"><span class="tag">ARTS-T</span></a></li>
-        
-          <li><a href="https://chanjarster.github.io/tags/kernel"><span class="tag">Kernel</span></a></li>
+          <li><a href="https://chanjarster.github.io/tags/k8s"><span class="tag">K8s</span></a></li>
         
       </ul>
       
       <p class="post-copyright">
-        This post was published <strong>235</strong> days ago, content in the post may be inaccurate, even wrong now, please take risk yourself.
+        
       </p>
     </footer>
     
