@@ -5,10 +5,7 @@
   <meta charset="utf-8" />
 
   
-  <title>
-  Posts
-   | 颇忒脱的技术博客
-</title>
+  <title>启用IPVS的K8S集群无法从Pod经外部访问自己的排障</title>
 
   
   
@@ -19,22 +16,28 @@
 
   
   <meta name="author" content="颇忒脱" />
-  <meta name="description" content="" />
+  <meta name="description" content="阿里云上的启用IPVS的K8S集群，无法从Pod经外部访问自己的排障流水账。
+
+" />
 
   
   
     <meta name="twitter:card" content="summary" />
     <meta name="twitter:site" content="@gohugoio" />
-    <meta name="twitter:title" content="Posts" />
-    <meta name="twitter:description" content="" />
+    <meta name="twitter:title" content="启用IPVS的K8S集群无法从Pod经外部访问自己的排障" />
+    <meta name="twitter:description" content="阿里云上的启用IPVS的K8S集群，无法从Pod经外部访问自己的排障流水账。
+
+" />
     <meta name="twitter:image" content="https://chanjarster.github.io/img/avatar.jpg" />
   
 
   
   <meta property="og:type" content="article" />
-  <meta property="og:title" content="Posts" />
-  <meta property="og:description" content="" />
-  <meta property="og:url" content="https://chanjarster.github.io/post/" />
+  <meta property="og:title" content="启用IPVS的K8S集群无法从Pod经外部访问自己的排障" />
+  <meta property="og:description" content="阿里云上的启用IPVS的K8S集群，无法从Pod经外部访问自己的排障流水账。
+
+" />
+  <meta property="og:url" content="https://chanjarster.github.io/post/k8s/k8s-ipvs-cannot-access-self-from-cluster/" />
   <meta property="og:image" content="https://chanjarster.github.io/img/avatar.jpg" />
 
 
@@ -43,8 +46,7 @@
 <meta name="generator" content="Hugo 0.49.2" />
 
 
-<link rel="canonical" href="https://chanjarster.github.io/post/" />
-<link rel="alternate" type="application/rss+xml" href="https://chanjarster.github.io/post/index.xml" title="颇忒脱的技术博客" />
+<link rel="canonical" href="https://chanjarster.github.io/post/k8s/k8s-ipvs-cannot-access-self-from-cluster/" />
 
 <meta name="renderer" content="webkit" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
@@ -105,6 +107,8 @@
     
     <div class="suspension">
       <a title="Go to top" class="to-top is-hide"><span class="icon icon-up"></span></a>
+      
+        
       
     </div>
     
@@ -235,54 +239,112 @@
   </nav>
 </header>
 
-  <section class="main post-list">
-    <header class="list-header offscreen">
-      <h2 class="list-label">Posts List</h2>
+  <section class="main post-detail">
+    <header class="post-header">
+      <h1 class="post-title">启用IPVS的K8S集群无法从Pod经外部访问自己的排障</h1>
+      <p class="post-meta">@颇忒脱 · Oct 21, 2019 · 1 min read</p>
     </header>
-    
+    <article class="post-content"><p>阿里云上的启用IPVS的K8S集群，无法从Pod经外部访问自己的排障流水账。</p>
+
+<p></p>
+
+<p>问题描述：</p>
+
+<ul>
+<li>阿里云上的托管版K8S集群（下面简称ACK），启用了IPVS</li>
+<li>集群中有两个应用Foo和Bar，Bar使用Ingress暴露外网地址，bar.xxx.com</li>
+<li>Foo应用无法访问 bar.xxx.com ，得到的错误是 Connection refused</li>
+</ul>
+
+<h2 id="初步排障">初步排障</h2>
+
+<h3 id="在集群外部测试">在集群外部测试</h3>
+
+<p>curl <a href="http://bar.xx.com">http://bar.xx.com</a> 能够返回结果</p>
+
+<p>ping bar.xxx.com，能够ping通：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-txt" data-lang="txt">PING xxx.bar.com (&lt;SLB-IP&gt;): 56 data bytes
+64 bytes from &lt;SLB-IP&gt;: icmp_seq=0 ttl=91 time=3.091 ms
+64 bytes from &lt;SLB-IP&gt;: icmp_seq=1 ttl=91 time=3.212 ms
+64 bytes from &lt;SLB-IP&gt;: icmp_seq=2 ttl=91 time=3.267 ms</code></pre></div>
+<p>注意：</p>
+
+<ul>
+<li>解析得到的IP是ACK创建时自动创建的SLB实例的公网IP。
+
+<br /></li>
+</ul>
+
+<h3 id="在集群内部测试">在集群内部测试</h3>
+
+<p>在K8S集群中启动一个临时Pod，nicolaka/netshoot</p>
+
+<p>curl <a href="http://bar.xxx.com">http://bar.xxx.com</a></p>
+
+<p>得到错误：<code>curl: (7) Failed to connect to bar.xxx.com port 80: Connection refused</code></p>
+
+<p>ping bar.xxx.com，能够ping通，得到结果</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-txt" data-lang="txt">PING xxx.bar.com (&lt;SLB-IP&gt;) 56(84) bytes of data.
+64 bytes from nginx-ingress-lb.kube-system.svc.cluster.local (&lt;SLB-IP&gt;): icmp_seq=1 ttl=64 time=0.035 ms
+64 bytes from nginx-ingress-lb.kube-system.svc.cluster.local (&lt;SLB-IP&gt;): icmp_seq=2 ttl=64 time=0.036 ms</code></pre></div>
+<p>注意：</p>
+
+<ul>
+<li>得到的IP同样是SLB实例的公网IP</li>
+<li>解析得到名字是Ingress Controller在集群内部的SVC的DNS Name。</li>
+</ul>
+
+<p>用tcpdump抓包：</p>
+
+<p>tcpdump -nn host bar.xxx.com，得到 port 80 unreachable的结果</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-txt" data-lang="txt">02:23:25.524028 IP 172.20.1.88.57138 &gt; &lt;SLB-IP&gt;.80: Flags [S], seq 1634983746, win 29200, options [mss 1460,sackOK,TS val 3961214492 ecr 0,nop,wscale 9], length 0
+02:23:25.525043 IP &lt;SLB-IP&gt; &gt; 172.20.1.88: ICMP 139.224.167.163 tcp port 80 unreachable, length 68</code></pre></div>
+<h2 id="和阿里同学沟通">和阿里同学沟通</h2>
+
+<p>建了工单描述了情况，得到的反馈如下：</p>
+
+<p>Ingress Controller Service的externalTrafficPolicy这个为Local（ACK初始化的默认值）的时候跨节点访问SVC SLB地址就是不行，这个和Nginx Ingress Controller没有关系。<strong>这个行为在ipvs和kube-proxy实现的service集群上行为是一致的</strong>，如果之前是好的，现在不行了，只有一种可能，就是之前访问Ingress入口Url的Pod和两个Nginx Ingress Controller Pod在一个节点上。建议把externalTrafficPolicy改成Cluster。</p>
+
+<h2 id="解决办法">解决办法</h2>
+
+<p>把externalTrafficPolicy改成Cluster之后的确解决了这个问题。</p>
+
+<p>不过<a href="https://kubernetes.io/zh/docs/tutorials/services/source-ip/">K8S文档</a>里说到如果这样设置，那么Pod就得不到客户端的源IP了，要得到客户端源IP只能设置为Local，但是Local又有无法访问的问题。</p>
+
+<p>阿里的同学说到过：</p>
+
+<blockquote>
+<p>如果之前是好的，现在不行了，只有一种可能，就是之前访问Ingress入口Url的Pod和两个Nginx Ingress Controller Pod在一个节点上</p>
+</blockquote>
+
+<p>就是说如果发起请求的Pod和Ingress Controller的Pod在同一个节点上的话，访问是没有问题的。我实验了一下果然如此。</p>
+
+<p>于是我<strong>把Ingress Controller从Deployment改成DaemonSet</strong>，让每个节点上都跑一个Ingress Controller Pod，于是问题解决。</p>
+
+<h2 id="其他资料">其他资料</h2>
+
+<p>关于这个问题又找了一些资料，不过看不太明白：</p>
+
+<ul>
+<li><a href="https://segmentfault.com/a/1190000016033076#articleHeader2"><a href="https://segmentfault.com/a/1190000016033076">从service的externalTrafficPolicy到podAntiAffinity</a></a></li>
+<li><a href="https://imroc.io/posts/kubernetes/troubleshooting-with-kubernetes-network/#%E8%AE%BF%E9%97%AE-externaltrafficpolicy-%E4%B8%BA-local-%E7%9A%84-service-%E5%AF%B9%E5%BA%94-lb-%E6%9C%89%E6%97%B6%E8%B6%85%E6%97%B6">访问 externalTrafficPolicy 为 Local 的 Service 对应 LB 有时超时</a></li>
+</ul>
+
+<p>另外注意到，用Rancher部署的K8S集群的Ingress Controller都是DaemonSet的。</p></article>
+    <footer class="post-footer">
+      
+      <ul class="post-tags">
+        
+          <li><a href="https://chanjarster.github.io/tags/k8s"><span class="tag">K8s</span></a></li>
+        
+      </ul>
+      
+      <p class="post-copyright">
+        
+      </p>
+    </footer>
     
       
-        <article class="post-entry">
-  <header class="post-header">
-    <h3 class="post-title"><a href="https://chanjarster.github.io/post/extract-public-service/" class="post-link">如何抽取公共服务并成功迁移</a></h3>
-    <p class="post-meta">@颇忒脱 · Aug 23, 2018 · 1 min read</p>
-  </header>
-  
-  <p class="post-summary">本文探讨了如何创建并落地一个公共服务的方法。
-
-</p>
-  <footer class="post-footer">
-    <a class="read-more" href="https://chanjarster.github.io/post/extract-public-service/">Read More →</a>
-  </footer>
-</article>
-
-      
-        <article class="post-entry">
-  <header class="post-header">
-    <h3 class="post-title"><a href="https://chanjarster.github.io/post/compare-authc-authz-models/" class="post-link">多种认证、授权模型的比较</a></h3>
-    <p class="post-meta">@颇忒脱 · Aug 22, 2018 · 1 min read</p>
-  </header>
-  
-  <p class="post-summary">本文比较了OAuth2.0的几种模式以及基于Session和JWT的认证模式。
-
-</p>
-  <footer class="post-footer">
-    <a class="read-more" href="https://chanjarster.github.io/post/compare-authc-authz-models/">Read More →</a>
-  </footer>
-</article>
-
-      
-    
-    
-      <footer class="list-footer">
-        <nav class="pagination">
-          <h3 class="offscreen">Pagination</h3>
-          
-            <a class="pagination-previous" href="https://chanjarster.github.io/post/page/11/">← Newer Posts</a>
-          
-          
-        </nav>
-      </footer>
     
   </section>
   <footer class="site-footer">

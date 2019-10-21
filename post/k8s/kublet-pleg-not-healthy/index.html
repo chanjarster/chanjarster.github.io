@@ -5,11 +5,7 @@
   <meta charset="utf-8" />
 
   
-  <title>
-  Tag → troubleshooting
-  
-   | 颇忒脱的技术博客
-</title>
+  <title>Kublet PLEG不健康问题排障</title>
 
   
   
@@ -20,20 +16,25 @@
 
   
   <meta name="author" content="颇忒脱" />
-  <meta name="description" content="颇忒脱的技术博客" />
+  <meta name="description" content="
+" />
 
   
-  <meta name="twitter:card" content="summary" />
-  <meta name="twitter:site" content="@gohugoio" />
-  <meta name="twitter:title" content="颇忒脱的技术博客" />
-  <meta name="twitter:description" content="颇忒脱的技术博客" />
-  <meta name="twitter:image" content="https://chanjarster.github.io/img/avatar.jpg" />
+  
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:site" content="@gohugoio" />
+    <meta name="twitter:title" content="Kublet PLEG不健康问题排障" />
+    <meta name="twitter:description" content="
+" />
+    <meta name="twitter:image" content="https://chanjarster.github.io/img/avatar.jpg" />
+  
 
   
-  <meta property="og:type" content="website" />
-  <meta property="og:title" content="颇忒脱的技术博客" />
-  <meta property="og:description" content="颇忒脱的技术博客" />
-  <meta property="og:url" content="https://chanjarster.github.io/tags/troubleshooting/" />
+  <meta property="og:type" content="article" />
+  <meta property="og:title" content="Kublet PLEG不健康问题排障" />
+  <meta property="og:description" content="
+" />
+  <meta property="og:url" content="https://chanjarster.github.io/post/k8s/kublet-pleg-not-healthy/" />
   <meta property="og:image" content="https://chanjarster.github.io/img/avatar.jpg" />
 
 
@@ -42,8 +43,7 @@
 <meta name="generator" content="Hugo 0.49.2" />
 
 
-<link rel="canonical" href="https://chanjarster.github.io/tags/troubleshooting/" />
-<link rel="alternate" type="application/rss+xml" href="https://chanjarster.github.io/tags/troubleshooting/index.xml" title="颇忒脱的技术博客" />
+<link rel="canonical" href="https://chanjarster.github.io/post/k8s/kublet-pleg-not-healthy/" />
 
 <meta name="renderer" content="webkit" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
@@ -105,6 +105,8 @@
     <div class="suspension">
       <a title="Go to top" class="to-top is-hide"><span class="icon icon-up"></span></a>
       
+        
+      
     </div>
     
     
@@ -127,6 +129,8 @@
         <li class="menu-item
             
             
+            
+              is-active
             ">
             <a href="https://chanjarster.github.io/">Home</a>
           </li>
@@ -232,71 +236,57 @@
   </nav>
 </header>
 
-  <section class="main post-list">
-    <header class="list-header offscreen">
-      <h2 class="list-label">Posts List</h2>
+  <section class="main post-detail">
+    <header class="post-header">
+      <h1 class="post-title">Kublet PLEG不健康问题排障</h1>
+      <p class="post-meta">@颇忒脱 · Feb 18, 2019 · 1 min read</p>
     </header>
+    <article class="post-content"><p></p>
+
+<p>环境：Rancher管控的K8S集群。</p>
+
+<p>现象：某个Node频繁出现“PLEG is not healthy: pleg was last seen active 3m46.752815514s ago; threshold is 3m0s”错误，频率在5-10分钟就会出现一次。</p>
+
+<p>排查：</p>
+
+<ol>
+<li><code>kubectl get pods --all-namespaces</code> 发现有一个<code>istio-ingressgateway-6bbdd58f8c-nlgnd</code>一直处于Terminating状态，也就是说杀不死。</li>
+<li>到Node上<code>docker logs --tail 100 kubelet</code>也看到这个Pod的状态异常：</li>
+</ol>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-txt" data-lang="txt"> I0218 01:21:17.383650   10311 kubelet.go:1775] skipping pod synchronization - [PLEG is not healthy: pleg was last seen active 3m46.752815514s ago; threshold is 3m0s]
+ ...
+ E0218 01:21:30.654433   10311 generic.go:271] PLEG: pod istio-ingressgateway-6bbdd58f8c-nlgnd/istio-system failed reinspection: rpc error: code = DeadlineExceeded desc = context deadline exceeded</code></pre></div>
+<ol>
+<li>用<code>kubelet delete pod</code>尝试删除，命令挂住。</li>
+<li>用<code>kubectl delete pod --force --grace-period=0</code>，强制删除Pod。</li>
+<li>再到Node上检查这个容器是否真的被停止，<code>docker ps -a| grep ingressgateway-6bbdd58f8c-nlgnd</code>，看到容器处于Exited状态。</li>
+<li>观察Node状态，问题依旧。</li>
+<li>把Pod关联的Deployment删除，把一只处于Terminating的Pod用<code>kubectl delete pod --force --grace-period=0</code>的方式删除。</li>
+<li>重新部署Deployment。</li>
+<li>问题解决。</li>
+</ol>
+
+<p>相关<a href="https://github.com/kubernetes/kubernetes/issues/51835">issue</a></p></article>
+    <footer class="post-footer">
+      
+      <ul class="post-tags">
+        
+          <li><a href="https://chanjarster.github.io/tags/arts"><span class="tag">ARTS</span></a></li>
+        
+          <li><a href="https://chanjarster.github.io/tags/arts-t"><span class="tag">ARTS-T</span></a></li>
+        
+          <li><a href="https://chanjarster.github.io/tags/k8s"><span class="tag">K8s</span></a></li>
+        
+          <li><a href="https://chanjarster.github.io/tags/troubleshooting"><span class="tag">Troubleshooting</span></a></li>
+        
+      </ul>
+      
+      <p class="post-copyright">
+        This post was published <strong>245</strong> days ago, content in the post may be inaccurate, even wrong now, please take risk yourself.
+      </p>
+    </footer>
     
-    
       
-        <article class="post-entry">
-  <header class="post-header">
-    <h3 class="post-title"><a href="https://chanjarster.github.io/post/kernel/perf-analyze-cpu-note/" class="post-link">Perf分析CPU性能问题笔记</a></h3>
-    <p class="post-meta">@颇忒脱 · Apr 12, 2019 · 2 min read</p>
-  </header>
-  
-  <p class="post-summary">
-</p>
-  <footer class="post-footer">
-    <a class="read-more" href="https://chanjarster.github.io/post/kernel/perf-analyze-cpu-note/">Read More →</a>
-  </footer>
-</article>
-
-      
-        <article class="post-entry">
-  <header class="post-header">
-    <h3 class="post-title"><a href="https://chanjarster.github.io/post/article-review/container-isolation-gone-wrong/" class="post-link">Container Isolation Gone Wrong</a></h3>
-    <p class="post-meta">@颇忒脱 · Feb 23, 2019 · 2 min read</p>
-  </header>
-  
-  <p class="post-summary">
-</p>
-  <footer class="post-footer">
-    <a class="read-more" href="https://chanjarster.github.io/post/article-review/container-isolation-gone-wrong/">Read More →</a>
-  </footer>
-</article>
-
-      
-        <article class="post-entry">
-  <header class="post-header">
-    <h3 class="post-title"><a href="https://chanjarster.github.io/post/k8s/kublet-pleg-not-healthy/" class="post-link">Kublet PLEG不健康问题排障</a></h3>
-    <p class="post-meta">@颇忒脱 · Feb 18, 2019 · 1 min read</p>
-  </header>
-  
-  <p class="post-summary">
-</p>
-  <footer class="post-footer">
-    <a class="read-more" href="https://chanjarster.github.io/post/k8s/kublet-pleg-not-healthy/">Read More →</a>
-  </footer>
-</article>
-
-      
-        <article class="post-entry">
-  <header class="post-header">
-    <h3 class="post-title"><a href="https://chanjarster.github.io/post/docker-console-logging-hangs/" class="post-link">容器打印日志到控制台阻塞的排障</a></h3>
-    <p class="post-meta">@颇忒脱 · Feb 17, 2019 · 1 min read</p>
-  </header>
-  
-  <p class="post-summary">记一次容器打印到控制台阻塞，且容器停止响应的问题。
-
-</p>
-  <footer class="post-footer">
-    <a class="read-more" href="https://chanjarster.github.io/post/docker-console-logging-hangs/">Read More →</a>
-  </footer>
-</article>
-
-      
-    
     
   </section>
   <footer class="site-footer">
