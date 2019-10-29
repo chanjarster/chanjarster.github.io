@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+<head>
+
+  <meta charset="utf-8" />
+
+  
+  <title>Testing Concurrent Programs</title>
+
+  
+  
+
+
+
+
+
+  
+  <meta name="author" content="颇忒脱" />
+  <meta name="description" content="
+" />
+
+  
+  
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:site" content="@gohugoio" />
+    <meta name="twitter:title" content="Testing Concurrent Programs" />
+    <meta name="twitter:description" content="
+" />
+    <meta name="twitter:image" content="https://chanjarster.github.io/img/avatar.jpg" />
+  
+
+  
+  <meta property="og:type" content="article" />
+  <meta property="og:title" content="Testing Concurrent Programs" />
+  <meta property="og:description" content="
+" />
+  <meta property="og:url" content="https://chanjarster.github.io/post/concurrent-programming/testing-concurrent-programs/" />
+  <meta property="og:image" content="https://chanjarster.github.io/img/avatar.jpg" />
+
+
+
+
+<meta name="generator" content="Hugo 0.49.2" />
+
+
+<link rel="canonical" href="https://chanjarster.github.io/post/concurrent-programming/testing-concurrent-programs/" />
+
+<meta name="renderer" content="webkit" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<meta name="format-detection" content="telephone=no,email=no,adress=no" />
+<meta http-equiv="Cache-Control" content="no-transform" />
+
+
+<meta name="robots" content="index,follow" />
+<meta name="referrer" content="origin-when-cross-origin" />
+
+
+
+
+
+
+
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="颇忒脱的技术博客" />
+<meta name="msapplication-tooltip" content="颇忒脱的技术博客" />
+<meta name='msapplication-navbutton-color' content="#5fbf5e" />
+<meta name="msapplication-TileColor" content="#5fbf5e" />
+<meta name="msapplication-TileImage" content="/img/tile-image-windows.png" />
+<link rel="icon" href="https://chanjarster.github.io/img/favicon.ico" />
+<link rel="icon" type="image/png" sizes="16x16" href="https://chanjarster.github.io/img/favicon-16x16.png" />
+<link rel="icon" type="image/png" sizes="32x32" href="https://chanjarster.github.io/img/favicon-32x32.png" />
+<link rel="icon" sizes="192x192" href="https://chanjarster.github.io/img/touch-icon-android.png" />
+<link rel="apple-touch-icon" href="https://chanjarster.github.io/img/touch-icon-apple.png" />
+<link rel="mask-icon" href="https://chanjarster.github.io/img/safari-pinned-tab.svg" color="#5fbf5e" />
+
+
+
+<link rel="stylesheet" href="//cdn.bootcss.com/video.js/6.2.8/alt/video-js-cdn.min.css" />
+
+<link rel="stylesheet" href="https://chanjarster.github.io/css/bundle.8e3aef2bc5.css" />
+
+
+  
+  <!--[if lt IE 9]>
+    <script src="//cdn.bootcss.com/html5shiv/3.7.3/html5shiv.min.js"></script>
+    <script src="//cdn.bootcss.com/respond.js/1.4.2/respond.min.js"></script>
+    <script src="//cdn.bootcss.com/video.js/6.2.8/ie8/videojs-ie8.min.js"></script>
+  <![endif]-->
+
+<!--[if lte IE 11]>
+    <script src="//cdn.bootcss.com/classlist/1.1.20170427/classList.min.js"></script>
+  <![endif]-->
+
+
+<script src="//cdn.bootcss.com/object-fit-images/3.2.3/ofi.min.js"></script>
+
+
+<script src="//cdn.bootcss.com/smooth-scroll/12.1.4/js/smooth-scroll.polyfills.min.js"></script>
+
+
+</head>
+  <body>
+    
+    <div class="suspension">
+      <a title="Go to top" class="to-top is-hide"><span class="icon icon-up"></span></a>
+      
+        
+      
+    </div>
+    
+    
+  <header class="site-header">
+  <img class="avatar" src="https://chanjarster.github.io/img/avatar2.jpg" alt="Avatar">
+  
+  <h2 class="title">颇忒脱的技术博客</h2>
+  
+  <p class="subtitle"></p>
+  <button class="menu-toggle" type="button">
+    <span class="icon icon-menu"></span>
+  </button>
+  <nav class="site-menu collapsed">
+    <h2 class="offscreen">Main Menu</h2>
+    <ul class="menu-list">
+      
+      
+      
+      
+        <li class="menu-item
+            
+            
+            
+              is-active
+            ">
+            <a href="https://chanjarster.github.io/">Home</a>
+          </li>
+      
+        <li class="menu-item
+            
+            
+            ">
+            <a href="https://chanjarster.github.io/tags/%E6%94%B6%E8%97%8F%E5%A4%B9/">Bookmarks</a>
+          </li>
+      
+        <li class="menu-item
+            
+            
+            ">
+            <a href="https://chanjarster.github.io/post/jvm/jvm-index/">JVM</a>
+          </li>
+      
+        <li class="menu-item
+            
+            
+            ">
+            <a href="https://chanjarster.github.io/post/concurrent-programming/index-page">并发编程</a>
+          </li>
+      
+        <li class="menu-item
+            
+            
+            ">
+            <a href="https://github.com/chanjarster">Works</a>
+          </li>
+      
+        <li class="menu-item
+            
+            
+            ">
+            <a href="https://chanjarster.github.io/tags/">Tags</a>
+          </li>
+      
+        <li class="menu-item
+            
+            
+            ">
+            <a href="https://chanjarster.github.io/links/">Links</a>
+          </li>
+      
+    </ul>
+  </nav>
+  <nav class="social-menu collapsed">
+    <h2 class="offscreen">Social Networks</h2>
+    <ul class="social-list">
+
+      
+
+      
+      <li class="social-item">
+        <a href="//github.com/chanjarster" title="GitHub"><span class="icon icon-github"></span></a>
+      </li>
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      <li class="social-item">
+        <a rel="alternate" type="application/rss+xml" href="https://chanjarster.github.io/index.xml"><span class="icon icon-rss" title="RSS"></span></a>
+      </li>
+
+    </ul>
+  </nav>
+</header>
+
+  <section class="main post-detail">
+    <header class="post-header">
+      <h1 class="post-title">Testing Concurrent Programs</h1>
+      <p class="post-meta">@颇忒脱 · Oct 29, 2019 · 5 min read</p>
+    </header>
+    <article class="post-content"><p></p>
+
+<p><img src="summary.png" alt="" /></p>
+
+<h2 id="测试正确性">测试正确性</h2>
+
+<p><img src="testing-correctness.png" alt="" /></p>
+
+<h3 id="测试阻塞方法">测试阻塞方法</h3>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#66d9ef">void</span> <span style="color:#a6e22e">testTakeBlocksWhenEmpty</span><span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
+  <span style="color:#66d9ef">final</span> BoundedBuffer<span style="color:#f92672">&lt;</span>Integer<span style="color:#f92672">&gt;</span> bb <span style="color:#f92672">=</span> <span style="color:#66d9ef">new</span> BoundedBuffer<span style="color:#f92672">&lt;&gt;(</span>10<span style="color:#f92672">);</span>
+  Thread taker <span style="color:#f92672">=</span> <span style="color:#66d9ef">new</span> Thread<span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
+    <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">run</span><span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
+    <span style="color:#66d9ef">try</span> <span style="color:#f92672">{</span>
+    <span style="color:#66d9ef">int</span> unused <span style="color:#f92672">=</span> bb<span style="color:#f92672">.</span><span style="color:#a6e22e">take</span><span style="color:#f92672">();</span>
+    fail<span style="color:#f92672">();</span> <span style="color:#75715e">// if we get here, it&#39;s an error
+</span><span style="color:#75715e"></span>    <span style="color:#f92672">}</span> <span style="color:#66d9ef">catch</span> <span style="color:#f92672">(</span>InterruptedException success<span style="color:#f92672">)</span> <span style="color:#f92672">{}</span>
+  <span style="color:#f92672">}</span>
+  <span style="color:#66d9ef">try</span> <span style="color:#f92672">{</span>
+  	take<span style="color:#f92672">.</span><span style="color:#a6e22e">start</span><span style="color:#f92672">();</span>
+  	Thread<span style="color:#f92672">.</span><span style="color:#a6e22e">sleep</span><span style="color:#f92672">(</span>LOCKUP_DETECT_TIMEOUT<span style="color:#f92672">);</span>
+  	taker<span style="color:#f92672">.</span><span style="color:#a6e22e">interrupt</span><span style="color:#f92672">();</span>
+  	taker<span style="color:#f92672">.</span><span style="color:#a6e22e">join</span><span style="color:#f92672">(</span>LOCKUP_DETECT_TIMEOUT<span style="color:#f92672">);</span>
+  	assertFalse<span style="color:#f92672">(</span>taker<span style="color:#f92672">.</span><span style="color:#a6e22e">isAlive</span><span style="color:#f92672">());</span>
+  <span style="color:#f92672">}</span> <span style="color:#66d9ef">catch</span> <span style="color:#f92672">(</span>Exception unexpected<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+    fail<span style="color:#f92672">();</span>
+  <span style="color:#f92672">}</span>
+  <span style="color:#f92672">}</span>
+<span style="color:#f92672">}</span></code></pre></div>
+<h3 id="测试安全性">测试安全性</h3>
+
+<p>一种简易的中等质量的随机数生成器：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#75715e">// 用hashcode / nanoTime 作为种子可以得到中等质量的随机数
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">static</span> <span style="color:#66d9ef">int</span> <span style="color:#a6e22e">xorShift</span><span style="color:#f92672">(</span><span style="color:#66d9ef">int</span> y<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+  y <span style="color:#f92672">^=</span> <span style="color:#f92672">(</span>y <span style="color:#f92672">&lt;&lt;</span> 6<span style="color:#f92672">);</span>
+  y <span style="color:#f92672">^=</span> <span style="color:#f92672">(</span>y <span style="color:#f92672">&gt;&gt;&gt;</span> 21<span style="color:#f92672">);</span>
+  y <span style="color:#f92672">^=</span> <span style="color:#f92672">(</span>y <span style="color:#f92672">&lt;&lt;</span> 7<span style="color:#f92672">);</span>
+  <span style="color:#66d9ef">return</span> y<span style="color:#f92672">;</span>
+<span style="color:#f92672">}</span></code></pre></div>
+<p>下面是测试线程安全的代码：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#66d9ef">public</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">PutTakeTest</span> <span style="color:#66d9ef">extends</span> TestCase <span style="color:#f92672">{</span>
+  <span style="color:#66d9ef">protected</span> <span style="color:#66d9ef">static</span> <span style="color:#66d9ef">final</span> ExecutorService pool <span style="color:#f92672">=</span> Executors<span style="color:#f92672">.</span><span style="color:#a6e22e">newCachedThreadPool</span><span style="color:#f92672">();</span>
+  <span style="color:#66d9ef">protected</span> CyclicBarrier barrier<span style="color:#f92672">;</span>
+  <span style="color:#66d9ef">protected</span> <span style="color:#66d9ef">final</span> SemaphoreBoundedBuffer<span style="color:#f92672">&lt;</span>Integer<span style="color:#f92672">&gt;</span> bb<span style="color:#f92672">;</span>
+  <span style="color:#66d9ef">protected</span> <span style="color:#66d9ef">final</span> <span style="color:#66d9ef">int</span> nTrials<span style="color:#f92672">,</span> nPairs<span style="color:#f92672">;</span>
+  <span style="color:#66d9ef">protected</span> <span style="color:#66d9ef">final</span> AtomicInteger putSum <span style="color:#f92672">=</span> <span style="color:#66d9ef">new</span> AtomicInteger<span style="color:#f92672">(</span>0<span style="color:#f92672">);</span>
+  <span style="color:#66d9ef">protected</span> <span style="color:#66d9ef">final</span> AtomicInteger takeSum <span style="color:#f92672">=</span> <span style="color:#66d9ef">new</span> AtomicInteger<span style="color:#f92672">(</span>0<span style="color:#f92672">);</span>
+
+  <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">static</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">main</span><span style="color:#f92672">(</span>String<span style="color:#f92672">[]</span> args<span style="color:#f92672">)</span> <span style="color:#66d9ef">throws</span> Exception <span style="color:#f92672">{</span>
+   <span style="color:#66d9ef">new</span> PutTakeTest<span style="color:#f92672">(</span>10<span style="color:#f92672">,</span> 10<span style="color:#f92672">,</span> 100000<span style="color:#f92672">).</span><span style="color:#a6e22e">test</span><span style="color:#f92672">();</span> <span style="color:#75715e">// sample parameters
+</span><span style="color:#75715e"></span>   pool<span style="color:#f92672">.</span><span style="color:#a6e22e">shutdown</span><span style="color:#f92672">();</span>
+  <span style="color:#f92672">}</span>
+
+  <span style="color:#66d9ef">public</span> <span style="color:#a6e22e">PutTakeTest</span><span style="color:#f92672">(</span><span style="color:#66d9ef">int</span> capacity<span style="color:#f92672">,</span> <span style="color:#66d9ef">int</span> npairs<span style="color:#f92672">,</span> <span style="color:#66d9ef">int</span> ntrials<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+   <span style="color:#66d9ef">this</span><span style="color:#f92672">.</span><span style="color:#a6e22e">bb</span> <span style="color:#f92672">=</span> <span style="color:#66d9ef">new</span> SemaphoreBoundedBuffer<span style="color:#f92672">&lt;</span>Integer<span style="color:#f92672">&gt;(</span>capacity<span style="color:#f92672">);</span>
+   <span style="color:#66d9ef">this</span><span style="color:#f92672">.</span><span style="color:#a6e22e">nTrials</span> <span style="color:#f92672">=</span> ntrials<span style="color:#f92672">;</span>
+   <span style="color:#66d9ef">this</span><span style="color:#f92672">.</span><span style="color:#a6e22e">nPairs</span> <span style="color:#f92672">=</span> npairs<span style="color:#f92672">;</span>
+   <span style="color:#75715e">// n个producer + n个consumer + 1个main thread
+</span><span style="color:#75715e"></span>   <span style="color:#66d9ef">this</span><span style="color:#f92672">.</span><span style="color:#a6e22e">barrier</span> <span style="color:#f92672">=</span> <span style="color:#66d9ef">new</span> CyclicBarrier<span style="color:#f92672">(</span>npairs <span style="color:#f92672">*</span> 2 <span style="color:#f92672">+</span> 1<span style="color:#f92672">);</span> main thread    
+  <span style="color:#f92672">}</span>
+
+  <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">test</span><span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
+   <span style="color:#66d9ef">try</span> <span style="color:#f92672">{</span>
+     <span style="color:#66d9ef">for</span> <span style="color:#f92672">(</span><span style="color:#66d9ef">int</span> i <span style="color:#f92672">=</span> 0<span style="color:#f92672">;</span> i <span style="color:#f92672">&lt;</span> nPairs<span style="color:#f92672">;</span> i<span style="color:#f92672">++)</span> <span style="color:#f92672">{</span>
+     pool<span style="color:#f92672">.</span><span style="color:#a6e22e">execute</span><span style="color:#f92672">(</span><span style="color:#66d9ef">new</span> Producer<span style="color:#f92672">());</span>
+     pool<span style="color:#f92672">.</span><span style="color:#a6e22e">execute</span><span style="color:#f92672">(</span><span style="color:#66d9ef">new</span> Consumer<span style="color:#f92672">());</span>
+     <span style="color:#f92672">}</span>
+     barrier<span style="color:#f92672">.</span><span style="color:#a6e22e">await</span><span style="color:#f92672">();</span> <span style="color:#75715e">// wait for all threads to be ready
+</span><span style="color:#75715e"></span>     barrier<span style="color:#f92672">.</span><span style="color:#a6e22e">await</span><span style="color:#f92672">();</span> <span style="color:#75715e">// wait for all threads to finish
+</span><span style="color:#75715e"></span>     assertEquals<span style="color:#f92672">(</span>putSum<span style="color:#f92672">.</span><span style="color:#a6e22e">get</span><span style="color:#f92672">(),</span> takeSum<span style="color:#f92672">.</span><span style="color:#a6e22e">get</span><span style="color:#f92672">());</span>
+  <span style="color:#f92672">}</span> <span style="color:#66d9ef">catch</span> <span style="color:#f92672">(</span>Exception e<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+    <span style="color:#66d9ef">throw</span> <span style="color:#66d9ef">new</span> RuntimeException<span style="color:#f92672">(</span>e<span style="color:#f92672">);</span>
+  <span style="color:#f92672">}</span>
+  <span style="color:#f92672">}</span>
+
+  <span style="color:#66d9ef">static</span> <span style="color:#66d9ef">int</span> <span style="color:#a6e22e">xorShift</span><span style="color:#f92672">(</span><span style="color:#66d9ef">int</span> y<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+  y <span style="color:#f92672">^=</span> <span style="color:#f92672">(</span>y <span style="color:#f92672">&lt;&lt;</span> 6<span style="color:#f92672">);</span>
+  y <span style="color:#f92672">^=</span> <span style="color:#f92672">(</span>y <span style="color:#f92672">&gt;&gt;&gt;</span> 21<span style="color:#f92672">);</span>
+  y <span style="color:#f92672">^=</span> <span style="color:#f92672">(</span>y <span style="color:#f92672">&lt;&lt;</span> 7<span style="color:#f92672">);</span>
+  <span style="color:#66d9ef">return</span> y<span style="color:#f92672">;</span>
+  <span style="color:#f92672">}</span>
+
+  <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">Producer</span> <span style="color:#66d9ef">implements</span> Runnable <span style="color:#f92672">{</span>
+  <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">run</span><span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
+    <span style="color:#66d9ef">try</span> <span style="color:#f92672">{</span>
+    <span style="color:#66d9ef">int</span> seed <span style="color:#f92672">=</span> <span style="color:#f92672">(</span><span style="color:#66d9ef">this</span><span style="color:#f92672">.</span><span style="color:#a6e22e">hashCode</span><span style="color:#f92672">()</span> <span style="color:#f92672">^</span> <span style="color:#f92672">(</span><span style="color:#66d9ef">int</span><span style="color:#f92672">)</span> System<span style="color:#f92672">.</span><span style="color:#a6e22e">nanoTime</span><span style="color:#f92672">());</span>
+    <span style="color:#66d9ef">int</span> sum <span style="color:#f92672">=</span> 0<span style="color:#f92672">;</span>
+    barrier<span style="color:#f92672">.</span><span style="color:#a6e22e">await</span><span style="color:#f92672">();</span>
+    <span style="color:#66d9ef">for</span> <span style="color:#f92672">(</span><span style="color:#66d9ef">int</span> i <span style="color:#f92672">=</span> nTrials<span style="color:#f92672">;</span> i <span style="color:#f92672">&gt;</span> 0<span style="color:#f92672">;</span> <span style="color:#f92672">--</span>i<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+      bb<span style="color:#f92672">.</span><span style="color:#a6e22e">put</span><span style="color:#f92672">(</span>seed<span style="color:#f92672">);</span>
+      sum <span style="color:#f92672">+=</span> seed<span style="color:#f92672">;</span>
+      seed <span style="color:#f92672">=</span> xorShift<span style="color:#f92672">(</span>seed<span style="color:#f92672">);</span>
+    <span style="color:#f92672">}</span>
+    <span style="color:#75715e">// 在最后汇总sum可以减少snc
+</span><span style="color:#75715e"></span>    putSum<span style="color:#f92672">.</span><span style="color:#a6e22e">getAndAdd</span><span style="color:#f92672">(</span>sum<span style="color:#f92672">);</span>
+    barrier<span style="color:#f92672">.</span><span style="color:#a6e22e">await</span><span style="color:#f92672">();</span>
+    <span style="color:#f92672">}</span> <span style="color:#66d9ef">catch</span> <span style="color:#f92672">(</span>Exception e<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+    <span style="color:#66d9ef">throw</span> <span style="color:#66d9ef">new</span> RuntimeException<span style="color:#f92672">(</span>e<span style="color:#f92672">);</span>
+    <span style="color:#f92672">}</span>
+  <span style="color:#f92672">}</span>
+  <span style="color:#f92672">}</span>
+
+  <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">Consumer</span> <span style="color:#66d9ef">implements</span> Runnable <span style="color:#f92672">{</span>
+  <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">run</span><span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
+    <span style="color:#66d9ef">try</span> <span style="color:#f92672">{</span>
+    barrier<span style="color:#f92672">.</span><span style="color:#a6e22e">await</span><span style="color:#f92672">();</span>
+    <span style="color:#66d9ef">int</span> sum <span style="color:#f92672">=</span> 0<span style="color:#f92672">;</span>
+    <span style="color:#66d9ef">for</span> <span style="color:#f92672">(</span><span style="color:#66d9ef">int</span> i <span style="color:#f92672">=</span> nTrials<span style="color:#f92672">;</span> i <span style="color:#f92672">&gt;</span> 0<span style="color:#f92672">;</span> <span style="color:#f92672">--</span>i<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+      sum <span style="color:#f92672">+=</span> bb<span style="color:#f92672">.</span><span style="color:#a6e22e">take</span><span style="color:#f92672">();</span>
+    <span style="color:#f92672">}</span>
+    takeSum<span style="color:#f92672">.</span><span style="color:#a6e22e">getAndAdd</span><span style="color:#f92672">(</span>sum<span style="color:#f92672">);</span>
+    barrier<span style="color:#f92672">.</span><span style="color:#a6e22e">await</span><span style="color:#f92672">();</span>
+    <span style="color:#f92672">}</span> <span style="color:#66d9ef">catch</span> <span style="color:#f92672">(</span>Exception e<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+    <span style="color:#66d9ef">throw</span> <span style="color:#66d9ef">new</span> RuntimeException<span style="color:#f92672">(</span>e<span style="color:#f92672">);</span>
+    <span style="color:#f92672">}</span>
+  <span style="color:#f92672">}</span>
+  <span style="color:#f92672">}</span>
+<span style="color:#f92672">}</span></code></pre></div>
+<p>被测代码：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#a6e22e">@ThreadSafe</span>
+<span style="color:#66d9ef">public</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">SemaphoreBoundedBuffer</span> <span style="color:#f92672">&lt;</span>E<span style="color:#f92672">&gt;</span> <span style="color:#f92672">{</span>
+  <span style="color:#66d9ef">private</span> <span style="color:#66d9ef">final</span> Semaphore availableItems<span style="color:#f92672">,</span> availableSpaces<span style="color:#f92672">;</span>
+  <span style="color:#a6e22e">@GuardedBy</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34;this&#34;</span><span style="color:#f92672">)</span> <span style="color:#66d9ef">private</span> <span style="color:#66d9ef">final</span> E<span style="color:#f92672">[]</span> items<span style="color:#f92672">;</span>
+  <span style="color:#a6e22e">@GuardedBy</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34;this&#34;</span><span style="color:#f92672">)</span> <span style="color:#66d9ef">private</span> <span style="color:#66d9ef">int</span> putPosition <span style="color:#f92672">=</span> 0<span style="color:#f92672">,</span> takePosition <span style="color:#f92672">=</span> 0<span style="color:#f92672">;</span>
+
+  <span style="color:#66d9ef">public</span> <span style="color:#a6e22e">SemaphoreBoundedBuffer</span><span style="color:#f92672">(</span><span style="color:#66d9ef">int</span> capacity<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+    <span style="color:#66d9ef">if</span> <span style="color:#f92672">(</span>capacity <span style="color:#f92672">&lt;=</span> 0<span style="color:#f92672">)</span>
+      <span style="color:#66d9ef">throw</span> <span style="color:#66d9ef">new</span> IllegalArgumentException<span style="color:#f92672">();</span>
+    availableItems <span style="color:#f92672">=</span> <span style="color:#66d9ef">new</span> Semaphore<span style="color:#f92672">(</span>0<span style="color:#f92672">);</span>
+    availableSpaces <span style="color:#f92672">=</span> <span style="color:#66d9ef">new</span> Semaphore<span style="color:#f92672">(</span>capacity<span style="color:#f92672">);</span>
+    items <span style="color:#f92672">=</span> <span style="color:#f92672">(</span>E<span style="color:#f92672">[])</span> <span style="color:#66d9ef">new</span> Object<span style="color:#f92672">[</span>capacity<span style="color:#f92672">];</span>
+  <span style="color:#f92672">}</span>
+
+  <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">boolean</span> <span style="color:#a6e22e">isEmpty</span><span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
+    <span style="color:#66d9ef">return</span> availableItems<span style="color:#f92672">.</span><span style="color:#a6e22e">availablePermits</span><span style="color:#f92672">()</span> <span style="color:#f92672">==</span> 0<span style="color:#f92672">;</span>
+  <span style="color:#f92672">}</span>
+
+  <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">boolean</span> <span style="color:#a6e22e">isFull</span><span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
+    <span style="color:#66d9ef">return</span> availableSpaces<span style="color:#f92672">.</span><span style="color:#a6e22e">availablePermits</span><span style="color:#f92672">()</span> <span style="color:#f92672">==</span> 0<span style="color:#f92672">;</span>
+  <span style="color:#f92672">}</span>
+
+  <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">put</span><span style="color:#f92672">(</span>E x<span style="color:#f92672">)</span> <span style="color:#66d9ef">throws</span> InterruptedException <span style="color:#f92672">{</span>
+    availableSpaces<span style="color:#f92672">.</span><span style="color:#a6e22e">acquire</span><span style="color:#f92672">();</span>
+    doInsert<span style="color:#f92672">(</span>x<span style="color:#f92672">);</span>
+    availableItems<span style="color:#f92672">.</span><span style="color:#a6e22e">release</span><span style="color:#f92672">();</span>
+  <span style="color:#f92672">}</span>
+
+  <span style="color:#66d9ef">public</span> E <span style="color:#a6e22e">take</span><span style="color:#f92672">()</span> <span style="color:#66d9ef">throws</span> InterruptedException <span style="color:#f92672">{</span>
+    availableItems<span style="color:#f92672">.</span><span style="color:#a6e22e">acquire</span><span style="color:#f92672">();</span>
+    E item <span style="color:#f92672">=</span> doExtract<span style="color:#f92672">();</span>
+    availableSpaces<span style="color:#f92672">.</span><span style="color:#a6e22e">release</span><span style="color:#f92672">();</span>
+    <span style="color:#66d9ef">return</span> item<span style="color:#f92672">;</span>
+  <span style="color:#f92672">}</span>
+  <span style="color:#75715e">// 这里的synchronized很重要，如果没有就线程不安全了
+</span><span style="color:#75715e"></span>  <span style="color:#66d9ef">private</span> <span style="color:#66d9ef">synchronized</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">doInsert</span><span style="color:#f92672">(</span>E x<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+    <span style="color:#66d9ef">int</span> i <span style="color:#f92672">=</span> putPosition<span style="color:#f92672">;</span>
+    items<span style="color:#f92672">[</span>i<span style="color:#f92672">]</span> <span style="color:#f92672">=</span> x<span style="color:#f92672">;</span>
+    putPosition <span style="color:#f92672">=</span> <span style="color:#f92672">(++</span>i <span style="color:#f92672">==</span> items<span style="color:#f92672">.</span><span style="color:#a6e22e">length</span><span style="color:#f92672">)</span> <span style="color:#f92672">?</span> 0 <span style="color:#f92672">:</span> i<span style="color:#f92672">;</span>
+  <span style="color:#f92672">}</span>
+  <span style="color:#75715e">// 这里的synchronized很重要，如果没有就线程不安全了
+</span><span style="color:#75715e"></span>  <span style="color:#66d9ef">private</span> <span style="color:#66d9ef">synchronized</span> E <span style="color:#a6e22e">doExtract</span><span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
+    <span style="color:#66d9ef">int</span> i <span style="color:#f92672">=</span> takePosition<span style="color:#f92672">;</span>
+    E x <span style="color:#f92672">=</span> items<span style="color:#f92672">[</span>i<span style="color:#f92672">];</span>
+    items<span style="color:#f92672">[</span>i<span style="color:#f92672">]</span> <span style="color:#f92672">=</span> <span style="color:#66d9ef">null</span><span style="color:#f92672">;</span>
+    takePosition <span style="color:#f92672">=</span> <span style="color:#f92672">(++</span>i <span style="color:#f92672">==</span> items<span style="color:#f92672">.</span><span style="color:#a6e22e">length</span><span style="color:#f92672">)</span> <span style="color:#f92672">?</span> 0 <span style="color:#f92672">:</span> i<span style="color:#f92672">;</span>
+    <span style="color:#66d9ef">return</span> x<span style="color:#f92672">;</span>
+  <span style="color:#f92672">}</span>
+<span style="color:#f92672">}</span></code></pre></div>
+<h3 id="测试资源管理">测试资源管理</h3>
+
+<p>测试<code>SemaphoreBoundedBuffer</code>是否正确释放了空间：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">Big</span> <span style="color:#f92672">{</span>
+  <span style="color:#66d9ef">double</span><span style="color:#f92672">[]</span> data <span style="color:#f92672">=</span> <span style="color:#66d9ef">new</span> <span style="color:#66d9ef">double</span><span style="color:#f92672">[</span>100000<span style="color:#f92672">];</span>
+<span style="color:#f92672">}</span>
+
+<span style="color:#66d9ef">void</span> <span style="color:#a6e22e">testLeak</span><span style="color:#f92672">()</span> <span style="color:#66d9ef">throws</span> InterruptedException <span style="color:#f92672">{</span>
+  SemaphoreBoundedBuffer<span style="color:#f92672">&lt;</span>Big<span style="color:#f92672">&gt;</span> bb <span style="color:#f92672">=</span> <span style="color:#66d9ef">new</span> SemaphoreBoundedBuffer<span style="color:#f92672">&lt;</span>Big<span style="color:#f92672">&gt;(</span>CAPACITY<span style="color:#f92672">);</span>
+  <span style="color:#66d9ef">int</span> heapSize1 <span style="color:#f92672">=</span> snapshotHeap<span style="color:#f92672">();</span>
+  <span style="color:#66d9ef">for</span> <span style="color:#f92672">(</span><span style="color:#66d9ef">int</span> i <span style="color:#f92672">=</span> 0<span style="color:#f92672">;</span> i <span style="color:#f92672">&lt;</span> CAPACITY<span style="color:#f92672">;</span> i<span style="color:#f92672">++)</span>
+    bb<span style="color:#f92672">.</span><span style="color:#a6e22e">put</span><span style="color:#f92672">(</span><span style="color:#66d9ef">new</span> Big<span style="color:#f92672">());</span>
+  <span style="color:#66d9ef">for</span> <span style="color:#f92672">(</span><span style="color:#66d9ef">int</span> i <span style="color:#f92672">=</span> 0<span style="color:#f92672">;</span> i <span style="color:#f92672">&lt;</span> CAPACITY<span style="color:#f92672">;</span> i<span style="color:#f92672">++)</span>
+    bb<span style="color:#f92672">.</span><span style="color:#a6e22e">take</span><span style="color:#f92672">();</span>
+  <span style="color:#66d9ef">int</span> heapSize2 <span style="color:#f92672">=</span> snapshotHeap<span style="color:#f92672">();</span>
+  assertTrue<span style="color:#f92672">(</span>Math<span style="color:#f92672">.</span><span style="color:#a6e22e">abs</span><span style="color:#f92672">(</span>heapSize1 <span style="color:#f92672">-</span> heapSize2<span style="color:#f92672">)</span> <span style="color:#f92672">&lt;</span> THRESHOLD<span style="color:#f92672">);</span>
+<span style="color:#f92672">}</span>
+
+<span style="color:#66d9ef">private</span> <span style="color:#66d9ef">int</span> <span style="color:#a6e22e">snapshotHeap</span><span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
+  <span style="color:#75715e">/* Snapshot heap and return heap size */</span>
+  <span style="color:#66d9ef">return</span> 0<span style="color:#f92672">;</span>
+<span style="color:#f92672">}</span></code></pre></div>
+<p>测试线程池扩展策略：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#66d9ef">public</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">TestThreadPool</span> <span style="color:#66d9ef">extends</span> TestCase <span style="color:#f92672">{</span>
+
+  <span style="color:#66d9ef">private</span> <span style="color:#66d9ef">final</span> TestingThreadFactory threadFactory <span style="color:#f92672">=</span> <span style="color:#66d9ef">new</span> TestingThreadFactory<span style="color:#f92672">();</span>
+
+  <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">testPoolExpansion</span><span style="color:#f92672">()</span> <span style="color:#66d9ef">throws</span> InterruptedException <span style="color:#f92672">{</span>
+  <span style="color:#66d9ef">int</span> MAX_SIZE <span style="color:#f92672">=</span> 10<span style="color:#f92672">;</span>
+  <span style="color:#75715e">// newFixedThreadPool 最多创建10个线程
+</span><span style="color:#75715e"></span>  ExecutorService exec <span style="color:#f92672">=</span> Executors<span style="color:#f92672">.</span><span style="color:#a6e22e">newFixedThreadPool</span><span style="color:#f92672">(</span>MAX_SIZE<span style="color:#f92672">);</span>
+
+  <span style="color:#66d9ef">for</span> <span style="color:#f92672">(</span><span style="color:#66d9ef">int</span> i <span style="color:#f92672">=</span> 0<span style="color:#f92672">;</span> i <span style="color:#f92672">&lt;</span> 10 <span style="color:#f92672">*</span> MAX_SIZE<span style="color:#f92672">;</span> i<span style="color:#f92672">++)</span>
+    exec<span style="color:#f92672">.</span><span style="color:#a6e22e">execute</span><span style="color:#f92672">(</span><span style="color:#66d9ef">new</span> Runnable<span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
+    <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">run</span><span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
+      <span style="color:#66d9ef">try</span> <span style="color:#f92672">{</span>
+      Thread<span style="color:#f92672">.</span><span style="color:#a6e22e">sleep</span><span style="color:#f92672">(</span>Long<span style="color:#f92672">.</span><span style="color:#a6e22e">MAX_VALUE</span><span style="color:#f92672">);</span>
+      <span style="color:#f92672">}</span> <span style="color:#66d9ef">catch</span> <span style="color:#f92672">(</span>InterruptedException e<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+      Thread<span style="color:#f92672">.</span><span style="color:#a6e22e">currentThread</span><span style="color:#f92672">().</span><span style="color:#a6e22e">interrupt</span><span style="color:#f92672">();</span>
+      <span style="color:#f92672">}</span>
+    <span style="color:#f92672">}</span>
+    <span style="color:#f92672">});</span>
+  <span style="color:#75715e">// 等待确保创建了至少10个线程
+</span><span style="color:#75715e"></span>  <span style="color:#66d9ef">for</span> <span style="color:#f92672">(</span><span style="color:#66d9ef">int</span> i <span style="color:#f92672">=</span> 0<span style="color:#f92672">;</span>
+     i <span style="color:#f92672">&lt;</span> 20 <span style="color:#f92672">&amp;&amp;</span> threadFactory<span style="color:#f92672">.</span><span style="color:#a6e22e">numCreated</span><span style="color:#f92672">.</span><span style="color:#a6e22e">get</span><span style="color:#f92672">()</span> <span style="color:#f92672">&lt;</span> MAX_SIZE<span style="color:#f92672">;</span>
+     i<span style="color:#f92672">++)</span>
+    Thread<span style="color:#f92672">.</span><span style="color:#a6e22e">sleep</span><span style="color:#f92672">(</span>100<span style="color:#f92672">);</span>
+  assertEquals<span style="color:#f92672">(</span>threadFactory<span style="color:#f92672">.</span><span style="color:#a6e22e">numCreated</span><span style="color:#f92672">.</span><span style="color:#a6e22e">get</span><span style="color:#f92672">(),</span> MAX_SIZE<span style="color:#f92672">);</span>
+  exec<span style="color:#f92672">.</span><span style="color:#a6e22e">shutdownNow</span><span style="color:#f92672">();</span>
+  <span style="color:#f92672">}</span>
+<span style="color:#f92672">}</span>
+
+<span style="color:#66d9ef">class</span> <span style="color:#a6e22e">TestingThreadFactory</span> <span style="color:#66d9ef">implements</span> ThreadFactory <span style="color:#f92672">{</span>
+  <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">final</span> AtomicInteger numCreated <span style="color:#f92672">=</span> <span style="color:#66d9ef">new</span> AtomicInteger<span style="color:#f92672">();</span>
+  <span style="color:#66d9ef">private</span> <span style="color:#66d9ef">final</span> ThreadFactory factory <span style="color:#f92672">=</span> Executors<span style="color:#f92672">.</span><span style="color:#a6e22e">defaultThreadFactory</span><span style="color:#f92672">();</span>
+
+  <span style="color:#66d9ef">public</span> Thread <span style="color:#a6e22e">newThread</span><span style="color:#f92672">(</span>Runnable r<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+  numCreated<span style="color:#f92672">.</span><span style="color:#a6e22e">incrementAndGet</span><span style="color:#f92672">();</span>
+  <span style="color:#66d9ef">return</span> factory<span style="color:#f92672">.</span><span style="color:#a6e22e">newThread</span><span style="color:#f92672">(</span>r<span style="color:#f92672">);</span>
+  <span style="color:#f92672">}</span>
+<span style="color:#f92672">}</span></code></pre></div>
+<h2 id="测试性能">测试性能</h2>
+
+<p><img src="testing-performance.png" alt="" /></p>
+
+<h3 id="barrier-based-timer">Barrier-based timer</h3>
+
+<p>利用Barrier的callback来做计时：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#66d9ef">this</span><span style="color:#f92672">.</span><span style="color:#a6e22e">timer</span> <span style="color:#f92672">=</span> <span style="color:#66d9ef">new</span> Barrierimer<span style="color:#f92672">();</span>
+<span style="color:#66d9ef">this</span><span style="color:#f92672">.</span><span style="color:#a6e22e">barrier</span> <span style="color:#f92672">=</span> <span style="color:#66d9ef">new</span> CyclicBarrier<span style="color:#f92672">(</span>nparis <span style="color:#f92672">*</span> 2 <span style="color:#f92672">+</span> 1<span style="color:#f92672">,</span> timer<span style="color:#f92672">);</span>
+
+<span style="color:#75715e">// 会在Barrier放行的时候执行
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">public</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">BarrierTimer</span> <span style="color:#66d9ef">implements</span> Runnable <span style="color:#f92672">{</span>
+  <span style="color:#66d9ef">private</span> <span style="color:#66d9ef">boolean</span> started<span style="color:#f92672">;</span>
+  <span style="color:#66d9ef">private</span> <span style="color:#66d9ef">long</span> startTime<span style="color:#f92672">,</span> endTime<span style="color:#f92672">;</span>
+
+  <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">synchronized</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">run</span><span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
+    <span style="color:#66d9ef">long</span> t <span style="color:#f92672">=</span> System<span style="color:#f92672">.</span><span style="color:#a6e22e">nanoTime</span><span style="color:#f92672">();</span>
+    <span style="color:#66d9ef">if</span> <span style="color:#f92672">(!</span>started<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+      started <span style="color:#f92672">=</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">;</span>
+      startTime <span style="color:#f92672">=</span> t<span style="color:#f92672">;</span>
+    <span style="color:#f92672">}</span> <span style="color:#66d9ef">else</span>
+      endTime <span style="color:#f92672">=</span> t<span style="color:#f92672">;</span>
+  <span style="color:#f92672">}</span>
+
+  <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">synchronized</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">clear</span><span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
+    started <span style="color:#f92672">=</span> <span style="color:#66d9ef">false</span><span style="color:#f92672">;</span>
+  <span style="color:#f92672">}</span>
+
+  <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">synchronized</span> <span style="color:#66d9ef">long</span> <span style="color:#a6e22e">getTime</span><span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
+    <span style="color:#66d9ef">return</span> endTime <span style="color:#f92672">-</span> startTime<span style="color:#f92672">;</span>
+  <span style="color:#f92672">}</span>
+<span style="color:#f92672">}</span></code></pre></div>
+<p>利用BarrierTimer测试【不同线程数，不同Buffer capacity】的吞吐量：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#66d9ef">public</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">TimedPutTakeTest</span> <span style="color:#66d9ef">extends</span> PutTakeTest <span style="color:#f92672">{</span>
+  <span style="color:#66d9ef">private</span> BarrierTimer timer <span style="color:#f92672">=</span> <span style="color:#66d9ef">new</span> BarrierTimer<span style="color:#f92672">();</span>
+
+  <span style="color:#66d9ef">public</span> <span style="color:#a6e22e">TimedPutTakeTest</span><span style="color:#f92672">(</span><span style="color:#66d9ef">int</span> cap<span style="color:#f92672">,</span> <span style="color:#66d9ef">int</span> pairs<span style="color:#f92672">,</span> <span style="color:#66d9ef">int</span> trials<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+    <span style="color:#66d9ef">super</span><span style="color:#f92672">(</span>cap<span style="color:#f92672">,</span> pairs<span style="color:#f92672">,</span> trials<span style="color:#f92672">);</span>
+    barrier <span style="color:#f92672">=</span> <span style="color:#66d9ef">new</span> CyclicBarrier<span style="color:#f92672">(</span>nPairs <span style="color:#f92672">*</span> 2 <span style="color:#f92672">+</span> 1<span style="color:#f92672">,</span> timer<span style="color:#f92672">);</span>
+  <span style="color:#f92672">}</span>
+
+  <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">test</span><span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
+    <span style="color:#66d9ef">try</span> <span style="color:#f92672">{</span>
+      timer<span style="color:#f92672">.</span><span style="color:#a6e22e">clear</span><span style="color:#f92672">();</span>
+      <span style="color:#66d9ef">for</span> <span style="color:#f92672">(</span><span style="color:#66d9ef">int</span> i <span style="color:#f92672">=</span> 0<span style="color:#f92672">;</span> i <span style="color:#f92672">&lt;</span> nPairs<span style="color:#f92672">;</span> i<span style="color:#f92672">++)</span> <span style="color:#f92672">{</span>
+        pool<span style="color:#f92672">.</span><span style="color:#a6e22e">execute</span><span style="color:#f92672">(</span><span style="color:#66d9ef">new</span> PutTakeTest<span style="color:#f92672">.</span><span style="color:#a6e22e">Producer</span><span style="color:#f92672">());</span>
+        pool<span style="color:#f92672">.</span><span style="color:#a6e22e">execute</span><span style="color:#f92672">(</span><span style="color:#66d9ef">new</span> PutTakeTest<span style="color:#f92672">.</span><span style="color:#a6e22e">Consumer</span><span style="color:#f92672">());</span>
+      <span style="color:#f92672">}</span>
+      barrier<span style="color:#f92672">.</span><span style="color:#a6e22e">await</span><span style="color:#f92672">();</span>
+      barrier<span style="color:#f92672">.</span><span style="color:#a6e22e">await</span><span style="color:#f92672">();</span>
+      <span style="color:#66d9ef">long</span> nsPerItem <span style="color:#f92672">=</span> timer<span style="color:#f92672">.</span><span style="color:#a6e22e">getTime</span><span style="color:#f92672">()</span> <span style="color:#f92672">/</span> <span style="color:#f92672">(</span>nPairs <span style="color:#f92672">*</span> <span style="color:#f92672">(</span><span style="color:#66d9ef">long</span><span style="color:#f92672">)</span> nTrials<span style="color:#f92672">);</span>
+      System<span style="color:#f92672">.</span><span style="color:#a6e22e">out</span><span style="color:#f92672">.</span><span style="color:#a6e22e">print</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34;Throughput: &#34;</span> <span style="color:#f92672">+</span> nsPerItem <span style="color:#f92672">+</span> <span style="color:#e6db74">&#34; ns/item&#34;</span><span style="color:#f92672">);</span>
+      assertEquals<span style="color:#f92672">(</span>putSum<span style="color:#f92672">.</span><span style="color:#a6e22e">get</span><span style="color:#f92672">(),</span> takeSum<span style="color:#f92672">.</span><span style="color:#a6e22e">get</span><span style="color:#f92672">());</span>
+    <span style="color:#f92672">}</span> <span style="color:#66d9ef">catch</span> <span style="color:#f92672">(</span>Exception e<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+      <span style="color:#66d9ef">throw</span> <span style="color:#66d9ef">new</span> RuntimeException<span style="color:#f92672">(</span>e<span style="color:#f92672">);</span>
+    <span style="color:#f92672">}</span>
+  <span style="color:#f92672">}</span>
+
+  <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">static</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">main</span><span style="color:#f92672">(</span>String<span style="color:#f92672">[]</span> args<span style="color:#f92672">)</span> <span style="color:#66d9ef">throws</span> Exception <span style="color:#f92672">{</span>
+    <span style="color:#66d9ef">int</span> tpt <span style="color:#f92672">=</span> 100000<span style="color:#f92672">;</span> <span style="color:#75715e">// trials per thread
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">for</span> <span style="color:#f92672">(</span><span style="color:#66d9ef">int</span> cap <span style="color:#f92672">=</span> 1<span style="color:#f92672">;</span> cap <span style="color:#f92672">&lt;=</span> 1000<span style="color:#f92672">;</span> cap <span style="color:#f92672">*=</span> 10<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+      System<span style="color:#f92672">.</span><span style="color:#a6e22e">out</span><span style="color:#f92672">.</span><span style="color:#a6e22e">println</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34;Capacity: &#34;</span> <span style="color:#f92672">+</span> cap<span style="color:#f92672">);</span>
+      <span style="color:#66d9ef">for</span> <span style="color:#f92672">(</span><span style="color:#66d9ef">int</span> pairs <span style="color:#f92672">=</span> 1<span style="color:#f92672">;</span> pairs <span style="color:#f92672">&lt;=</span> 128<span style="color:#f92672">;</span> pairs <span style="color:#f92672">*=</span> 2<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+        TimedPutTakeTest t <span style="color:#f92672">=</span> <span style="color:#66d9ef">new</span> TimedPutTakeTest<span style="color:#f92672">(</span>cap<span style="color:#f92672">,</span> pairs<span style="color:#f92672">,</span> tpt<span style="color:#f92672">);</span>
+        System<span style="color:#f92672">.</span><span style="color:#a6e22e">out</span><span style="color:#f92672">.</span><span style="color:#a6e22e">print</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34;Pairs: &#34;</span> <span style="color:#f92672">+</span> pairs <span style="color:#f92672">+</span> <span style="color:#e6db74">&#34;\t&#34;</span><span style="color:#f92672">);</span>
+        t<span style="color:#f92672">.</span><span style="color:#a6e22e">test</span><span style="color:#f92672">();</span>
+        System<span style="color:#f92672">.</span><span style="color:#a6e22e">out</span><span style="color:#f92672">.</span><span style="color:#a6e22e">print</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34;\t&#34;</span><span style="color:#f92672">);</span>
+        Thread<span style="color:#f92672">.</span><span style="color:#a6e22e">sleep</span><span style="color:#f92672">(</span>1000<span style="color:#f92672">);</span>
+        t<span style="color:#f92672">.</span><span style="color:#a6e22e">test</span><span style="color:#f92672">();</span>
+        System<span style="color:#f92672">.</span><span style="color:#a6e22e">out</span><span style="color:#f92672">.</span><span style="color:#a6e22e">println</span><span style="color:#f92672">();</span>
+        Thread<span style="color:#f92672">.</span><span style="color:#a6e22e">sleep</span><span style="color:#f92672">(</span>1000<span style="color:#f92672">);</span>
+      <span style="color:#f92672">}</span>
+    <span style="color:#f92672">}</span>
+    PutTakeTest<span style="color:#f92672">.</span><span style="color:#a6e22e">pool</span><span style="color:#f92672">.</span><span style="color:#a6e22e">shutdown</span><span style="color:#f92672">();</span>
+  <span style="color:#f92672">}</span>
+<span style="color:#f92672">}</span></code></pre></div>
+<h2 id="避免性能测试陷阱">避免性能测试陷阱</h2>
+
+<p><img src="avoiding-performance-testing-pitfalls.png" alt="" /></p>
+
+<h3 id="去除死代码">去除死代码</h3>
+
+<p>一个避免被编译器当作是死代码的技巧：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#66d9ef">if</span> <span style="color:#f92672">(</span>foo<span style="color:#f92672">.</span><span style="color:#a6e22e">x</span><span style="color:#f92672">.</span><span style="color:#a6e22e">hashCode</span><span style="color:#f92672">()</span> <span style="color:#f92672">==</span> System<span style="color:#f92672">.</span><span style="color:#a6e22e">nanoTime</span><span style="color:#f92672">())</span> <span style="color:#f92672">{</span>
+  System<span style="color:#f92672">.</span><span style="color:#a6e22e">out</span><span style="color:#f92672">.</span><span style="color:#a6e22e">print</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34; &#34;</span><span style="color:#f92672">);</span>
+<span style="color:#f92672">}</span></code></pre></div>
+<h2 id="其他测试方法">其他测试方法</h2>
+
+<p><img src="complementary-testing-approaches.png" alt="" /></p></article>
+    <footer class="post-footer">
+      
+      <ul class="post-tags">
+        
+          <li><a href="https://chanjarster.github.io/tags/arts"><span class="tag">ARTS</span></a></li>
+        
+          <li><a href="https://chanjarster.github.io/tags/arts-t"><span class="tag">ARTS-T</span></a></li>
+        
+          <li><a href="https://chanjarster.github.io/tags/%E5%B9%B6%E5%8F%91%E7%BC%96%E7%A8%8B"><span class="tag">并发编程</span></a></li>
+        
+      </ul>
+      
+      <p class="post-copyright">
+        
+      </p>
+    </footer>
+    
+      
+    
+  </section>
+  <footer class="site-footer">
+  <p>© 2017-2019 颇忒脱的技术博客</p>
+  <p>Powered by <a href="https://gohugo.io/" target="_blank">Hugo</a> with theme <a href="https://github.com/laozhu/hugo-nuo" target="_blank">Nuo</a>.</p>
+  
+</footer>
+
+
+
+<script async src="//cdn.bootcss.com/video.js/6.2.8/alt/video.novtt.min.js"></script>
+<script async src="//cdn.bootcss.com/mathjax/2.7.2/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    tex2jax: {
+      inlineMath: [['$','$'], ['\\(','\\)']],
+      displayMath: [['$$','$$'], ['\\[','\\]']],
+      processEscapes: true,
+      processEnvironments: true,
+      skipTags: ['script', 'noscript', 'style', 'textarea', 'pre'],
+      TeX: { equationNumbers: { autoNumber: "AMS" },
+      extensions: ["AMSmath.js", "AMSsymbols.js"] }
+    }
+  });
+</script>
+<script type="text/x-mathjax-config">
+  // Fix <code> tags after MathJax finishes running. This is a
+  // hack to overcome a shortcoming of Markdown. Discussion at
+  // https://github.com/mojombo/jekyll/issues/199
+  MathJax.Hub.Queue(() => {
+    MathJax.Hub.getAllJax().map(v => v.SourceElement().parentNode.className += ' has-jax');
+  });
+</script>
+
+<script src="https://chanjarster.github.io/js/bundle.273f9ac6f0.js"></script>
+
+
+
+
+  </body>
+</html>
