@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+<head>
+
+  <meta charset="utf-8" />
+
+  
+  <title>Explicit Locks</title>
+
+  
+  
+
+
+
+
+
+  
+  <meta name="author" content="颇忒脱" />
+  <meta name="description" content="
+" />
+
+  
+  
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:site" content="@gohugoio" />
+    <meta name="twitter:title" content="Explicit Locks" />
+    <meta name="twitter:description" content="
+" />
+    <meta name="twitter:image" content="https://chanjarster.github.io/img/avatar.jpg" />
+  
+
+  
+  <meta property="og:type" content="article" />
+  <meta property="og:title" content="Explicit Locks" />
+  <meta property="og:description" content="
+" />
+  <meta property="og:url" content="https://chanjarster.github.io/post/concurrent-programming/explicit-locks/" />
+  <meta property="og:image" content="https://chanjarster.github.io/img/avatar.jpg" />
+
+
+
+
+<meta name="generator" content="Hugo 0.49.2" />
+
+
+<link rel="canonical" href="https://chanjarster.github.io/post/concurrent-programming/explicit-locks/" />
+
+<meta name="renderer" content="webkit" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<meta name="format-detection" content="telephone=no,email=no,adress=no" />
+<meta http-equiv="Cache-Control" content="no-transform" />
+
+
+<meta name="robots" content="index,follow" />
+<meta name="referrer" content="origin-when-cross-origin" />
+
+
+
+
+
+
+
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="颇忒脱的技术博客" />
+<meta name="msapplication-tooltip" content="颇忒脱的技术博客" />
+<meta name='msapplication-navbutton-color' content="#5fbf5e" />
+<meta name="msapplication-TileColor" content="#5fbf5e" />
+<meta name="msapplication-TileImage" content="/img/tile-image-windows.png" />
+<link rel="icon" href="https://chanjarster.github.io/img/favicon.ico" />
+<link rel="icon" type="image/png" sizes="16x16" href="https://chanjarster.github.io/img/favicon-16x16.png" />
+<link rel="icon" type="image/png" sizes="32x32" href="https://chanjarster.github.io/img/favicon-32x32.png" />
+<link rel="icon" sizes="192x192" href="https://chanjarster.github.io/img/touch-icon-android.png" />
+<link rel="apple-touch-icon" href="https://chanjarster.github.io/img/touch-icon-apple.png" />
+<link rel="mask-icon" href="https://chanjarster.github.io/img/safari-pinned-tab.svg" color="#5fbf5e" />
+
+
+
+<link rel="stylesheet" href="//cdn.bootcss.com/video.js/6.2.8/alt/video-js-cdn.min.css" />
+
+<link rel="stylesheet" href="https://chanjarster.github.io/css/bundle.8e3aef2bc5.css" />
+
+
+  
+  <!--[if lt IE 9]>
+    <script src="//cdn.bootcss.com/html5shiv/3.7.3/html5shiv.min.js"></script>
+    <script src="//cdn.bootcss.com/respond.js/1.4.2/respond.min.js"></script>
+    <script src="//cdn.bootcss.com/video.js/6.2.8/ie8/videojs-ie8.min.js"></script>
+  <![endif]-->
+
+<!--[if lte IE 11]>
+    <script src="//cdn.bootcss.com/classlist/1.1.20170427/classList.min.js"></script>
+  <![endif]-->
+
+
+<script src="//cdn.bootcss.com/object-fit-images/3.2.3/ofi.min.js"></script>
+
+
+<script src="//cdn.bootcss.com/smooth-scroll/12.1.4/js/smooth-scroll.polyfills.min.js"></script>
+
+
+</head>
+  <body>
+    
+    <div class="suspension">
+      <a title="Go to top" class="to-top is-hide"><span class="icon icon-up"></span></a>
+      
+        
+      
+    </div>
+    
+    
+  <header class="site-header">
+  <img class="avatar" src="https://chanjarster.github.io/img/avatar2.jpg" alt="Avatar">
+  
+  <h2 class="title">颇忒脱的技术博客</h2>
+  
+  <p class="subtitle"></p>
+  <button class="menu-toggle" type="button">
+    <span class="icon icon-menu"></span>
+  </button>
+  <nav class="site-menu collapsed">
+    <h2 class="offscreen">Main Menu</h2>
+    <ul class="menu-list">
+      
+      
+      
+      
+        <li class="menu-item
+            
+            
+            
+              is-active
+            ">
+            <a href="https://chanjarster.github.io/">Home</a>
+          </li>
+      
+        <li class="menu-item
+            
+            
+            ">
+            <a href="https://chanjarster.github.io/tags/%E6%94%B6%E8%97%8F%E5%A4%B9/">Bookmarks</a>
+          </li>
+      
+        <li class="menu-item
+            
+            
+            ">
+            <a href="https://chanjarster.github.io/post/jvm/jvm-index/">JVM</a>
+          </li>
+      
+        <li class="menu-item
+            
+            
+            ">
+            <a href="https://chanjarster.github.io/post/concurrent-programming/index-page">并发编程</a>
+          </li>
+      
+        <li class="menu-item
+            
+            
+            ">
+            <a href="https://github.com/chanjarster">Works</a>
+          </li>
+      
+        <li class="menu-item
+            
+            
+            ">
+            <a href="https://chanjarster.github.io/tags/">Tags</a>
+          </li>
+      
+        <li class="menu-item
+            
+            
+            ">
+            <a href="https://chanjarster.github.io/links/">Links</a>
+          </li>
+      
+    </ul>
+  </nav>
+  <nav class="social-menu collapsed">
+    <h2 class="offscreen">Social Networks</h2>
+    <ul class="social-list">
+
+      
+
+      
+      <li class="social-item">
+        <a href="//github.com/chanjarster" title="GitHub"><span class="icon icon-github"></span></a>
+      </li>
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      <li class="social-item">
+        <a rel="alternate" type="application/rss+xml" href="https://chanjarster.github.io/index.xml"><span class="icon icon-rss" title="RSS"></span></a>
+      </li>
+
+    </ul>
+  </nav>
+</header>
+
+  <section class="main post-detail">
+    <header class="post-header">
+      <h1 class="post-title">Explicit Locks</h1>
+      <p class="post-meta">@颇忒脱 · Nov 5, 2019 · 3 min read</p>
+    </header>
+    <article class="post-content"><p></p>
+
+<p><img src="explicit-locks.png" alt="" /></p>
+
+<h2 id="lock和reentrantlock">Lock和ReentrantLock</h2>
+
+<p>Lock接口：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#66d9ef">public</span> <span style="color:#66d9ef">interface</span> <span style="color:#a6e22e">Lock</span> <span style="color:#f92672">{</span>
+  <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">lock</span><span style="color:#f92672">();</span>
+  <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">lockInterruptibly</span><span style="color:#f92672">()</span> <span style="color:#66d9ef">throws</span> InterruptedException<span style="color:#f92672">;</span>
+  <span style="color:#66d9ef">boolean</span> <span style="color:#a6e22e">tryLock</span><span style="color:#f92672">();</span>
+  <span style="color:#66d9ef">boolean</span> <span style="color:#a6e22e">tryLock</span><span style="color:#f92672">(</span><span style="color:#66d9ef">long</span> timeout<span style="color:#f92672">,</span> TimeUnit unit<span style="color:#f92672">)</span> <span style="color:#66d9ef">throws</span> InterruptedException<span style="color:#f92672">;</span>
+  <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">unlock</span><span style="color:#f92672">();</span>
+  Condition <span style="color:#a6e22e">newCondition</span><span style="color:#f92672">();</span>
+<span style="color:#f92672">}</span></code></pre></div>
+<p>Lock的典型用法：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java">Lock lock <span style="color:#f92672">=</span> <span style="color:#66d9ef">new</span> ReentrantLock<span style="color:#f92672">();</span>
+<span style="color:#f92672">...</span>
+lock<span style="color:#f92672">.</span><span style="color:#a6e22e">lock</span><span style="color:#f92672">();</span>
+<span style="color:#66d9ef">try</span> <span style="color:#f92672">{</span>
+  <span style="color:#75715e">// update object state
+</span><span style="color:#75715e"></span>  <span style="color:#75715e">// catch exceptions and restore invariants if necessary
+</span><span style="color:#75715e"></span><span style="color:#f92672">}</span> <span style="color:#66d9ef">finally</span> <span style="color:#f92672">{</span>
+  lock<span style="color:#f92672">.</span><span style="color:#a6e22e">unlock</span><span style="color:#f92672">();</span>
+<span style="color:#f92672">}</span></code></pre></div>
+<h3 id="轮询的和定时的获得锁">轮询的和定时的获得锁</h3>
+
+<p>一个死锁重试的例子：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#75715e">/**
+</span><span style="color:#75715e"> * DeadlockAvoidance
+</span><span style="color:#75715e"> * &lt;p/&gt;
+</span><span style="color:#75715e"> * Avoiding lock-ordering deadlock using tryLock
+</span><span style="color:#75715e"> *
+</span><span style="color:#75715e"> * @author Brian Goetz and Tim Peierls
+</span><span style="color:#75715e"> */</span>
+<span style="color:#66d9ef">public</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">DeadlockAvoidance</span> <span style="color:#f92672">{</span>
+  <span style="color:#66d9ef">private</span> <span style="color:#66d9ef">static</span> Random rnd <span style="color:#f92672">=</span> <span style="color:#66d9ef">new</span> Random<span style="color:#f92672">();</span>
+
+  <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">boolean</span> <span style="color:#a6e22e">transferMoney</span><span style="color:#f92672">(</span>Account fromAcct<span style="color:#f92672">,</span>
+                 Account toAcct<span style="color:#f92672">,</span>
+                 DollarAmount amount<span style="color:#f92672">,</span>
+                 <span style="color:#66d9ef">long</span> timeout<span style="color:#f92672">,</span>
+                 TimeUnit unit<span style="color:#f92672">)</span>
+      <span style="color:#66d9ef">throws</span> InsufficientFundsException<span style="color:#f92672">,</span> InterruptedException <span style="color:#f92672">{</span>
+    <span style="color:#66d9ef">long</span> fixedDelay <span style="color:#f92672">=</span> getFixedDelayComponentNanos<span style="color:#f92672">(</span>timeout<span style="color:#f92672">,</span> unit<span style="color:#f92672">);</span>
+    <span style="color:#66d9ef">long</span> randMod <span style="color:#f92672">=</span> getRandomDelayModulusNanos<span style="color:#f92672">(</span>timeout<span style="color:#f92672">,</span> unit<span style="color:#f92672">);</span>
+    <span style="color:#66d9ef">long</span> stopTime <span style="color:#f92672">=</span> System<span style="color:#f92672">.</span><span style="color:#a6e22e">nanoTime</span><span style="color:#f92672">()</span> <span style="color:#f92672">+</span> unit<span style="color:#f92672">.</span><span style="color:#a6e22e">toNanos</span><span style="color:#f92672">(</span>timeout<span style="color:#f92672">);</span>
+
+    <span style="color:#66d9ef">while</span> <span style="color:#f92672">(</span><span style="color:#66d9ef">true</span><span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+      <span style="color:#66d9ef">if</span> <span style="color:#f92672">(</span>fromAcct<span style="color:#f92672">.</span><span style="color:#a6e22e">lock</span><span style="color:#f92672">.</span><span style="color:#a6e22e">tryLock</span><span style="color:#f92672">())</span> <span style="color:#f92672">{</span>  <span style="color:#75715e">// 注意这个if，true就是成功获得，false反之
+</span><span style="color:#75715e"></span>        <span style="color:#66d9ef">try</span> <span style="color:#f92672">{</span>
+          <span style="color:#66d9ef">if</span> <span style="color:#f92672">(</span>toAcct<span style="color:#f92672">.</span><span style="color:#a6e22e">lock</span><span style="color:#f92672">.</span><span style="color:#a6e22e">tryLock</span><span style="color:#f92672">())</span> <span style="color:#f92672">{</span>
+            <span style="color:#66d9ef">try</span> <span style="color:#f92672">{</span>
+              <span style="color:#66d9ef">if</span> <span style="color:#f92672">(</span>fromAcct<span style="color:#f92672">.</span><span style="color:#a6e22e">getBalance</span><span style="color:#f92672">().</span><span style="color:#a6e22e">compareTo</span><span style="color:#f92672">(</span>amount<span style="color:#f92672">)</span> <span style="color:#f92672">&lt;</span> 0<span style="color:#f92672">)</span>
+                <span style="color:#66d9ef">throw</span> <span style="color:#66d9ef">new</span> InsufficientFundsException<span style="color:#f92672">();</span>
+              <span style="color:#66d9ef">else</span> <span style="color:#f92672">{</span>
+                fromAcct<span style="color:#f92672">.</span><span style="color:#a6e22e">debit</span><span style="color:#f92672">(</span>amount<span style="color:#f92672">);</span>
+                toAcct<span style="color:#f92672">.</span><span style="color:#a6e22e">credit</span><span style="color:#f92672">(</span>amount<span style="color:#f92672">);</span>
+                <span style="color:#75715e">// 成功得到锁在这里会返回
+</span><span style="color:#75715e"></span>                <span style="color:#66d9ef">return</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">;</span>
+              <span style="color:#f92672">}</span>
+            <span style="color:#f92672">}</span> <span style="color:#66d9ef">finally</span> <span style="color:#f92672">{</span>
+              toAcct<span style="color:#f92672">.</span><span style="color:#a6e22e">lock</span><span style="color:#f92672">.</span><span style="color:#a6e22e">unlock</span><span style="color:#f92672">();</span>
+            <span style="color:#f92672">}</span>
+          <span style="color:#f92672">}</span>
+        <span style="color:#f92672">}</span> <span style="color:#66d9ef">finally</span> <span style="color:#f92672">{</span>
+          fromAcct<span style="color:#f92672">.</span><span style="color:#a6e22e">lock</span><span style="color:#f92672">.</span><span style="color:#a6e22e">unlock</span><span style="color:#f92672">();</span>
+        <span style="color:#f92672">}</span>
+      <span style="color:#f92672">}</span>
+      <span style="color:#75715e">// 到这里说明没有成功
+</span><span style="color:#75715e"></span>      <span style="color:#66d9ef">if</span> <span style="color:#f92672">(</span>System<span style="color:#f92672">.</span><span style="color:#a6e22e">nanoTime</span><span style="color:#f92672">()</span> <span style="color:#f92672">&lt;</span> stopTime<span style="color:#f92672">)</span>
+        <span style="color:#66d9ef">return</span> <span style="color:#66d9ef">false</span><span style="color:#f92672">;</span>
+      <span style="color:#75715e">// 随机sleep避免再次冲突
+</span><span style="color:#75715e"></span>      NANOSECONDS<span style="color:#f92672">.</span><span style="color:#a6e22e">sleep</span><span style="color:#f92672">(</span>fixedDelay <span style="color:#f92672">+</span> rnd<span style="color:#f92672">.</span><span style="color:#a6e22e">nextLong</span><span style="color:#f92672">()</span> <span style="color:#f92672">%</span> randMod<span style="color:#f92672">);</span>
+    <span style="color:#f92672">}</span>
+  <span style="color:#f92672">}</span>
+
+  <span style="color:#66d9ef">private</span> <span style="color:#66d9ef">static</span> <span style="color:#66d9ef">final</span> <span style="color:#66d9ef">int</span> DELAY_FIXED <span style="color:#f92672">=</span> 1<span style="color:#f92672">;</span>
+  <span style="color:#66d9ef">private</span> <span style="color:#66d9ef">static</span> <span style="color:#66d9ef">final</span> <span style="color:#66d9ef">int</span> DELAY_RANDOM <span style="color:#f92672">=</span> 2<span style="color:#f92672">;</span>
+
+  <span style="color:#66d9ef">static</span> <span style="color:#66d9ef">long</span> <span style="color:#a6e22e">getFixedDelayComponentNanos</span><span style="color:#f92672">(</span><span style="color:#66d9ef">long</span> timeout<span style="color:#f92672">,</span> TimeUnit unit<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+    <span style="color:#66d9ef">return</span> DELAY_FIXED<span style="color:#f92672">;</span>
+  <span style="color:#f92672">}</span>
+
+  <span style="color:#66d9ef">static</span> <span style="color:#66d9ef">long</span> <span style="color:#a6e22e">getRandomDelayModulusNanos</span><span style="color:#f92672">(</span><span style="color:#66d9ef">long</span> timeout<span style="color:#f92672">,</span> TimeUnit unit<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+    <span style="color:#66d9ef">return</span> DELAY_RANDOM<span style="color:#f92672">;</span>
+  <span style="color:#f92672">}</span>
+
+  <span style="color:#66d9ef">static</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">DollarAmount</span> <span style="color:#66d9ef">implements</span> Comparable<span style="color:#f92672">&lt;</span>DollarAmount<span style="color:#f92672">&gt;</span> <span style="color:#f92672">{</span>
+    <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">int</span> <span style="color:#a6e22e">compareTo</span><span style="color:#f92672">(</span>DollarAmount other<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+      <span style="color:#66d9ef">return</span> 0<span style="color:#f92672">;</span>
+    <span style="color:#f92672">}</span>
+
+    DollarAmount<span style="color:#f92672">(</span><span style="color:#66d9ef">int</span> dollars<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+    <span style="color:#f92672">}</span>
+  <span style="color:#f92672">}</span>
+
+  <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">Account</span> <span style="color:#f92672">{</span>
+    <span style="color:#66d9ef">public</span> Lock lock<span style="color:#f92672">;</span>
+
+    <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">debit</span><span style="color:#f92672">(</span>DollarAmount d<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+    <span style="color:#f92672">}</span>
+
+    <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">credit</span><span style="color:#f92672">(</span>DollarAmount d<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+    <span style="color:#f92672">}</span>
+
+    DollarAmount <span style="color:#a6e22e">getBalance</span><span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
+      <span style="color:#66d9ef">return</span> <span style="color:#66d9ef">null</span><span style="color:#f92672">;</span>
+    <span style="color:#f92672">}</span>
+  <span style="color:#f92672">}</span>
+
+  <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">InsufficientFundsException</span> <span style="color:#66d9ef">extends</span> Exception <span style="color:#f92672">{</span>
+  <span style="color:#f92672">}</span>
+<span style="color:#f92672">}</span></code></pre></div>
+<p>下面实际上是一个单线程程序，同时为了避免永久等待，引入了超时：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#75715e">/**
+</span><span style="color:#75715e"> * TimedLocking
+</span><span style="color:#75715e"> * &lt;p/&gt;
+</span><span style="color:#75715e"> * Locking with a time budget
+</span><span style="color:#75715e"> *
+</span><span style="color:#75715e"> * @author Brian Goetz and Tim Peierls
+</span><span style="color:#75715e"> */</span>
+<span style="color:#66d9ef">public</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">TimedLocking</span> <span style="color:#f92672">{</span>
+  <span style="color:#66d9ef">private</span> Lock lock <span style="color:#f92672">=</span> <span style="color:#66d9ef">new</span> ReentrantLock<span style="color:#f92672">();</span>
+
+  <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">boolean</span> <span style="color:#a6e22e">trySendOnSharedLine</span><span style="color:#f92672">(</span>String message<span style="color:#f92672">,</span>
+                     <span style="color:#66d9ef">long</span> timeout<span style="color:#f92672">,</span> TimeUnit unit<span style="color:#f92672">)</span>
+      <span style="color:#66d9ef">throws</span> InterruptedException <span style="color:#f92672">{</span>
+    <span style="color:#66d9ef">long</span> nanosToLock <span style="color:#f92672">=</span> unit<span style="color:#f92672">.</span><span style="color:#a6e22e">toNanos</span><span style="color:#f92672">(</span>timeout<span style="color:#f92672">)</span>
+        <span style="color:#f92672">-</span> estimatedNanosToSend<span style="color:#f92672">(</span>message<span style="color:#f92672">);</span> <span style="color:#75715e">// 这个很重要，能让超时时间更准确一些
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">if</span> <span style="color:#f92672">(!</span>lock<span style="color:#f92672">.</span><span style="color:#a6e22e">tryLock</span><span style="color:#f92672">(</span>nanosToLock<span style="color:#f92672">,</span> NANOSECONDS<span style="color:#f92672">))</span>
+      <span style="color:#66d9ef">return</span> <span style="color:#66d9ef">false</span><span style="color:#f92672">;</span>
+    <span style="color:#66d9ef">try</span> <span style="color:#f92672">{</span>
+      <span style="color:#66d9ef">return</span> sendOnSharedLine<span style="color:#f92672">(</span>message<span style="color:#f92672">);</span>
+    <span style="color:#f92672">}</span> <span style="color:#66d9ef">finally</span> <span style="color:#f92672">{</span>
+      lock<span style="color:#f92672">.</span><span style="color:#a6e22e">unlock</span><span style="color:#f92672">();</span>
+    <span style="color:#f92672">}</span>
+  <span style="color:#f92672">}</span>
+
+  <span style="color:#66d9ef">private</span> <span style="color:#66d9ef">boolean</span> <span style="color:#a6e22e">sendOnSharedLine</span><span style="color:#f92672">(</span>String message<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+    <span style="color:#75715e">/* send something */</span>
+    <span style="color:#66d9ef">return</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">;</span>
+  <span style="color:#f92672">}</span>
+
+  <span style="color:#66d9ef">long</span> <span style="color:#a6e22e">estimatedNanosToSend</span><span style="color:#f92672">(</span>String message<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+    <span style="color:#66d9ef">return</span> message<span style="color:#f92672">.</span><span style="color:#a6e22e">length</span><span style="color:#f92672">();</span>
+  <span style="color:#f92672">}</span>
+<span style="color:#f92672">}</span></code></pre></div>
+<h2 id="读写锁">读写锁</h2>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#66d9ef">public</span> <span style="color:#66d9ef">interface</span> <span style="color:#a6e22e">ReadWriteLock</span> <span style="color:#f92672">{</span>
+  Lock <span style="color:#a6e22e">readLock</span><span style="color:#f92672">();</span>
+  Lock <span style="color:#a6e22e">writeLock</span><span style="color:#f92672">();</span>
+<span style="color:#f92672">}</span></code></pre></div>
+<p>例子代码（实际上更推荐ConcurrentHashMap，这里只是一个例子）：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#75715e">/**
+</span><span style="color:#75715e"> * ReadWriteMap
+</span><span style="color:#75715e"> * &lt;p/&gt;
+</span><span style="color:#75715e"> * Wrapping a Map with a read-write lock
+</span><span style="color:#75715e"> *
+</span><span style="color:#75715e"> * @author Brian Goetz and Tim Peierls
+</span><span style="color:#75715e"> */</span>
+<span style="color:#66d9ef">public</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">ReadWriteMap</span> <span style="color:#f92672">&lt;</span>K<span style="color:#f92672">,</span>V<span style="color:#f92672">&gt;</span> <span style="color:#f92672">{</span>
+  <span style="color:#66d9ef">private</span> <span style="color:#66d9ef">final</span> Map<span style="color:#f92672">&lt;</span>K<span style="color:#f92672">,</span> V<span style="color:#f92672">&gt;</span> map<span style="color:#f92672">;</span>
+  <span style="color:#66d9ef">private</span> <span style="color:#66d9ef">final</span> ReadWriteLock lock <span style="color:#f92672">=</span> <span style="color:#66d9ef">new</span> ReentrantReadWriteLock<span style="color:#f92672">();</span>
+  <span style="color:#66d9ef">private</span> <span style="color:#66d9ef">final</span> Lock r <span style="color:#f92672">=</span> lock<span style="color:#f92672">.</span><span style="color:#a6e22e">readLock</span><span style="color:#f92672">();</span>
+  <span style="color:#66d9ef">private</span> <span style="color:#66d9ef">final</span> Lock w <span style="color:#f92672">=</span> lock<span style="color:#f92672">.</span><span style="color:#a6e22e">writeLock</span><span style="color:#f92672">();</span>
+
+  <span style="color:#66d9ef">public</span> <span style="color:#a6e22e">ReadWriteMap</span><span style="color:#f92672">(</span>Map<span style="color:#f92672">&lt;</span>K<span style="color:#f92672">,</span> V<span style="color:#f92672">&gt;</span> map<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+    <span style="color:#66d9ef">this</span><span style="color:#f92672">.</span><span style="color:#a6e22e">map</span> <span style="color:#f92672">=</span> map<span style="color:#f92672">;</span>
+  <span style="color:#f92672">}</span>
+
+  <span style="color:#66d9ef">public</span> V <span style="color:#a6e22e">put</span><span style="color:#f92672">(</span>K key<span style="color:#f92672">,</span> V value<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+    w<span style="color:#f92672">.</span><span style="color:#a6e22e">lock</span><span style="color:#f92672">();</span>
+    <span style="color:#66d9ef">try</span> <span style="color:#f92672">{</span>
+      <span style="color:#66d9ef">return</span> map<span style="color:#f92672">.</span><span style="color:#a6e22e">put</span><span style="color:#f92672">(</span>key<span style="color:#f92672">,</span> value<span style="color:#f92672">);</span>
+    <span style="color:#f92672">}</span> <span style="color:#66d9ef">finally</span> <span style="color:#f92672">{</span>
+      w<span style="color:#f92672">.</span><span style="color:#a6e22e">unlock</span><span style="color:#f92672">();</span>
+    <span style="color:#f92672">}</span>
+  <span style="color:#f92672">}</span>
+
+  <span style="color:#66d9ef">public</span> V <span style="color:#a6e22e">remove</span><span style="color:#f92672">(</span>Object key<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+    w<span style="color:#f92672">.</span><span style="color:#a6e22e">lock</span><span style="color:#f92672">();</span>
+    <span style="color:#66d9ef">try</span> <span style="color:#f92672">{</span>
+      <span style="color:#66d9ef">return</span> map<span style="color:#f92672">.</span><span style="color:#a6e22e">remove</span><span style="color:#f92672">(</span>key<span style="color:#f92672">);</span>
+    <span style="color:#f92672">}</span> <span style="color:#66d9ef">finally</span> <span style="color:#f92672">{</span>
+      w<span style="color:#f92672">.</span><span style="color:#a6e22e">unlock</span><span style="color:#f92672">();</span>
+    <span style="color:#f92672">}</span>
+  <span style="color:#f92672">}</span>
+
+  <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">putAll</span><span style="color:#f92672">(</span>Map<span style="color:#f92672">&lt;?</span> <span style="color:#66d9ef">extends</span> K<span style="color:#f92672">,</span> <span style="color:#f92672">?</span> <span style="color:#66d9ef">extends</span> V<span style="color:#f92672">&gt;</span> m<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+    w<span style="color:#f92672">.</span><span style="color:#a6e22e">lock</span><span style="color:#f92672">();</span>
+    <span style="color:#66d9ef">try</span> <span style="color:#f92672">{</span>
+      map<span style="color:#f92672">.</span><span style="color:#a6e22e">putAll</span><span style="color:#f92672">(</span>m<span style="color:#f92672">);</span>
+    <span style="color:#f92672">}</span> <span style="color:#66d9ef">finally</span> <span style="color:#f92672">{</span>
+      w<span style="color:#f92672">.</span><span style="color:#a6e22e">unlock</span><span style="color:#f92672">();</span>
+    <span style="color:#f92672">}</span>
+  <span style="color:#f92672">}</span>
+
+  <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">clear</span><span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
+    w<span style="color:#f92672">.</span><span style="color:#a6e22e">lock</span><span style="color:#f92672">();</span>
+    <span style="color:#66d9ef">try</span> <span style="color:#f92672">{</span>
+      map<span style="color:#f92672">.</span><span style="color:#a6e22e">clear</span><span style="color:#f92672">();</span>
+    <span style="color:#f92672">}</span> <span style="color:#66d9ef">finally</span> <span style="color:#f92672">{</span>
+      w<span style="color:#f92672">.</span><span style="color:#a6e22e">unlock</span><span style="color:#f92672">();</span>
+    <span style="color:#f92672">}</span>
+  <span style="color:#f92672">}</span>
+
+  <span style="color:#66d9ef">public</span> V <span style="color:#a6e22e">get</span><span style="color:#f92672">(</span>Object key<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+    r<span style="color:#f92672">.</span><span style="color:#a6e22e">lock</span><span style="color:#f92672">();</span>
+    <span style="color:#66d9ef">try</span> <span style="color:#f92672">{</span>
+      <span style="color:#66d9ef">return</span> map<span style="color:#f92672">.</span><span style="color:#a6e22e">get</span><span style="color:#f92672">(</span>key<span style="color:#f92672">);</span>
+    <span style="color:#f92672">}</span> <span style="color:#66d9ef">finally</span> <span style="color:#f92672">{</span>
+      r<span style="color:#f92672">.</span><span style="color:#a6e22e">unlock</span><span style="color:#f92672">();</span>
+    <span style="color:#f92672">}</span>
+  <span style="color:#f92672">}</span>
+
+  <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">int</span> <span style="color:#a6e22e">size</span><span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
+    r<span style="color:#f92672">.</span><span style="color:#a6e22e">lock</span><span style="color:#f92672">();</span>
+    <span style="color:#66d9ef">try</span> <span style="color:#f92672">{</span>
+      <span style="color:#66d9ef">return</span> map<span style="color:#f92672">.</span><span style="color:#a6e22e">size</span><span style="color:#f92672">();</span>
+    <span style="color:#f92672">}</span> <span style="color:#66d9ef">finally</span> <span style="color:#f92672">{</span>
+      r<span style="color:#f92672">.</span><span style="color:#a6e22e">unlock</span><span style="color:#f92672">();</span>
+    <span style="color:#f92672">}</span>
+  <span style="color:#f92672">}</span>
+
+  <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">boolean</span> <span style="color:#a6e22e">isEmpty</span><span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
+    r<span style="color:#f92672">.</span><span style="color:#a6e22e">lock</span><span style="color:#f92672">();</span>
+    <span style="color:#66d9ef">try</span> <span style="color:#f92672">{</span>
+      <span style="color:#66d9ef">return</span> map<span style="color:#f92672">.</span><span style="color:#a6e22e">isEmpty</span><span style="color:#f92672">();</span>
+    <span style="color:#f92672">}</span> <span style="color:#66d9ef">finally</span> <span style="color:#f92672">{</span>
+      r<span style="color:#f92672">.</span><span style="color:#a6e22e">unlock</span><span style="color:#f92672">();</span>
+    <span style="color:#f92672">}</span>
+  <span style="color:#f92672">}</span>
+
+  <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">boolean</span> <span style="color:#a6e22e">containsKey</span><span style="color:#f92672">(</span>Object key<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+    r<span style="color:#f92672">.</span><span style="color:#a6e22e">lock</span><span style="color:#f92672">();</span>
+    <span style="color:#66d9ef">try</span> <span style="color:#f92672">{</span>
+      <span style="color:#66d9ef">return</span> map<span style="color:#f92672">.</span><span style="color:#a6e22e">containsKey</span><span style="color:#f92672">(</span>key<span style="color:#f92672">);</span>
+    <span style="color:#f92672">}</span> <span style="color:#66d9ef">finally</span> <span style="color:#f92672">{</span>
+      r<span style="color:#f92672">.</span><span style="color:#a6e22e">unlock</span><span style="color:#f92672">();</span>
+    <span style="color:#f92672">}</span>
+  <span style="color:#f92672">}</span>
+
+  <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">boolean</span> <span style="color:#a6e22e">containsValue</span><span style="color:#f92672">(</span>Object value<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+    r<span style="color:#f92672">.</span><span style="color:#a6e22e">lock</span><span style="color:#f92672">();</span>
+    <span style="color:#66d9ef">try</span> <span style="color:#f92672">{</span>
+      <span style="color:#66d9ef">return</span> map<span style="color:#f92672">.</span><span style="color:#a6e22e">containsValue</span><span style="color:#f92672">(</span>value<span style="color:#f92672">);</span>
+    <span style="color:#f92672">}</span> <span style="color:#66d9ef">finally</span> <span style="color:#f92672">{</span>
+      r<span style="color:#f92672">.</span><span style="color:#a6e22e">unlock</span><span style="color:#f92672">();</span>
+    <span style="color:#f92672">}</span>
+  <span style="color:#f92672">}</span>
+<span style="color:#f92672">}</span></code></pre></div></article>
+    <footer class="post-footer">
+      
+      <ul class="post-tags">
+        
+          <li><a href="https://chanjarster.github.io/tags/arts"><span class="tag">ARTS</span></a></li>
+        
+          <li><a href="https://chanjarster.github.io/tags/arts-t"><span class="tag">ARTS-T</span></a></li>
+        
+          <li><a href="https://chanjarster.github.io/tags/%E5%B9%B6%E5%8F%91%E7%BC%96%E7%A8%8B"><span class="tag">并发编程</span></a></li>
+        
+      </ul>
+      
+      <p class="post-copyright">
+        
+      </p>
+    </footer>
+    
+      
+    
+  </section>
+  <footer class="site-footer">
+  <p>© 2017-2019 颇忒脱的技术博客</p>
+  <p>Powered by <a href="https://gohugo.io/" target="_blank">Hugo</a> with theme <a href="https://github.com/laozhu/hugo-nuo" target="_blank">Nuo</a>.</p>
+  
+</footer>
+
+
+
+<script async src="//cdn.bootcss.com/video.js/6.2.8/alt/video.novtt.min.js"></script>
+<script async src="//cdn.bootcss.com/mathjax/2.7.2/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    tex2jax: {
+      inlineMath: [['$','$'], ['\\(','\\)']],
+      displayMath: [['$$','$$'], ['\\[','\\]']],
+      processEscapes: true,
+      processEnvironments: true,
+      skipTags: ['script', 'noscript', 'style', 'textarea', 'pre'],
+      TeX: { equationNumbers: { autoNumber: "AMS" },
+      extensions: ["AMSmath.js", "AMSsymbols.js"] }
+    }
+  });
+</script>
+<script type="text/x-mathjax-config">
+  // Fix <code> tags after MathJax finishes running. This is a
+  // hack to overcome a shortcoming of Markdown. Discussion at
+  // https://github.com/mojombo/jekyll/issues/199
+  MathJax.Hub.Queue(() => {
+    MathJax.Hub.getAllJax().map(v => v.SourceElement().parentNode.className += ' has-jax');
+  });
+</script>
+
+<script src="https://chanjarster.github.io/js/bundle.273f9ac6f0.js"></script>
+
+
+
+
+  </body>
+</html>
