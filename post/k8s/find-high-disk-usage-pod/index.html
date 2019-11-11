@@ -5,7 +5,7 @@
   <meta charset="utf-8" />
 
   
-  <title>算法 - 时间复杂度</title>
+  <title>查找K8S中高磁盘占用Pod</title>
 
   
   
@@ -23,7 +23,7 @@
   
     <meta name="twitter:card" content="summary" />
     <meta name="twitter:site" content="@gohugoio" />
-    <meta name="twitter:title" content="算法 - 时间复杂度" />
+    <meta name="twitter:title" content="查找K8S中高磁盘占用Pod" />
     <meta name="twitter:description" content="
 " />
     <meta name="twitter:image" content="https://chanjarster.github.io/img/avatar.jpg" />
@@ -31,10 +31,10 @@
 
   
   <meta property="og:type" content="article" />
-  <meta property="og:title" content="算法 - 时间复杂度" />
+  <meta property="og:title" content="查找K8S中高磁盘占用Pod" />
   <meta property="og:description" content="
 " />
-  <meta property="og:url" content="https://chanjarster.github.io/post/algo/1-complexity/" />
+  <meta property="og:url" content="https://chanjarster.github.io/post/k8s/find-high-disk-usage-pod/" />
   <meta property="og:image" content="https://chanjarster.github.io/img/avatar.jpg" />
 
 
@@ -43,7 +43,7 @@
 <meta name="generator" content="Hugo 0.49.2" />
 
 
-<link rel="canonical" href="https://chanjarster.github.io/post/algo/1-complexity/" />
+<link rel="canonical" href="https://chanjarster.github.io/post/k8s/find-high-disk-usage-pod/" />
 
 <meta name="renderer" content="webkit" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
@@ -238,76 +238,49 @@
 
   <section class="main post-detail">
     <header class="post-header">
-      <h1 class="post-title">算法 - 时间复杂度</h1>
-      <p class="post-meta">@颇忒脱 · Feb 13, 2019 · 1 min read</p>
+      <h1 class="post-title">查找K8S中高磁盘占用Pod</h1>
+      <p class="post-meta">@颇忒脱 · Nov 11, 2019 · 1 min read</p>
     </header>
     <article class="post-content"><p></p>
 
-<p><a href="https://time.geekbang.org/column/article/40036">极客时间 - 数据结构与算法之美 - 03 | 复杂度分析（上）：如何分析、统计算法的执行效率和资源消耗？</a></p>
+<p>这是一次排障过程，发现Worker节点磁盘占用高，K8S报告<code>kublet has disk pressure</code>。</p>
 
-<h2 id="unit-time">unit_time</h2>
+<p>K8S是Rancher管理的，开启了监控（Grafana+Prometheus），在Grafana监控大盘观察，的确发现节点的磁盘可用空间在10%左右，节点磁盘大小为1T，如此占用不正常。</p>
 
-<p>读、运算、写均算作一个unit_time</p>
+<p>尝试在Grafana查找哪个Pod占用的磁盘，但是并未提供这样的视图。</p>
 
-<h2 id="计算技巧">计算技巧</h2>
+<p>在节点上执行：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">sudo du -h --max-depth <span style="color:#ae81ff">1</span> /var/lib/docker/</code></pre></div>
+<p>得到的确是Docker占用的磁盘。</p>
 
-<ol>
-<li>只关注循环执行次数最多的一段代码。</li>
-<li>加法法则：总复杂度等于量级最大的那段代码的复杂度。</li>
-<li>乘法法则：嵌套代码的复杂度等于嵌套内外代码复杂度的乘积。</li>
-</ol>
+<p>在节点上执行：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">docker system df</code></pre></div>
+<p>得到Container占用磁盘特别高</p>
 
-<h2 id="复杂度量级">复杂度量级</h2>
+<p>在节点上执行：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">docker ps -a --format <span style="color:#e6db74">&#34;table {{.Size}}\t{{.Names}}&#34;</span></code></pre></div>
+<p>得到容器的磁盘占用，发现<code>kubelet</code>占用磁盘特别高，且符合<code>docker system df</code>的结果。</p>
 
-<ul>
-<li>常数阶 O(1)</li>
-<li>线性阶 O(n)</li>
-<li>对数阶 O(logn)</li>
-<li>线性对数阶 O(nLogn)</li>
-<li>平方阶 O(n^2)、立方阶 O(n^3)、k次方阶 O(n^k)</li>
-<li>指数阶 O(2^n)</li>
-<li>阶乘阶 O(n!)</li>
-</ul>
+<p>进入<code>kubelet</code>查看占用情况：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">docker exec -it kubelet /bin/bash
+du -h --max-depth <span style="color:#ae81ff">1</span></code></pre></div>
+<p>发现在<code>/v8</code>磁盘占用了大部分空间，进入后查看发现大量应用日志。</p>
 
-<p>举例：</p>
+<p>找到相关应用开发人员，原来是他们使用了hostPath来挂载卷，把日志都写到了节点上，且没有开启日志滚动和压缩，导致占用大量节点磁盘。</p>
 
-<p>O(1)</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#66d9ef">int</span> i <span style="color:#f92672">=</span> 8<span style="color:#f92672">;</span>
-<span style="color:#66d9ef">int</span> j <span style="color:#f92672">=</span> 6<span style="color:#f92672">;</span>
-<span style="color:#66d9ef">int</span> sum <span style="color:#f92672">=</span> i <span style="color:#f92672">+</span> j<span style="color:#f92672">;</span></code></pre></div>
-<p>O(n)</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java">i<span style="color:#f92672">=</span>1<span style="color:#f92672">;</span>
-<span style="color:#66d9ef">while</span> <span style="color:#f92672">(</span>i <span style="color:#f92672">&lt;=</span> n<span style="color:#f92672">)</span>  <span style="color:#f92672">{</span>
-  i <span style="color:#f92672">=</span> i <span style="color:#f92672">*</span> 2<span style="color:#f92672">;</span>
-<span style="color:#f92672">}</span></code></pre></div>
-<p>O(m + n)</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#66d9ef">int</span> <span style="color:#a6e22e">cal</span><span style="color:#f92672">(</span><span style="color:#66d9ef">int</span> m<span style="color:#f92672">,</span> <span style="color:#66d9ef">int</span> n<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
-  <span style="color:#66d9ef">int</span> sum_1 <span style="color:#f92672">=</span> 0<span style="color:#f92672">;</span>
-  <span style="color:#66d9ef">int</span> i <span style="color:#f92672">=</span> 1<span style="color:#f92672">;</span>
-  <span style="color:#66d9ef">for</span> <span style="color:#f92672">(;</span> i <span style="color:#f92672">&lt;</span> m<span style="color:#f92672">;</span> <span style="color:#f92672">++</span>i<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
-    sum_1 <span style="color:#f92672">=</span> sum_1 <span style="color:#f92672">+</span> i<span style="color:#f92672">;</span>
-  <span style="color:#f92672">}</span>
-
-  <span style="color:#66d9ef">int</span> sum_2 <span style="color:#f92672">=</span> 0<span style="color:#f92672">;</span>
-  <span style="color:#66d9ef">int</span> j <span style="color:#f92672">=</span> 1<span style="color:#f92672">;</span>
-  <span style="color:#66d9ef">for</span> <span style="color:#f92672">(;</span> j <span style="color:#f92672">&lt;</span> n<span style="color:#f92672">;</span> <span style="color:#f92672">++</span>j<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
-    sum_2 <span style="color:#f92672">=</span> sum_2 <span style="color:#f92672">+</span> j<span style="color:#f92672">;</span>
-  <span style="color:#f92672">}</span>
-
-  <span style="color:#66d9ef">return</span> sum_1 <span style="color:#f92672">+</span> sum_2<span style="color:#f92672">;</span>
-<span style="color:#f92672">}</span></code></pre></div></article>
+<p>后经研究发现，hostPath挂载的卷在Deployment/StatefulSets删除后也依然存在，手动删除后问题解决，并让开发人员不要使用hostPath后解决。</p></article>
     <footer class="post-footer">
       
       <ul class="post-tags">
         
-          <li><a href="https://chanjarster.github.io/tags/arts"><span class="tag">ARTS</span></a></li>
+          <li><a href="https://chanjarster.github.io/tags/k8s"><span class="tag">K8s</span></a></li>
         
-          <li><a href="https://chanjarster.github.io/tags/arts-a"><span class="tag">ARTS-A</span></a></li>
+          <li><a href="https://chanjarster.github.io/tags/troubleshooting"><span class="tag">Troubleshooting</span></a></li>
         
       </ul>
       
       <p class="post-copyright">
-        This post was published <strong>270</strong> days ago, content in the post may be inaccurate, even wrong now, please take risk yourself.
+        
       </p>
     </footer>
     
