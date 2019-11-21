@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+<head>
+
+  <meta charset="utf-8" />
+
+  
+  <title>事务 - Saga</title>
+
+  
+  
+
+
+
+
+
+  
+  <meta name="author" content="颇忒脱" />
+  <meta name="description" content="
+" />
+
+  
+  
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:site" content="@gohugoio" />
+    <meta name="twitter:title" content="事务 - Saga" />
+    <meta name="twitter:description" content="
+" />
+    <meta name="twitter:image" content="https://chanjarster.github.io/img/avatar.jpg" />
+  
+
+  
+  <meta property="og:type" content="article" />
+  <meta property="og:title" content="事务 - Saga" />
+  <meta property="og:description" content="
+" />
+  <meta property="og:url" content="https://chanjarster.github.io/post/d-transactions/saga/" />
+  <meta property="og:image" content="https://chanjarster.github.io/img/avatar.jpg" />
+
+
+
+
+<meta name="generator" content="Hugo 0.49.2" />
+
+
+<link rel="canonical" href="https://chanjarster.github.io/post/d-transactions/saga/" />
+
+<meta name="renderer" content="webkit" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<meta name="format-detection" content="telephone=no,email=no,adress=no" />
+<meta http-equiv="Cache-Control" content="no-transform" />
+
+
+<meta name="robots" content="index,follow" />
+<meta name="referrer" content="origin-when-cross-origin" />
+
+
+
+
+
+
+
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="颇忒脱的技术博客" />
+<meta name="msapplication-tooltip" content="颇忒脱的技术博客" />
+<meta name='msapplication-navbutton-color' content="#5fbf5e" />
+<meta name="msapplication-TileColor" content="#5fbf5e" />
+<meta name="msapplication-TileImage" content="/img/tile-image-windows.png" />
+<link rel="icon" href="https://chanjarster.github.io/img/favicon.ico" />
+<link rel="icon" type="image/png" sizes="16x16" href="https://chanjarster.github.io/img/favicon-16x16.png" />
+<link rel="icon" type="image/png" sizes="32x32" href="https://chanjarster.github.io/img/favicon-32x32.png" />
+<link rel="icon" sizes="192x192" href="https://chanjarster.github.io/img/touch-icon-android.png" />
+<link rel="apple-touch-icon" href="https://chanjarster.github.io/img/touch-icon-apple.png" />
+<link rel="mask-icon" href="https://chanjarster.github.io/img/safari-pinned-tab.svg" color="#5fbf5e" />
+
+
+
+<link rel="stylesheet" href="//cdn.bootcss.com/video.js/6.2.8/alt/video-js-cdn.min.css" />
+
+<link rel="stylesheet" href="https://chanjarster.github.io/css/bundle.8e3aef2bc5.css" />
+
+
+  
+  <!--[if lt IE 9]>
+    <script src="//cdn.bootcss.com/html5shiv/3.7.3/html5shiv.min.js"></script>
+    <script src="//cdn.bootcss.com/respond.js/1.4.2/respond.min.js"></script>
+    <script src="//cdn.bootcss.com/video.js/6.2.8/ie8/videojs-ie8.min.js"></script>
+  <![endif]-->
+
+<!--[if lte IE 11]>
+    <script src="//cdn.bootcss.com/classlist/1.1.20170427/classList.min.js"></script>
+  <![endif]-->
+
+
+<script src="//cdn.bootcss.com/object-fit-images/3.2.3/ofi.min.js"></script>
+
+
+<script src="//cdn.bootcss.com/smooth-scroll/12.1.4/js/smooth-scroll.polyfills.min.js"></script>
+
+
+</head>
+  <body>
+    
+    <div class="suspension">
+      <a title="Go to top" class="to-top is-hide"><span class="icon icon-up"></span></a>
+      
+        
+      
+    </div>
+    
+    
+  <header class="site-header">
+  <img class="avatar" src="https://chanjarster.github.io/img/avatar2.jpg" alt="Avatar">
+  
+  <h2 class="title">颇忒脱的技术博客</h2>
+  
+  <p class="subtitle"></p>
+  <button class="menu-toggle" type="button">
+    <span class="icon icon-menu"></span>
+  </button>
+  <nav class="site-menu collapsed">
+    <h2 class="offscreen">Main Menu</h2>
+    <ul class="menu-list">
+      
+      
+      
+      
+        <li class="menu-item
+            
+            
+            
+              is-active
+            ">
+            <a href="https://chanjarster.github.io/">Home</a>
+          </li>
+      
+        <li class="menu-item
+            
+            
+            ">
+            <a href="https://chanjarster.github.io/tags/%E6%94%B6%E8%97%8F%E5%A4%B9/">Bookmarks</a>
+          </li>
+      
+        <li class="menu-item
+            
+            
+            ">
+            <a href="https://chanjarster.github.io/post/jvm/jvm-index/">JVM</a>
+          </li>
+      
+        <li class="menu-item
+            
+            
+            ">
+            <a href="https://chanjarster.github.io/post/concurrent-programming/index-page">并发编程</a>
+          </li>
+      
+        <li class="menu-item
+            
+            
+            ">
+            <a href="https://github.com/chanjarster">Works</a>
+          </li>
+      
+        <li class="menu-item
+            
+            
+            ">
+            <a href="https://chanjarster.github.io/tags/">Tags</a>
+          </li>
+      
+        <li class="menu-item
+            
+            
+            ">
+            <a href="https://chanjarster.github.io/links/">Links</a>
+          </li>
+      
+    </ul>
+  </nav>
+  <nav class="social-menu collapsed">
+    <h2 class="offscreen">Social Networks</h2>
+    <ul class="social-list">
+
+      
+
+      
+      <li class="social-item">
+        <a href="//github.com/chanjarster" title="GitHub"><span class="icon icon-github"></span></a>
+      </li>
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      <li class="social-item">
+        <a rel="alternate" type="application/rss+xml" href="https://chanjarster.github.io/index.xml"><span class="icon icon-rss" title="RSS"></span></a>
+      </li>
+
+    </ul>
+  </nav>
+</header>
+
+  <section class="main post-detail">
+    <header class="post-header">
+      <h1 class="post-title">事务 - Saga</h1>
+      <p class="post-meta">@颇忒脱 · Mar 21, 2018 · 1 min read</p>
+    </header>
+    <article class="post-content"><p></p>
+
+<p><a href="https://github.com/chanjarster/transactions">github</a></p>
+
+<p>1987年普林斯顿大学的Hector Garcia-Molina和Kenneth Salem发表了一篇Paper <a href="ftp://ftp.cs.princeton.edu/reports/1987/070.pdf">Sagas</a>，讲述的是如何处理long lived transaction（长活事务）。听起来是不是觉得和分布式事务很像？没错，下面来看看这个来自1987年的解决方案是如何启发当今的分布式事务问题的。</p>
+
+<h2 id="协议介绍">协议介绍</h2>
+
+<p>Saga的组成：</p>
+
+<ul>
+<li>每个Saga由一系列sub-transaction T<sub>i</sub> 组成</li>
+<li>每个T<sub>i</sub> 都有对应的补偿动作C<sub>i</sub>，补偿动作用于撤销T<sub>i</sub>造成的结果</li>
+</ul>
+
+<p>可以看到，和<a href="https://segmentfault.com/a/1190000013811149">TCC</a>相比，Saga没有“预留”动作，它的T<sub>i</sub>就是直接提交到库。</p>
+
+<p>Saga的执行顺序有两种：</p>
+
+<ul>
+<li>T<sub>1</sub>, T<sub>2</sub>, T<sub>3</sub>, &hellip;, T<sub>n</sub></li>
+<li>T<sub>1</sub>, T<sub>2</sub>, &hellip;, T<sub>j</sub>, C<sub>j</sub>,&hellip;, C<sub>2</sub>, C<sub>1</sub>，其中0 &lt; j &lt; n</li>
+</ul>
+
+<p>Saga定义了两种恢复策略：</p>
+
+<ul>
+<li>backward recovery，向后恢复，即上面提到的第二种执行顺序，其中j是发生错误的sub-transaction，这种做法的效果是撤销掉之前所有成功的sub-transation，使得整个Saga的执行结果撤销。</li>
+<li>forward recovery，向前恢复，适用于必须要成功的场景，执行顺序是类似于这样的：T<sub>1</sub>, T<sub>2</sub>, &hellip;, T<sub>j</sub>(失败), T<sub>j</sub>(重试),&hellip;, T<sub>n</sub>，其中j是发生错误的sub-transaction。该情况下不需要C<sub>i</sub>。</li>
+</ul>
+
+<h2 id="对于acid的保证">对于ACID的保证</h2>
+
+<p>Saga对于ACID的保证和TCC一样：</p>
+
+<ul>
+<li>A，正常情况下保证。</li>
+<li>C，在某个时间点，会出现A库和B库的数据违反一致性要求的情况，但是最终是一致的。</li>
+<li>I，在某个时间点，A事务能够读到B事务部分提交的结果。</li>
+<li>D，和本地事务一样，只要commit则数据被持久。</li>
+</ul>
+
+<h2 id="和tcc对比">和TCC对比</h2>
+
+<p>Saga相比TCC的缺点是缺少预留动作，导致补偿动作的实现比较麻烦：T<sub>i</sub>就是commit，比如一个业务是发送邮件，在TCC模式下，先保存草稿（Try）再发送（Confirm），撤销的话直接删除草稿（Cancel）就行了。而Saga则就直接发送邮件了（T<sub>i</sub>），如果要撤销则得再发送一份邮件说明撤销（C<sub>i</sub>），实现起来有一些麻烦。</p>
+
+<p>如果把上面的发邮件的例子换成：A服务在完成T<sub>i</sub>后立即发送Event到ESB（企业服务总线，可以认为是一个消息中间件），下游服务监听到这个Event做自己的一些工作然后再发送Event到ESB，如果A服务执行补偿动作C<sub>i</sub>，那么整个补偿动作的层级就很深。</p>
+
+<p>不过没有预留动作也可以认为是优点：</p>
+
+<ul>
+<li>有些业务很简单，套用TCC需要修改原来的业务逻辑，而Saga只需要添加一个补偿动作就行了。</li>
+<li>TCC最少通信次数为2n，而Saga为n（n=sub-transaction的数量）。</li>
+<li>有些第三方服务没有Try接口，TCC模式实现起来就比较tricky了，而Saga则很简单。</li>
+<li>没有预留动作就意味着不必担心资源释放的问题，异常处理起来也更简单（请对比Saga的恢复策略和TCC的异常处理）。</li>
+</ul>
+
+<h2 id="实现saga的注意事项">实现Saga的注意事项</h2>
+
+<p>对于服务来说，实现Saga有以下这些要求：</p>
+
+<ol>
+<li>T<sub>i</sub>和C<sub>i</sub>是幂等的。</li>
+<li>C<sub>i</sub>必须是能够成功的，如果无法成功则需要人工介入。</li>
+<li>T<sub>i</sub> - C<sub>i</sub>和C<sub>i</sub> - T<sub>i</sub>的执行结果必须是一样的：sub-transaction被撤销了。</li>
+</ol>
+
+<p>第一点要求T<sub>i</sub>和C<sub>i</sub>是幂等的，举个例子，假设在执行T<sub>i</sub>的时候超时了，此时我们是不知道执行结果的，如果采用forward recovery策略就会再次发送T<sub>i</sub>，那么就有可能出现T<sub>i</sub>被执行了两次，所以要求T<sub>i</sub>幂等。如果采用backward recovery策略就会发送C<sub>i</sub>，而如果C<sub>i</sub>也超时了，就会尝试再次发送C<sub>i</sub>，那么就有可能出现C<sub>i</sub>被执行两次，所以要求C<sub>i</sub>幂等。</p>
+
+<p>第二点要求C<sub>i</sub>必须能够成功，这个很好理解，因为，如果C<sub>i</sub>不能执行成功就意味着整个Saga无法完全撤销，这个是不允许的。但总会出现一些特殊情况比如C<sub>i</sub>的代码有bug、服务长时间崩溃等，这个时候就需要人工介入了。</p>
+
+<p>第三点乍看起来比较奇怪，举例说明，还是考虑T<sub>i</sub>执行超时的场景，我们采用了backward recovery，发送一个C<sub>i</sub>，那么就会有三种情况：</p>
+
+<ol>
+<li>T<sub>i</sub>的请求丢失了，服务之前没有、之后也不会执行T<sub>i</sub></li>
+<li>T<sub>i</sub>在C<sub>i</sub>之前执行</li>
+<li>C<sub>i</sub>在T<sub>i</sub>之前执行</li>
+</ol>
+
+<p>对于第1种情况，容易处理。对于第2、3种情况，则要求T<sub>i</sub>和C<sub>i</sub>是可交换的（commutative)，并且其最终结果都是sub-transaction被撤销。</p>
+
+<h2 id="参考资料">参考资料</h2>
+
+<ul>
+<li><a href="ftp://ftp.cs.princeton.edu/reports/1987/070.pdf">Paper - Sagas</a></li>
+<li><a href="https://servicecomb.incubator.apache.org/docs/distributed_saga_1/">Eventual Data Consistency Solution in ServiceComb - part 1</a></li>
+<li><a href="https://servicecomb.incubator.apache.org/docs/distributed_saga_2/">Eventual Data Consistency Solution in ServiceComb - part 2</a></li>
+<li><a href="https://servicecomb.incubator.apache.org/docs/distributed_saga_3/">Eventual Data Consistency Solution in ServiceComb - part 3</a></li>
+<li><a href="https://www.youtube.com/watch?v=1H6tounpnG8">Distributed Sagas: A Protocol for Coordinating Microservices</a></li>
+</ul></article>
+    <footer class="post-footer">
+      
+      <ul class="post-tags">
+        
+          <li><a href="https://chanjarster.github.io/tags/%E5%88%86%E5%B8%83%E5%BC%8F%E4%BA%8B%E5%8A%A1"><span class="tag">分布式事务</span></a></li>
+        
+      </ul>
+      
+      <p class="post-copyright">
+        This post was published <strong>610</strong> days ago, content in the post may be inaccurate, even wrong now, please take risk yourself.
+      </p>
+    </footer>
+    
+      
+    
+  </section>
+  <footer class="site-footer">
+  <p>© 2017-2019 颇忒脱的技术博客</p>
+  <p>Powered by <a href="https://gohugo.io/" target="_blank">Hugo</a> with theme <a href="https://github.com/laozhu/hugo-nuo" target="_blank">Nuo</a>.</p>
+  
+</footer>
+
+
+
+<script async src="//cdn.bootcss.com/video.js/6.2.8/alt/video.novtt.min.js"></script>
+<script async src="//cdn.bootcss.com/mathjax/2.7.2/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    tex2jax: {
+      inlineMath: [['$','$'], ['\\(','\\)']],
+      displayMath: [['$$','$$'], ['\\[','\\]']],
+      processEscapes: true,
+      processEnvironments: true,
+      skipTags: ['script', 'noscript', 'style', 'textarea', 'pre'],
+      TeX: { equationNumbers: { autoNumber: "AMS" },
+      extensions: ["AMSmath.js", "AMSsymbols.js"] }
+    }
+  });
+</script>
+<script type="text/x-mathjax-config">
+  // Fix <code> tags after MathJax finishes running. This is a
+  // hack to overcome a shortcoming of Markdown. Discussion at
+  // https://github.com/mojombo/jekyll/issues/199
+  MathJax.Hub.Queue(() => {
+    MathJax.Hub.getAllJax().map(v => v.SourceElement().parentNode.className += ' has-jax');
+  });
+</script>
+
+<script src="https://chanjarster.github.io/js/bundle.273f9ac6f0.js"></script>
+
+
+
+
+  </body>
+</html>

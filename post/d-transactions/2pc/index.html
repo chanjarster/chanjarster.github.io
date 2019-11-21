@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+<head>
+
+  <meta charset="utf-8" />
+
+  
+  <title>事务 - 2PC</title>
+
+  
+  
+
+
+
+
+
+  
+  <meta name="author" content="颇忒脱" />
+  <meta name="description" content="
+" />
+
+  
+  
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:site" content="@gohugoio" />
+    <meta name="twitter:title" content="事务 - 2PC" />
+    <meta name="twitter:description" content="
+" />
+    <meta name="twitter:image" content="https://chanjarster.github.io/img/avatar.jpg" />
+  
+
+  
+  <meta property="og:type" content="article" />
+  <meta property="og:title" content="事务 - 2PC" />
+  <meta property="og:description" content="
+" />
+  <meta property="og:url" content="https://chanjarster.github.io/post/d-transactions/2pc/" />
+  <meta property="og:image" content="https://chanjarster.github.io/img/avatar.jpg" />
+
+
+
+
+<meta name="generator" content="Hugo 0.49.2" />
+
+
+<link rel="canonical" href="https://chanjarster.github.io/post/d-transactions/2pc/" />
+
+<meta name="renderer" content="webkit" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<meta name="format-detection" content="telephone=no,email=no,adress=no" />
+<meta http-equiv="Cache-Control" content="no-transform" />
+
+
+<meta name="robots" content="index,follow" />
+<meta name="referrer" content="origin-when-cross-origin" />
+
+
+
+
+
+
+
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="颇忒脱的技术博客" />
+<meta name="msapplication-tooltip" content="颇忒脱的技术博客" />
+<meta name='msapplication-navbutton-color' content="#5fbf5e" />
+<meta name="msapplication-TileColor" content="#5fbf5e" />
+<meta name="msapplication-TileImage" content="/img/tile-image-windows.png" />
+<link rel="icon" href="https://chanjarster.github.io/img/favicon.ico" />
+<link rel="icon" type="image/png" sizes="16x16" href="https://chanjarster.github.io/img/favicon-16x16.png" />
+<link rel="icon" type="image/png" sizes="32x32" href="https://chanjarster.github.io/img/favicon-32x32.png" />
+<link rel="icon" sizes="192x192" href="https://chanjarster.github.io/img/touch-icon-android.png" />
+<link rel="apple-touch-icon" href="https://chanjarster.github.io/img/touch-icon-apple.png" />
+<link rel="mask-icon" href="https://chanjarster.github.io/img/safari-pinned-tab.svg" color="#5fbf5e" />
+
+
+
+<link rel="stylesheet" href="//cdn.bootcss.com/video.js/6.2.8/alt/video-js-cdn.min.css" />
+
+<link rel="stylesheet" href="https://chanjarster.github.io/css/bundle.8e3aef2bc5.css" />
+
+
+  
+  <!--[if lt IE 9]>
+    <script src="//cdn.bootcss.com/html5shiv/3.7.3/html5shiv.min.js"></script>
+    <script src="//cdn.bootcss.com/respond.js/1.4.2/respond.min.js"></script>
+    <script src="//cdn.bootcss.com/video.js/6.2.8/ie8/videojs-ie8.min.js"></script>
+  <![endif]-->
+
+<!--[if lte IE 11]>
+    <script src="//cdn.bootcss.com/classlist/1.1.20170427/classList.min.js"></script>
+  <![endif]-->
+
+
+<script src="//cdn.bootcss.com/object-fit-images/3.2.3/ofi.min.js"></script>
+
+
+<script src="//cdn.bootcss.com/smooth-scroll/12.1.4/js/smooth-scroll.polyfills.min.js"></script>
+
+
+</head>
+  <body>
+    
+    <div class="suspension">
+      <a title="Go to top" class="to-top is-hide"><span class="icon icon-up"></span></a>
+      
+        
+      
+    </div>
+    
+    
+  <header class="site-header">
+  <img class="avatar" src="https://chanjarster.github.io/img/avatar2.jpg" alt="Avatar">
+  
+  <h2 class="title">颇忒脱的技术博客</h2>
+  
+  <p class="subtitle"></p>
+  <button class="menu-toggle" type="button">
+    <span class="icon icon-menu"></span>
+  </button>
+  <nav class="site-menu collapsed">
+    <h2 class="offscreen">Main Menu</h2>
+    <ul class="menu-list">
+      
+      
+      
+      
+        <li class="menu-item
+            
+            
+            
+              is-active
+            ">
+            <a href="https://chanjarster.github.io/">Home</a>
+          </li>
+      
+        <li class="menu-item
+            
+            
+            ">
+            <a href="https://chanjarster.github.io/tags/%E6%94%B6%E8%97%8F%E5%A4%B9/">Bookmarks</a>
+          </li>
+      
+        <li class="menu-item
+            
+            
+            ">
+            <a href="https://chanjarster.github.io/post/jvm/jvm-index/">JVM</a>
+          </li>
+      
+        <li class="menu-item
+            
+            
+            ">
+            <a href="https://chanjarster.github.io/post/concurrent-programming/index-page">并发编程</a>
+          </li>
+      
+        <li class="menu-item
+            
+            
+            ">
+            <a href="https://github.com/chanjarster">Works</a>
+          </li>
+      
+        <li class="menu-item
+            
+            
+            ">
+            <a href="https://chanjarster.github.io/tags/">Tags</a>
+          </li>
+      
+        <li class="menu-item
+            
+            
+            ">
+            <a href="https://chanjarster.github.io/links/">Links</a>
+          </li>
+      
+    </ul>
+  </nav>
+  <nav class="social-menu collapsed">
+    <h2 class="offscreen">Social Networks</h2>
+    <ul class="social-list">
+
+      
+
+      
+      <li class="social-item">
+        <a href="//github.com/chanjarster" title="GitHub"><span class="icon icon-github"></span></a>
+      </li>
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      <li class="social-item">
+        <a rel="alternate" type="application/rss+xml" href="https://chanjarster.github.io/index.xml"><span class="icon icon-rss" title="RSS"></span></a>
+      </li>
+
+    </ul>
+  </nav>
+</header>
+
+  <section class="main post-detail">
+    <header class="post-header">
+      <h1 class="post-title">事务 - 2PC</h1>
+      <p class="post-meta">@颇忒脱 · Mar 18, 2019 · 1 min read</p>
+    </header>
+    <article class="post-content"><p></p>
+
+<p><a href="https://github.com/chanjarster/transactions">github</a></p>
+
+<p>在<a href="https://segmentfault.com/a/1190000013771861">上一篇文章</a>中我们介绍了本地事务，随着软件复杂度的上升，我们会需要一种可以在多个数据库之间完成事务（<a href="https://en.wikipedia.org/wiki/Distributed_transaction">分布式事务</a>）的方法，而这个方法也必须能够保证ACID。于是就出现了<a href="https://en.wikipedia.org/wiki/Two-phase_commit_protocol">2PC - Two phase commit protocol</a>。事实上2PC不仅仅适用于多数据库事务场景下使用，也适用于所有支持2PC的参与方（Participants)。</p>
+
+<h2 id="算法介绍">算法介绍</h2>
+
+<p>2PC的参与方有：</p>
+
+<ol>
+<li>一个作为Coordinator的节点</li>
+<li>多个作为Cohort的网络节点</li>
+</ol>
+
+<p>2PC假设：</p>
+
+<ol>
+<li>所有节点都有一个稳定存储用以保存WAL（<a href="https://en.wikipedia.org/wiki/Write_ahead_logging">write-ahead log</a>）</li>
+<li>没有一个节点会永远崩溃（即会最终恢复）</li>
+<li>write-ahead log中存储的数据永远不会丢失，不会因崩溃而损坏</li>
+<li>任意两个节点都能够互相通信</li>
+</ol>
+
+<p>第四个假设太过严格，实际上有不是所有的2PC实现都满足。第一、二个假设则大多数2PC实现都能满足。</p>
+
+<p>PS. 如果某个节点完全损坏（比如服务器物理损毁），那么数据就直接丢失了。</p>
+
+<p>2PC的执行步骤：</p>
+
+<ol>
+<li>Commit request phase /Voting phase。这个阶段做：
+
+<ol>
+<li>Coordinator发送一个查询是否同意commit的请求到所有Cohort，并且等待所有Cohort给出应答。</li>
+<li>Cohort收到请求，开始执行事务，执行到就差commit为止（不commit）。</li>
+<li>每个Cohort根据操作结果返回Yes或No</li>
+</ol></li>
+<li>Commit phase / Completion phase。这个阶段分两种情况：
+
+<ol>
+<li>成功。所有Cohort应答Yes</li>
+<li>Coordinator发送commit指令到所有Cohort</li>
+<li>每个Cohort执行commit，并发送ack到Coordinator</li>
+<li>当Coordinator收到每个Cohort的ack之后则事务完成</li>
+<li>失败。任意Cohort应答No，或者在commit request阶段超时</li>
+<li>Coordinator发送rollback指令到所有Cohort</li>
+<li>每个Cohort执行rollback，并发送ack到Coordinator</li>
+<li>当Coordinator收到每个Cohort的ack之后则事务撤销</li>
+</ol></li>
+</ol>
+
+<p>消息流（摘自wiki）：</p>
+
+<pre><code>Coordinator                                         Cohort
+                              QUERY TO COMMIT
+                --------------------------------&gt;
+                              VOTE YES/NO           prepare*/abort*
+                &lt;-------------------------------
+commit*/abort*                COMMIT/ROLLBACK
+                --------------------------------&gt;
+                              ACKNOWLEDGMENT        commit*/abort*
+                &lt;--------------------------------  
+end
+</code></pre>
+
+<p>2PC的通信次数是：</p>
+
+<ol>
+<li>如果实现没有要求任意两个Cohort可以通信，那么是2n（n=Cohort数量）</li>
+<li>如果实现要求任意两个Cohort可以通信，那么是n^2</li>
+</ol>
+
+<h2 id="异常处理">异常处理</h2>
+
+<p>我们把上面的流程简化以便说明异常处理：</p>
+
+<ol>
+<li>Coordinator发送query to commit</li>
+<li>Cohort执行prepare</li>
+<li>Cohort返回ack</li>
+<li>Coordinator发送commit/rollback</li>
+<li>Cohort执行commit/rollback</li>
+<li>Cohort返回ack</li>
+</ol>
+
+<p>从Coordinate角度来看出现异常要怎么处理：</p>
+
+<ol>
+<li>step 1发生异常，Coordinator需要执行rollback</li>
+<li>step 2、3发生异常，意味着Coordinator没有收到Cohort的响应，这个时候因认定为失败，执行rollback</li>
+<li>step 4发生异常，Coordinator重试commit/rollback</li>
+<li>step 5、6发生异常，意味着Coordinator没有收到Cohort的响应，这个时候因认定为失败，重试commit/rollback</li>
+</ol>
+
+<p>从Cohort角度来看看看出现异常怎么处理：</p>
+
+<ol>
+<li>step 1，意味着Cohort没有收到请求，什么都不需要做</li>
+<li>step 2，意味着Cohort没有执行成功，什么都不需要做</li>
+<li>step 3，意味着Coordinator没有收到结果，什么都不需要做，等待Coordinator重试即可。Cohort要保证prepare是幂等的。</li>
+<li>step 4，等待Coordinator重试即可，这里有点tricky，如果Coordinator迟迟不retry，那么Cohort要自行rollback，否则就会造成资源死锁。</li>
+<li>step 5，等待Coordinator重试即可</li>
+<li>step 6，意味着Coordinator没有收到结果，什么都不需要做，等待Coordinator重试即可，Cohort要保证commit/rollback是幂等的。</li>
+</ol>
+
+<p>观察一下你就会发现依然存在漏洞——会出现违反一致性的情况：</p>
+
+<ol>
+<li>若Coordinator/Cohort因崩溃遗失了信息，有的Cohort已commit，有的Cohort则恢复到commit之前的状态。</li>
+<li>若Coordinator在step 4发送commit，而Cohort在rollback（因timeout导致的rollback）。</li>
+</ol>
+
+<p>出现上面的情况就需要人工介入了。</p>
+
+<p>更多2PC的异常处理推理详见这篇<a href="http://www.inf.fu-berlin.de/lehre/SS10/DBS-TA/folien/07-10-TA-2PC-2-1.pdf">slides</a>。</p>
+
+<h2 id="缺点">缺点</h2>
+
+<p>根据上面的算法介绍可以看出2PC是一个阻塞协议：</p>
+
+<ul>
+<li>如果两个事务针对同一个数据，那么后面的要等待前面完成，这是由于Cohort采用的是本地事务所决定的</li>
+<li>Cohort在commit request phase之后会阻塞，直到进入Coordinator告之Cohort进入commit phase</li>
+</ul>
+
+<h2 id="对于acid的保证">对于ACID的保证</h2>
+
+<p>2PC所保证的ACID和本地事务所提到的ACID不太一样——事实上对于所有分布式事务来说都不太一样：</p>
+
+<ul>
+<li>A，正常情况下保证</li>
+<li>C，在某个时间点，会出现A库和B库的数据违反一致性要求的情况</li>
+<li>I，在某个时间点，A事务能够读到B事务部分提交的结果</li>
+<li>D，和本地事务一样，只要commit则数据被持久</li>
+</ul>
+
+<h2 id="xa">XA</h2>
+
+<p><a href="https://en.wikipedia.org/wiki/X/Open_XA">XA</a>是一个针对<a href="https://en.wikipedia.org/wiki/Distributed_transaction">分布式事务</a>的spec，它实现了2PC协议。在XA中定义了两种参与方：Transaction Manager（TM）和Resource Manager（RM），其中TM=2PC中的Coordinator，RM=2PC中的Cohort。</p>
+
+<p>Java规范中的JTA（Java Transaction API）定义了XA的Java接口，JTA的实现有Bitronix、Atomikos等等。</p>
+
+<h2 id="参考资料">参考资料</h2>
+
+<ul>
+<li><a href="https://en.wikipedia.org/wiki/Two-phase_commit_protocol">wiki - 2PC</a></li>
+<li><a href="https://en.wikipedia.org/wiki/X/Open_XA">wiki - XA</a></li>
+<li><a href="https://en.wikipedia.org/wiki/Distributed_transaction">wiki - Distributed Transaction</a></li>
+<li><a href="https://en.wikipedia.org/wiki/Write_ahead_logging">wiki - Write-ahead log</a></li>
+<li><a href="https://www.quora.com/For-2-phase-commit-why-is-the-worst-case-communication-complexity-of-a-failed-transaction-O-n-2">For 2 phase commit, why is the worst-case communication complexity of a failed transaction O(n^2)?</a></li>
+<li><a href="http://www.inf.fu-berlin.de/lehre/SS10/DBS-TA/folien/07-10-TA-2PC-2-1.pdf">slides - Distributed Commit Protocols</a></li>
+</ul></article>
+    <footer class="post-footer">
+      
+      <ul class="post-tags">
+        
+          <li><a href="https://chanjarster.github.io/tags/%E5%88%86%E5%B8%83%E5%BC%8F%E4%BA%8B%E5%8A%A1"><span class="tag">分布式事务</span></a></li>
+        
+      </ul>
+      
+      <p class="post-copyright">
+        This post was published <strong>248</strong> days ago, content in the post may be inaccurate, even wrong now, please take risk yourself.
+      </p>
+    </footer>
+    
+      
+    
+  </section>
+  <footer class="site-footer">
+  <p>© 2017-2019 颇忒脱的技术博客</p>
+  <p>Powered by <a href="https://gohugo.io/" target="_blank">Hugo</a> with theme <a href="https://github.com/laozhu/hugo-nuo" target="_blank">Nuo</a>.</p>
+  
+</footer>
+
+
+
+<script async src="//cdn.bootcss.com/video.js/6.2.8/alt/video.novtt.min.js"></script>
+<script async src="//cdn.bootcss.com/mathjax/2.7.2/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    tex2jax: {
+      inlineMath: [['$','$'], ['\\(','\\)']],
+      displayMath: [['$$','$$'], ['\\[','\\]']],
+      processEscapes: true,
+      processEnvironments: true,
+      skipTags: ['script', 'noscript', 'style', 'textarea', 'pre'],
+      TeX: { equationNumbers: { autoNumber: "AMS" },
+      extensions: ["AMSmath.js", "AMSsymbols.js"] }
+    }
+  });
+</script>
+<script type="text/x-mathjax-config">
+  // Fix <code> tags after MathJax finishes running. This is a
+  // hack to overcome a shortcoming of Markdown. Discussion at
+  // https://github.com/mojombo/jekyll/issues/199
+  MathJax.Hub.Queue(() => {
+    MathJax.Hub.getAllJax().map(v => v.SourceElement().parentNode.className += ' has-jax');
+  });
+</script>
+
+<script src="https://chanjarster.github.io/js/bundle.273f9ac6f0.js"></script>
+
+
+
+
+  </body>
+</html>
