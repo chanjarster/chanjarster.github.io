@@ -1,0 +1,832 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+<head>
+
+  <meta charset="utf-8" />
+
+  
+  <title>Building Custom Synchronizers</title>
+
+  
+  
+
+
+
+
+
+  
+  <meta name="author" content="颇忒脱" />
+  <meta name="description" content="
+" />
+
+  
+  
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:site" content="@gohugoio" />
+    <meta name="twitter:title" content="Building Custom Synchronizers" />
+    <meta name="twitter:description" content="
+" />
+    <meta name="twitter:image" content="https://chanjarster.github.io/img/avatar.jpg" />
+  
+
+  
+  <meta property="og:type" content="article" />
+  <meta property="og:title" content="Building Custom Synchronizers" />
+  <meta property="og:description" content="
+" />
+  <meta property="og:url" content="https://chanjarster.github.io/post/concurrent-programming/building-custom-synchronizers/" />
+  <meta property="og:image" content="https://chanjarster.github.io/img/avatar.jpg" />
+
+
+
+
+<meta name="generator" content="Hugo 0.49.2" />
+
+
+<link rel="canonical" href="https://chanjarster.github.io/post/concurrent-programming/building-custom-synchronizers/" />
+
+<meta name="renderer" content="webkit" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<meta name="format-detection" content="telephone=no,email=no,adress=no" />
+<meta http-equiv="Cache-Control" content="no-transform" />
+
+
+<meta name="robots" content="index,follow" />
+<meta name="referrer" content="origin-when-cross-origin" />
+
+
+
+
+
+
+
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="颇忒脱的技术博客" />
+<meta name="msapplication-tooltip" content="颇忒脱的技术博客" />
+<meta name='msapplication-navbutton-color' content="#5fbf5e" />
+<meta name="msapplication-TileColor" content="#5fbf5e" />
+<meta name="msapplication-TileImage" content="/img/tile-image-windows.png" />
+<link rel="icon" href="https://chanjarster.github.io/img/favicon.ico" />
+<link rel="icon" type="image/png" sizes="16x16" href="https://chanjarster.github.io/img/favicon-16x16.png" />
+<link rel="icon" type="image/png" sizes="32x32" href="https://chanjarster.github.io/img/favicon-32x32.png" />
+<link rel="icon" sizes="192x192" href="https://chanjarster.github.io/img/touch-icon-android.png" />
+<link rel="apple-touch-icon" href="https://chanjarster.github.io/img/touch-icon-apple.png" />
+<link rel="mask-icon" href="https://chanjarster.github.io/img/safari-pinned-tab.svg" color="#5fbf5e" />
+
+
+
+<link rel="stylesheet" href="//cdn.bootcss.com/video.js/6.2.8/alt/video-js-cdn.min.css" />
+
+<link rel="stylesheet" href="https://chanjarster.github.io/css/bundle.8e3aef2bc5.css" />
+
+
+  
+  <!--[if lt IE 9]>
+    <script src="//cdn.bootcss.com/html5shiv/3.7.3/html5shiv.min.js"></script>
+    <script src="//cdn.bootcss.com/respond.js/1.4.2/respond.min.js"></script>
+    <script src="//cdn.bootcss.com/video.js/6.2.8/ie8/videojs-ie8.min.js"></script>
+  <![endif]-->
+
+<!--[if lte IE 11]>
+    <script src="//cdn.bootcss.com/classlist/1.1.20170427/classList.min.js"></script>
+  <![endif]-->
+
+
+<script src="//cdn.bootcss.com/object-fit-images/3.2.3/ofi.min.js"></script>
+
+
+<script src="//cdn.bootcss.com/smooth-scroll/12.1.4/js/smooth-scroll.polyfills.min.js"></script>
+
+
+</head>
+  <body>
+    
+    <div class="suspension">
+      <a title="Go to top" class="to-top is-hide"><span class="icon icon-up"></span></a>
+      
+        
+      
+    </div>
+    
+    
+  <header class="site-header">
+  <img class="avatar" src="https://chanjarster.github.io/img/avatar2.jpg" alt="Avatar">
+  
+  <h2 class="title">颇忒脱的技术博客</h2>
+  
+  <p class="subtitle"></p>
+  <button class="menu-toggle" type="button">
+    <span class="icon icon-menu"></span>
+  </button>
+  <nav class="site-menu collapsed">
+    <h2 class="offscreen">Main Menu</h2>
+    <ul class="menu-list">
+      
+      
+      
+      
+        <li class="menu-item
+            
+            
+            
+              is-active
+            ">
+            <a href="https://chanjarster.github.io/">Home</a>
+          </li>
+      
+        <li class="menu-item
+            
+            
+            ">
+            <a href="https://chanjarster.github.io/tags/%E6%94%B6%E8%97%8F%E5%A4%B9/">Bookmarks</a>
+          </li>
+      
+        <li class="menu-item
+            
+            
+            ">
+            <a href="https://chanjarster.github.io/post/jvm/jvm-index/">JVM</a>
+          </li>
+      
+        <li class="menu-item
+            
+            
+            ">
+            <a href="https://chanjarster.github.io/post/concurrent-programming/index-page">并发编程</a>
+          </li>
+      
+        <li class="menu-item
+            
+            
+            ">
+            <a href="https://github.com/chanjarster">Works</a>
+          </li>
+      
+        <li class="menu-item
+            
+            
+            ">
+            <a href="https://chanjarster.github.io/tags/">Tags</a>
+          </li>
+      
+        <li class="menu-item
+            
+            
+            ">
+            <a href="https://chanjarster.github.io/links/">Links</a>
+          </li>
+      
+    </ul>
+  </nav>
+  <nav class="social-menu collapsed">
+    <h2 class="offscreen">Social Networks</h2>
+    <ul class="social-list">
+
+      
+
+      
+      <li class="social-item">
+        <a href="//github.com/chanjarster" title="GitHub"><span class="icon icon-github"></span></a>
+      </li>
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      <li class="social-item">
+        <a rel="alternate" type="application/rss+xml" href="https://chanjarster.github.io/index.xml"><span class="icon icon-rss" title="RSS"></span></a>
+      </li>
+
+    </ul>
+  </nav>
+</header>
+
+  <section class="main post-detail">
+    <header class="post-header">
+      <h1 class="post-title">Building Custom Synchronizers</h1>
+      <p class="post-meta">@颇忒脱 · Nov 21, 2019 · 5 min read</p>
+    </header>
+    <article class="post-content"><p></p>
+
+<h2 id="状态依赖的类">状态依赖的类</h2>
+
+<ul>
+<li>某些操作具有基于状态的前置条件的类</li>
+<li>比如：FutureTask、Semaphore、BlockingQueue</li>
+<li>比如：你不能从空队列中移除item，不能在任务结束前得到结果</li>
+</ul>
+
+<p>构建状态依赖的类最简单的办法就是利用已有的状态依赖的类。比如使用<code>CountDownLatch</code>，或者自己构建同步器。自己构建同步器可以利用：内置条件队列（intrinsic condition queues）、显式<code>Condition</code>对象、<code>AbstractQueuedSynchronizer</code>框架。</p>
+
+<h2 id="管理状态依赖">管理状态依赖</h2>
+
+<p>使用polling（轮询）和sleeping来出来状态依赖是很痛苦的。所以不推荐。</p>
+
+<p>阻塞的状态依赖动作的结构：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java">acquire lock on object state
+<span style="color:#a6e22e">while</span> <span style="color:#f92672">(</span>precondition does not hold<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+  release lock
+  wait until precondition might hold
+  optionally fail <span style="color:#66d9ef">if</span> interrupted or timeout expires
+  reacquire lock
+<span style="color:#f92672">}</span>
+perform action
+release lock</code></pre></div>
+<p>下面是一个有届的Buffer的基类，用的是循环数组，后面有些例子会用它来说明：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#a6e22e">@ThreadSafe</span>
+<span style="color:#66d9ef">public</span> <span style="color:#66d9ef">abstract</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">BaseBoundedBuffer</span> <span style="color:#f92672">&lt;</span>V<span style="color:#f92672">&gt;</span> <span style="color:#f92672">{</span>
+    <span style="color:#a6e22e">@GuardedBy</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34;this&#34;</span><span style="color:#f92672">)</span> <span style="color:#66d9ef">private</span> <span style="color:#66d9ef">final</span> V<span style="color:#f92672">[]</span> buf<span style="color:#f92672">;</span>
+    <span style="color:#a6e22e">@GuardedBy</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34;this&#34;</span><span style="color:#f92672">)</span> <span style="color:#66d9ef">private</span> <span style="color:#66d9ef">int</span> tail<span style="color:#f92672">;</span>
+    <span style="color:#a6e22e">@GuardedBy</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34;this&#34;</span><span style="color:#f92672">)</span> <span style="color:#66d9ef">private</span> <span style="color:#66d9ef">int</span> head<span style="color:#f92672">;</span>
+    <span style="color:#a6e22e">@GuardedBy</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34;this&#34;</span><span style="color:#f92672">)</span> <span style="color:#66d9ef">private</span> <span style="color:#66d9ef">int</span> count<span style="color:#f92672">;</span>
+
+    <span style="color:#66d9ef">protected</span> <span style="color:#a6e22e">BaseBoundedBuffer</span><span style="color:#f92672">(</span><span style="color:#66d9ef">int</span> capacity<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+        <span style="color:#66d9ef">this</span><span style="color:#f92672">.</span><span style="color:#a6e22e">buf</span> <span style="color:#f92672">=</span> <span style="color:#f92672">(</span>V<span style="color:#f92672">[])</span> <span style="color:#66d9ef">new</span> Object<span style="color:#f92672">[</span>capacity<span style="color:#f92672">];</span>
+    <span style="color:#f92672">}</span>
+
+    <span style="color:#66d9ef">protected</span> <span style="color:#66d9ef">synchronized</span> <span style="color:#66d9ef">final</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">doPut</span><span style="color:#f92672">(</span>V v<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+        buf<span style="color:#f92672">[</span>tail<span style="color:#f92672">]</span> <span style="color:#f92672">=</span> v<span style="color:#f92672">;</span>
+        <span style="color:#66d9ef">if</span> <span style="color:#f92672">(++</span>tail <span style="color:#f92672">==</span> buf<span style="color:#f92672">.</span><span style="color:#a6e22e">length</span><span style="color:#f92672">)</span>
+            tail <span style="color:#f92672">=</span> 0<span style="color:#f92672">;</span>
+        <span style="color:#f92672">++</span>count<span style="color:#f92672">;</span>
+    <span style="color:#f92672">}</span>
+
+    <span style="color:#66d9ef">protected</span> <span style="color:#66d9ef">synchronized</span> <span style="color:#66d9ef">final</span> V <span style="color:#a6e22e">doTake</span><span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
+        V v <span style="color:#f92672">=</span> buf<span style="color:#f92672">[</span>head<span style="color:#f92672">];</span>
+        buf<span style="color:#f92672">[</span>head<span style="color:#f92672">]</span> <span style="color:#f92672">=</span> <span style="color:#66d9ef">null</span><span style="color:#f92672">;</span>
+        <span style="color:#66d9ef">if</span> <span style="color:#f92672">(++</span>head <span style="color:#f92672">==</span> buf<span style="color:#f92672">.</span><span style="color:#a6e22e">length</span><span style="color:#f92672">)</span>
+            head <span style="color:#f92672">=</span> 0<span style="color:#f92672">;</span>
+        <span style="color:#f92672">--</span>count<span style="color:#f92672">;</span>
+        <span style="color:#66d9ef">return</span> v<span style="color:#f92672">;</span>
+    <span style="color:#f92672">}</span>
+
+    <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">synchronized</span> <span style="color:#66d9ef">final</span> <span style="color:#66d9ef">boolean</span> <span style="color:#a6e22e">isFull</span><span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
+        <span style="color:#66d9ef">return</span> count <span style="color:#f92672">==</span> buf<span style="color:#f92672">.</span><span style="color:#a6e22e">length</span><span style="color:#f92672">;</span>
+    <span style="color:#f92672">}</span>
+
+    <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">synchronized</span> <span style="color:#66d9ef">final</span> <span style="color:#66d9ef">boolean</span> <span style="color:#a6e22e">isEmpty</span><span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
+        <span style="color:#66d9ef">return</span> count <span style="color:#f92672">==</span> 0<span style="color:#f92672">;</span>
+    <span style="color:#f92672">}</span>
+<span style="color:#f92672">}</span></code></pre></div>
+<h3 id="例子-传播前置条件失败给调用方-不要">例子：传播前置条件失败给调用方（不要）</h3>
+
+<p>下面这个例子不要的地方在于：</p>
+
+<ul>
+<li>Full和Empty是两个正常状态，抛异常不好</li>
+<li>调用方得捕获异常，然后还要自己重试，重试的方式有两种
+
+<ul>
+<li>sleep，但是sleep时长很难掌握，会造成响应度不够</li>
+<li>不sleep直接重试，这个就是所谓的busy waiting或者spin waiting，浪费CPU</li>
+</ul></li>
+<li>调用方处理前置条件失败</li>
+</ul>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#a6e22e">@ThreadSafe</span>
+<span style="color:#66d9ef">public</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">GrumpyBoundedBuffer</span> <span style="color:#f92672">&lt;</span>V<span style="color:#f92672">&gt;</span> <span style="color:#66d9ef">extends</span> BaseBoundedBuffer<span style="color:#f92672">&lt;</span>V<span style="color:#f92672">&gt;</span> <span style="color:#f92672">{</span>
+    <span style="color:#66d9ef">public</span> <span style="color:#a6e22e">GrumpyBoundedBuffer</span><span style="color:#f92672">(</span><span style="color:#66d9ef">int</span> size<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+        <span style="color:#66d9ef">super</span><span style="color:#f92672">(</span>size<span style="color:#f92672">);</span>
+    <span style="color:#f92672">}</span>
+
+    <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">synchronized</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">put</span><span style="color:#f92672">(</span>V v<span style="color:#f92672">)</span> <span style="color:#66d9ef">throws</span> BufferFullException <span style="color:#f92672">{</span>
+        <span style="color:#66d9ef">if</span> <span style="color:#f92672">(</span>isFull<span style="color:#f92672">())</span>
+            <span style="color:#66d9ef">throw</span> <span style="color:#66d9ef">new</span> BufferFullException<span style="color:#f92672">();</span>
+        doPut<span style="color:#f92672">(</span>v<span style="color:#f92672">);</span>
+    <span style="color:#f92672">}</span>
+
+    <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">synchronized</span> V <span style="color:#a6e22e">take</span><span style="color:#f92672">()</span> <span style="color:#66d9ef">throws</span> BufferEmptyException <span style="color:#f92672">{</span>
+        <span style="color:#66d9ef">if</span> <span style="color:#f92672">(</span>isEmpty<span style="color:#f92672">())</span>
+            <span style="color:#66d9ef">throw</span> <span style="color:#66d9ef">new</span> BufferEmptyException<span style="color:#f92672">();</span>
+        <span style="color:#66d9ef">return</span> doTake<span style="color:#f92672">();</span>
+    <span style="color:#f92672">}</span>
+<span style="color:#f92672">}</span>
+
+<span style="color:#66d9ef">class</span> <span style="color:#a6e22e">ExampleUsage</span> <span style="color:#f92672">{</span>
+    <span style="color:#66d9ef">private</span> GrumpyBoundedBuffer<span style="color:#f92672">&lt;</span>String<span style="color:#f92672">&gt;</span> buffer<span style="color:#f92672">;</span>
+    <span style="color:#66d9ef">int</span> SLEEP_GRANULARITY <span style="color:#f92672">=</span> 50<span style="color:#f92672">;</span>
+
+    <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">useBuffer</span><span style="color:#f92672">()</span> <span style="color:#66d9ef">throws</span> InterruptedException <span style="color:#f92672">{</span>
+        <span style="color:#66d9ef">while</span> <span style="color:#f92672">(</span><span style="color:#66d9ef">true</span><span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+            <span style="color:#66d9ef">try</span> <span style="color:#f92672">{</span>
+                String item <span style="color:#f92672">=</span> buffer<span style="color:#f92672">.</span><span style="color:#a6e22e">take</span><span style="color:#f92672">();</span>
+                <span style="color:#75715e">// use item
+</span><span style="color:#75715e"></span>                <span style="color:#66d9ef">break</span><span style="color:#f92672">;</span>
+            <span style="color:#f92672">}</span> <span style="color:#66d9ef">catch</span> <span style="color:#f92672">(</span>BufferEmptyException e<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+                Thread<span style="color:#f92672">.</span><span style="color:#a6e22e">sleep</span><span style="color:#f92672">(</span>SLEEP_GRANULARITY<span style="color:#f92672">);</span>
+            <span style="color:#f92672">}</span>
+        <span style="color:#f92672">}</span>
+    <span style="color:#f92672">}</span>
+<span style="color:#f92672">}</span>
+
+<span style="color:#66d9ef">class</span> <span style="color:#a6e22e">BufferFullException</span> <span style="color:#66d9ef">extends</span> RuntimeException <span style="color:#f92672">{</span>
+<span style="color:#f92672">}</span>
+
+<span style="color:#66d9ef">class</span> <span style="color:#a6e22e">BufferEmptyException</span> <span style="color:#66d9ef">extends</span> RuntimeException <span style="color:#f92672">{</span>
+<span style="color:#f92672">}</span></code></pre></div>
+<p>不用异常也可以，比如通过返回一个Error结果，但是问题的本质没有变</p>
+
+<h3 id="例子-用轮询和睡眠来阻塞">例子：用轮询和睡眠来阻塞</h3>
+
+<p>这个例子稍微好点，自己处理前置条件失败：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#a6e22e">@ThreadSafe</span>
+<span style="color:#66d9ef">public</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">SleepyBoundedBuffer</span> <span style="color:#f92672">&lt;</span>V<span style="color:#f92672">&gt;</span> <span style="color:#66d9ef">extends</span> BaseBoundedBuffer<span style="color:#f92672">&lt;</span>V<span style="color:#f92672">&gt;</span> <span style="color:#f92672">{</span>
+    <span style="color:#66d9ef">int</span> SLEEP_GRANULARITY <span style="color:#f92672">=</span> 60<span style="color:#f92672">;</span>
+
+    <span style="color:#66d9ef">public</span> <span style="color:#a6e22e">SleepyBoundedBuffer</span><span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
+        <span style="color:#66d9ef">this</span><span style="color:#f92672">(</span>100<span style="color:#f92672">);</span>
+    <span style="color:#f92672">}</span>
+
+    <span style="color:#66d9ef">public</span> <span style="color:#a6e22e">SleepyBoundedBuffer</span><span style="color:#f92672">(</span><span style="color:#66d9ef">int</span> size<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+        <span style="color:#66d9ef">super</span><span style="color:#f92672">(</span>size<span style="color:#f92672">);</span>
+    <span style="color:#f92672">}</span>
+
+    <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">put</span><span style="color:#f92672">(</span>V v<span style="color:#f92672">)</span> <span style="color:#66d9ef">throws</span> InterruptedException <span style="color:#f92672">{</span>
+        <span style="color:#66d9ef">while</span> <span style="color:#f92672">(</span><span style="color:#66d9ef">true</span><span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+            <span style="color:#66d9ef">synchronized</span> <span style="color:#f92672">(</span><span style="color:#66d9ef">this</span><span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+                <span style="color:#66d9ef">if</span> <span style="color:#f92672">(!</span>isFull<span style="color:#f92672">())</span> <span style="color:#f92672">{</span>
+                    doPut<span style="color:#f92672">(</span>v<span style="color:#f92672">);</span>
+                    <span style="color:#66d9ef">return</span><span style="color:#f92672">;</span>
+                <span style="color:#f92672">}</span>
+            <span style="color:#f92672">}</span>
+            Thread<span style="color:#f92672">.</span><span style="color:#a6e22e">sleep</span><span style="color:#f92672">(</span>SLEEP_GRANULARITY<span style="color:#f92672">);</span>
+        <span style="color:#f92672">}</span>
+    <span style="color:#f92672">}</span>
+
+    <span style="color:#66d9ef">public</span> V <span style="color:#a6e22e">take</span><span style="color:#f92672">()</span> <span style="color:#66d9ef">throws</span> InterruptedException <span style="color:#f92672">{</span>
+        <span style="color:#66d9ef">while</span> <span style="color:#f92672">(</span><span style="color:#66d9ef">true</span><span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+            <span style="color:#66d9ef">synchronized</span> <span style="color:#f92672">(</span><span style="color:#66d9ef">this</span><span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+                <span style="color:#66d9ef">if</span> <span style="color:#f92672">(!</span>isEmpty<span style="color:#f92672">())</span>
+                    <span style="color:#66d9ef">return</span> doTake<span style="color:#f92672">();</span>
+            <span style="color:#f92672">}</span>
+            Thread<span style="color:#f92672">.</span><span style="color:#a6e22e">sleep</span><span style="color:#f92672">(</span>SLEEP_GRANULARITY<span style="color:#f92672">);</span>
+        <span style="color:#f92672">}</span>
+    <span style="color:#f92672">}</span>
+<span style="color:#f92672">}</span></code></pre></div>
+<p>不过问题也差不多：睡眠的粒度很难把握，短了浪费CPU，长了增加响应度，</p>
+
+<h3 id="条件队列-condition-queues">条件队列（Condition queues）</h3>
+
+<p>起名为Condition queue是因为它给一组线程——称为wait set——等待特定的条件变为true。这个队列中的元素是等待条件的线程。</p>
+
+<p>每个对象可以作为condition queue，<code>Object</code>的<code>wait</code>、<code>notify</code>、<code>notifyAll</code>方法构成了内置条件队列的API。</p>
+
+<p>对象内置锁和内置条件队列是关联的：</p>
+
+<ul>
+<li>你要调用条件队列方法必须先获得对象锁。</li>
+<li>你不能等待条件除非你能检查状态，你不能把其他线程从条件等待中释放除非你能够修改状态。</li>
+</ul>
+
+<p>下面这个例子更简单，也更高效，响应度更高。</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#a6e22e">@ThreadSafe</span>
+<span style="color:#66d9ef">public</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">BoundedBuffer</span> <span style="color:#f92672">&lt;</span>V<span style="color:#f92672">&gt;</span> <span style="color:#66d9ef">extends</span> BaseBoundedBuffer<span style="color:#f92672">&lt;</span>V<span style="color:#f92672">&gt;</span> <span style="color:#f92672">{</span>
+    <span style="color:#75715e">// CONDITION PREDICATE: not-full (!isFull())
+</span><span style="color:#75715e"></span>    <span style="color:#75715e">// CONDITION PREDICATE: not-empty (!isEmpty())
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">public</span> <span style="color:#a6e22e">BoundedBuffer</span><span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
+        <span style="color:#66d9ef">this</span><span style="color:#f92672">(</span>100<span style="color:#f92672">);</span>
+    <span style="color:#f92672">}</span>
+
+    <span style="color:#66d9ef">public</span> <span style="color:#a6e22e">BoundedBuffer</span><span style="color:#f92672">(</span><span style="color:#66d9ef">int</span> size<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+        <span style="color:#66d9ef">super</span><span style="color:#f92672">(</span>size<span style="color:#f92672">);</span>
+    <span style="color:#f92672">}</span>
+
+    <span style="color:#75715e">// BLOCKS-UNTIL: not-full
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">synchronized</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">put</span><span style="color:#f92672">(</span>V v<span style="color:#f92672">)</span> <span style="color:#66d9ef">throws</span> InterruptedException <span style="color:#f92672">{</span>
+        <span style="color:#66d9ef">while</span> <span style="color:#f92672">(</span>isFull<span style="color:#f92672">())</span>
+            wait<span style="color:#f92672">();</span>
+        doPut<span style="color:#f92672">(</span>v<span style="color:#f92672">);</span>
+        notifyAll<span style="color:#f92672">();</span>
+    <span style="color:#f92672">}</span>
+
+    <span style="color:#75715e">// BLOCKS-UNTIL: not-empty
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">synchronized</span> V <span style="color:#a6e22e">take</span><span style="color:#f92672">()</span> <span style="color:#66d9ef">throws</span> InterruptedException <span style="color:#f92672">{</span>
+        <span style="color:#66d9ef">while</span> <span style="color:#f92672">(</span>isEmpty<span style="color:#f92672">())</span>
+            wait<span style="color:#f92672">();</span>
+        V v <span style="color:#f92672">=</span> doTake<span style="color:#f92672">();</span>
+        notifyAll<span style="color:#f92672">();</span>
+        <span style="color:#66d9ef">return</span> v<span style="color:#f92672">;</span>
+    <span style="color:#f92672">}</span>
+
+    <span style="color:#75715e">// BLOCKS-UNTIL: not-full
+</span><span style="color:#75715e"></span>    <span style="color:#75715e">// Alternate form of put() using conditional notification
+</span><span style="color:#75715e"></span>    <span style="color:#75715e">// 减少notifyAll的次数
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">synchronized</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">alternatePut</span><span style="color:#f92672">(</span>V v<span style="color:#f92672">)</span> <span style="color:#66d9ef">throws</span> InterruptedException <span style="color:#f92672">{</span>
+        <span style="color:#66d9ef">while</span> <span style="color:#f92672">(</span>isFull<span style="color:#f92672">())</span>
+            wait<span style="color:#f92672">();</span>
+        <span style="color:#66d9ef">boolean</span> wasEmpty <span style="color:#f92672">=</span> isEmpty<span style="color:#f92672">();</span>
+        doPut<span style="color:#f92672">(</span>v<span style="color:#f92672">);</span>
+        <span style="color:#66d9ef">if</span> <span style="color:#f92672">(</span>wasEmpty<span style="color:#f92672">)</span>
+            notifyAll<span style="color:#f92672">();</span>
+    <span style="color:#f92672">}</span>
+<span style="color:#f92672">}</span></code></pre></div>
+<h2 id="使用条件队列">使用条件队列</h2>
+
+<h3 id="条件判断-the-condition-predicate">条件判断 The condition predicate</h3>
+
+<ul>
+<li>正确使用条件队列的关键是识别对象所等待的condition predicates。</li>
+<li>contidition predicates是使得操作依赖于状态的前置条件。</li>
+<li>比如<code>take</code>的condition predicate是buffer不为空、<code>put</code>的则是buffer没有满</li>
+</ul>
+
+<p>condition wait牵涉三个：加锁、<code>wait</code>方法、被锁保护的状态变量。测试condition predicate之前要得到锁，锁对象和条件队列对象得是同一个。</p>
+
+<p><code>wait</code>方法：释放锁，阻塞当前线程，等待——直到或超过规定时间、或线程被中断、或线程被通知唤醒。线程被唤醒后和其他线程再次争抢锁。</p>
+
+<h3 id="醒得太快-waking-up-too-soon">醒得太快 waking up too soon</h3>
+
+<p>从<code>wait</code>中醒来不代表condition predicate变成true了，所以醒过来后一定要判断条件。</p>
+
+<p>一个内置条件队列可能被多个condition predicate使用，因此如果有人调用了<code>notifyAll</code>不代表你等待的condition predicate变成true了。而且<code>wait</code>还会虚假的醒来，即并没有人调用<code>notify</code>。</p>
+
+<p>下面是经典用法：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#66d9ef">void</span> <span style="color:#a6e22e">stateDependentMethod</span><span style="color:#f92672">()</span> <span style="color:#66d9ef">throws</span> InterruptedException <span style="color:#f92672">{</span>
+  <span style="color:#66d9ef">synchronized</span><span style="color:#f92672">(</span>lock<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+    <span style="color:#66d9ef">while</span> <span style="color:#f92672">(!</span>conditionPredicate<span style="color:#f92672">())</span> <span style="color:#f92672">{</span>
+      lock<span style="color:#f92672">.</span><span style="color:#a6e22e">wait</span><span style="color:#f92672">();</span>
+    <span style="color:#f92672">}</span>
+    <span style="color:#75715e">// object is no in desired state
+</span><span style="color:#75715e"></span>  <span style="color:#f92672">}</span>
+<span style="color:#f92672">}</span></code></pre></div>
+<p>使用<code>Object.wait</code>或<code>Condition.await</code>要记牢：</p>
+
+<ul>
+<li>总是得有一个condition predicate</li>
+<li>在<code>wait</code>之前，和从<code>wait</code>唤醒之后要测试condition predicate</li>
+<li>总是在循环中调用<code>wait</code></li>
+<li>保证condition predicate所用的状态变量被condition queue的相同锁保护</li>
+<li>调用<code>wait</code>、<code>notify</code>、<code>notifyAll</code>之前要持有锁</li>
+<li>在检查condition predicate之后但在对其进行操作之前，请勿释放锁</li>
+</ul>
+
+<h3 id="漏掉的信号">漏掉的信号</h3>
+
+<p>漏掉信号发生在：一个线程必须等待一个已经是true的条件，但是在等待之前没能检查condition predicate。</p>
+
+<p>如果A 先<code>notify</code>，而B在后面<code>wait</code>，那么B是不会得到A发出的信号的，所以在<code>wait</code>之前一定要检查condition predicate。用前面的代码结构就能解决这个问题。</p>
+
+<h3 id="通知">通知</h3>
+
+<p>如果你在等待一个条件，那么确保肯定有其他人会在条件变成true的时候发出通知。</p>
+
+<p>通知也需要得到锁，所以而且通知线程释放锁越快越好。大部分情况下要用<code>notifyAll</code>而不是<code>notify</code>，因为<code>notify</code>只通知一个线程，如果这个线程等待的condition没有变成true，那么这次通知就浪费了，那么其他线程就没有机会了，也就是这个信号被劫持了。</p>
+
+<p><code>notify</code>可以作为性能优化的手段，但还是那句老话，先做对再做好。</p>
+
+<h3 id="例子-gate-class">例子：gate class</h3>
+
+<p>下面是一个gate例子，gate关闭的时候线程等待，gate打开的时候线程通过：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#a6e22e">@ThreadSafe</span>
+<span style="color:#66d9ef">public</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">ThreadGate</span> <span style="color:#f92672">{</span>
+    <span style="color:#75715e">// CONDITION-PREDICATE: opened-since(n) (isOpen || generation&gt;n)
+</span><span style="color:#75715e"></span>    <span style="color:#a6e22e">@GuardedBy</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34;this&#34;</span><span style="color:#f92672">)</span> <span style="color:#66d9ef">private</span> <span style="color:#66d9ef">boolean</span> isOpen<span style="color:#f92672">;</span>
+    <span style="color:#a6e22e">@GuardedBy</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34;this&#34;</span><span style="color:#f92672">)</span> <span style="color:#66d9ef">private</span> <span style="color:#66d9ef">int</span> generation<span style="color:#f92672">;</span>
+
+    <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">synchronized</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">close</span><span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
+        isOpen <span style="color:#f92672">=</span> <span style="color:#66d9ef">false</span><span style="color:#f92672">;</span>
+    <span style="color:#f92672">}</span>
+
+    <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">synchronized</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">open</span><span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
+        <span style="color:#f92672">++</span>generation<span style="color:#f92672">;</span>
+        isOpen <span style="color:#f92672">=</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">;</span>
+        notifyAll<span style="color:#f92672">();</span>
+    <span style="color:#f92672">}</span>
+
+    <span style="color:#75715e">// BLOCKS-UNTIL: opened-since(generation on entry)
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">synchronized</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">await</span><span style="color:#f92672">()</span> <span style="color:#66d9ef">throws</span> InterruptedException <span style="color:#f92672">{</span>
+        <span style="color:#66d9ef">int</span> arrivalGeneration <span style="color:#f92672">=</span> generation<span style="color:#f92672">;</span>
+        <span style="color:#66d9ef">while</span> <span style="color:#f92672">(!</span>isOpen <span style="color:#f92672">&amp;&amp;</span> arrivalGeneration <span style="color:#f92672">==</span> generation<span style="color:#f92672">)</span>
+            wait<span style="color:#f92672">();</span>
+    <span style="color:#f92672">}</span>
+<span style="color:#f92672">}</span></code></pre></div>
+<p>解释一下这段：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#66d9ef">while</span> <span style="color:#f92672">(!</span>isOpen <span style="color:#f92672">&amp;&amp;</span> arrivalGeneration <span style="color:#f92672">==</span> generation<span style="color:#f92672">)</span>
+  wait<span style="color:#f92672">();</span></code></pre></div>
+<p>如果大门关闭 且 线程进入时的代数和门的代数一样，就要等待。反过来的意思是，如果大门开放，或者线程进入时的代数比门的代数更老，则通过。为什么？</p>
+
+<p>因为在从<code>wait</code>唤醒到再次进入while之间门可能会被关闭，如果只看<code>open</code>状态，那么有一部分线程就会通不过，这个是有问题的，因为Gate设计的本来意是如果大门打开，那么就同时释放。</p>
+
+<h3 id="子类安全性问题">子类安全性问题</h3>
+
+<p>一个依赖状态的类应该要么完全暴露（并文档）它的等待和通知协议给子类，要么压根防止子类参与进来。</p>
+
+<h3 id="封装condition-queues">封装Condition queues</h3>
+
+<p>最好封装条件队列，这样在类层级外部就不会访问到它。</p>
+
+<h3 id="进入和退出协议">进入和退出协议</h3>
+
+<p>略。</p>
+
+<h2 id="显式条件对象">显式条件对象</h2>
+
+<p><code>Condition</code>对象关联一个<code>Lock</code>对象，一个<code>Lock</code>对象可以有很多<code>Condition</code>对象。<code>Condition</code>对象继承了<code>Lock</code>对象的公平性。</p>
+
+<p>下面是<code>Condition</code>接口：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#66d9ef">void</span> <span style="color:#a6e22e">await</span><span style="color:#f92672">()</span>
+<span style="color:#66d9ef">boolean</span> <span style="color:#a6e22e">await</span><span style="color:#f92672">(</span><span style="color:#66d9ef">long</span> time<span style="color:#f92672">,</span> TimeUnit unit<span style="color:#f92672">)</span>
+<span style="color:#66d9ef">long</span> <span style="color:#a6e22e">awaitNanos</span><span style="color:#f92672">(</span><span style="color:#66d9ef">long</span> nanosTimeout<span style="color:#f92672">)</span>
+<span style="color:#66d9ef">void</span> <span style="color:#a6e22e">awaitUninterruptibly</span><span style="color:#f92672">()</span>
+<span style="color:#66d9ef">boolean</span> <span style="color:#a6e22e">awaitUntil</span><span style="color:#f92672">(</span>Date deadline<span style="color:#f92672">)</span>
+<span style="color:#66d9ef">void</span> <span style="color:#a6e22e">signal</span><span style="color:#f92672">()</span>
+<span style="color:#66d9ef">void</span> <span style="color:#a6e22e">signalAll</span><span style="color:#f92672">()</span></code></pre></div>
+<p>下面是一个例子：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#a6e22e">@ThreadSafe</span>
+<span style="color:#66d9ef">public</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">ConditionBoundedBuffer</span> <span style="color:#f92672">&lt;</span>T<span style="color:#f92672">&gt;</span> <span style="color:#f92672">{</span>
+    <span style="color:#66d9ef">protected</span> <span style="color:#66d9ef">final</span> Lock lock <span style="color:#f92672">=</span> <span style="color:#66d9ef">new</span> ReentrantLock<span style="color:#f92672">();</span>
+    <span style="color:#75715e">// CONDITION PREDICATE: notFull (count &lt; items.length)
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">private</span> <span style="color:#66d9ef">final</span> Condition notFull <span style="color:#f92672">=</span> lock<span style="color:#f92672">.</span><span style="color:#a6e22e">newCondition</span><span style="color:#f92672">();</span>
+    <span style="color:#75715e">// CONDITION PREDICATE: notEmpty (count &gt; 0)
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">private</span> <span style="color:#66d9ef">final</span> Condition notEmpty <span style="color:#f92672">=</span> lock<span style="color:#f92672">.</span><span style="color:#a6e22e">newCondition</span><span style="color:#f92672">();</span>
+    <span style="color:#66d9ef">private</span> <span style="color:#66d9ef">static</span> <span style="color:#66d9ef">final</span> <span style="color:#66d9ef">int</span> BUFFER_SIZE <span style="color:#f92672">=</span> 100<span style="color:#f92672">;</span>
+    <span style="color:#a6e22e">@GuardedBy</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34;lock&#34;</span><span style="color:#f92672">)</span> <span style="color:#66d9ef">private</span> <span style="color:#66d9ef">final</span> T<span style="color:#f92672">[]</span> items <span style="color:#f92672">=</span> <span style="color:#f92672">(</span>T<span style="color:#f92672">[])</span> <span style="color:#66d9ef">new</span> Object<span style="color:#f92672">[</span>BUFFER_SIZE<span style="color:#f92672">];</span>
+    <span style="color:#a6e22e">@GuardedBy</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34;lock&#34;</span><span style="color:#f92672">)</span> <span style="color:#66d9ef">private</span> <span style="color:#66d9ef">int</span> tail<span style="color:#f92672">,</span> head<span style="color:#f92672">,</span> count<span style="color:#f92672">;</span>
+
+    <span style="color:#75715e">// BLOCKS-UNTIL: notFull
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">put</span><span style="color:#f92672">(</span>T x<span style="color:#f92672">)</span> <span style="color:#66d9ef">throws</span> InterruptedException <span style="color:#f92672">{</span>
+        lock<span style="color:#f92672">.</span><span style="color:#a6e22e">lock</span><span style="color:#f92672">();</span>
+        <span style="color:#66d9ef">try</span> <span style="color:#f92672">{</span>
+            <span style="color:#66d9ef">while</span> <span style="color:#f92672">(</span>count <span style="color:#f92672">==</span> items<span style="color:#f92672">.</span><span style="color:#a6e22e">length</span><span style="color:#f92672">)</span>
+                notFull<span style="color:#f92672">.</span><span style="color:#a6e22e">await</span><span style="color:#f92672">();</span>
+            items<span style="color:#f92672">[</span>tail<span style="color:#f92672">]</span> <span style="color:#f92672">=</span> x<span style="color:#f92672">;</span>
+            <span style="color:#66d9ef">if</span> <span style="color:#f92672">(++</span>tail <span style="color:#f92672">==</span> items<span style="color:#f92672">.</span><span style="color:#a6e22e">length</span><span style="color:#f92672">)</span>
+                tail <span style="color:#f92672">=</span> 0<span style="color:#f92672">;</span>
+            <span style="color:#f92672">++</span>count<span style="color:#f92672">;</span>
+            notEmpty<span style="color:#f92672">.</span><span style="color:#a6e22e">signal</span><span style="color:#f92672">();</span>
+        <span style="color:#f92672">}</span> <span style="color:#66d9ef">finally</span> <span style="color:#f92672">{</span>
+            lock<span style="color:#f92672">.</span><span style="color:#a6e22e">unlock</span><span style="color:#f92672">();</span>
+        <span style="color:#f92672">}</span>
+    <span style="color:#f92672">}</span>
+
+    <span style="color:#75715e">// BLOCKS-UNTIL: notEmpty
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">public</span> T <span style="color:#a6e22e">take</span><span style="color:#f92672">()</span> <span style="color:#66d9ef">throws</span> InterruptedException <span style="color:#f92672">{</span>
+        lock<span style="color:#f92672">.</span><span style="color:#a6e22e">lock</span><span style="color:#f92672">();</span>
+        <span style="color:#66d9ef">try</span> <span style="color:#f92672">{</span>
+            <span style="color:#66d9ef">while</span> <span style="color:#f92672">(</span>count <span style="color:#f92672">==</span> 0<span style="color:#f92672">)</span>
+                notEmpty<span style="color:#f92672">.</span><span style="color:#a6e22e">await</span><span style="color:#f92672">();</span>
+            T x <span style="color:#f92672">=</span> items<span style="color:#f92672">[</span>head<span style="color:#f92672">];</span>
+            items<span style="color:#f92672">[</span>head<span style="color:#f92672">]</span> <span style="color:#f92672">=</span> <span style="color:#66d9ef">null</span><span style="color:#f92672">;</span>
+            <span style="color:#66d9ef">if</span> <span style="color:#f92672">(++</span>head <span style="color:#f92672">==</span> items<span style="color:#f92672">.</span><span style="color:#a6e22e">length</span><span style="color:#f92672">)</span>
+                head <span style="color:#f92672">=</span> 0<span style="color:#f92672">;</span>
+            <span style="color:#f92672">--</span>count<span style="color:#f92672">;</span>
+            notFull<span style="color:#f92672">.</span><span style="color:#a6e22e">signal</span><span style="color:#f92672">();</span>
+            <span style="color:#66d9ef">return</span> x<span style="color:#f92672">;</span>
+        <span style="color:#f92672">}</span> <span style="color:#66d9ef">finally</span> <span style="color:#f92672">{</span>
+            lock<span style="color:#f92672">.</span><span style="color:#a6e22e">unlock</span><span style="color:#f92672">();</span>
+        <span style="color:#f92672">}</span>
+    <span style="color:#f92672">}</span>
+<span style="color:#f92672">}</span></code></pre></div>
+<h2 id="解剖同步器">解剖同步器</h2>
+
+<p>像<code>ReentrantLock</code>、<code>Semaphore</code>、<code>CountDownLatch</code>、<code>FutureTask</code>，都是利用了<code>AbstractQueuedSynchronizer</code> (AQS)。</p>
+
+<h2 id="abstractqueuedsynchronizer">AbstractQueuedSynchronizer</h2>
+
+<p>基于AQS的同步器执行的操作是<code>acquire</code>和<code>release</code>的变种：</p>
+
+<ul>
+<li>获取（acquire）是状态依赖的操作，而且总是会阻塞</li>
+<li>释放（release）不是一个阻塞操作，一次释放可能会允许阻塞在acquire的线程通过。</li>
+</ul>
+
+<p>AQS管理同步器的状态，通过<code>getState</code>、<code>setState</code>、<code>compareAndSetState</code>方法。比如：</p>
+
+<ul>
+<li><code>ReentrantLock</code>使用它来记录拥有锁的线程获得锁的次数（可重入的关系）</li>
+<li><code>Semaphore</code>使用它来代表剩余的permits</li>
+<li><code>FutureTask</code>用它来表示任务的状态：没开始、运行中、完成、取消。</li>
+</ul>
+
+<p>同步器也可以保存其他状态，比入<code>ReentrantLock</code>保存了lock owner线程，用来确保只有owner可以释放锁。</p>
+
+<p><code>acquire</code>可能是独占的（exclusive），比如<code>ReentrantLock</code>。也可以是非独占的（non-exclusive)，比如<code>Sempaphore</code>和<code>CountDownLatch</code>。</p>
+
+<p>一次<code>acquire</code>的包含两个部分：</p>
+
+<ul>
+<li><p>第一部分</p>
+
+<ol>
+<li>判断当前状态是否允许获取</li>
+<li>如果允许，线程通过。如果不允许，线程阻塞或者失败。</li>
+</ol></li>
+
+<li><p>第二部分：更新同步器状态。</p></li>
+</ul>
+
+<p><code>acquire</code>和<code>release</code>的经典形式：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#66d9ef">boolean</span> <span style="color:#a6e22e">acquire</span><span style="color:#f92672">()</span> <span style="color:#66d9ef">throws</span> InterruptedException <span style="color:#f92672">{</span>
+  <span style="color:#66d9ef">while</span> <span style="color:#f92672">(</span>state does not permit acquire<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+    <span style="color:#66d9ef">if</span> <span style="color:#f92672">(</span>blocking acquisition requested<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+      enqueue current thread <span style="color:#66d9ef">if</span> not already queued
+      block current thread
+    <span style="color:#f92672">}</span>
+    <span style="color:#66d9ef">else</span>
+      <span style="color:#66d9ef">return</span> failure
+  <span style="color:#f92672">}</span>
+  possibly update synchronization state
+  dequeue thread <span style="color:#66d9ef">if</span> it was queued
+  <span style="color:#66d9ef">return</span> success
+<span style="color:#f92672">}</span>
+<span style="color:#66d9ef">void</span> <span style="color:#a6e22e">release</span><span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
+  update synchronization state
+  <span style="color:#a6e22e">if</span> <span style="color:#f92672">(</span><span style="color:#66d9ef">new</span> state may permit a blocked thread to acquire<span style="color:#f92672">)</span> 
+    unblock one or more queued threads
+<span style="color:#f92672">}</span></code></pre></div>
+<p>实现AQS：</p>
+
+<ul>
+<li>支持独占式获取的同步器要实现：<code>tryAcquire</code>、 <code>tryRelease</code>、 <code>isheldExclusively</code>方法。</li>
+<li>支持非独占获取的同步器要实现：<code>tryAcquireShared</code>、<code>tryReleaseShared</code>。</li>
+<li>AQS的<code>acquire</code>、<code>acquireShared</code>、<code>release</code>、<code>releaseShared</code>会调用上面的<code>try*</code>方法。</li>
+</ul>
+
+<p><code>tryAcquireShared</code>方法返回值说明：</p>
+
+<ul>
+<li>&lt; 0，获取失败</li>
+<li>= 0，独占式获取成功</li>
+<li>&gt; 0，非独占式获取成功</li>
+</ul>
+
+<p><code>tryRelease</code>和<code>tryReleaseShared</code>返回值说明：</p>
+
+<ul>
+<li>true，可以释放阻塞在获取操作的线程</li>
+<li>false，不释放线程</li>
+</ul>
+
+<h3 id="简单的latch">简单的Latch</h3>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#a6e22e">@ThreadSafe</span>
+<span style="color:#66d9ef">public</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">OneShotLatch</span> <span style="color:#f92672">{</span>
+    <span style="color:#66d9ef">private</span> <span style="color:#66d9ef">final</span> Sync sync <span style="color:#f92672">=</span> <span style="color:#66d9ef">new</span> Sync<span style="color:#f92672">();</span>
+
+    <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">signal</span><span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
+        sync<span style="color:#f92672">.</span><span style="color:#a6e22e">releaseShared</span><span style="color:#f92672">(</span>0<span style="color:#f92672">);</span>
+    <span style="color:#f92672">}</span>
+
+    <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">await</span><span style="color:#f92672">()</span> <span style="color:#66d9ef">throws</span> InterruptedException <span style="color:#f92672">{</span>
+        sync<span style="color:#f92672">.</span><span style="color:#a6e22e">acquireSharedInterruptibly</span><span style="color:#f92672">(</span>0<span style="color:#f92672">);</span>
+    <span style="color:#f92672">}</span>
+
+    <span style="color:#66d9ef">private</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">Sync</span> <span style="color:#66d9ef">extends</span> AbstractQueuedSynchronizer <span style="color:#f92672">{</span>
+        <span style="color:#66d9ef">protected</span> <span style="color:#66d9ef">int</span> <span style="color:#a6e22e">tryAcquireShared</span><span style="color:#f92672">(</span><span style="color:#66d9ef">int</span> ignored<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+            <span style="color:#75715e">// Succeed if latch is open (state == 1), else fail
+</span><span style="color:#75715e"></span>            <span style="color:#66d9ef">return</span> <span style="color:#f92672">(</span>getState<span style="color:#f92672">()</span> <span style="color:#f92672">==</span> 1<span style="color:#f92672">)</span> <span style="color:#f92672">?</span> 1 <span style="color:#f92672">:</span> <span style="color:#f92672">-</span>1<span style="color:#f92672">;</span>
+        <span style="color:#f92672">}</span>
+
+        <span style="color:#66d9ef">protected</span> <span style="color:#66d9ef">boolean</span> <span style="color:#a6e22e">tryReleaseShared</span><span style="color:#f92672">(</span><span style="color:#66d9ef">int</span> ignored<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+            setState<span style="color:#f92672">(</span>1<span style="color:#f92672">);</span> <span style="color:#75715e">// Latch is now open
+</span><span style="color:#75715e"></span>            <span style="color:#66d9ef">return</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">;</span> <span style="color:#75715e">// Other threads may now be able to acquire
+</span><span style="color:#75715e"></span>
+        <span style="color:#f92672">}</span>
+    <span style="color:#f92672">}</span>
+<span style="color:#f92672">}</span></code></pre></div>
+<p>一般来说不会直接继承AQS，而是弄一个私有内部类来继承，这样可以保证封装。</p>
+
+<h2 id="aqs在juc同步器中的运用">AQS在JUC同步器中的运用</h2>
+
+<h3 id="reentrantlock">ReentrantLock</h3>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#66d9ef">protected</span> <span style="color:#66d9ef">boolean</span> <span style="color:#a6e22e">tryAcquire</span><span style="color:#f92672">(</span><span style="color:#66d9ef">int</span> ignored<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+  find Thread current <span style="color:#f92672">=</span> Thread<span style="color:#f92672">.</span><span style="color:#a6e22e">currentThread</span><span style="color:#f92672">();</span>
+  <span style="color:#66d9ef">int</span> c <span style="color:#f92672">=</span> getState<span style="color:#f92672">();</span>
+  <span style="color:#66d9ef">if</span> <span style="color:#f92672">(</span>c <span style="color:#f92672">==</span> 0<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+    <span style="color:#66d9ef">if</span> <span style="color:#f92672">(</span>compareAndSetState<span style="color:#f92672">(</span>0<span style="color:#f92672">,</span> 1<span style="color:#f92672">))</span> <span style="color:#f92672">{</span>   <span style="color:#75715e">// 这里的整段代码不是同步的
+</span><span style="color:#75715e"></span>      owner <span style="color:#f92672">=</span> current<span style="color:#f92672">;</span>                <span style="color:#75715e">// 没成功说明被别的线程抢了，会跑到最后的return false
+</span><span style="color:#75715e"></span>      <span style="color:#66d9ef">return</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">;</span>
+    <span style="color:#f92672">}</span>
+  <span style="color:#f92672">}</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> <span style="color:#f92672">(</span>current <span style="color:#f92672">==</span> owner<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+    setState<span style="color:#f92672">(</span>c <span style="color:#f92672">+</span> 1<span style="color:#f92672">);</span>
+    <span style="color:#66d9ef">return</span> <span style="color:#66d9ef">true</span>
+  <span style="color:#f92672">}</span>
+  <span style="color:#66d9ef">return</span> <span style="color:#66d9ef">false</span><span style="color:#f92672">;</span>
+<span style="color:#f92672">}</span></code></pre></div>
+<h3 id="semaphore和countdownlatch">Semaphore和CountDownLatch</h3>
+
+<p>在Semaphore中的运用：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#66d9ef">protected</span> <span style="color:#66d9ef">int</span> <span style="color:#a6e22e">tryAcquireShared</span><span style="color:#f92672">(</span><span style="color:#66d9ef">int</span> acquires<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+  <span style="color:#66d9ef">while</span> <span style="color:#f92672">(</span><span style="color:#66d9ef">true</span><span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+    <span style="color:#66d9ef">int</span> available <span style="color:#f92672">=</span> getState<span style="color:#f92672">();</span>
+    <span style="color:#66d9ef">int</span> remaining <span style="color:#f92672">=</span> available <span style="color:#f92672">-</span> acquires<span style="color:#f92672">;</span>
+    <span style="color:#66d9ef">if</span> <span style="color:#f92672">(</span>remaining <span style="color:#f92672">&lt;</span> 0 <span style="color:#f92672">||</span> compareAndSetState<span style="color:#f92672">(</span>available<span style="color:#f92672">,</span> remaining<span style="color:#f92672">))</span>
+      <span style="color:#75715e">/* &gt; 0: 我拿别人也能拿，非独占
+</span><span style="color:#75715e">         = 0: 我拿别人拿不了，独占
+</span><span style="color:#75715e">         &lt; 0: 谁都拿不了
+</span><span style="color:#75715e">       */</span>
+      <span style="color:#66d9ef">return</span> remaining<span style="color:#f92672">;</span>
+  <span style="color:#f92672">}</span>
+<span style="color:#f92672">}</span>
+<span style="color:#66d9ef">protected</span> <span style="color:#66d9ef">boolean</span> <span style="color:#a6e22e">tryReleaseShared</span><span style="color:#f92672">(</span><span style="color:#66d9ef">int</span> releases<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+  <span style="color:#66d9ef">while</span> <span style="color:#f92672">(</span><span style="color:#66d9ef">true</span><span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+    <span style="color:#66d9ef">int</span> p <span style="color:#f92672">=</span> getState<span style="color:#f92672">();</span>
+    <span style="color:#66d9ef">if</span> <span style="color:#f92672">(</span>compareAndSetState<span style="color:#f92672">(</span>p<span style="color:#f92672">,</span> p <span style="color:#f92672">+</span> releases<span style="color:#f92672">))</span>
+      <span style="color:#66d9ef">return</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">;</span>
+  <span style="color:#f92672">}</span>
+<span style="color:#f92672">}</span></code></pre></div>
+<p>在CountDownLatch中的运用：</p>
+
+<p>无</p>
+
+<h3 id="futuretask">FutureTask</h3>
+
+<p>state保存任务状态：running、completed、cancelled，同时保存计算结果或抛出的异常，还维护了一个运行这个任务的线程（为了能够cancel）</p>
+
+<h3 id="reentrantreadwritelock">ReentrantReadWriteLock</h3>
+
+<p>同时使用了shared和非shared两种方法。</p>
+
+<p>AQS内部维护了一个等待线程的队列，跟踪每个线程是请求独占还是非独占。在ReentrantReadWriteLock里，当锁可用式，如果队列头的线程请求写锁，它会得到它。如果队列头线程请求读锁，则会释放它和后面的线程，直到碰到一个请求写锁的线程。</p></article>
+    <footer class="post-footer">
+      
+      <ul class="post-tags">
+        
+          <li><a href="https://chanjarster.github.io/tags/arts"><span class="tag">ARTS</span></a></li>
+        
+          <li><a href="https://chanjarster.github.io/tags/arts-t"><span class="tag">ARTS-T</span></a></li>
+        
+          <li><a href="https://chanjarster.github.io/tags/%E5%B9%B6%E5%8F%91%E7%BC%96%E7%A8%8B"><span class="tag">并发编程</span></a></li>
+        
+      </ul>
+      
+      <p class="post-copyright">
+        
+      </p>
+    </footer>
+    
+      
+    
+  </section>
+  <footer class="site-footer">
+  <p>© 2017-2019 颇忒脱的技术博客</p>
+  <p>Powered by <a href="https://gohugo.io/" target="_blank">Hugo</a> with theme <a href="https://github.com/laozhu/hugo-nuo" target="_blank">Nuo</a>.</p>
+  
+</footer>
+
+
+
+<script async src="//cdn.bootcss.com/video.js/6.2.8/alt/video.novtt.min.js"></script>
+<script async src="//cdn.bootcss.com/mathjax/2.7.2/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    tex2jax: {
+      inlineMath: [['$','$'], ['\\(','\\)']],
+      displayMath: [['$$','$$'], ['\\[','\\]']],
+      processEscapes: true,
+      processEnvironments: true,
+      skipTags: ['script', 'noscript', 'style', 'textarea', 'pre'],
+      TeX: { equationNumbers: { autoNumber: "AMS" },
+      extensions: ["AMSmath.js", "AMSsymbols.js"] }
+    }
+  });
+</script>
+<script type="text/x-mathjax-config">
+  // Fix <code> tags after MathJax finishes running. This is a
+  // hack to overcome a shortcoming of Markdown. Discussion at
+  // https://github.com/mojombo/jekyll/issues/199
+  MathJax.Hub.Queue(() => {
+    MathJax.Hub.getAllJax().map(v => v.SourceElement().parentNode.className += ' has-jax');
+  });
+</script>
+
+<script src="https://chanjarster.github.io/js/bundle.273f9ac6f0.js"></script>
+
+
+
+
+  </body>
+</html>
