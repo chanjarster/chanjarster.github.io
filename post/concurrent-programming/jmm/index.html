@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+<head>
+
+  <meta charset="utf-8" />
+
+  
+  <title>The Java Memory Model</title>
+
+  
+  
+
+
+
+
+
+  
+  <meta name="author" content="颇忒脱" />
+  <meta name="description" content="
+" />
+
+  
+  
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:site" content="@gohugoio" />
+    <meta name="twitter:title" content="The Java Memory Model" />
+    <meta name="twitter:description" content="
+" />
+    <meta name="twitter:image" content="https://chanjarster.github.io/img/avatar.jpg" />
+  
+
+  
+  <meta property="og:type" content="article" />
+  <meta property="og:title" content="The Java Memory Model" />
+  <meta property="og:description" content="
+" />
+  <meta property="og:url" content="https://chanjarster.github.io/post/concurrent-programming/jmm/" />
+  <meta property="og:image" content="https://chanjarster.github.io/img/avatar.jpg" />
+
+
+
+
+<meta name="generator" content="Hugo 0.49.2" />
+
+
+<link rel="canonical" href="https://chanjarster.github.io/post/concurrent-programming/jmm/" />
+
+<meta name="renderer" content="webkit" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<meta name="format-detection" content="telephone=no,email=no,adress=no" />
+<meta http-equiv="Cache-Control" content="no-transform" />
+
+
+<meta name="robots" content="index,follow" />
+<meta name="referrer" content="origin-when-cross-origin" />
+
+
+
+
+
+
+
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="颇忒脱的技术博客" />
+<meta name="msapplication-tooltip" content="颇忒脱的技术博客" />
+<meta name='msapplication-navbutton-color' content="#5fbf5e" />
+<meta name="msapplication-TileColor" content="#5fbf5e" />
+<meta name="msapplication-TileImage" content="/img/tile-image-windows.png" />
+<link rel="icon" href="https://chanjarster.github.io/img/favicon.ico" />
+<link rel="icon" type="image/png" sizes="16x16" href="https://chanjarster.github.io/img/favicon-16x16.png" />
+<link rel="icon" type="image/png" sizes="32x32" href="https://chanjarster.github.io/img/favicon-32x32.png" />
+<link rel="icon" sizes="192x192" href="https://chanjarster.github.io/img/touch-icon-android.png" />
+<link rel="apple-touch-icon" href="https://chanjarster.github.io/img/touch-icon-apple.png" />
+<link rel="mask-icon" href="https://chanjarster.github.io/img/safari-pinned-tab.svg" color="#5fbf5e" />
+
+
+
+<link rel="stylesheet" href="//cdn.bootcss.com/video.js/6.2.8/alt/video-js-cdn.min.css" />
+
+<link rel="stylesheet" href="https://chanjarster.github.io/css/bundle.8e3aef2bc5.css" />
+
+
+  
+  <!--[if lt IE 9]>
+    <script src="//cdn.bootcss.com/html5shiv/3.7.3/html5shiv.min.js"></script>
+    <script src="//cdn.bootcss.com/respond.js/1.4.2/respond.min.js"></script>
+    <script src="//cdn.bootcss.com/video.js/6.2.8/ie8/videojs-ie8.min.js"></script>
+  <![endif]-->
+
+<!--[if lte IE 11]>
+    <script src="//cdn.bootcss.com/classlist/1.1.20170427/classList.min.js"></script>
+  <![endif]-->
+
+
+<script src="//cdn.bootcss.com/object-fit-images/3.2.3/ofi.min.js"></script>
+
+
+<script src="//cdn.bootcss.com/smooth-scroll/12.1.4/js/smooth-scroll.polyfills.min.js"></script>
+
+
+</head>
+  <body>
+    
+    <div class="suspension">
+      <a title="Go to top" class="to-top is-hide"><span class="icon icon-up"></span></a>
+      
+        
+      
+    </div>
+    
+    
+  <header class="site-header">
+  <img class="avatar" src="https://chanjarster.github.io/img/avatar2.jpg" alt="Avatar">
+  
+  <h2 class="title">颇忒脱的技术博客</h2>
+  
+  <p class="subtitle"></p>
+  <button class="menu-toggle" type="button">
+    <span class="icon icon-menu"></span>
+  </button>
+  <nav class="site-menu collapsed">
+    <h2 class="offscreen">Main Menu</h2>
+    <ul class="menu-list">
+      
+      
+      
+      
+        <li class="menu-item
+            
+            
+            
+              is-active
+            ">
+            <a href="https://chanjarster.github.io/">Home</a>
+          </li>
+      
+        <li class="menu-item
+            
+            
+            ">
+            <a href="https://chanjarster.github.io/tags/%E6%94%B6%E8%97%8F%E5%A4%B9/">Bookmarks</a>
+          </li>
+      
+        <li class="menu-item
+            
+            
+            ">
+            <a href="https://chanjarster.github.io/post/jvm/jvm-index/">JVM</a>
+          </li>
+      
+        <li class="menu-item
+            
+            
+            ">
+            <a href="https://chanjarster.github.io/post/concurrent-programming/index-page">并发编程</a>
+          </li>
+      
+        <li class="menu-item
+            
+            
+            ">
+            <a href="https://github.com/chanjarster">Works</a>
+          </li>
+      
+        <li class="menu-item
+            
+            
+            ">
+            <a href="https://chanjarster.github.io/tags/">Tags</a>
+          </li>
+      
+        <li class="menu-item
+            
+            
+            ">
+            <a href="https://chanjarster.github.io/links/">Links</a>
+          </li>
+      
+    </ul>
+  </nav>
+  <nav class="social-menu collapsed">
+    <h2 class="offscreen">Social Networks</h2>
+    <ul class="social-list">
+
+      
+
+      
+      <li class="social-item">
+        <a href="//github.com/chanjarster" title="GitHub"><span class="icon icon-github"></span></a>
+      </li>
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      <li class="social-item">
+        <a rel="alternate" type="application/rss+xml" href="https://chanjarster.github.io/index.xml"><span class="icon icon-rss" title="RSS"></span></a>
+      </li>
+
+    </ul>
+  </nav>
+</header>
+
+  <section class="main post-detail">
+    <header class="post-header">
+      <h1 class="post-title">The Java Memory Model</h1>
+      <p class="post-meta">@颇忒脱 · Nov 26, 2019 · 3 min read</p>
+    </header>
+    <article class="post-content"><p></p>
+
+<h2 id="什么是内存模型">什么是内存模型</h2>
+
+<p>以下因素会阻止一个线程看到变量的最新值，导致在其他线程的内存操作看起来不按顺序发生：</p>
+
+<ul>
+<li>编译器生成的指令的顺序可以和源代码的顺序不同</li>
+<li>编译器可以把变量存到寄存器而不是内存</li>
+<li>处理器可以并行执行指令，或者不按顺序执行指令</li>
+<li>cache可能使得对变量的写以不同的顺序提交到main memory</li>
+<li>保存在处理器本地cache中的值可能对其他处理器不可见</li>
+</ul>
+
+<p>Java语言规范要求JVM维持“线程内看起来顺序执行的语义”。</p>
+
+<p>为何会有以上因素：</p>
+
+<ul>
+<li>CPU的并行度的增加：pipelined superscalar执行单元，动态指令调度，speculative execution（投机执行），成熟的多级缓存。</li>
+<li>编译器变得更复杂：充安排指令以优化执行，使用成熟的全局寄存器分配算法。</li>
+</ul>
+
+<h3 id="平台内存模型">平台内存模型</h3>
+
+<p>多处理器架构，每个处理器有它自己的cache定时和主内存保持一致。</p>
+
+<p>处理器架构提供了不同程度的cache coherence，缓存一致性。</p>
+
+<p>确保每个处理器在任何时刻知道其他处理器在干什么代价是很高的。</p>
+
+<p>一个架构的“内存模型”告诉程序它能够从内存系统得到怎样的保证，并规定了在共享数据时哪些特殊指令（称为内存屏障或者fence）可以得到额外的内存协调保证。</p>
+
+<p>Java内存模型屏蔽了不同架构的内存模型，提供了一种抽象，它会在何时的地方插入内存屏障。</p>
+
+<p>Java内存模型也不提供顺序一致性，现代多处理器架构也不支持顺序一致性。</p>
+
+<h3 id="重排序">重排序</h3>
+
+<p>下面这段代码从代码顺序来说，可能的结果是：(1, 0)，(0, 1)，(1, 1)。但还有可能是 (0, 0)。</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#66d9ef">public</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">PossibleReordering</span> <span style="color:#f92672">{</span>
+  <span style="color:#66d9ef">static</span> <span style="color:#66d9ef">int</span> x <span style="color:#f92672">=</span> 0<span style="color:#f92672">,</span> y <span style="color:#f92672">=</span> 0<span style="color:#f92672">;</span>
+  <span style="color:#66d9ef">static</span> <span style="color:#66d9ef">int</span> a <span style="color:#f92672">=</span> 0<span style="color:#f92672">,</span> b <span style="color:#f92672">=</span> 0<span style="color:#f92672">;</span>
+
+  <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">static</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">main</span><span style="color:#f92672">(</span>String<span style="color:#f92672">[]</span> args<span style="color:#f92672">)</span> <span style="color:#66d9ef">throws</span> InterruptedException <span style="color:#f92672">{</span>
+    <span style="color:#75715e">// Thread A
+</span><span style="color:#75715e"></span>    Thread one <span style="color:#f92672">=</span> <span style="color:#66d9ef">new</span> Thread<span style="color:#f92672">(</span><span style="color:#66d9ef">new</span> Runnable<span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
+      <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">run</span><span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
+        a <span style="color:#f92672">=</span> 1<span style="color:#f92672">;</span>
+        x <span style="color:#f92672">=</span> b<span style="color:#f92672">;</span>
+      <span style="color:#f92672">}</span>
+    <span style="color:#f92672">});</span>
+    <span style="color:#75715e">// Thread B
+</span><span style="color:#75715e"></span>    Thread other <span style="color:#f92672">=</span> <span style="color:#66d9ef">new</span> Thread<span style="color:#f92672">(</span><span style="color:#66d9ef">new</span> Runnable<span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
+      <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">run</span><span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
+        b <span style="color:#f92672">=</span> 1<span style="color:#f92672">;</span>
+        y <span style="color:#f92672">=</span> a<span style="color:#f92672">;</span>
+      <span style="color:#f92672">}</span>
+    <span style="color:#f92672">});</span>
+    one<span style="color:#f92672">.</span><span style="color:#a6e22e">start</span><span style="color:#f92672">();</span>
+    other<span style="color:#f92672">.</span><span style="color:#a6e22e">start</span><span style="color:#f92672">();</span>
+    one<span style="color:#f92672">.</span><span style="color:#a6e22e">join</span><span style="color:#f92672">();</span>
+    other<span style="color:#f92672">.</span><span style="color:#a6e22e">join</span><span style="color:#f92672">();</span>
+    System<span style="color:#f92672">.</span><span style="color:#a6e22e">out</span><span style="color:#f92672">.</span><span style="color:#a6e22e">println</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34;( &#34;</span> <span style="color:#f92672">+</span> x <span style="color:#f92672">+</span> <span style="color:#e6db74">&#34;,&#34;</span> <span style="color:#f92672">+</span> y <span style="color:#f92672">+</span> <span style="color:#e6db74">&#34;)&#34;</span><span style="color:#f92672">);</span>
+  <span style="color:#f92672">}</span>
+<span style="color:#f92672">}</span></code></pre></div>
+<p>前面将了代码重排序的原因，实际上就算代码按顺序执行，因为cache刷新到主内存的时机也可能使B线程看到A是以相反顺序执行的。</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-txt" data-lang="txt">Thread A  ---&gt; x=b(0) ----------------------&gt; a=1
+Thread B  --------------&gt; b=1 -----&gt; y=a(0)</code></pre></div>
+<p>同步（synchronization）禁止了编译器、运行时和硬件对内存操作做出能够违反JMM要求的可见性保证的重排序。注意是可以重排序的，支持禁止了哪些会违反可见性保证的重排序。</p>
+
+<p>happens-before：要确保操作B能够看到操作A的结果（不论A和B是否在相同线程中），它们必须有happens-before关系。如果没有happens-before，那么JVM可以随意重排序。</p>
+
+<p>happens-before规则：</p>
+
+<ul>
+<li><p>程序顺序规则：同一个线程里的操作happens-before程序顺序中的后一个操作。</p></li>
+
+<li><p>内置锁规则：unlock 内置锁happens-before后续lock这个锁。</p></li>
+
+<li><p>volatile变量规则：对volatile变量的写happens-before后续对这个变量的读。</p></li>
+
+<li><p>线程开始规则：线程start happens-before 这个线程里的动作。</p></li>
+
+<li><p>线程终止：A线程里的动作 happens-before 侦测到这个线程终止的B线程的动作。Thread.join 和 Thread.isAlive 都适用该规则。</p></li>
+
+<li><p>中断规则：A线程调用B线程的interrupt方法 happens-before B侦测到中断。B无论是收到InterruptedException，调用isInterrupted或者interrupted方法都适用该规则。</p></li>
+
+<li><p>Finalizer规则：构造函数的结束 happens-before 该对象finalizer的开始。</p></li>
+
+<li><p>传递性规则：如果A happens-before B，B happens-before C，那么A也happens-before C。</p></li>
+</ul>
+
+<p>扩展规则（接力式同步）：</p>
+
+<ul>
+<li>put item到线程安全集合happens-before在其他线程里从这个集合里get</li>
+<li><code>countDown</code> <code>CountDownLatch</code> happens-before 一个线程从 <code>await</code> 返回 （AQS的release）</li>
+<li>释放一个<code>Semaphore</code>的<code>permit</code> happens-before 从这个<code>Semaphore</code>获取<code>permit</code> （AQS的release）</li>
+<li>Future代表的任务所执行的动作 happens-before 其他线程从Future.get返回</li>
+<li>提交<code>Runnable</code> / <code>Callable</code> 到<code>Executor</code> happens-before 任务执行</li>
+<li>一个线程到达 <code>CyclicBarrier</code>/<code>Exchanger</code> happens-before 从同一个barrier/exchanger释放到其他线程。如果<code>CyclicBarrier</code>使用barrier action，那么到达<code>CyclicBarrier</code> happens-before barrier action，进而happens-before 从barrier释放到线程。</li>
+</ul>
+
+<p>注意传递性规则，看这个图，线程A的所有操作happens-before 线程B的所有操作：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-txt" data-lang="txt"> [Thread A]
+    y=1
+  lock M
+    x=1                        [Thread B]
+  unlock M ------------------&gt;   lock M
+                                  i=x
+                                 unlock M
+                                  j=y</code></pre></div>
+<h3 id="接力式同步">接力式同步</h3>
+
+<p>把一个happens-before规则和另一个happens-before规则结合起来，一般都是volatile变量 或者 内置锁，使得对一个变量的访问有序。不过这个技巧对语句的顺序很敏感，也容易被破坏，所以这个是榨取性能的最后武器，一般不推荐使用。</p>
+
+<p>下面这段代码看不到什么锁，但是能够保证不被重排序是因为间接的使用了同一个volatile变量：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java">  <span style="color:#66d9ef">private</span> <span style="color:#66d9ef">final</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">Sync</span> <span style="color:#66d9ef">extends</span> AbstractQueuedSynchronizer <span style="color:#f92672">{</span>
+    <span style="color:#75715e">/** State value representing that task is ready to run */</span>
+    <span style="color:#66d9ef">private</span> <span style="color:#66d9ef">static</span> <span style="color:#66d9ef">final</span> <span style="color:#66d9ef">int</span> READY   <span style="color:#f92672">=</span> 0<span style="color:#f92672">;</span>
+    <span style="color:#75715e">/** State value representing that task is running */</span>
+    <span style="color:#66d9ef">private</span> <span style="color:#66d9ef">static</span> <span style="color:#66d9ef">final</span> <span style="color:#66d9ef">int</span> RUNNING   <span style="color:#f92672">=</span> 1<span style="color:#f92672">;</span>
+    <span style="color:#75715e">/** State value representing that task ran */</span>
+    <span style="color:#66d9ef">private</span> <span style="color:#66d9ef">static</span> <span style="color:#66d9ef">final</span> <span style="color:#66d9ef">int</span> RAN     <span style="color:#f92672">=</span> 2<span style="color:#f92672">;</span>
+    <span style="color:#75715e">/** State value representing that task was cancelled */</span>
+    <span style="color:#66d9ef">private</span> <span style="color:#66d9ef">static</span> <span style="color:#66d9ef">final</span> <span style="color:#66d9ef">int</span> CANCELLED <span style="color:#f92672">=</span> 4<span style="color:#f92672">;</span>
+    <span style="color:#75715e">/** The result to return from get() */</span>
+    <span style="color:#66d9ef">private</span> V result<span style="color:#f92672">;</span>
+    <span style="color:#75715e">/** The exception to throw from get() */</span>
+    <span style="color:#66d9ef">private</span> Throwable exception<span style="color:#f92672">;</span>
+
+    V <span style="color:#a6e22e">innerGet</span><span style="color:#f92672">()</span> <span style="color:#66d9ef">throws</span> InterruptedException<span style="color:#f92672">,</span> ExecutionException <span style="color:#f92672">{</span>
+      <span style="color:#75715e">// 间接调用了tryAcquireShared -&gt; 读取 volatile state变量
+</span><span style="color:#75715e"></span>      acquireSharedInterruptibly<span style="color:#f92672">(</span>0<span style="color:#f92672">);</span>
+      <span style="color:#66d9ef">if</span> <span style="color:#f92672">(</span>getState<span style="color:#f92672">()</span> <span style="color:#f92672">==</span> CANCELLED<span style="color:#f92672">)</span>
+        <span style="color:#66d9ef">throw</span> <span style="color:#66d9ef">new</span> CancellationException<span style="color:#f92672">();</span>
+      <span style="color:#66d9ef">if</span> <span style="color:#f92672">(</span>exception <span style="color:#f92672">!=</span> <span style="color:#66d9ef">null</span><span style="color:#f92672">)</span>
+        <span style="color:#66d9ef">throw</span> <span style="color:#66d9ef">new</span> ExecutionException<span style="color:#f92672">(</span>exception<span style="color:#f92672">);</span>
+      <span style="color:#66d9ef">return</span> result<span style="color:#f92672">;</span>
+    <span style="color:#f92672">}</span>
+
+    <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">innerSet</span><span style="color:#f92672">(</span>V v<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+      <span style="color:#66d9ef">for</span> <span style="color:#f92672">(;;)</span> <span style="color:#f92672">{</span>
+        <span style="color:#66d9ef">int</span> s <span style="color:#f92672">=</span> getState<span style="color:#f92672">();</span>
+        <span style="color:#66d9ef">if</span> <span style="color:#f92672">(</span>s <span style="color:#f92672">==</span> RAN<span style="color:#f92672">)</span>
+          <span style="color:#66d9ef">return</span><span style="color:#f92672">;</span>
+        <span style="color:#66d9ef">if</span> <span style="color:#f92672">(</span>s <span style="color:#f92672">==</span> CANCELLED<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+          <span style="color:#75715e">// 间接调用了tryReleaseShared -&gt; 写 volatile state变量
+</span><span style="color:#75715e"></span>          releaseShared<span style="color:#f92672">(</span>0<span style="color:#f92672">);</span>
+          <span style="color:#66d9ef">return</span><span style="color:#f92672">;</span>
+        <span style="color:#f92672">}</span>
+        <span style="color:#66d9ef">if</span> <span style="color:#f92672">(</span>compareAndSetState<span style="color:#f92672">(</span>s<span style="color:#f92672">,</span> RAN<span style="color:#f92672">))</span> <span style="color:#f92672">{</span>
+          result <span style="color:#f92672">=</span> v<span style="color:#f92672">;</span>
+          <span style="color:#75715e">// 间接调用了tryReleaseShared -&gt; 写 volatile state变量
+</span><span style="color:#75715e"></span>          releaseShared<span style="color:#f92672">(</span>0<span style="color:#f92672">);</span>
+          done<span style="color:#f92672">();</span>
+          <span style="color:#66d9ef">return</span><span style="color:#f92672">;</span>
+        <span style="color:#f92672">}</span>
+      <span style="color:#f92672">}</span>
+    <span style="color:#f92672">}</span>
+  <span style="color:#f92672">}</span></code></pre></div>
+<h2 id="发布">发布</h2>
+
+<p>不正确发布的风险正是发布共享对象的线程和访问该对象的线程缺少happens-before的结果。</p>
+
+<h3 id="不安全发布">不安全发布</h3>
+
+<p>看下面这段代码，<code>new Resource()</code>里有对Resource内部属性的写，发布这个对象则是对<code>resource</code>变量的写，两者之间缺乏happens-before关系，那么就意味着这些操作可能会重排序，也就意味着其他线程可能会看到一个构造不完全的对象：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#a6e22e">@NotThreadSafe</span>
+<span style="color:#66d9ef">public</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">UnsafeLazyInitialization</span> <span style="color:#f92672">{</span>
+    <span style="color:#66d9ef">private</span> <span style="color:#66d9ef">static</span> Resource resource<span style="color:#f92672">;</span>
+
+    <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">static</span> Resource <span style="color:#a6e22e">getInstance</span><span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
+        <span style="color:#66d9ef">if</span> <span style="color:#f92672">(</span>resource <span style="color:#f92672">==</span> <span style="color:#66d9ef">null</span><span style="color:#f92672">)</span>
+            resource <span style="color:#f92672">=</span> <span style="color:#66d9ef">new</span> Resource<span style="color:#f92672">();</span> <span style="color:#75715e">// unsafe publication
+</span><span style="color:#75715e"></span>        <span style="color:#66d9ef">return</span> resource<span style="color:#f92672">;</span>
+    <span style="color:#f92672">}</span>
+
+    <span style="color:#66d9ef">static</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">Resource</span> <span style="color:#f92672">{</span>
+    <span style="color:#f92672">}</span>
+<span style="color:#f92672">}</span></code></pre></div>
+<h3 id="安全发布">安全发布</h3>
+
+<p>举个队列的例子，如果A放X到队列的动作happens-before B从队列中取出B，那么不仅B能看到A所留下的X的状态，B也能看到A在传递X之前的所有动作。</p>
+
+<h3 id="安全法发布惯用法">安全法发布惯用法</h3>
+
+<p>添加了<code>synchronized</code>（用的是内置锁规则）：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#a6e22e">@ThreadSafe</span>
+<span style="color:#66d9ef">public</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">SafeLazyInitialization</span> <span style="color:#f92672">{</span>
+    <span style="color:#66d9ef">private</span> <span style="color:#66d9ef">static</span> Resource resource<span style="color:#f92672">;</span>
+  
+    <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">synchronized</span> <span style="color:#66d9ef">static</span> Resource <span style="color:#a6e22e">getInstance</span><span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
+        <span style="color:#66d9ef">if</span> <span style="color:#f92672">(</span>resource <span style="color:#f92672">==</span> <span style="color:#66d9ef">null</span><span style="color:#f92672">)</span>
+            resource <span style="color:#f92672">=</span> <span style="color:#66d9ef">new</span> Resource<span style="color:#f92672">();</span>
+        <span style="color:#66d9ef">return</span> resource<span style="color:#f92672">;</span>
+    <span style="color:#f92672">}</span>
+
+    <span style="color:#66d9ef">static</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">Resource</span> <span style="color:#f92672">{</span>
+    <span style="color:#f92672">}</span>
+<span style="color:#f92672">}</span></code></pre></div>
+<p>也可以利用JVM初始化类时，初始化其静态变量串行话（使用了锁）的事实：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#a6e22e">@ThreadSafe</span>
+<span style="color:#66d9ef">public</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">EagerInitialization</span> <span style="color:#f92672">{</span>
+    <span style="color:#66d9ef">private</span> <span style="color:#66d9ef">static</span> Resource resource <span style="color:#f92672">=</span> <span style="color:#66d9ef">new</span> Resource<span style="color:#f92672">();</span>
+
+    <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">static</span> Resource <span style="color:#a6e22e">getResource</span><span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
+        <span style="color:#66d9ef">return</span> resource<span style="color:#f92672">;</span>
+    <span style="color:#f92672">}</span>
+
+    <span style="color:#66d9ef">static</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">Resource</span> <span style="color:#f92672">{</span>
+    <span style="color:#f92672">}</span>
+<span style="color:#f92672">}</span></code></pre></div>
+<p>再Hack一点，弄个懒加载：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#a6e22e">@ThreadSafe</span>
+<span style="color:#66d9ef">public</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">ResourceFactory</span> <span style="color:#f92672">{</span>
+    <span style="color:#66d9ef">private</span> <span style="color:#66d9ef">static</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">ResourceHolder</span> <span style="color:#f92672">{</span>
+        <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">static</span> Resource resource <span style="color:#f92672">=</span> <span style="color:#66d9ef">new</span> Resource<span style="color:#f92672">();</span>
+    <span style="color:#f92672">}</span>
+
+    <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">static</span> Resource <span style="color:#a6e22e">getResource</span><span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
+        <span style="color:#66d9ef">return</span> ResourceFactory<span style="color:#f92672">.</span><span style="color:#a6e22e">ResourceHolder</span><span style="color:#f92672">.</span><span style="color:#a6e22e">resource</span><span style="color:#f92672">;</span>
+    <span style="color:#f92672">}</span>
+
+    <span style="color:#66d9ef">static</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">Resource</span> <span style="color:#f92672">{</span>
+    <span style="color:#f92672">}</span>
+<span style="color:#f92672">}</span></code></pre></div>
+<h3 id="double-checked-locking">Double-checked locking</h3>
+
+<p>下面这段代码就是臭名昭著的DCL：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#a6e22e">@NotThreadSafe</span>
+<span style="color:#66d9ef">public</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">DoubleCheckedLocking</span> <span style="color:#f92672">{</span>
+    <span style="color:#66d9ef">private</span> <span style="color:#66d9ef">static</span> Resource resource<span style="color:#f92672">;</span>
+
+    <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">static</span> Resource <span style="color:#a6e22e">getInstance</span><span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
+        <span style="color:#66d9ef">if</span> <span style="color:#f92672">(</span>resource <span style="color:#f92672">==</span> <span style="color:#66d9ef">null</span><span style="color:#f92672">)</span> <span style="color:#f92672">{</span>  <span style="color:#75715e">// 这行代码并未同步，因此会看到构造不完全的对象
+</span><span style="color:#75715e"></span>            <span style="color:#66d9ef">synchronized</span> <span style="color:#f92672">(</span>DoubleCheckedLocking<span style="color:#f92672">.</span><span style="color:#a6e22e">class</span><span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+                <span style="color:#66d9ef">if</span> <span style="color:#f92672">(</span>resource <span style="color:#f92672">==</span> <span style="color:#66d9ef">null</span><span style="color:#f92672">)</span>
+                    resource <span style="color:#f92672">=</span> <span style="color:#66d9ef">new</span> Resource<span style="color:#f92672">();</span>
+            <span style="color:#f92672">}</span>
+        <span style="color:#f92672">}</span>
+        <span style="color:#66d9ef">return</span> resource<span style="color:#f92672">;</span>
+    <span style="color:#f92672">}</span>
+
+    <span style="color:#66d9ef">static</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">Resource</span> <span style="color:#f92672">{</span>
+
+    <span style="color:#f92672">}</span>
+<span style="color:#f92672">}</span></code></pre></div>
+<p>JDK 1.5之后，可以把resource变量变成<code>volatile</code>解决这个问题（因为有了Happens-before）</p>
+
+<h3 id="初始化安全">初始化安全</h3>
+
+<p>“初始化安全”的保证，允许正确构建的不可变对象，安全的在线程间共享，而不需要同步，且不用考虑这个对象是如何发布的。也就是说如果上面代码<code>Resource</code>是不可变的，那就没有DCL的问题。</p>
+
+<p>对于对象的final属性，初始化安全机制禁止对任何构造函数的代码和初始加载该对象引用做重排序。例外：</p>
+
+<ul>
+<li>非final属性没有这个保证</li>
+<li>在构造期间对象逃逸了，也没有这个保证</li>
+<li>这个保证只针对于可以通过final属性得到的值有效，可认为具有传递性</li>
+</ul>
+
+<p>下面代码是安全发布的，可以看到<code>SafeStates</code>是不可变的，<code>states</code>也只不过是<code>HashMap</code>，但<code>SafeStates</code>依然能够以和前面的<code>Resource</code>一样的形式安全发布：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#a6e22e">@ThreadSafe</span>
+<span style="color:#66d9ef">public</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">SafeStates</span> <span style="color:#f92672">{</span>
+    <span style="color:#66d9ef">private</span> <span style="color:#66d9ef">final</span> Map<span style="color:#f92672">&lt;</span>String<span style="color:#f92672">,</span> String<span style="color:#f92672">&gt;</span> states<span style="color:#f92672">;</span>
+
+    <span style="color:#66d9ef">public</span> <span style="color:#a6e22e">SafeStates</span><span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
+        states <span style="color:#f92672">=</span> <span style="color:#66d9ef">new</span> HashMap<span style="color:#f92672">&lt;</span>String<span style="color:#f92672">,</span> String<span style="color:#f92672">&gt;();</span>
+        states<span style="color:#f92672">.</span><span style="color:#a6e22e">put</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34;alaska&#34;</span><span style="color:#f92672">,</span> <span style="color:#e6db74">&#34;AK&#34;</span><span style="color:#f92672">);</span>
+        states<span style="color:#f92672">.</span><span style="color:#a6e22e">put</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34;alabama&#34;</span><span style="color:#f92672">,</span> <span style="color:#e6db74">&#34;AL&#34;</span><span style="color:#f92672">);</span>
+        <span style="color:#75715e">/*...*/</span>
+        states<span style="color:#f92672">.</span><span style="color:#a6e22e">put</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34;wyoming&#34;</span><span style="color:#f92672">,</span> <span style="color:#e6db74">&#34;WY&#34;</span><span style="color:#f92672">);</span>
+    <span style="color:#f92672">}</span>
+
+    <span style="color:#66d9ef">public</span> String <span style="color:#a6e22e">getAbbreviation</span><span style="color:#f92672">(</span>String s<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+        <span style="color:#66d9ef">return</span> states<span style="color:#f92672">.</span><span style="color:#a6e22e">get</span><span style="color:#f92672">(</span>s<span style="color:#f92672">);</span>
+    <span style="color:#f92672">}</span>
+<span style="color:#f92672">}</span></code></pre></div></article>
+    <footer class="post-footer">
+      
+      <ul class="post-tags">
+        
+          <li><a href="https://chanjarster.github.io/tags/arts"><span class="tag">ARTS</span></a></li>
+        
+          <li><a href="https://chanjarster.github.io/tags/arts-t"><span class="tag">ARTS-T</span></a></li>
+        
+          <li><a href="https://chanjarster.github.io/tags/%E5%B9%B6%E5%8F%91%E7%BC%96%E7%A8%8B"><span class="tag">并发编程</span></a></li>
+        
+      </ul>
+      
+      <p class="post-copyright">
+        
+      </p>
+    </footer>
+    
+      
+    
+  </section>
+  <footer class="site-footer">
+  <p>© 2017-2019 颇忒脱的技术博客</p>
+  <p>Powered by <a href="https://gohugo.io/" target="_blank">Hugo</a> with theme <a href="https://github.com/laozhu/hugo-nuo" target="_blank">Nuo</a>.</p>
+  
+</footer>
+
+
+
+<script async src="//cdn.bootcss.com/video.js/6.2.8/alt/video.novtt.min.js"></script>
+<script async src="//cdn.bootcss.com/mathjax/2.7.2/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    tex2jax: {
+      inlineMath: [['$','$'], ['\\(','\\)']],
+      displayMath: [['$$','$$'], ['\\[','\\]']],
+      processEscapes: true,
+      processEnvironments: true,
+      skipTags: ['script', 'noscript', 'style', 'textarea', 'pre'],
+      TeX: { equationNumbers: { autoNumber: "AMS" },
+      extensions: ["AMSmath.js", "AMSsymbols.js"] }
+    }
+  });
+</script>
+<script type="text/x-mathjax-config">
+  // Fix <code> tags after MathJax finishes running. This is a
+  // hack to overcome a shortcoming of Markdown. Discussion at
+  // https://github.com/mojombo/jekyll/issues/199
+  MathJax.Hub.Queue(() => {
+    MathJax.Hub.getAllJax().map(v => v.SourceElement().parentNode.className += ' has-jax');
+  });
+</script>
+
+<script src="https://chanjarster.github.io/js/bundle.273f9ac6f0.js"></script>
+
+
+
+
+  </body>
+</html>
