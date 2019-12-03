@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+<head>
+
+  <meta charset="utf-8" />
+
+  
+  <title>Redis解决超卖问题的方案汇总</title>
+
+  
+  
+
+
+
+
+
+  
+  <meta name="author" content="颇忒脱" />
+  <meta name="description" content="
+" />
+
+  
+  
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:site" content="@gohugoio" />
+    <meta name="twitter:title" content="Redis解决超卖问题的方案汇总" />
+    <meta name="twitter:description" content="
+" />
+    <meta name="twitter:image" content="https://chanjarster.github.io/img/avatar.jpg" />
+  
+
+  
+  <meta property="og:type" content="article" />
+  <meta property="og:title" content="Redis解决超卖问题的方案汇总" />
+  <meta property="og:description" content="
+" />
+  <meta property="og:url" content="https://chanjarster.github.io/post/redis-lua-miaosha/" />
+  <meta property="og:image" content="https://chanjarster.github.io/img/avatar.jpg" />
+
+
+
+
+<meta name="generator" content="Hugo 0.49.2" />
+
+
+<link rel="canonical" href="https://chanjarster.github.io/post/redis-lua-miaosha/" />
+
+<meta name="renderer" content="webkit" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<meta name="format-detection" content="telephone=no,email=no,adress=no" />
+<meta http-equiv="Cache-Control" content="no-transform" />
+
+
+<meta name="robots" content="index,follow" />
+<meta name="referrer" content="origin-when-cross-origin" />
+
+
+
+
+
+
+
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="颇忒脱的技术博客" />
+<meta name="msapplication-tooltip" content="颇忒脱的技术博客" />
+<meta name='msapplication-navbutton-color' content="#5fbf5e" />
+<meta name="msapplication-TileColor" content="#5fbf5e" />
+<meta name="msapplication-TileImage" content="/img/tile-image-windows.png" />
+<link rel="icon" href="https://chanjarster.github.io/img/favicon.ico" />
+<link rel="icon" type="image/png" sizes="16x16" href="https://chanjarster.github.io/img/favicon-16x16.png" />
+<link rel="icon" type="image/png" sizes="32x32" href="https://chanjarster.github.io/img/favicon-32x32.png" />
+<link rel="icon" sizes="192x192" href="https://chanjarster.github.io/img/touch-icon-android.png" />
+<link rel="apple-touch-icon" href="https://chanjarster.github.io/img/touch-icon-apple.png" />
+<link rel="mask-icon" href="https://chanjarster.github.io/img/safari-pinned-tab.svg" color="#5fbf5e" />
+
+
+
+<link rel="stylesheet" href="//cdn.bootcss.com/video.js/6.2.8/alt/video-js-cdn.min.css" />
+
+<link rel="stylesheet" href="https://chanjarster.github.io/css/bundle.8e3aef2bc5.css" />
+
+
+  
+  <!--[if lt IE 9]>
+    <script src="//cdn.bootcss.com/html5shiv/3.7.3/html5shiv.min.js"></script>
+    <script src="//cdn.bootcss.com/respond.js/1.4.2/respond.min.js"></script>
+    <script src="//cdn.bootcss.com/video.js/6.2.8/ie8/videojs-ie8.min.js"></script>
+  <![endif]-->
+
+<!--[if lte IE 11]>
+    <script src="//cdn.bootcss.com/classlist/1.1.20170427/classList.min.js"></script>
+  <![endif]-->
+
+
+<script src="//cdn.bootcss.com/object-fit-images/3.2.3/ofi.min.js"></script>
+
+
+<script src="//cdn.bootcss.com/smooth-scroll/12.1.4/js/smooth-scroll.polyfills.min.js"></script>
+
+
+</head>
+  <body>
+    
+    <div class="suspension">
+      <a title="Go to top" class="to-top is-hide"><span class="icon icon-up"></span></a>
+      
+        
+      
+    </div>
+    
+    
+  <header class="site-header">
+  <img class="avatar" src="https://chanjarster.github.io/img/avatar2.jpg" alt="Avatar">
+  
+  <h2 class="title">颇忒脱的技术博客</h2>
+  
+  <p class="subtitle"></p>
+  <button class="menu-toggle" type="button">
+    <span class="icon icon-menu"></span>
+  </button>
+  <nav class="site-menu collapsed">
+    <h2 class="offscreen">Main Menu</h2>
+    <ul class="menu-list">
+      
+      
+      
+      
+        <li class="menu-item
+            
+            
+            
+              is-active
+            ">
+            <a href="https://chanjarster.github.io/">Home</a>
+          </li>
+      
+        <li class="menu-item
+            
+            
+            ">
+            <a href="https://chanjarster.github.io/tags/%E6%94%B6%E8%97%8F%E5%A4%B9/">Bookmarks</a>
+          </li>
+      
+        <li class="menu-item
+            
+            
+            ">
+            <a href="https://chanjarster.github.io/post/jvm/jvm-index/">JVM</a>
+          </li>
+      
+        <li class="menu-item
+            
+            
+            ">
+            <a href="https://chanjarster.github.io/post/concurrent-programming/index-page">并发编程</a>
+          </li>
+      
+        <li class="menu-item
+            
+            
+            ">
+            <a href="https://github.com/chanjarster">Works</a>
+          </li>
+      
+        <li class="menu-item
+            
+            
+            ">
+            <a href="https://chanjarster.github.io/tags/">Tags</a>
+          </li>
+      
+        <li class="menu-item
+            
+            
+            ">
+            <a href="https://chanjarster.github.io/links/">Links</a>
+          </li>
+      
+    </ul>
+  </nav>
+  <nav class="social-menu collapsed">
+    <h2 class="offscreen">Social Networks</h2>
+    <ul class="social-list">
+
+      
+
+      
+      <li class="social-item">
+        <a href="//github.com/chanjarster" title="GitHub"><span class="icon icon-github"></span></a>
+      </li>
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      <li class="social-item">
+        <a rel="alternate" type="application/rss+xml" href="https://chanjarster.github.io/index.xml"><span class="icon icon-rss" title="RSS"></span></a>
+      </li>
+
+    </ul>
+  </nav>
+</header>
+
+  <section class="main post-detail">
+    <header class="post-header">
+      <h1 class="post-title">Redis解决超卖问题的方案汇总</h1>
+      <p class="post-meta">@颇忒脱 · Dec 3, 2019 · 1 min read</p>
+    </header>
+    <article class="post-content"><p></p>
+
+<h2 id="乐观锁">乐观锁</h2>
+
+<p>伪代码如下：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash"><span style="color:#66d9ef">do</span> <span style="color:#f92672">{</span>
+  oldCount <span style="color:#f92672">=</span> getCount<span style="color:#f92672">(</span>itemid<span style="color:#f92672">)</span>
+  <span style="color:#66d9ef">if</span> <span style="color:#f92672">(</span>oldCount &lt;<span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span><span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+    <span style="color:#66d9ef">return</span> false
+  <span style="color:#f92672">}</span>
+  newCount <span style="color:#f92672">=</span> oldCount - <span style="color:#ae81ff">1</span>;
+<span style="color:#f92672">}</span> <span style="color:#66d9ef">while</span> <span style="color:#f92672">(</span>!compareAndSwap<span style="color:#f92672">(</span>itemid, newCount, oldCount<span style="color:#f92672">))</span>
+<span style="color:#66d9ef">return</span> true</code></pre></div>
+<p>主要是解决check-then-act的问题，因此真正更新Redis的时候要检查oldCount是否有变化。</p>
+
+<p>很遗憾，你无法使用Redis的<a href="https://redis.io/topics/transactions#optimistic-locking-using-check-and-set">Optimistic locking using check-and-set</a>来实现<code>compareAndSet</code>，需要使用LUA脚本来：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-lua" data-lang="lua"><span style="color:#75715e">-- Usage: EVAL &#34;&lt;this script&gt;&#34; 1 &lt;key&gt; &lt;new-value&gt; &lt;old-value&gt;</span>
+<span style="color:#66d9ef">local</span> key <span style="color:#f92672">=</span> KEYS[<span style="color:#ae81ff">1</span>]
+<span style="color:#66d9ef">local</span> newValue <span style="color:#f92672">=</span> ARGV[<span style="color:#ae81ff">1</span>]
+<span style="color:#66d9ef">local</span> expectedOldValue <span style="color:#f92672">=</span> ARGV[<span style="color:#ae81ff">2</span>]
+
+<span style="color:#66d9ef">local</span> oldValue <span style="color:#f92672">=</span> redis.call(<span style="color:#e6db74">&#39;GET&#39;</span>, key)
+
+<span style="color:#66d9ef">if</span> oldValue <span style="color:#f92672">==</span> expectedOldValue <span style="color:#66d9ef">then</span>
+  redis.call(<span style="color:#e6db74">&#39;SET&#39;</span>, key, newValue)
+  <span style="color:#66d9ef">return</span> <span style="color:#e6db74">&#34;OK&#34;</span>
+<span style="color:#66d9ef">end</span>
+<span style="color:#66d9ef">return</span> <span style="color:#66d9ef">nil</span></code></pre></div>
+<p>乐观锁的实现比较复杂，每次更新时都得判断数据是否发生变化，且多了几次查询动作，增加了网络开销。</p>
+
+<h2 id="利用list">利用List</h2>
+
+<p>有一个讨巧的思路是构建一个Redis List，一个商品有100个，那么List中就有100个元素，增加元素时<code>RPUSH</code>，删除元素时<code>LPOP</code>。当<code>LPOP</code>失败的时候，说明List空了，说明商品卖光了。</p>
+
+<p>这个方法的优点在于只需要一次LPOP的动作，伪代码：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash"><span style="color:#66d9ef">if</span> <span style="color:#f92672">(</span>nil !<span style="color:#f92672">=</span> redis.lpop<span style="color:#f92672">(</span>itemid<span style="color:#f92672">))</span> <span style="color:#f92672">{</span>
+  <span style="color:#66d9ef">return</span> true
+<span style="color:#f92672">}</span>
+<span style="color:#66d9ef">return</span> false</code></pre></div>
+<p>这个方法的缺陷在于浪费了Redis的空间，事先维护List也是一项工作。</p>
+
+<h2 id="lua脚本">LUA脚本</h2>
+
+<p>还可以更激进一点，把整个秒杀逻辑放在LUA脚本里。因为Redis是单线程的，执行命令是串行的，在Redis里执行LUA脚本能够避免并发环境下的check-then-act错误。下面一个LUA脚本（<a href="https://blog.csdn.net/weixin_39660145/article/details/85334457#redis_lua_36">原始链接</a>）的例子：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-lua" data-lang="lua"><span style="color:#75715e">-- Usage: EVAL &#34;&lt;this script&gt;&#34; 1 &lt;good-id&gt; &lt;activity-id&gt; &lt;user-id&gt;</span>
+<span style="color:#75715e">-- KEYS [good-id]</span>
+<span style="color:#75715e">-- ARGV [activity-id,user-id]</span>
+<span style="color:#75715e">-- return -1:库存不足 0:重复购买 1:成功</span>
+
+<span style="color:#66d9ef">local</span> good <span style="color:#f92672">=</span> KEYS[<span style="color:#ae81ff">1</span>]
+<span style="color:#66d9ef">local</span> activity <span style="color:#f92672">=</span> ARGV[<span style="color:#ae81ff">1</span>]
+<span style="color:#66d9ef">local</span> uid <span style="color:#f92672">=</span> ARGV[<span style="color:#ae81ff">2</span>]
+<span style="color:#66d9ef">local</span> gooduids <span style="color:#f92672">=</span> good <span style="color:#f92672">..</span> <span style="color:#e6db74">&#39;:&#39;</span> <span style="color:#f92672">..</span> activity <span style="color:#f92672">..</span> <span style="color:#e6db74">&#39;:uids&#39;</span>
+
+<span style="color:#66d9ef">local</span> isin <span style="color:#f92672">=</span> redis.call(<span style="color:#e6db74">&#39;SISMEMBER&#39;</span>, gooduids, uid)
+
+<span style="color:#66d9ef">if</span> isin <span style="color:#f92672">&gt;</span> <span style="color:#ae81ff">0</span> <span style="color:#66d9ef">then</span>
+  <span style="color:#66d9ef">return</span> <span style="color:#ae81ff">0</span>
+<span style="color:#66d9ef">end</span>
+
+<span style="color:#66d9ef">local</span> goodstock <span style="color:#f92672">=</span> good <span style="color:#f92672">..</span> <span style="color:#e6db74">&#39;:&#39;</span> <span style="color:#f92672">..</span> activity <span style="color:#f92672">..</span> <span style="color:#e6db74">&#39;:stock&#39;</span>
+<span style="color:#66d9ef">local</span> stock <span style="color:#f92672">=</span> redis.call(<span style="color:#e6db74">&#39;GET&#39;</span>, goodstock)
+
+<span style="color:#66d9ef">if</span> <span style="color:#f92672">not</span> stock <span style="color:#f92672">or</span> tonumber(stock) <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span> <span style="color:#66d9ef">then</span>
+  <span style="color:#66d9ef">return</span> <span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>
+<span style="color:#66d9ef">end</span>
+
+redis.call(<span style="color:#e6db74">&#39;DECR&#39;</span>, goodstock)
+redis.call(<span style="color:#e6db74">&#39;SADD&#39;</span>, gooduids, uid)
+<span style="color:#66d9ef">return</span> <span style="color:#ae81ff">1</span>
+<span style="color:#75715e">-- ————————————————</span>
+<span style="color:#75715e">-- 版权声明：本文为CSDN博主「姚仔」的原创文章，遵循 CC 4.0 BY-SA 版权协议，转载请附上原文出处链接及本声明。</span></code></pre></div>
+<p>LUA脚本来实现业务和用数据库存储过程来实现业务一样，具有灵活性不够、难以维护的问题。如果秒杀业务再复制一点，相信LUA脚本就会变得难以维护。如果秒杀业务需要外部系统的信息，则LUA脚本就不能胜任了。</p></article>
+    <footer class="post-footer">
+      
+      <ul class="post-tags">
+        
+          <li><a href="https://chanjarster.github.io/tags/redis"><span class="tag">Redis</span></a></li>
+        
+          <li><a href="https://chanjarster.github.io/tags/%E9%AB%98%E5%B9%B6%E5%8F%91"><span class="tag">高并发</span></a></li>
+        
+          <li><a href="https://chanjarster.github.io/tags/%E5%BE%AE%E6%9C%8D%E5%8A%A1"><span class="tag">微服务</span></a></li>
+        
+      </ul>
+      
+      <p class="post-copyright">
+        
+      </p>
+    </footer>
+    
+      
+    
+  </section>
+  <footer class="site-footer">
+  <p>© 2017-2019 颇忒脱的技术博客</p>
+  <p>Powered by <a href="https://gohugo.io/" target="_blank">Hugo</a> with theme <a href="https://github.com/laozhu/hugo-nuo" target="_blank">Nuo</a>.</p>
+  
+</footer>
+
+
+
+<script async src="//cdn.bootcss.com/video.js/6.2.8/alt/video.novtt.min.js"></script>
+<script async src="//cdn.bootcss.com/mathjax/2.7.2/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    tex2jax: {
+      inlineMath: [['$','$'], ['\\(','\\)']],
+      displayMath: [['$$','$$'], ['\\[','\\]']],
+      processEscapes: true,
+      processEnvironments: true,
+      skipTags: ['script', 'noscript', 'style', 'textarea', 'pre'],
+      TeX: { equationNumbers: { autoNumber: "AMS" },
+      extensions: ["AMSmath.js", "AMSsymbols.js"] }
+    }
+  });
+</script>
+<script type="text/x-mathjax-config">
+  // Fix <code> tags after MathJax finishes running. This is a
+  // hack to overcome a shortcoming of Markdown. Discussion at
+  // https://github.com/mojombo/jekyll/issues/199
+  MathJax.Hub.Queue(() => {
+    MathJax.Hub.getAllJax().map(v => v.SourceElement().parentNode.className += ' has-jax');
+  });
+</script>
+
+<script src="https://chanjarster.github.io/js/bundle.273f9ac6f0.js"></script>
+
+
+
+
+  </body>
+</html>

@@ -5,7 +5,7 @@
   <meta charset="utf-8" />
 
   
-  <title>OpenSSL笔记</title>
+  <title>Nginx Ingress的Cookie粘滞策略</title>
 
   
   
@@ -23,7 +23,7 @@
   
     <meta name="twitter:card" content="summary" />
     <meta name="twitter:site" content="@gohugoio" />
-    <meta name="twitter:title" content="OpenSSL笔记" />
+    <meta name="twitter:title" content="Nginx Ingress的Cookie粘滞策略" />
     <meta name="twitter:description" content="
 " />
     <meta name="twitter:image" content="https://chanjarster.github.io/img/avatar.jpg" />
@@ -31,10 +31,10 @@
 
   
   <meta property="og:type" content="article" />
-  <meta property="og:title" content="OpenSSL笔记" />
+  <meta property="og:title" content="Nginx Ingress的Cookie粘滞策略" />
   <meta property="og:description" content="
 " />
-  <meta property="og:url" content="https://chanjarster.github.io/post/openssl-notes/" />
+  <meta property="og:url" content="https://chanjarster.github.io/post/k8s/ingress-nginx-session-cookie-sticky/" />
   <meta property="og:image" content="https://chanjarster.github.io/img/avatar.jpg" />
 
 
@@ -43,7 +43,7 @@
 <meta name="generator" content="Hugo 0.49.2" />
 
 
-<link rel="canonical" href="https://chanjarster.github.io/post/openssl-notes/" />
+<link rel="canonical" href="https://chanjarster.github.io/post/k8s/ingress-nginx-session-cookie-sticky/" />
 
 <meta name="renderer" content="webkit" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
@@ -238,41 +238,33 @@
 
   <section class="main post-detail">
     <header class="post-header">
-      <h1 class="post-title">OpenSSL笔记</h1>
-      <p class="post-meta">@颇忒脱 · May 2, 2019 · 1 min read</p>
+      <h1 class="post-title">Nginx Ingress的Cookie粘滞策略</h1>
+      <p class="post-meta">@颇忒脱 · Dec 3, 2019 · 1 min read</p>
     </header>
     <article class="post-content"><p></p>
 
-<h2 id="证书链">证书链</h2>
+<p>如果你的应用部署在K8S上，replicas &gt; 1，且你的应用是基于Session的，<strong>同时又没有做Session共享or复制</strong>，那么你是不能通过NodePort Service来暴露应用的，因为Service只支持一种策略，就是轮询，这样会导致用户的Session丢失。</p>
+
+<p>默认的Ingress的配置也是轮询的，但是你可以启用基于Cookie的粘滞策略，当用户第一次访问的时候会得到一个Cookie，该Cookie记录了所访问的Pod，再下一次访问的时候Nginx Ingress Controller会将请求转发到同一个Pod上，从而实现Session粘滞。</p>
+
+<p>关键的两个Annotation：</p>
 
 <ul>
-<li><a href="https://medium.com/@superseb/get-your-certificate-chain-right-4b117a9c0fce">Get your certificate chain right</a>，解释了什么是证书链、怎么做证书链、怎么验证证书链</li>
+<li><code>nginx.ingress.kubernetes.io/affinity: cookie</code></li>
+<li><code>nginx.ingress.kubernetes.io/affinity-mode: persistent</code></li>
 </ul>
 
-<h2 id="how-tos">How Tos</h2>
-
-<p>格式转换：</p>
-
-<ul>
-<li><a href="https://medium.com/@nirmaluchoudhari/converting-certificates-using-openssl-9957a743c66b">Converting Certificates Using OpenSSL</a></li>
-<li><a href="https://knowledge.digicert.com/solution/SO26449.html">How to convert a certificate into the appropriate format</a></li>
-</ul>
-
-<p>校验验证：</p>
-
-<ul>
-<li><a href="https://gist.github.com/webtobesocial/5313b0d7abc25e06c2d78f8b767d4bc3">Some list of openssl commands for check and verify your keys</a></li>
-</ul></article>
+<p>更多参考<a href="https://kubernetes.github.io/ingress-nginx/user-guide/nginx-configuration/annotations/#session-affinity">Session Affinity</a>。</p></article>
     <footer class="post-footer">
       
       <ul class="post-tags">
         
-          <li><a href="https://chanjarster.github.io/tags/openssl"><span class="tag">Openssl</span></a></li>
+          <li><a href="https://chanjarster.github.io/tags/k8s"><span class="tag">K8s</span></a></li>
         
       </ul>
       
       <p class="post-copyright">
-        This post was published <strong>215</strong> days ago, content in the post may be inaccurate, even wrong now, please take risk yourself.
+        
       </p>
     </footer>
     
