@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+<head>
+
+  <meta charset="utf-8" />
+
+  
+  <title>一致性Hash笔记</title>
+
+  
+  
+
+
+
+
+
+  
+  <meta name="author" content="颇忒脱" />
+  <meta name="description" content="
+" />
+
+  
+  
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:site" content="@gohugoio" />
+    <meta name="twitter:title" content="一致性Hash笔记" />
+    <meta name="twitter:description" content="
+" />
+    <meta name="twitter:image" content="https://chanjarster.github.io/img/avatar.jpg" />
+  
+
+  
+  <meta property="og:type" content="article" />
+  <meta property="og:title" content="一致性Hash笔记" />
+  <meta property="og:description" content="
+" />
+  <meta property="og:url" content="https://chanjarster.github.io/post/consistent-hashing/" />
+  <meta property="og:image" content="https://chanjarster.github.io/img/avatar.jpg" />
+
+
+
+
+<meta name="generator" content="Hugo 0.49.2" />
+
+
+<link rel="canonical" href="https://chanjarster.github.io/post/consistent-hashing/" />
+
+<meta name="renderer" content="webkit" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<meta name="format-detection" content="telephone=no,email=no,adress=no" />
+<meta http-equiv="Cache-Control" content="no-transform" />
+
+
+<meta name="robots" content="index,follow" />
+<meta name="referrer" content="origin-when-cross-origin" />
+
+
+
+
+
+
+
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="颇忒脱的技术博客" />
+<meta name="msapplication-tooltip" content="颇忒脱的技术博客" />
+<meta name='msapplication-navbutton-color' content="#5fbf5e" />
+<meta name="msapplication-TileColor" content="#5fbf5e" />
+<meta name="msapplication-TileImage" content="/img/tile-image-windows.png" />
+<link rel="icon" href="https://chanjarster.github.io/img/favicon.ico" />
+<link rel="icon" type="image/png" sizes="16x16" href="https://chanjarster.github.io/img/favicon-16x16.png" />
+<link rel="icon" type="image/png" sizes="32x32" href="https://chanjarster.github.io/img/favicon-32x32.png" />
+<link rel="icon" sizes="192x192" href="https://chanjarster.github.io/img/touch-icon-android.png" />
+<link rel="apple-touch-icon" href="https://chanjarster.github.io/img/touch-icon-apple.png" />
+<link rel="mask-icon" href="https://chanjarster.github.io/img/safari-pinned-tab.svg" color="#5fbf5e" />
+
+
+
+<link rel="stylesheet" href="//cdn.bootcss.com/video.js/6.2.8/alt/video-js-cdn.min.css" />
+
+<link rel="stylesheet" href="https://chanjarster.github.io/css/bundle.8e3aef2bc5.css" />
+
+
+  
+  <!--[if lt IE 9]>
+    <script src="//cdn.bootcss.com/html5shiv/3.7.3/html5shiv.min.js"></script>
+    <script src="//cdn.bootcss.com/respond.js/1.4.2/respond.min.js"></script>
+    <script src="//cdn.bootcss.com/video.js/6.2.8/ie8/videojs-ie8.min.js"></script>
+  <![endif]-->
+
+<!--[if lte IE 11]>
+    <script src="//cdn.bootcss.com/classlist/1.1.20170427/classList.min.js"></script>
+  <![endif]-->
+
+
+<script src="//cdn.bootcss.com/object-fit-images/3.2.3/ofi.min.js"></script>
+
+
+<script src="//cdn.bootcss.com/smooth-scroll/12.1.4/js/smooth-scroll.polyfills.min.js"></script>
+
+
+</head>
+  <body>
+    
+    <div class="suspension">
+      <a title="Go to top" class="to-top is-hide"><span class="icon icon-up"></span></a>
+      
+        
+      
+    </div>
+    
+    
+  <header class="site-header">
+  <img class="avatar" src="https://chanjarster.github.io/img/avatar2.jpg" alt="Avatar">
+  
+  <h2 class="title">颇忒脱的技术博客</h2>
+  
+  <p class="subtitle"></p>
+  <button class="menu-toggle" type="button">
+    <span class="icon icon-menu"></span>
+  </button>
+  <nav class="site-menu collapsed">
+    <h2 class="offscreen">Main Menu</h2>
+    <ul class="menu-list">
+      
+      
+      
+      
+        <li class="menu-item
+            
+            
+            
+              is-active
+            ">
+            <a href="https://chanjarster.github.io/">Home</a>
+          </li>
+      
+        <li class="menu-item
+            
+            
+            ">
+            <a href="https://chanjarster.github.io/tags/%E6%94%B6%E8%97%8F%E5%A4%B9/">Bookmarks</a>
+          </li>
+      
+        <li class="menu-item
+            
+            
+            ">
+            <a href="https://chanjarster.github.io/post/jvm/jvm-index/">JVM</a>
+          </li>
+      
+        <li class="menu-item
+            
+            
+            ">
+            <a href="https://chanjarster.github.io/post/concurrent-programming/index-page">并发编程</a>
+          </li>
+      
+        <li class="menu-item
+            
+            
+            ">
+            <a href="https://github.com/chanjarster">Works</a>
+          </li>
+      
+        <li class="menu-item
+            
+            
+            ">
+            <a href="https://chanjarster.github.io/tags/">Tags</a>
+          </li>
+      
+        <li class="menu-item
+            
+            
+            ">
+            <a href="https://chanjarster.github.io/links/">Links</a>
+          </li>
+      
+    </ul>
+  </nav>
+  <nav class="social-menu collapsed">
+    <h2 class="offscreen">Social Networks</h2>
+    <ul class="social-list">
+
+      
+
+      
+      <li class="social-item">
+        <a href="//github.com/chanjarster" title="GitHub"><span class="icon icon-github"></span></a>
+      </li>
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      <li class="social-item">
+        <a rel="alternate" type="application/rss+xml" href="https://chanjarster.github.io/index.xml"><span class="icon icon-rss" title="RSS"></span></a>
+      </li>
+
+    </ul>
+  </nav>
+</header>
+
+  <section class="main post-detail">
+    <header class="post-header">
+      <h1 class="post-title">一致性Hash笔记</h1>
+      <p class="post-meta">@颇忒脱 · Dec 4, 2019 · 1 min read</p>
+    </header>
+    <article class="post-content"><p></p>
+
+<p>场景概述：假设你有个N个服务器，你想要把你的数据均匀的分配到这N个服务器中，并且每次取数据的时候到对应的服务器去取。</p>
+
+<h2 id="方案一-轮询-字典表">方案一：轮询+字典表</h2>
+
+<p>给数据生成一个key，轮询的方式把数据存到这N个服务器中，并且保存一个key-&gt;服务器的字典。</p>
+
+<p>增加服务器时：老服务器总是会比新服务器存更多数据</p>
+
+<p>删除服务器时：需要更新字典，因为某些key对应的服务器已经不存在了</p>
+
+<p>优点：很均匀</p>
+
+<p>缺点：需要维护字典，这个有额外开销。同时这个字典会变成瓶颈。</p>
+
+<h2 id="方案二-hash取模分配">方案二：hash取模分配</h2>
+
+<p>给数据生成一个key，取数据和存数据的时候都用<code>serverIndex = hash(key) mod N</code>得到服务器编号。关于hash函数，得使用结果均匀的算法，Java的<code>hashCode</code>不均匀，有以下选择：</p>
+
+<ul>
+<li><a href="https://en.wikipedia.org/wiki/SHA-1">SHA-1</a> 和 <a href="https://en.wikipedia.org/wiki/MD5">MD5</a> 均匀，但他们是密码学算法，比较耗CPU</li>
+<li><a href="https://en.wikipedia.org/wiki/MurmurHash">MurmurHash</a>，开销低一点</li>
+<li>还有非密码学算法：<a href="https://github.com/cespare/xxhash">xxHash</a>，<a href="https://github.com/dgryski/go-metro">MetroHash</a>，<a href="https://github.com/dgryski/go-metro">MetroHash</a></li>
+</ul>
+
+<p>增加服务器时：所有的key都得重新取模</p>
+
+<p>删除服务器时：所有的key都得重新取模</p>
+
+<p>优点：没有保存字典的开销</p>
+
+<p>缺点：增加和删除服务器的时候需要移动所有key</p>
+
+<h2 id="方案三-一致性hash">方案三：一致性hash</h2>
+
+<p>一致性hash为了解决前一种方案的缺点，提出了一种可以在增加or删除服务器的时候只移动1/N个key的办法。</p>
+
+<p>想象有一个环，上面有2<sup>32</sup>个点，每个服务器在这个环上都有一个点，给定一个key怎么找对应的服务器？先<code>hash(key)</code>得到它所在的点，然后顺时针找到第一个服务器：</p>
+
+<p><img src="https://kkc.github.io/img/2016-08/consistent_hashing_3.png" alt="" /></p>
+
+<p>当增加or删除服务器的时候，key沿着顺时针找到下一个服务器就行，如果服务器在环上的分布均匀（即间隔均匀），那么也就只有1/N的会产生移动。</p>
+
+<p>但是随着服务器的增加or删除，总是会不均匀，因此我们可以给服务器增加分身（即虚拟节点）：</p>
+
+<p><img src="https://kkc.github.io/img/2016-08/virtual.jpg" alt="" /></p>
+
+<p>可以看到A、B、C三个服务器在环上的位置不止一个，这样就能解决key分布不均匀的问题。</p>
+
+<h3 id="参考代码">参考代码</h3>
+
+<p>感谢<a href="http://www.tom-e-white.com/2007/11/consistent-hashing.html">Tom White - Consistent Hashing</a>，他给出了一种Java的参考实现：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#66d9ef">public</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">ConsistentHash</span><span style="color:#f92672">&lt;</span>T<span style="color:#f92672">&gt;</span> <span style="color:#f92672">{</span>
+
+  <span style="color:#66d9ef">private</span> <span style="color:#66d9ef">final</span> HashFunction hashFunction<span style="color:#f92672">;</span>
+  <span style="color:#75715e">// 每个服务器有几个分身，即虚拟节点
+</span><span style="color:#75715e"></span>  <span style="color:#66d9ef">private</span> <span style="color:#66d9ef">final</span> <span style="color:#66d9ef">int</span> numberOfReplicas<span style="color:#f92672">;</span>
+  <span style="color:#66d9ef">private</span> <span style="color:#66d9ef">final</span> SortedMap<span style="color:#f92672">&lt;</span>Integer<span style="color:#f92672">,</span> T<span style="color:#f92672">&gt;</span> circle <span style="color:#f92672">=</span>
+    <span style="color:#66d9ef">new</span> TreeMap<span style="color:#f92672">&lt;</span>Integer<span style="color:#f92672">,</span> T<span style="color:#f92672">&gt;();</span>
+
+  <span style="color:#66d9ef">public</span> <span style="color:#a6e22e">ConsistentHash</span><span style="color:#f92672">(</span>HashFunction hashFunction<span style="color:#f92672">,</span>
+    <span style="color:#66d9ef">int</span> numberOfReplicas<span style="color:#f92672">,</span> Collection<span style="color:#f92672">&lt;</span>T<span style="color:#f92672">&gt;</span> nodes<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+
+    <span style="color:#66d9ef">this</span><span style="color:#f92672">.</span><span style="color:#a6e22e">hashFunction</span> <span style="color:#f92672">=</span> hashFunction<span style="color:#f92672">;</span>
+    <span style="color:#66d9ef">this</span><span style="color:#f92672">.</span><span style="color:#a6e22e">numberOfReplicas</span> <span style="color:#f92672">=</span> numberOfReplicas<span style="color:#f92672">;</span>
+
+    <span style="color:#66d9ef">for</span> <span style="color:#f92672">(</span>T node <span style="color:#f92672">:</span> nodes<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+      add<span style="color:#f92672">(</span>node<span style="color:#f92672">);</span>
+    <span style="color:#f92672">}</span>
+  <span style="color:#f92672">}</span>
+
+  <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">add</span><span style="color:#f92672">(</span>T node<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+    <span style="color:#66d9ef">for</span> <span style="color:#f92672">(</span><span style="color:#66d9ef">int</span> i <span style="color:#f92672">=</span> 0<span style="color:#f92672">;</span> i <span style="color:#f92672">&lt;</span> numberOfReplicas<span style="color:#f92672">;</span> i<span style="color:#f92672">++)</span> <span style="color:#f92672">{</span>
+      <span style="color:#75715e">// 给服务器加编号的形式产生虚拟节点
+</span><span style="color:#75715e"></span>      circle<span style="color:#f92672">.</span><span style="color:#a6e22e">put</span><span style="color:#f92672">(</span>hashFunction<span style="color:#f92672">.</span><span style="color:#a6e22e">hash</span><span style="color:#f92672">(</span>node<span style="color:#f92672">.</span><span style="color:#a6e22e">toString</span><span style="color:#f92672">()</span> <span style="color:#f92672">+</span> i<span style="color:#f92672">),</span>
+        node<span style="color:#f92672">);</span>
+    <span style="color:#f92672">}</span>
+  <span style="color:#f92672">}</span>
+
+  <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">remove</span><span style="color:#f92672">(</span>T node<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+    <span style="color:#66d9ef">for</span> <span style="color:#f92672">(</span><span style="color:#66d9ef">int</span> i <span style="color:#f92672">=</span> 0<span style="color:#f92672">;</span> i <span style="color:#f92672">&lt;</span> numberOfReplicas<span style="color:#f92672">;</span> i<span style="color:#f92672">++)</span> <span style="color:#f92672">{</span>
+      <span style="color:#75715e">// 删除服务器的所有虚拟节点
+</span><span style="color:#75715e"></span>      circle<span style="color:#f92672">.</span><span style="color:#a6e22e">remove</span><span style="color:#f92672">(</span>hashFunction<span style="color:#f92672">.</span><span style="color:#a6e22e">hash</span><span style="color:#f92672">(</span>node<span style="color:#f92672">.</span><span style="color:#a6e22e">toString</span><span style="color:#f92672">()</span> <span style="color:#f92672">+</span> i<span style="color:#f92672">));</span>
+    <span style="color:#f92672">}</span>
+  <span style="color:#f92672">}</span>
+
+  <span style="color:#66d9ef">public</span> T <span style="color:#a6e22e">get</span><span style="color:#f92672">(</span>Object key<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+    <span style="color:#66d9ef">if</span> <span style="color:#f92672">(</span>circle<span style="color:#f92672">.</span><span style="color:#a6e22e">isEmpty</span><span style="color:#f92672">())</span> <span style="color:#f92672">{</span>
+      <span style="color:#66d9ef">return</span> <span style="color:#66d9ef">null</span><span style="color:#f92672">;</span>
+    <span style="color:#f92672">}</span>
+    <span style="color:#66d9ef">int</span> hash <span style="color:#f92672">=</span> hashFunction<span style="color:#f92672">.</span><span style="color:#a6e22e">hash</span><span style="color:#f92672">(</span>key<span style="color:#f92672">);</span>
+    <span style="color:#66d9ef">if</span> <span style="color:#f92672">(!</span>circle<span style="color:#f92672">.</span><span style="color:#a6e22e">containsKey</span><span style="color:#f92672">(</span>hash<span style="color:#f92672">))</span> <span style="color:#f92672">{</span>
+      SortedMap<span style="color:#f92672">&lt;</span>Integer<span style="color:#f92672">,</span> T<span style="color:#f92672">&gt;</span> tailMap <span style="color:#f92672">=</span>
+        <span style="color:#75715e">// tailMap方法返回大于等于key的第一个key及其之后的数据，得到当前Map的视图
+</span><span style="color:#75715e"></span>        circle<span style="color:#f92672">.</span><span style="color:#a6e22e">tailMap</span><span style="color:#f92672">(</span>hash<span style="color:#f92672">);</span>
+      <span style="color:#75715e">// 如果tailMap为空，那么就去环中的第一个节点，否则就去tailMap的第一个节点
+</span><span style="color:#75715e"></span>      <span style="color:#75715e">// 相当于顺时针找服务器
+</span><span style="color:#75715e"></span>      hash <span style="color:#f92672">=</span> tailMap<span style="color:#f92672">.</span><span style="color:#a6e22e">isEmpty</span><span style="color:#f92672">()</span> <span style="color:#f92672">?</span>
+             circle<span style="color:#f92672">.</span><span style="color:#a6e22e">firstKey</span><span style="color:#f92672">()</span> <span style="color:#f92672">:</span> tailMap<span style="color:#f92672">.</span><span style="color:#a6e22e">firstKey</span><span style="color:#f92672">();</span>
+    <span style="color:#f92672">}</span>
+    <span style="color:#66d9ef">return</span> circle<span style="color:#f92672">.</span><span style="color:#a6e22e">get</span><span style="color:#f92672">(</span>hash<span style="color:#f92672">);</span>
+  <span style="color:#f92672">}</span> 
+
+<span style="color:#f92672">}</span></code></pre></div>
+<h3 id="代价">代价</h3>
+
+<p>那么每个服务器多少个虚拟节点才能使得分布均匀呢？</p>
+
+<p><a href="https://medium.com/@dgryski/consistent-hashing-algorithmic-tradeoffs-ef6b8e2fcae8">Consistent Hashing: Algorithmic Tradeoffs</a>提到：</p>
+
+<blockquote>
+<p>每个服务器100个虚拟节点，负载的标准差为10%，1000个虚拟节点时负载的标准差为~3.2%。这就意味着具有较大的内存开销</p>
+</blockquote>
+
+<p>不过我认为你有100台服务器，每个1,000个虚拟节点，Map中放100,000个entry占用的空间也不大。</p>
+
+<p>这篇文章里也提到了更多其他的算法，各有利弊。</p>
+
+<h2 id="参考资料">参考资料</h2>
+
+<ul>
+<li><a href="http://www.tom-e-white.com/2007/11/consistent-hashing.html">Tom White - Consistent Hashing</a>，介绍了基本概念</li>
+<li><a href="https://medium.com/@dgryski/consistent-hashing-algorithmic-tradeoffs-ef6b8e2fcae8">Consistent Hashing: Algorithmic Tradeoffs</a>，提到了更多算法实现及利弊</li>
+<li><a href="https://medium.com/netflix-techblog/distributing-content-to-open-connect-3e3e391d4dc9">Distributing Content to Open Connect</a>，提到了服务器本身规格有差别的情况</li>
+<li><a href="https://blog.imaginea.com/consistent-hashing-in-cassandra/">Consistent Hashing in Cassandra</a></li>
+</ul></article>
+    <footer class="post-footer">
+      
+      <ul class="post-tags">
+        
+          <li><a href="https://chanjarster.github.io/tags/%E5%88%86%E5%B8%83%E5%BC%8F%E6%9E%B6%E6%9E%84"><span class="tag">分布式架构</span></a></li>
+        
+          <li><a href="https://chanjarster.github.io/tags/%E5%88%86%E5%B8%83%E5%BC%8F%E7%AE%97%E6%B3%95"><span class="tag">分布式算法</span></a></li>
+        
+      </ul>
+      
+      <p class="post-copyright">
+        
+      </p>
+    </footer>
+    
+      
+    
+  </section>
+  <footer class="site-footer">
+  <p>© 2017-2019 颇忒脱的技术博客</p>
+  <p>Powered by <a href="https://gohugo.io/" target="_blank">Hugo</a> with theme <a href="https://github.com/laozhu/hugo-nuo" target="_blank">Nuo</a>.</p>
+  
+</footer>
+
+
+
+<script async src="//cdn.bootcss.com/video.js/6.2.8/alt/video.novtt.min.js"></script>
+<script async src="//cdn.bootcss.com/mathjax/2.7.2/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    tex2jax: {
+      inlineMath: [['$','$'], ['\\(','\\)']],
+      displayMath: [['$$','$$'], ['\\[','\\]']],
+      processEscapes: true,
+      processEnvironments: true,
+      skipTags: ['script', 'noscript', 'style', 'textarea', 'pre'],
+      TeX: { equationNumbers: { autoNumber: "AMS" },
+      extensions: ["AMSmath.js", "AMSsymbols.js"] }
+    }
+  });
+</script>
+<script type="text/x-mathjax-config">
+  // Fix <code> tags after MathJax finishes running. This is a
+  // hack to overcome a shortcoming of Markdown. Discussion at
+  // https://github.com/mojombo/jekyll/issues/199
+  MathJax.Hub.Queue(() => {
+    MathJax.Hub.getAllJax().map(v => v.SourceElement().parentNode.className += ' has-jax');
+  });
+</script>
+
+<script src="https://chanjarster.github.io/js/bundle.273f9ac6f0.js"></script>
+
+
+
+
+  </body>
+</html>
