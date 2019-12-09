@@ -5,7 +5,7 @@
   <meta charset="utf-8" />
 
   
-  <title>Cracking Coding Interview - 5.6 Conversion</title>
+  <title>StatefulSets迁移PV的方法</title>
 
   
   
@@ -23,7 +23,7 @@
   
     <meta name="twitter:card" content="summary" />
     <meta name="twitter:site" content="@gohugoio" />
-    <meta name="twitter:title" content="Cracking Coding Interview - 5.6 Conversion" />
+    <meta name="twitter:title" content="StatefulSets迁移PV的方法" />
     <meta name="twitter:description" content="
 " />
     <meta name="twitter:image" content="https://chanjarster.github.io/img/avatar.jpg" />
@@ -31,10 +31,10 @@
 
   
   <meta property="og:type" content="article" />
-  <meta property="og:title" content="Cracking Coding Interview - 5.6 Conversion" />
+  <meta property="og:title" content="StatefulSets迁移PV的方法" />
   <meta property="og:description" content="
 " />
-  <meta property="og:url" content="https://chanjarster.github.io/post/cracking-coding-interview/5.6-conversion/" />
+  <meta property="og:url" content="https://chanjarster.github.io/post/k8s/statefulsets-pv-migration/" />
   <meta property="og:image" content="https://chanjarster.github.io/img/avatar.jpg" />
 
 
@@ -43,7 +43,7 @@
 <meta name="generator" content="Hugo 0.49.2" />
 
 
-<link rel="canonical" href="https://chanjarster.github.io/post/cracking-coding-interview/5.6-conversion/" />
+<link rel="canonical" href="https://chanjarster.github.io/post/k8s/statefulsets-pv-migration/" />
 
 <meta name="renderer" content="webkit" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
@@ -238,74 +238,171 @@
 
   <section class="main post-detail">
     <header class="post-header">
-      <h1 class="post-title">Cracking Coding Interview - 5.6 Conversion</h1>
-      <p class="post-meta">@颇忒脱 · Aug 20, 2019 · 1 min read</p>
+      <h1 class="post-title">StatefulSets迁移PV的方法</h1>
+      <p class="post-meta">@颇忒脱 · Dec 9, 2019 · 2 min read</p>
     </header>
     <article class="post-content"><p></p>
 
-<p><strong>Conversion</strong>: Write a function to determine the number of bits you would need to flip to convert integer <code>A</code> to integer <code>B</code>.</p>
+<p>先说说场景，你有一个StatefulSets，通过<code>volumeClaimTemplate</code>创建了PVC。现在这些PVC所关联的PV对你来说不够用了，你希望能够使用更大的PVC。</p>
 
-<p>EXAMPLE</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-txt" data-lang="txt">Input:  29 (or: 11101), 15 (or: 01111)
-Output: 2</code></pre></div>
-<p>Hints: #336, #369</p>
+<p>大致步骤如下：</p>
 
-<h2 id="解法1">解法1</h2>
+<ol>
+<li>先把StatefulSets的Yaml备份下来。</li>
+<li>利用busybox复制数据。</li>
+<li>使用新PVC。</li>
+<li>清理PVC。</li>
+</ol>
 
-<p>这个题可以用XOR来做，因为XOR的意思是相异为真，然后再数一下有多少个<code>1</code>。</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#66d9ef">public</span> <span style="color:#66d9ef">int</span> <span style="color:#a6e22e">converstion</span><span style="color:#f92672">(</span><span style="color:#66d9ef">int</span> a<span style="color:#f92672">,</span> <span style="color:#66d9ef">int</span> b<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
-  <span style="color:#66d9ef">int</span> xor <span style="color:#f92672">=</span> a <span style="color:#f92672">^</span> b<span style="color:#f92672">;</span>
-  <span style="color:#66d9ef">int</span> count <span style="color:#f92672">=</span> 0<span style="color:#f92672">;</span>
-  <span style="color:#66d9ef">while</span> <span style="color:#f92672">(</span>xor <span style="color:#f92672">!=</span> 0<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
-    <span style="color:#66d9ef">if</span> <span style="color:#f92672">(</span>xor <span style="color:#f92672">&amp;</span> 1 <span style="color:#f92672">==</span> 1<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
-      count<span style="color:#f92672">++;</span>
-    <span style="color:#f92672">}</span>
-    xor <span style="color:#f92672">&gt;&gt;&gt;=</span> 1<span style="color:#f92672">;</span>
-  <span style="color:#f92672">}</span>
-  <span style="color:#66d9ef">return</span> count<span style="color:#f92672">;</span>
-<span style="color:#f92672">}</span></code></pre></div>
-<h2 id="解法2">解法2</h2>
+<p>下面是详细步骤：</p>
 
-<p>解法1用位移来计算有多少个1，还可以有更简便的方法。</p>
+<h2 id="备份statefulsets">备份StatefulSets</h2>
 
-<p>如果我们可以每次迭代都可以清除一个数字最右边的<code>1</code>，那么我们只需要计算吧这个数字清零为止共做了几次循环即可。</p>
+<p>把StatefulSets的Yaml备份下来，下面是代码片段，注意volumeClaimTemplate和volumeMounts部分：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-yaml" data-lang="yaml">apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: zookeeper
+  <span style="color:#75715e"># ...</span>
+spec:
+  <span style="color:#75715e"># ...</span>
+  template:
+    <span style="color:#75715e"># ...</span>
+    spec:
+      containers:
+      - image: ranchercharts/confluentinc-cp-zookeeper:<span style="color:#ae81ff">5.3</span>.<span style="color:#ae81ff">0</span>
+        <span style="color:#75715e"># ...</span>
+        volumeMounts:
+        - mountPath: /var/lib/zookeeper/data
+          name: datadir
+  <span style="color:#75715e"># ...</span>
+  volumeClaimTemplates:
+  - metadata:
+      name: datadir
+    spec:
+      accessModes:
+      - ReadWriteOnce
+      resources:
+        requests:
+          storage: 5Gi
+      volumeMode: Filesystem</code></pre></div>
+<p>然后删掉它，删掉StatefulSets不会删除对应的PVC。</p>
 
-<p>用<code>n &amp; (n - 1)</code>可以做到这一点，回顾<a href="../5.5-debugger">5.5 - Debugger</a>里对于减法的描述：</p>
+<h2 id="复制数据">复制数据</h2>
 
-<blockquote>
-<p>当你在给二进制做减法的时候，实际上是把最右边的<code>1</code>变成<code>0</code>，把它右边的<code>0</code>都变成<code>1</code>。</p>
-</blockquote>
+<p>StatefulSets的volumeClaimTemplate所生成的PVC的名字是这样的格式：<code>{volume-name}-{statefulsets-name}-数字</code>，比如<code>datadir-zookeeper-0</code>。</p>
 
-<p>实际上就是：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-txt" data-lang="txt">       rightmost 1
-           v
-n:     xxxx100
-n - 1: xxxx011
-AND:   xxxx000</code></pre></div>
-<p>两者AND一下就把最右边的<code>1</code>给去除了。</p>
+<p>所以我们可以创建一个busybox StatefulSets，名字也是zookeeper，并且它的volumeClaimTemplate和原来的一样，这样它就可以使用旧PVC了。同时它还得创建一个新的volumeClaimTemplate来创建新的PVC。</p>
 
-<p>代码：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#66d9ef">public</span> <span style="color:#66d9ef">int</span> <span style="color:#a6e22e">conversion</span><span style="color:#f92672">(</span><span style="color:#66d9ef">int</span> a<span style="color:#f92672">,</span> <span style="color:#66d9ef">int</span> b<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
-  <span style="color:#66d9ef">int</span> xor <span style="color:#f92672">=</span> a <span style="color:#f92672">^</span> b<span style="color:#f92672">;</span>
-  <span style="color:#66d9ef">int</span> count<span style="color:#f92672">;</span>
-  <span style="color:#66d9ef">while</span> <span style="color:#f92672">(</span>xor <span style="color:#f92672">!=</span> 0<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
-    count<span style="color:#f92672">++;</span>
-    xor <span style="color:#f92672">&amp;=</span> xor <span style="color:#f92672">-</span> 1<span style="color:#f92672">;</span>
-  <span style="color:#f92672">}</span>
-  <span style="color:#66d9ef">return</span> count<span style="color:#f92672">;</span>
-<span style="color:#f92672">}</span></code></pre></div></article>
+<p>注意replicas得和原来的一样。</p>
+
+<p>下面是例子：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-yaml" data-lang="yaml">apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: zookeeper
+spec:
+  podManagementPolicy: OrderedReady
+  <span style="color:#75715e"># 得和原来的一样</span>
+  replicas: <span style="color:#ae81ff">3</span>
+  selector:
+    matchLabels:
+      app: busybox-pvc-migration
+  serviceName: portal-cp-zookeeper
+  template:
+    metadata:
+      labels:
+        app: busybox-pvc-migration
+    spec:
+      containers:
+      - image: busybox
+        imagePullPolicy: Always
+        name: zookeeper
+        stdin: <span style="color:#66d9ef">true</span>
+        tty: <span style="color:#66d9ef">true</span>
+        volumeMounts:
+        <span style="color:#75715e"># 旧PVC</span>
+        - mountPath: /datadir-old
+          name: datadir
+        <span style="color:#75715e"># 新PVC</span>
+        - mountPath: /datadir-new
+          name: datadir-new
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+  updateStrategy:
+    type: RollingUpdate
+  volumeClaimTemplates:
+  <span style="color:#75715e"># 旧claim</span>
+  - metadata:
+      name: datadir
+    spec:
+      accessModes:
+      - ReadWriteOnce
+      resources:
+        requests:
+          storage: 5Gi
+      volumeMode: Filesystem
+   <span style="color:#75715e"># 新claim</span>
+  - metadata:
+      name: datadir-new
+    spec:
+      accessModes:
+      - ReadWriteOnce
+      resources:
+        requests:
+          storage: 10Gi
+      volumeMode: Filesystem</code></pre></div>
+<p>进入每个busybox的shell，复制旧PVC的内容到新的PVC：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">cp -r /datadir-old/* /datadir-new/</code></pre></div>
+<p>复制完之后注意检查一下文件的权限和所属用户与用户组。</p>
+
+<p>最后删除busybox。同理，它所新建的PVC也不会被删除，这些PVC后面要被使用。</p>
+
+<h2 id="使用新pvc">使用新PVC</h2>
+
+<p>修改之前备份下来的Yaml，让它使用新的PVC，修改volumeClaimTemplate和volumeMounts部分：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-yaml" data-lang="yaml">apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: zookeeper
+  <span style="color:#75715e"># ...</span>
+spec:
+  <span style="color:#75715e"># ...</span>
+  template:
+    <span style="color:#75715e"># ...</span>
+    spec:
+      containers:
+      - image: ranchercharts/confluentinc-cp-zookeeper:<span style="color:#ae81ff">5.3</span>.<span style="color:#ae81ff">0</span>
+        <span style="color:#75715e"># ...</span>
+        volumeMounts:
+        - mountPath: /var/lib/zookeeper/data
+          <span style="color:#75715e"># 使用了新的PVC</span>
+          name: datadir-new
+  <span style="color:#75715e"># ...</span>
+  volumeClaimTemplates:
+  - metadata:
+      <span style="color:#75715e"># 使用了新的PVC</span>
+      name: datadir-new
+    spec:
+      accessModes:
+      - ReadWriteOnce
+      resources:
+        requests:
+          storage: 10Gi
+      volumeMode: Filesystem</code></pre></div>
+<h2 id="清理pvc">清理PVC</h2>
+
+<p>确认没有问题后，可以清理掉旧的PVC。</p></article>
     <footer class="post-footer">
       
       <ul class="post-tags">
         
-          <li><a href="https://chanjarster.github.io/tags/arts"><span class="tag">ARTS</span></a></li>
-        
-          <li><a href="https://chanjarster.github.io/tags/arts-a"><span class="tag">ARTS-A</span></a></li>
+          <li><a href="https://chanjarster.github.io/tags/k8s"><span class="tag">K8s</span></a></li>
         
       </ul>
       
       <p class="post-copyright">
-        This post was published <strong>111</strong> days ago, content in the post may be inaccurate, even wrong now, please take risk yourself.
+        
       </p>
     </footer>
     
