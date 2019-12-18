@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+<head>
+
+  <meta charset="utf-8" />
+
+  
+  <title>MySQL - redo log和binlog</title>
+
+  
+  
+
+
+
+
+
+  
+  <meta name="author" content="颇忒脱" />
+  <meta name="description" content="
+" />
+
+  
+  
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:site" content="@gohugoio" />
+    <meta name="twitter:title" content="MySQL - redo log和binlog" />
+    <meta name="twitter:description" content="
+" />
+    <meta name="twitter:image" content="https://chanjarster.github.io/img/avatar.jpg" />
+  
+
+  
+  <meta property="og:type" content="article" />
+  <meta property="og:title" content="MySQL - redo log和binlog" />
+  <meta property="og:description" content="
+" />
+  <meta property="og:url" content="https://chanjarster.github.io/post/mysql/redo-log-binlog/" />
+  <meta property="og:image" content="https://chanjarster.github.io/img/avatar.jpg" />
+
+
+
+
+<meta name="generator" content="Hugo 0.49.2" />
+
+
+<link rel="canonical" href="https://chanjarster.github.io/post/mysql/redo-log-binlog/" />
+
+<meta name="renderer" content="webkit" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<meta name="format-detection" content="telephone=no,email=no,adress=no" />
+<meta http-equiv="Cache-Control" content="no-transform" />
+
+
+<meta name="robots" content="index,follow" />
+<meta name="referrer" content="origin-when-cross-origin" />
+
+
+
+
+
+
+
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="颇忒脱的技术博客" />
+<meta name="msapplication-tooltip" content="颇忒脱的技术博客" />
+<meta name='msapplication-navbutton-color' content="#5fbf5e" />
+<meta name="msapplication-TileColor" content="#5fbf5e" />
+<meta name="msapplication-TileImage" content="/img/tile-image-windows.png" />
+<link rel="icon" href="https://chanjarster.github.io/img/favicon.ico" />
+<link rel="icon" type="image/png" sizes="16x16" href="https://chanjarster.github.io/img/favicon-16x16.png" />
+<link rel="icon" type="image/png" sizes="32x32" href="https://chanjarster.github.io/img/favicon-32x32.png" />
+<link rel="icon" sizes="192x192" href="https://chanjarster.github.io/img/touch-icon-android.png" />
+<link rel="apple-touch-icon" href="https://chanjarster.github.io/img/touch-icon-apple.png" />
+<link rel="mask-icon" href="https://chanjarster.github.io/img/safari-pinned-tab.svg" color="#5fbf5e" />
+
+
+
+<link rel="stylesheet" href="//cdn.bootcss.com/video.js/6.2.8/alt/video-js-cdn.min.css" />
+
+<link rel="stylesheet" href="https://chanjarster.github.io/css/bundle.8e3aef2bc5.css" />
+
+
+  
+  <!--[if lt IE 9]>
+    <script src="//cdn.bootcss.com/html5shiv/3.7.3/html5shiv.min.js"></script>
+    <script src="//cdn.bootcss.com/respond.js/1.4.2/respond.min.js"></script>
+    <script src="//cdn.bootcss.com/video.js/6.2.8/ie8/videojs-ie8.min.js"></script>
+  <![endif]-->
+
+<!--[if lte IE 11]>
+    <script src="//cdn.bootcss.com/classlist/1.1.20170427/classList.min.js"></script>
+  <![endif]-->
+
+
+<script src="//cdn.bootcss.com/object-fit-images/3.2.3/ofi.min.js"></script>
+
+
+<script src="//cdn.bootcss.com/smooth-scroll/12.1.4/js/smooth-scroll.polyfills.min.js"></script>
+
+
+</head>
+  <body>
+    
+    <div class="suspension">
+      <a title="Go to top" class="to-top is-hide"><span class="icon icon-up"></span></a>
+      
+        
+      
+    </div>
+    
+    
+  <header class="site-header">
+  <img class="avatar" src="https://chanjarster.github.io/img/avatar2.jpg" alt="Avatar">
+  
+  <h2 class="title">颇忒脱的技术博客</h2>
+  
+  <p class="subtitle"></p>
+  <button class="menu-toggle" type="button">
+    <span class="icon icon-menu"></span>
+  </button>
+  <nav class="site-menu collapsed">
+    <h2 class="offscreen">Main Menu</h2>
+    <ul class="menu-list">
+      
+      
+      
+      
+        <li class="menu-item
+            
+            
+            
+              is-active
+            ">
+            <a href="https://chanjarster.github.io/">Home</a>
+          </li>
+      
+        <li class="menu-item
+            
+            
+            ">
+            <a href="https://chanjarster.github.io/tags/%E6%94%B6%E8%97%8F%E5%A4%B9/">Bookmarks</a>
+          </li>
+      
+        <li class="menu-item
+            
+            
+            ">
+            <a href="https://chanjarster.github.io/post/jvm/jvm-index/">JVM</a>
+          </li>
+      
+        <li class="menu-item
+            
+            
+            ">
+            <a href="https://chanjarster.github.io/post/concurrent-programming/index-page">并发编程</a>
+          </li>
+      
+        <li class="menu-item
+            
+            
+            ">
+            <a href="https://github.com/chanjarster">Works</a>
+          </li>
+      
+        <li class="menu-item
+            
+            
+            ">
+            <a href="https://chanjarster.github.io/tags/">Tags</a>
+          </li>
+      
+        <li class="menu-item
+            
+            
+            ">
+            <a href="https://chanjarster.github.io/links/">Links</a>
+          </li>
+      
+    </ul>
+  </nav>
+  <nav class="social-menu collapsed">
+    <h2 class="offscreen">Social Networks</h2>
+    <ul class="social-list">
+
+      
+
+      
+      <li class="social-item">
+        <a href="//github.com/chanjarster" title="GitHub"><span class="icon icon-github"></span></a>
+      </li>
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      <li class="social-item">
+        <a rel="alternate" type="application/rss+xml" href="https://chanjarster.github.io/index.xml"><span class="icon icon-rss" title="RSS"></span></a>
+      </li>
+
+    </ul>
+  </nav>
+</header>
+
+  <section class="main post-detail">
+    <header class="post-header">
+      <h1 class="post-title">MySQL - redo log和binlog</h1>
+      <p class="post-meta">@颇忒脱 · Dec 18, 2019 · 1 min read</p>
+    </header>
+    <article class="post-content"><p></p>
+
+<p>MySQL有两个日志模块，redo log和binlog。</p>
+
+<h2 id="redo-log">redo log</h2>
+
+<p>redo log属于InnoDB存储引擎。实际上就是WAL（Write-Ahead Log），在写磁盘前（数据页）先写日志。</p>
+
+<p>并且写好日志之后先更新内存，直到一下两种情况时才同步到磁盘：</p>
+
+<ul>
+<li>系统闲的时候</li>
+<li>redo log写满的时候</li>
+</ul>
+
+<p>InnoDB的redo log大小是固定的，4个文件每个文件1G。逻辑上可以认为是一个环。write pos是当前写到的位置，checkpoint则是已经同步到数据库的位置，在write pos和checkpoint之间的空白的可写日志区域，checkpoint之后的则是还未同步到磁盘的内容，每次同步一点内容，checkpoint都会往后移动。</p>
+
+<p><img src="redo-log.png" alt="" /></p>
+
+<h2 id="binlog">binlog</h2>
+
+<p>属于Server层（见<a href="../basic-arch">MySQL - 基础架构</a>），在InnoDB出现之前，MySQL一直依赖于binlog。</p>
+
+<p>binlog的作用是用来归档。存储引擎可以使用binlog。</p>
+
+<h2 id="两者区别">两者区别</h2>
+
+<ul>
+<li>redo log是InnoDB引擎特有的，binlog则是属于Server的。</li>
+<li>redo log记录的是物理操作，即怎么写“在某个数据页上做了什么修改“，很符合存储引擎的特点。binlog记录的是逻辑操作，比如某行数据的某个字段变成了什么值。</li>
+<li>redo log记录的内容有限，前面说了4G内容。binlog则是无限的。</li>
+</ul>
+
+<h2 id="日志的2pc">日志的2PC</h2>
+
+<p>举例说明redo log和binlog在<code>update T set c=c+1 where ID=2;</code>时是怎么工作的。</p>
+
+<ol>
+<li>【执行器】问【存储引擎】要ID=2的行，如果该行所在数据页已经在内存中，则直接返回，如果不在则从磁盘中加载数据页，然后返回。这里很重要的信息是，更新操作首先是在内存中进行的，之后才会同步到磁盘。</li>
+<li>【执行器】更新字段的值，调用【存储引擎】写入新值</li>
+<li>【存储引擎】更新内存中的数据，把这个更新记录到redo log中，记录的是一条prepare日志，写到磁盘。</li>
+<li>【执行器】生成这个操作的binlog，并写到磁盘。</li>
+<li>【执行器】调用事务提交接口，把之前prepare日志改成commit状态。</li>
+<li>结束</li>
+</ol>
+
+<p>这个都是为了保证【服务层】和【存储引擎】的数据一致性。</p>
+
+<h2 id="为何还要binlog">为何还要binlog？</h2>
+
+<p>binlog看似多余落后，为何redo log没有取代呢？</p>
+
+<ul>
+<li>redo log存储空间有限，binlog则无限。</li>
+<li>redo log只有InnoDB可用，其他引擎不能用</li>
+<li>历史原因，很多机制比如Master-Slave的数据复制使用的是binlog</li>
+</ul>
+
+<h2 id="数据库备份周期">数据库备份周期？</h2>
+
+<p>是一天一备还是一周一备？根据什么来选择？</p>
+
+<p>根据你能承受的系统挂机时间来选择，备份的时间越近就能越快的恢复，反之则时间越长。这个很好理解，距离上次备份到现在所产生的binlog的大小决定了所要恢复的时间。</p></article>
+    <footer class="post-footer">
+      
+      <ul class="post-tags">
+        
+          <li><a href="https://chanjarster.github.io/tags/mysql"><span class="tag">Mysql</span></a></li>
+        
+      </ul>
+      
+      <p class="post-copyright">
+        
+      </p>
+    </footer>
+    
+      
+    
+  </section>
+  <footer class="site-footer">
+  <p>© 2017-2019 颇忒脱的技术博客</p>
+  <p>Powered by <a href="https://gohugo.io/" target="_blank">Hugo</a> with theme <a href="https://github.com/laozhu/hugo-nuo" target="_blank">Nuo</a>.</p>
+  
+</footer>
+
+
+
+<script async src="//cdn.bootcss.com/video.js/6.2.8/alt/video.novtt.min.js"></script>
+<script async src="//cdn.bootcss.com/mathjax/2.7.2/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    tex2jax: {
+      inlineMath: [['$','$'], ['\\(','\\)']],
+      displayMath: [['$$','$$'], ['\\[','\\]']],
+      processEscapes: true,
+      processEnvironments: true,
+      skipTags: ['script', 'noscript', 'style', 'textarea', 'pre'],
+      TeX: { equationNumbers: { autoNumber: "AMS" },
+      extensions: ["AMSmath.js", "AMSsymbols.js"] }
+    }
+  });
+</script>
+<script type="text/x-mathjax-config">
+  // Fix <code> tags after MathJax finishes running. This is a
+  // hack to overcome a shortcoming of Markdown. Discussion at
+  // https://github.com/mojombo/jekyll/issues/199
+  MathJax.Hub.Queue(() => {
+    MathJax.Hub.getAllJax().map(v => v.SourceElement().parentNode.className += ' has-jax');
+  });
+</script>
+
+<script src="https://chanjarster.github.io/js/bundle.273f9ac6f0.js"></script>
+
+
+
+
+  </body>
+</html>
