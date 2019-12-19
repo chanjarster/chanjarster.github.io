@@ -5,7 +5,7 @@
   <meta charset="utf-8" />
 
   
-  <title>安利一个造Prometheus假数据的工具</title>
+  <title>MySQL - 事务隔离</title>
 
   
   
@@ -15,29 +15,26 @@
 
 
   
-  <meta name="author" content="破忒脱" />
-  <meta name="description" content="学习Prometheus各种函数的时候最好能够造一些我们想要的数据来测试，但是Prometheus没有提供直接操作其数据库的功能，所以在这里安利一个工具。
-
+  <meta name="author" content="颇忒脱" />
+  <meta name="description" content="
 " />
 
   
   
     <meta name="twitter:card" content="summary" />
     <meta name="twitter:site" content="@gohugoio" />
-    <meta name="twitter:title" content="安利一个造Prometheus假数据的工具" />
-    <meta name="twitter:description" content="学习Prometheus各种函数的时候最好能够造一些我们想要的数据来测试，但是Prometheus没有提供直接操作其数据库的功能，所以在这里安利一个工具。
-
+    <meta name="twitter:title" content="MySQL - 事务隔离" />
+    <meta name="twitter:description" content="
 " />
     <meta name="twitter:image" content="https://chanjarster.github.io/img/avatar.jpg" />
   
 
   
   <meta property="og:type" content="article" />
-  <meta property="og:title" content="安利一个造Prometheus假数据的工具" />
-  <meta property="og:description" content="学习Prometheus各种函数的时候最好能够造一些我们想要的数据来测试，但是Prometheus没有提供直接操作其数据库的功能，所以在这里安利一个工具。
-
+  <meta property="og:title" content="MySQL - 事务隔离" />
+  <meta property="og:description" content="
 " />
-  <meta property="og:url" content="https://chanjarster.github.io/post/p8s-mock-data/" />
+  <meta property="og:url" content="https://chanjarster.github.io/post/mysql/isolation/" />
   <meta property="og:image" content="https://chanjarster.github.io/img/avatar.jpg" />
 
 
@@ -46,7 +43,7 @@
 <meta name="generator" content="Hugo 0.49.2" />
 
 
-<link rel="canonical" href="https://chanjarster.github.io/post/p8s-mock-data/" />
+<link rel="canonical" href="https://chanjarster.github.io/post/mysql/isolation/" />
 
 <meta name="renderer" content="webkit" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
@@ -241,64 +238,133 @@
 
   <section class="main post-detail">
     <header class="post-header">
-      <h1 class="post-title">安利一个造Prometheus假数据的工具</h1>
-      <p class="post-meta">@破忒脱 · Dec 28, 2018 · 1 min read</p>
+      <h1 class="post-title">MySQL - 事务隔离</h1>
+      <p class="post-meta">@颇忒脱 · Dec 19, 2019 · 1 min read</p>
     </header>
-    <article class="post-content"><p>学习Prometheus各种函数的时候最好能够造一些我们想要的数据来测试，但是Prometheus没有提供直接操作其数据库的功能，所以在这里安利一个工具。</p>
+    <article class="post-content"><p></p>
 
-<p></p>
+<h2 id="隔离级别">隔离级别</h2>
 
-<p>下面讲一下步骤：</p>
+<p>在<a href="../../d-transactions/local-transaction">事务 - 本地事务</a>中已经讲过4种事务隔离级别，这里补充一些别的方面。</p>
 
-<h2 id="提供假指标数据">提供假指标数据</h2>
+<table>
+<thead>
+<tr>
+<th>事务A</th>
+<th>事务B</th>
+</tr>
+</thead>
 
-<p>我做了一个提供假指标的工具<a href="https://github.com/chanjarster/prometheus-mock-data">prometheus-mock-data</a>。利用这个工具我们可以提供给Prometheus我们想提供给它的指标，这样便于后面的测试。</p>
+<tbody>
+<tr>
+<td>启动事务<br />查询得到值1</td>
+<td>启动事务</td>
+</tr>
 
-<p>新建一个文件<code>scrape-data.txt</code>，内容见<a href="https://gist.github.com/chanjarster/ae4b092d59fea9c7dc316e18cf7b56c7">gist</a>，这个文件里定义了每次Prometheus抓指标的时候所能抓到的值，这个工具会依次提供这些指标（当然你也可以写自己的假数据）。</p>
+<tr>
+<td></td>
+<td>查询得到值1</td>
+</tr>
 
-<p>运行：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">docker run -d --rm <span style="color:#ae81ff">\
-</span><span style="color:#ae81ff"></span>  --name<span style="color:#f92672">=</span>mock-metrics <span style="color:#ae81ff">\
-</span><span style="color:#ae81ff"></span>  -v <span style="color:#66d9ef">$(</span>pwd<span style="color:#66d9ef">)</span>/scrape-data.txt:/home/java-app/etc/scrape-data.txt <span style="color:#ae81ff">\
-</span><span style="color:#ae81ff"></span>  -p <span style="color:#ae81ff">8080</span>:8080 <span style="color:#ae81ff">\
-</span><span style="color:#ae81ff"></span>  chanjarster/prometheus-mock-data:latest</code></pre></div>
-<p>用浏览器访问：<code>http://localhost:8080/metrics</code>，刷新几次，能够看到指标数据在循环显示。</p>
+<tr>
+<td></td>
+<td>将1改成2</td>
+</tr>
 
-<h2 id="启动prometheus">启动Prometheus</h2>
+<tr>
+<td>查询得到值V1</td>
+<td></td>
+</tr>
 
-<p>新建配置文件：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-yaml" data-lang="yaml">scrape_configs:
-  - job_name: <span style="color:#e6db74">&#39;mock&#39;</span>
-    scrape_interval: 15s
-    static_configs:
-    - targets:
-      - <span style="color:#e6db74">&#39;&lt;docker-host-machine-ip&gt;:8080&#39;</span></code></pre></div>
-<p>注意：Data point的间隔通过<code>scrape_interval</code>参数控制。</p>
+<tr>
+<td></td>
+<td>提交事务B</td>
+</tr>
 
-<p>启动：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">docker run -d <span style="color:#ae81ff">\
-</span><span style="color:#ae81ff"></span>    --name<span style="color:#f92672">=</span>prometheus <span style="color:#ae81ff">\
-</span><span style="color:#ae81ff"></span>    -p <span style="color:#ae81ff">9090</span>:9090 <span style="color:#ae81ff">\
-</span><span style="color:#ae81ff"></span>    -v <span style="color:#66d9ef">$(</span>pwd<span style="color:#66d9ef">)</span>/prom-config.yml:/prometheus-config/prom-config.yml <span style="color:#ae81ff">\
-</span><span style="color:#ae81ff"></span>    prom/prometheus --config.file<span style="color:#f92672">=</span>/prometheus-config/prom-config.yml</code></pre></div>
-<p>打开<code>http://localhost:9090</code>看看是不是抓到指标了。</p>
+<tr>
+<td>查询得到值V2</td>
+<td></td>
+</tr>
 
-<h2 id="启动grafana">启动Grafana</h2>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">docker run -d <span style="color:#ae81ff">\
-</span><span style="color:#ae81ff"></span>    --name<span style="color:#f92672">=</span>grafana <span style="color:#ae81ff">\
-</span><span style="color:#ae81ff"></span>    -p <span style="color:#ae81ff">3000</span>:3000 <span style="color:#ae81ff">\
-</span><span style="color:#ae81ff"></span>    grafana/grafana</code></pre></div>
-<p>在Grafana里配置Prometheus数据源，然后作图。</p></article>
+<tr>
+<td>提交事务A</td>
+<td></td>
+</tr>
+
+<tr>
+<td>查询得到值V3</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+
+<p>在不同隔离级别下，V1、V2、V3得到的是什么值：</p>
+
+<ul>
+<li>read uncommitted：V1=2、V2=2、V3=2。</li>
+<li>read committed：V1=1、V2=2、V3=2。</li>
+<li>repeatable read：V1=1、V2=1、V3=2。</li>
+<li>serializable：V1=1、V2=1，同时“提交事务将1改成2时”会被锁住，事务A提交后才能继续，然后V3=2。</li>
+</ul>
+
+<p>repeatable read的试用场景，你希望两次读得到的结果都一样，即使期间有其他事务在修改这个值。比如：</p>
+
+<blockquote>
+<p>假设你在管理一个个人银行账户表。一个表存了每个月月底的余额，一个表存了账单明细。这时候你要做数据校对，也就是判断上个月的余额和当前余额的差额，是否与本月的账单明细一致。你一定希望在校对过程中，即使有用户发生了一笔新的交易，也不影响你的校对结果。</p>
+</blockquote>
+
+<h2 id="事务隔离的实现">事务隔离的实现</h2>
+
+<p>在 MySQL 中，实际上每条记录在更新的时候都会同时记录一条回滚操作。记录上的最新值，通过回滚操作，都可以得到前一个状态的值。</p>
+
+<p>假设一个值从 1 被按顺序改成了 2、3、4，在回滚日志里面就会有类似下面的记录。</p>
+
+<p><img src="rollback-segment.png" style="zoom:50%;" /></p>
+
+<p>从“read-view A、B、C”看到的值分别是1、2、4。<strong>MySQL通过MVCC（多版本并发控制）来实现的</strong>。read-view A得到的1实际上是从read-view C（当前值）一路回退得到的。</p>
+
+<p>回滚日志什么时候删除？当没有比它更早的read-view的时候，比如只要上面的read-view A存在，那么上面3个回滚日志都必须存在。</p>
+
+<p><strong>长事务会导致大量回滚日志</strong>，因为只要事务没提交，MySQL就要保留可能会被这个事务用到的所有回滚日志，从而占用大量空间，回滚日志是保存在文件中的。</p>
+
+<h2 id="启动事务的方式">启动事务的方式</h2>
+
+<ul>
+<li>显式的：begin / start transaction, commit / rollback。</li>
+<li>隐式的：你执行select也会开启一个事务。</li>
+</ul>
+
+<p>什么时候关闭事务：</p>
+
+<ul>
+<li>显式的：commit / rollback。</li>
+<li>隐式的：<code>set autocommit=1</code>。</li>
+</ul>
+
+<p><strong>所以如果<code>set autocommit=0</code>，则会让你无意当中开启了一个事务而不提交结果就造成了长事务。</strong></p>
+
+<p><code>commit work and chain</code>可以让你提交事务之后立即再开启一个事务：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#66d9ef">begin</span>;
+
+<span style="color:#66d9ef">select</span> <span style="color:#ae81ff">1</span> <span style="color:#66d9ef">from</span> dual;
+
+<span style="color:#66d9ef">commit</span> <span style="color:#66d9ef">work</span> <span style="color:#66d9ef">and</span> <span style="color:#66d9ef">chain</span>;
+
+<span style="color:#66d9ef">select</span> <span style="color:#ae81ff">1</span> <span style="color:#66d9ef">from</span> dual;
+
+<span style="color:#66d9ef">commit</span>;</code></pre></div>
+<p>下面语句可以查询出超过60秒的长事务：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#66d9ef">select</span> <span style="color:#f92672">*</span> <span style="color:#66d9ef">from</span> information_schema.innodb_trx <span style="color:#66d9ef">where</span> TIME_TO_SEC(timediff(now(),trx_started))<span style="color:#f92672">&gt;</span><span style="color:#ae81ff">60</span></code></pre></div></article>
     <footer class="post-footer">
       
       <ul class="post-tags">
         
-          <li><a href="https://chanjarster.github.io/tags/prometheus"><span class="tag">Prometheus</span></a></li>
+          <li><a href="https://chanjarster.github.io/tags/mysql"><span class="tag">Mysql</span></a></li>
         
       </ul>
       
       <p class="post-copyright">
-        This post was published <strong>356</strong> days ago, content in the post may be inaccurate, even wrong now, please take risk yourself.
+        
       </p>
     </footer>
     
