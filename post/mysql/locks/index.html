@@ -5,7 +5,7 @@
   <meta charset="utf-8" />
 
   
-  <title>算法 - 冒泡排序（Bubble sort）</title>
+  <title>MySQL - 锁</title>
 
   
   
@@ -23,7 +23,7 @@
   
     <meta name="twitter:card" content="summary" />
     <meta name="twitter:site" content="@gohugoio" />
-    <meta name="twitter:title" content="算法 - 冒泡排序（Bubble sort）" />
+    <meta name="twitter:title" content="MySQL - 锁" />
     <meta name="twitter:description" content="
 " />
     <meta name="twitter:image" content="https://chanjarster.github.io/img/avatar.jpg" />
@@ -31,10 +31,10 @@
 
   
   <meta property="og:type" content="article" />
-  <meta property="og:title" content="算法 - 冒泡排序（Bubble sort）" />
+  <meta property="og:title" content="MySQL - 锁" />
   <meta property="og:description" content="
 " />
-  <meta property="og:url" content="https://chanjarster.github.io/post/algo/8-bubble-sort/" />
+  <meta property="og:url" content="https://chanjarster.github.io/post/mysql/locks/" />
   <meta property="og:image" content="https://chanjarster.github.io/img/avatar.jpg" />
 
 
@@ -43,7 +43,7 @@
 <meta name="generator" content="Hugo 0.49.2" />
 
 
-<link rel="canonical" href="https://chanjarster.github.io/post/algo/8-bubble-sort/" />
+<link rel="canonical" href="https://chanjarster.github.io/post/mysql/locks/" />
 
 <meta name="renderer" content="webkit" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
@@ -245,74 +245,101 @@
 
   <section class="main post-detail">
     <header class="post-header">
-      <h1 class="post-title">算法 - 冒泡排序（Bubble sort）</h1>
-      <p class="post-meta">@颇忒脱 · Feb 13, 2019 · 1 min read</p>
+      <h1 class="post-title">MySQL - 锁</h1>
+      <p class="post-meta">@颇忒脱 · Dec 20, 2019 · 1 min read</p>
     </header>
     <article class="post-content"><p></p>
 
+<p>先导概念：</p>
+
 <ul>
-<li><a href="https://time.geekbang.org/column/article/41802">极客时间 - 数据结构与算法之美 - 11 | 排序（上）</a></li>
+<li>读锁：可以并发读，如果有写操作，则必须等读锁释放</li>
+<li>写锁：不能并发读，也不能并发写，都必须等写锁释放才能继续</li>
 </ul>
 
-<p>算法描述：</p>
+<h2 id="全局锁">全局锁</h2>
+
+<p>使用<a href="https://dev.mysql.com/doc/refman/8.0/en/flush.html#flush-tables-with-read-lock">FLUSH TABLES WITH READ LOCK</a>会让你给整个数据库加一个读锁。这会阻塞所有DML、DDL、更新类事务的commit，直到被释放。</p>
+
+<p><strong>全局锁的典型使用场景是，做全库逻辑备份。</strong></p>
+
+<p>怎么释放？TODO</p>
+
+<h2 id="表级锁">表级锁</h2>
+
+<h3 id="表锁">表锁</h3>
+
+<p>通过下面语句给表加上读锁或写锁，还有释放：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#75715e">-- 加锁
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">lock</span> tables ... <span style="color:#66d9ef">read</span><span style="color:#f92672">/</span><span style="color:#66d9ef">write</span>
+<span style="color:#75715e">-- 释放
+</span><span style="color:#75715e"></span>unlock tables
+<span style="color:#75715e">-- 例如
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">lock</span> tables t1 <span style="color:#66d9ef">read</span>, t2 <span style="color:#66d9ef">write</span></code></pre></div>
+<p>MySQL的锁不是可重入的，即加锁之后，当前连接/session也受制于这个锁。</p>
+
+<p>如果加的是读锁：</p>
+
+<ul>
+<li>本session：可以读，不可写（直接报错）</li>
+<li>其他session：可以读，阻塞写</li>
+</ul>
+
+<p>如果加的是写锁：</p>
+
+<ul>
+<li>本session：可以读、可以写</li>
+<li>其他session：阻塞读、阻塞写</li>
+</ul>
+
+<h3 id="元数据锁-metadata-lock-mdl">元数据锁（Metadata Lock，MDL）</h3>
+
+<p>访问表的时候会被自动加上（隐式）：</p>
+
+<ul>
+<li>在CRUD一个表的时候，加上MDL读锁</li>
+<li>对表结构变更的时候，加上MDL写锁</li>
+</ul>
+
+<p><strong>陷阱：MDL锁在语句开始时申请，但是要在事务提交之后才会释放。</strong>所以下面语句会导致很多数据库操作被阻塞：</p>
+
+<p><img src="mdl-phases.png" style="zoom:50%;" /></p>
 
 <ol>
-<li>a为待排序数组</li>
-<li>j = 0，比较 a[j] 和 a[j+1]：
-
-<ul>
-<li>如果 a[j] &gt; a[j+1]，交换两个元素位置</li>
-<li>否则啥都不用做</li>
-<li>j++</li>
-</ul></li>
-<li>循环n - 1次
-
-<ul>
-<li>第一次循环，把最大的元素移动到了 最后</li>
-<li>第二次循环，把第2大元素移动到了 倒数第2位</li>
-<li>第三次循环，把第3大元素移动到了 倒数第3位</li>
-<li>&hellip;</li>
-<li>直到循环结束，元素都排序好了</li>
-</ul></li>
+<li>session A开启事务，查询，得到MDL读锁</li>
+<li>session B查询，得到MDL读锁</li>
+<li>session C加字段，要得到MDL写锁，阻塞</li>
+<li>session D查询，要得到MDL读锁，阻塞</li>
 </ol>
 
-<p>算法本质：把大的元素像泡泡一样冒到最后。</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#75715e">// 冒泡排序，a 表示数组
-</span><span style="color:#75715e"></span><span style="color:#66d9ef">public</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">sort</span><span style="color:#f92672">(</span><span style="color:#66d9ef">int</span><span style="color:#f92672">[]</span> a<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
-  <span style="color:#66d9ef">int</span> n <span style="color:#f92672">=</span> a<span style="color:#f92672">.</span><span style="color:#a6e22e">length</span><span style="color:#f92672">;</span>
-  <span style="color:#66d9ef">if</span> <span style="color:#f92672">(</span>n <span style="color:#f92672">&lt;=</span> 1<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
-    <span style="color:#66d9ef">return</span><span style="color:#f92672">;</span>
-  <span style="color:#f92672">}</span>
-  <span style="color:#66d9ef">for</span> <span style="color:#f92672">(</span><span style="color:#66d9ef">int</span> i <span style="color:#f92672">=</span> 0<span style="color:#f92672">;</span> i <span style="color:#f92672">&lt;</span> n<span style="color:#f92672">;</span> i<span style="color:#f92672">++)</span> <span style="color:#f92672">{</span>
-    <span style="color:#66d9ef">boolean</span> flag <span style="color:#f92672">=</span> <span style="color:#66d9ef">false</span><span style="color:#f92672">;</span>
-    <span style="color:#66d9ef">for</span> <span style="color:#f92672">(</span><span style="color:#66d9ef">int</span> j <span style="color:#f92672">=</span> 0<span style="color:#f92672">;</span> j <span style="color:#f92672">&lt;</span> n <span style="color:#f92672">-</span> i <span style="color:#f92672">-</span> 1<span style="color:#f92672">;</span> j<span style="color:#f92672">++)</span> <span style="color:#f92672">{</span>
-      <span style="color:#75715e">// 每次交换把一个较大的元素移动到数组尾部
-</span><span style="color:#75715e"></span>      <span style="color:#66d9ef">if</span> <span style="color:#f92672">(</span>a<span style="color:#f92672">[</span>j<span style="color:#f92672">]</span> <span style="color:#f92672">&gt;</span> a<span style="color:#f92672">[</span>j <span style="color:#f92672">+</span> 1<span style="color:#f92672">])</span> <span style="color:#f92672">{</span>
-        <span style="color:#66d9ef">int</span> tmp <span style="color:#f92672">=</span> a<span style="color:#f92672">[</span>j<span style="color:#f92672">];</span>
-        a<span style="color:#f92672">[</span>j<span style="color:#f92672">]</span> <span style="color:#f92672">=</span> a<span style="color:#f92672">[</span>j <span style="color:#f92672">+</span> 1<span style="color:#f92672">];</span>
-        a<span style="color:#f92672">[</span>j <span style="color:#f92672">+</span> 1<span style="color:#f92672">]</span> <span style="color:#f92672">=</span> tmp<span style="color:#f92672">;</span>
-        flag <span style="color:#f92672">=</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">;</span>
-      <span style="color:#f92672">}</span>
-    <span style="color:#f92672">}</span>
-    <span style="color:#66d9ef">if</span> <span style="color:#f92672">(!</span>flag<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
-      <span style="color:#75715e">// 如果没有数据交换，则说明数组已经有序
-</span><span style="color:#75715e"></span>      <span style="color:#66d9ef">break</span><span style="color:#f92672">;</span>
-    <span style="color:#f92672">}</span>
-  <span style="color:#f92672">}</span>
-<span style="color:#f92672">}</span></code></pre></div>
-<p><img src="../sort/bubble-sort.png" alt="" /></p></article>
+<p>因为session A没有提交事务，所以就造成了后续一连串的阻塞。如果某个表上的查询语句频繁，而且客户端有重试机制，也就是说超时后会再起一个新 session 再请求的话，这个库的线程很快就会爆满。</p>
+
+<p><strong>解决办法：</strong></p>
+
+<p>问题的本质在于一个MDL写锁在等待MDL读锁的释放，而读锁却在一个长事务里，导致后续的MDL读锁堆积。</p>
+
+<p>所以可以在执行DDL之前看有没有长事务在跑，如果有，Kill掉这个长事务，或者等待长事务结束在DDL。</p>
+
+<p>还可以给DDL添加超时时间，如果等待超时则放弃，然后人工再重试（MariaDB和AliSQL支持下面语法）：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#66d9ef">ALTER</span> <span style="color:#66d9ef">TABLE</span> tbl_name NOWAIT <span style="color:#66d9ef">add</span> <span style="color:#66d9ef">column</span> ...
+<span style="color:#66d9ef">ALTER</span> <span style="color:#66d9ef">TABLE</span> tbl_name WAIT N <span style="color:#66d9ef">add</span> <span style="color:#66d9ef">column</span> ... </code></pre></div>
+<h2 id="行锁">行锁</h2>
+
+<h2 id="数据库备份">数据库备份</h2>
+
+<p>可以使用<a href="https://dev.mysql.com/doc/refman/8.0/en/flush.html#flush-tables-with-read-lock">FLUSH TABLES WITH READ LOCK</a>把数据库整个锁了来备份，目的是得到一致性视图。MyISAM引擎不支持MVCC，所以可以用这个方法。</p>
+
+<p><code>mysqldump --single-transaction</code>则能利用InnoDB的MVCC机制来得到一个一致性视图。<code>--single-transaction</code>方法只适用于所有的表使用事务引擎的库（InnoDB）。</p></article>
     <footer class="post-footer">
       
       <ul class="post-tags">
         
-          <li><a href="https://chanjarster.github.io/tags/arts"><span class="tag">ARTS</span></a></li>
-        
-          <li><a href="https://chanjarster.github.io/tags/arts-a"><span class="tag">ARTS-A</span></a></li>
+          <li><a href="https://chanjarster.github.io/tags/mysql"><span class="tag">Mysql</span></a></li>
         
       </ul>
       
       <p class="post-copyright">
-        This post was published <strong>311</strong> days ago, content in the post may be inaccurate, even wrong now, please take risk yourself.
+        
       </p>
     </footer>
     
