@@ -325,6 +325,130 @@
 <span style="color:#66d9ef">ALTER</span> <span style="color:#66d9ef">TABLE</span> tbl_name WAIT N <span style="color:#66d9ef">add</span> <span style="color:#66d9ef">column</span> ... </code></pre></div>
 <h2 id="行锁">行锁</h2>
 
+<p>InnoDB支持行锁，MyISAM不支持。所以行锁是做在存储引擎上的。</p>
+
+<p>比如下面：</p>
+
+<table>
+<thead>
+<tr>
+<th align="center">事务A</th>
+<th align="center">事务B</th>
+</tr>
+</thead>
+
+<tbody>
+<tr>
+<td align="center">begin;<br />update t set k=k+1 where id=1;<br />update t set k=k+2 where id=2;</td>
+<td align="center"></td>
+</tr>
+
+<tr>
+<td align="center"></td>
+<td align="center">begin;<br />update t set k=k+2 where id=1;</td>
+</tr>
+
+<tr>
+<td align="center">commit;</td>
+<td align="center"></td>
+</tr>
+</tbody>
+</table>
+
+<p>很容易就能猜到，事务B会被阻塞，直到事务A提交。所以：</p>
+
+<ul>
+<li><strong>行锁在需要的时候才获取（执行具体语句时）</strong></li>
+<li><strong>事务持有的行锁在事务提交时才会被释放。（这个和MDL锁一样一样的）</strong></li>
+</ul>
+
+<h3 id="死锁">死锁</h3>
+
+<p>因为上面的两个特性，很容易造成死锁：</p>
+
+<table>
+<thead>
+<tr>
+<th>序号</th>
+<th>事务A</th>
+<th>事务B</th>
+</tr>
+</thead>
+
+<tbody>
+<tr>
+<td>1</td>
+<td>begin;</td>
+<td>begin;</td>
+</tr>
+
+<tr>
+<td>2</td>
+<td>update t set k=k+1 where id=1;</td>
+<td></td>
+</tr>
+
+<tr>
+<td>3</td>
+<td></td>
+<td>update t set k=k+1 where id=2;</td>
+</tr>
+
+<tr>
+<td>4</td>
+<td>update t set k=k+1 where id=2;</td>
+<td></td>
+</tr>
+
+<tr>
+<td>5</td>
+<td></td>
+<td>update t set k=k+1 where id=1;</td>
+</tr>
+
+<tr>
+<td>6</td>
+<td>commit;</td>
+<td>commit;</td>
+</tr>
+</tbody>
+</table>
+
+<p>其实在4和5的时候，事务A和事务B就都不能继续下去了，大家互相等待。</p>
+
+<p>解决办法：</p>
+
+<ul>
+<li>系统参数<a href="https://dev.mysql.com/doc/refman/8.0/en/innodb-parameters.html#sysvar_innodb_lock_wait_timeout"><code>innodb_lock_wait_timeout</code></a>，控制事务等待行锁的超时时间（秒）。默认50秒。</li>
+<li>系统参数[<code>innodb_deadlock_detect</code>][7]，开启死锁检测。默认on。发现死锁后，主动回滚死锁链条中的某一个事务，让其他事务得以继续执行。</li>
+</ul>
+
+<p>死锁检测的过程：每当一个事务被锁的时候，就要看看它所依赖的线程有没有被别人锁住，如此循环，最后判断是否出现了循环等待，也就是死锁。</p>
+
+<h3 id="死锁检测高并发情况下拖慢速度">死锁检测高并发情况下拖慢速度</h3>
+
+<p>假设有 1000 个并发线程要同时更新同一行，每个线程都要检测是否和其他线程形成死锁，那么死锁检测操作就是 100 万这个量级的。于是出现<strong>“CPU 利用率很高，但是每秒却执行不了几个事务“</strong>。</p>
+
+<p>解决办法：</p>
+
+<ol>
+<li>保证程序不会出现死锁，然后把死锁检测关掉。不靠谱。</li>
+<li>控制并发度，最好对同一行的修改串行化。依赖于中间件或者修改MySQL源码。</li>
+<li>锁的条带化（Java并发编程里的概念），比如影院账号的例子，把账号分成10个，减少锁的冲突。</li>
+</ol>
+
+<h3 id="加锁的顺序">加锁的顺序</h3>
+
+<p>先给哪行加锁，后给哪行加锁，是有讲究的，<strong>如果你的事务中需要锁多个行，要把最可能造成锁冲突、最可能影响并发度的锁尽量往后放。</strong>。什么比如一个购票的业务：</p>
+
+<ol>
+<li>从顾客 A 账户余额中扣除电影票价；</li>
+<li>给影院 B 的账户余额增加这张电影票价；</li>
+<li>记录一条交易日志。</li>
+</ol>
+
+<p>显然更新影院B账户余额的并发度比更新顾客A账户余额高很多，应该把它放后面。可以按照3、1、2的顺序执行。</p>
+
 <h2 id="数据库备份">数据库备份</h2>
 
 <p>可以使用<a href="https://dev.mysql.com/doc/refman/8.0/en/flush.html#flush-tables-with-read-lock">FLUSH TABLES WITH READ LOCK</a>把数据库整个锁了来备份，目的是得到一致性视图。MyISAM引擎不支持MVCC，所以可以用这个方法。</p>
