@@ -5,7 +5,7 @@
   <meta charset="utf-8" />
 
   
-  <title>Cracking Coding Interview - 10.8 Find Duplicates</title>
+  <title>MySQL - 常见命令及参数</title>
 
   
   
@@ -23,7 +23,7 @@
   
     <meta name="twitter:card" content="summary" />
     <meta name="twitter:site" content="@gohugoio" />
-    <meta name="twitter:title" content="Cracking Coding Interview - 10.8 Find Duplicates" />
+    <meta name="twitter:title" content="MySQL - 常见命令及参数" />
     <meta name="twitter:description" content="
 " />
     <meta name="twitter:image" content="https://chanjarster.github.io/img/avatar.jpg" />
@@ -31,10 +31,10 @@
 
   
   <meta property="og:type" content="article" />
-  <meta property="og:title" content="Cracking Coding Interview - 10.8 Find Duplicates" />
+  <meta property="og:title" content="MySQL - 常见命令及参数" />
   <meta property="og:description" content="
 " />
-  <meta property="og:url" content="https://chanjarster.github.io/post/cracking-coding-interview/10.8-find-duplicates/" />
+  <meta property="og:url" content="https://chanjarster.github.io/post/mysql/commands-params/" />
   <meta property="og:image" content="https://chanjarster.github.io/img/avatar.jpg" />
 
 
@@ -43,7 +43,7 @@
 <meta name="generator" content="Hugo 0.49.2" />
 
 
-<link rel="canonical" href="https://chanjarster.github.io/post/cracking-coding-interview/10.8-find-duplicates/" />
+<link rel="canonical" href="https://chanjarster.github.io/post/mysql/commands-params/" />
 
 <meta name="renderer" content="webkit" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
@@ -245,45 +245,72 @@
 
   <section class="main post-detail">
     <header class="post-header">
-      <h1 class="post-title">Cracking Coding Interview - 10.8 Find Duplicates</h1>
-      <p class="post-meta">@颇忒脱 · Aug 29, 2019 · 1 min read</p>
+      <h1 class="post-title">MySQL - 常见命令及参数</h1>
+      <p class="post-meta">@颇忒脱 · Dec 18, 2019 · 1 min read</p>
     </header>
     <article class="post-content"><p></p>
 
-<p><strong>Find Duplicates</strong>: You have an array with all the numbers from <code>1</code> to <code>N</code>, where <code>N</code> is at most 32,000. The array may have duplicate entries and you do not know what <code>N</code> is. With only 4 kilobytes of memory available, how would you print all duplicate elements in the array?</p>
+<p>docker测试：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">docker run -d --name mysql8 <span style="color:#ae81ff">\
+</span><span style="color:#ae81ff"></span>-e MYSQL_ROOT_PASSWORD<span style="color:#f92672">=</span><span style="color:#ae81ff">12345</span> <span style="color:#ae81ff">\
+</span><span style="color:#ae81ff"></span>-e MYSQL_USER<span style="color:#f92672">=</span>test <span style="color:#ae81ff">\
+</span><span style="color:#ae81ff"></span>-e MYSQL_PASSWORD<span style="color:#f92672">=</span>test <span style="color:#ae81ff">\
+</span><span style="color:#ae81ff"></span>-e MYSQL_DATABASE<span style="color:#f92672">=</span>test <span style="color:#ae81ff">\
+</span><span style="color:#ae81ff"></span>mysql:8
 
-<p>Hints: #289, #315</p>
+docker exec -it mysql8 mysql -u test -p test</code></pre></div>
+<p>常见命令：</p>
 
-<h2 id="解法">解法</h2>
+<ul>
+<li>查看数据库连接：<code>show processlist</code></li>
+<li>查看数据库参数：<code>show variables</code>也可以模糊查询<code>show variables like '%wait%'</code></li>
+<li>执行shell命令：<code>system ...</code></li>
+<li>查询超过60秒的长事务：
+<code>select * from information_schema.innodb_trx where TIME_TO_SEC(timediff(now(),trx_started))&gt;60;</code></li>
+<li>重建索引：<code>alter table T engine=InnoDB</code></li>
+<li><a href="https://dev.mysql.com/doc/refman/8.0/en/flush.html#flush-tables-with-read-lock"><code>FLUSH TABLES WITH READ LOCK</code></a>：全局读锁</li>
+</ul>
 
-<p>又遇到了有限内存的问题。</p>
+<p>系统参数：</p>
 
-<p>题目中给了4K内存，4K = 4096 bytes = 8 * 4096 bits =&gt; 32,000 。题目中由说了<code>N</code>不会超过32,000，那也就意味着我们可以用bit vector来做这个事情。</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#66d9ef">public</span> <span style="color:#66d9ef">int</span> <span style="color:#a6e22e">findDuplicates</span><span style="color:#f92672">(</span><span style="color:#66d9ef">int</span><span style="color:#f92672">[]</span> array<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
-  <span style="color:#66d9ef">byte</span><span style="color:#f92672">[]</span> bitVector <span style="color:#f92672">=</span> <span style="color:#66d9ef">new</span> <span style="color:#66d9ef">byte</span><span style="color:#f92672">[</span>4 <span style="color:#f92672">*</span> 1024<span style="color:#f92672">];</span>
-  <span style="color:#66d9ef">for</span> <span style="color:#f92672">(</span><span style="color:#66d9ef">int</span> i <span style="color:#f92672">=</span> 0<span style="color:#f92672">;</span> i <span style="color:#f92672">&lt;</span> array<span style="color:#f92672">.</span><span style="color:#a6e22e">length</span><span style="color:#f92672">;</span> i<span style="color:#f92672">++)</span> <span style="color:#f92672">{</span>
-    <span style="color:#66d9ef">int</span> byteIndex <span style="color:#f92672">=</span> i <span style="color:#f92672">/</span> Byte<span style="color:#f92672">.</span><span style="color:#a6e22e">SIZE</span><span style="color:#f92672">;</span>
-    <span style="color:#66d9ef">int</span> bitIndex <span style="color:#f92672">=</span> i <span style="color:#f92672">%</span> Byte<span style="color:#f92672">.</span><span style="color:#a6e22e">SIZE</span><span style="color:#f92672">;</span>
-    <span style="color:#66d9ef">byte</span> flag <span style="color:#f92672">=</span> 1 <span style="color:#f92672">&lt;&lt;</span> bitIndex<span style="color:#f92672">;</span>
-    <span style="color:#66d9ef">if</span> <span style="color:#f92672">(</span>bitVector<span style="color:#f92672">[</span>byteIndex<span style="color:#f92672">]</span> <span style="color:#f92672">&amp;</span> flag <span style="color:#f92672">==</span> 0<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
-      bitVector<span style="color:#f92672">[</span>byteIndex<span style="color:#f92672">]</span> <span style="color:#f92672">|=</span> flag<span style="color:#f92672">;</span>
-    <span style="color:#f92672">}</span> <span style="color:#66d9ef">else</span> <span style="color:#f92672">{</span>
-      System<span style="color:#f92672">.</span><span style="color:#a6e22e">out</span><span style="color:#f92672">.</span><span style="color:#a6e22e">println</span><span style="color:#f92672">(</span>i<span style="color:#f92672">);</span>
-    <span style="color:#f92672">}</span>
-  <span style="color:#f92672">}</span>
-<span style="color:#f92672">}</span></code></pre></div></article>
+<ul>
+<li>设置全局参数：<code>set global xxx=yyy</code></li>
+
+<li><p>持久全局参数：<code>set persist xxx=yyy</code></p></li>
+
+<li><p><a href="https://dev.mysql.com/doc/refman/8.0/en/server-system-variables.html#sysvar_wait_timeout"><code>wait_timeout</code></a>：控制数据库连接多少时间没有动静就断开，默认8小时。</p></li>
+
+<li><p>慢日志查询相关参数：<code>show variables like '%slow%;</code>和<code>long_query_time</code>（单位秒）</p></li>
+
+<li><p><a href="https://dev.mysql.com/doc/refman/8.0/en/server-system-variables.html#sysvar_slow_query_log"><code>slow_query_log</code></a>：是否开启慢日志查询</p></li>
+
+<li><p><a href="https://dev.mysql.com/doc/refman/8.0/en/server-system-variables.html#sysvar_transaction_isolation"><code>transaction_isolation</code></a>，查看数据库隔离级别</p></li>
+
+<li><p><a href="https://dev.mysql.com/doc/refman/8.0/en/server-system-variables.html#sysvar_max_execution_time"><code>max_execution_time</code></a>，SELECT语句的最大执行时长</p></li>
+
+<li><p><a href="https://dev.mysql.com/doc/refman/8.0/en/innodb-parameters.html#sysvar_innodb_lock_wait_timeout"><code>innodb_lock_wait_timeout</code></a>，事务获得行锁的最大等待时间（秒）。默认50秒。</p></li>
+
+<li><p><a href="https://dev.mysql.com/doc/refman/8.0/en/innodb-parameters.html#sysvar_innodb_deadlock_detect"><code>innodb_deadlock_detect</code></a>，开启死锁检测。默认on。</p></li>
+
+<li><p><a href="https://dev.mysql.com/doc/refman/8.0/en/replication-options-binary-log.html#sysvar_binlog_expire_logs_seconds"><code>binlog_expire_logs_seconds</code></a>，binlog的保留时间（秒），默认30天。</p></li>
+</ul>
+
+<p>session参数：</p>
+
+<ul>
+<li>设置Session参数：<code>set xxx=yyy</code></li>
+<li><a href="https://dev.mysql.com/doc/refman/8.0/en/set-sql-log-bin.html"><code>sql_log_bin</code></a>：控制当前session是否产生binlog。</li>
+</ul></article>
     <footer class="post-footer">
       
       <ul class="post-tags">
         
-          <li><a href="https://chanjarster.github.io/tags/arts"><span class="tag">ARTS</span></a></li>
-        
-          <li><a href="https://chanjarster.github.io/tags/arts-a"><span class="tag">ARTS-A</span></a></li>
+          <li><a href="https://chanjarster.github.io/tags/mysql"><span class="tag">Mysql</span></a></li>
         
       </ul>
       
       <p class="post-copyright">
-        This post was published <strong>119</strong> days ago, content in the post may be inaccurate, even wrong now, please take risk yourself.
+        
       </p>
     </footer>
     
