@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+<head>
+
+  <meta charset="utf-8" />
+
+  
+  <title>MySQL - MVCC</title>
+
+  
+  
+
+
+
+
+
+  
+  <meta name="author" content="颇忒脱" />
+  <meta name="description" content="
+" />
+
+  
+  
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:site" content="@gohugoio" />
+    <meta name="twitter:title" content="MySQL - MVCC" />
+    <meta name="twitter:description" content="
+" />
+    <meta name="twitter:image" content="https://chanjarster.github.io/img/avatar.jpg" />
+  
+
+  
+  <meta property="og:type" content="article" />
+  <meta property="og:title" content="MySQL - MVCC" />
+  <meta property="og:description" content="
+" />
+  <meta property="og:url" content="https://chanjarster.github.io/post/mysql/mvcc/" />
+  <meta property="og:image" content="https://chanjarster.github.io/img/avatar.jpg" />
+
+
+
+
+<meta name="generator" content="Hugo 0.49.2" />
+
+
+<link rel="canonical" href="https://chanjarster.github.io/post/mysql/mvcc/" />
+
+<meta name="renderer" content="webkit" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<meta name="format-detection" content="telephone=no,email=no,adress=no" />
+<meta http-equiv="Cache-Control" content="no-transform" />
+
+
+<meta name="robots" content="index,follow" />
+<meta name="referrer" content="origin-when-cross-origin" />
+
+
+
+
+
+
+
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="颇忒脱的技术博客" />
+<meta name="msapplication-tooltip" content="颇忒脱的技术博客" />
+<meta name='msapplication-navbutton-color' content="#5fbf5e" />
+<meta name="msapplication-TileColor" content="#5fbf5e" />
+<meta name="msapplication-TileImage" content="/img/tile-image-windows.png" />
+<link rel="icon" href="https://chanjarster.github.io/img/favicon.ico" />
+<link rel="icon" type="image/png" sizes="16x16" href="https://chanjarster.github.io/img/favicon-16x16.png" />
+<link rel="icon" type="image/png" sizes="32x32" href="https://chanjarster.github.io/img/favicon-32x32.png" />
+<link rel="icon" sizes="192x192" href="https://chanjarster.github.io/img/touch-icon-android.png" />
+<link rel="apple-touch-icon" href="https://chanjarster.github.io/img/touch-icon-apple.png" />
+<link rel="mask-icon" href="https://chanjarster.github.io/img/safari-pinned-tab.svg" color="#5fbf5e" />
+
+
+
+<link rel="stylesheet" href="//cdn.bootcss.com/video.js/6.2.8/alt/video-js-cdn.min.css" />
+
+<link rel="stylesheet" href="https://chanjarster.github.io/css/bundle.8e3aef2bc5.css" />
+
+
+  
+  <!--[if lt IE 9]>
+    <script src="//cdn.bootcss.com/html5shiv/3.7.3/html5shiv.min.js"></script>
+    <script src="//cdn.bootcss.com/respond.js/1.4.2/respond.min.js"></script>
+    <script src="//cdn.bootcss.com/video.js/6.2.8/ie8/videojs-ie8.min.js"></script>
+  <![endif]-->
+
+<!--[if lte IE 11]>
+    <script src="//cdn.bootcss.com/classlist/1.1.20170427/classList.min.js"></script>
+  <![endif]-->
+
+
+<script src="//cdn.bootcss.com/object-fit-images/3.2.3/ofi.min.js"></script>
+
+
+<script src="//cdn.bootcss.com/smooth-scroll/12.1.4/js/smooth-scroll.polyfills.min.js"></script>
+
+
+</head>
+  <body>
+    
+    <div class="suspension">
+      <a title="Go to top" class="to-top is-hide"><span class="icon icon-up"></span></a>
+      
+        
+      
+    </div>
+    
+    
+  <header class="site-header">
+  <img class="avatar" src="https://chanjarster.github.io/img/avatar2.jpg" alt="Avatar">
+  
+  <h2 class="title">颇忒脱的技术博客</h2>
+  
+  <p class="subtitle"></p>
+  <button class="menu-toggle" type="button">
+    <span class="icon icon-menu"></span>
+  </button>
+  <nav class="site-menu collapsed">
+    <h2 class="offscreen">Main Menu</h2>
+    <ul class="menu-list">
+      
+      
+      
+      
+        <li class="menu-item
+            
+            
+            
+              is-active
+            ">
+            <a href="https://chanjarster.github.io/">Home</a>
+          </li>
+      
+        <li class="menu-item
+            
+            
+            ">
+            <a href="https://chanjarster.github.io/tags/%E6%94%B6%E8%97%8F%E5%A4%B9/">Bookmarks</a>
+          </li>
+      
+        <li class="menu-item
+            
+            
+            ">
+            <a href="https://chanjarster.github.io/post/jvm/index-page">JVM</a>
+          </li>
+      
+        <li class="menu-item
+            
+            
+            ">
+            <a href="https://chanjarster.github.io/post/concurrent-programming/index-page">并发编程</a>
+          </li>
+      
+        <li class="menu-item
+            
+            
+            ">
+            <a href="https://chanjarster.github.io/post/mysql/index-page">MySQL</a>
+          </li>
+      
+        <li class="menu-item
+            
+            
+            ">
+            <a href="https://github.com/chanjarster">Works</a>
+          </li>
+      
+        <li class="menu-item
+            
+            
+            ">
+            <a href="https://chanjarster.github.io/tags/">Tags</a>
+          </li>
+      
+        <li class="menu-item
+            
+            
+            ">
+            <a href="https://chanjarster.github.io/links/">Links</a>
+          </li>
+      
+    </ul>
+  </nav>
+  <nav class="social-menu collapsed">
+    <h2 class="offscreen">Social Networks</h2>
+    <ul class="social-list">
+
+      
+
+      
+      <li class="social-item">
+        <a href="//github.com/chanjarster" title="GitHub"><span class="icon icon-github"></span></a>
+      </li>
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      <li class="social-item">
+        <a rel="alternate" type="application/rss+xml" href="https://chanjarster.github.io/index.xml"><span class="icon icon-rss" title="RSS"></span></a>
+      </li>
+
+    </ul>
+  </nav>
+</header>
+
+  <section class="main post-detail">
+    <header class="post-header">
+      <h1 class="post-title">MySQL - MVCC</h1>
+      <p class="post-meta">@颇忒脱 · Dec 30, 2019 · 1 min read</p>
+    </header>
+    <article class="post-content"><p></p>
+
+<p>前面提到过MySQL通过MVCC来实现事务隔离（准确的说是InnoDB引擎实现了MVCC）。那么接下来详细讲讲这个MVCC。</p>
+
+<h2 id="先思考一下">先思考一下</h2>
+
+<p>下面是一个例子，这个例子中的数据库事务隔离级别是RR（Repeatable Read），并且auto commit=1。</p>
+
+<p>有一张表，且有(1,1)和(2,2)两条数据：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#66d9ef">CREATE</span> <span style="color:#66d9ef">TABLE</span> <span style="color:#f92672">`</span>t<span style="color:#f92672">`</span> (
+  <span style="color:#f92672">`</span>id<span style="color:#f92672">`</span> int(<span style="color:#ae81ff">11</span>) <span style="color:#66d9ef">NOT</span> <span style="color:#66d9ef">NULL</span>,
+  <span style="color:#f92672">`</span>k<span style="color:#f92672">`</span> int(<span style="color:#ae81ff">11</span>) <span style="color:#66d9ef">DEFAULT</span> <span style="color:#66d9ef">NULL</span>,
+  <span style="color:#66d9ef">PRIMARY</span> <span style="color:#66d9ef">KEY</span> (<span style="color:#f92672">`</span>id<span style="color:#f92672">`</span>)
+) ENGINE<span style="color:#f92672">=</span>InnoDB;
+<span style="color:#66d9ef">insert</span> <span style="color:#66d9ef">into</span> t(id, k) <span style="color:#66d9ef">values</span>(<span style="color:#ae81ff">1</span>,<span style="color:#ae81ff">1</span>),(<span style="color:#ae81ff">2</span>,<span style="color:#ae81ff">2</span>);</code></pre></div>
+<p>下面是三个事务的执行语句的情况，自上而下代表时间的先后。</p>
+
+<table>
+<thead>
+<tr>
+<th align="center">事务A</th>
+<th align="center">事务B</th>
+<th align="center">事务C</th>
+</tr>
+</thead>
+
+<tbody>
+<tr>
+<td align="center">start transaction with consistent snapshot</td>
+<td align="center"></td>
+<td align="center"></td>
+</tr>
+
+<tr>
+<td align="center"></td>
+<td align="center">start transaction with consistent snapshot</td>
+<td align="center"></td>
+</tr>
+
+<tr>
+<td align="center"></td>
+<td align="center"></td>
+<td align="center">update t set k=k+1 where id=1</td>
+</tr>
+
+<tr>
+<td align="center"></td>
+<td align="center">update t set k=k+1 where id=1</td>
+<td align="center"></td>
+</tr>
+
+<tr>
+<td align="center"></td>
+<td align="center">select k from t where id=1</td>
+<td align="center"></td>
+</tr>
+
+<tr>
+<td align="center">select k from t where id=1</td>
+<td align="center"></td>
+<td align="center"></td>
+</tr>
+
+<tr>
+<td align="center">commit;</td>
+<td align="center"></td>
+<td align="center"></td>
+</tr>
+
+<tr>
+<td align="center"></td>
+<td align="center">commit;</td>
+<td align="center"></td>
+</tr>
+</tbody>
+</table>
+
+<p><code>start transaction with consistent snapshot</code>代表了在开启一个事务的时候同时开启一个一致性视图，事务C因为开启了auto commit的关系，所以虽然只有一条语句但是也自成一个事务。</p>
+
+<p>现在问事务A的select得到的值是什么？事务B的select得到的又是什么？</p>
+
+<p>解答这个问题就要回答所谓的“一致性视图”到底是怎么实现的。</p>
+
+<h2 id="一致性视图">一致性视图</h2>
+
+<p>一致性视图就相当于给数据库拍了一个快照，当然这个快照是逻辑的不是物理的。在<a href="../isolation">MySQL - 事务隔离</a>里我们提到了可以通过undo log来得到read view，那么关键问题就变成了：如何能够得到所有表属于这个快照的read view。那先讲三点：</p>
+
+<ol>
+<li>开启事务的时候，会得到一个全局唯一且单调递增的transaction id</li>
+<li>每次更新行的时候，都会把这个transaciton id一并保存，并且将其记为row trx_id</li>
+<li>每行都有多个read view，可以理解为多个版本，read view里记录了row trx_id</li>
+</ol>
+
+<p>那么，如果你现在的transaction id是100，那么你在读一张表的时候就能够规定，只取row trx_id &lt;= 100的read view，这样不就是相当于给数据库打了快照了吗？</p>
+
+<p>下面这张图就是一行有4个版本（read view）V1、V2、V3、V4，通过undo log U1、U2、U3能够得到它们，还有事务id。</p>
+
+<p><img src="row-trx-id.png" style="zoom:50%;" /></p>
+
+<h3 id="innodb的实现">InnoDB的实现</h3>
+
+<p>在实现上InnoDB 为每个事务构造了一个数组，用来保存这个事务启动瞬间，当前正在“活跃”的所有事务 ID。“活跃”指的就是，启动了但还没提交。</p>
+
+<p>数组里面事务 ID 的最小值记为低水位，当前系统里面已经创建过的事务 ID 的最大值加 1 记为高水位。这个视图数组和高水位，就组成了当前事务的一致性视图（read-view）。</p>
+
+<p>而数据版本的可见性规则，就是基于数据的 row trx_id 和这个一致性视图的对比结果得到的。</p>
+
+<p><img src="hi-lo.png" style="zoom:50%;" /></p>
+
+<p>这样，对于当前事务的启动瞬间来说，一个数据版本的 row trx_id，有以下几种可能：</p>
+
+<ol>
+<li>如果落在绿色部分，表示这个版本是已提交的事务或者是当前事务自己生成的，这个数据是可见的；</li>
+<li>如果落在红色部分，表示这个版本是由将来启动的事务生成的，是肯定不可见的；</li>
+<li>如果落在黄色部分，那就包括两种情况
+
+<ol>
+<li>若 row trx_id 在数组中，表示这个版本是由还没提交的事务生成的，不可见；</li>
+<li>若 row trx_id 不在数组中，表示这个版本是已经提交了的事务生成的，可见。</li>
+</ol></li>
+</ol>
+
+<h2 id="回过头来看例子">回过头来看例子</h2>
+
+<p>现在问事务A的select得到的值是什么？事务B的select得到的又是什么？</p>
+
+<p>假设：</p>
+
+<ol>
+<li>事务 A 开始前，系统里面只有一个活跃事务 ID 是 99；</li>
+<li>事务 A、B、C 的版本号分别是 100、101、102，且当前系统里只有这四个事务；</li>
+<li>三个事务开始前，(1,1）这一行数据的 row trx_id 是 90。</li>
+</ol>
+
+<p>那么，事务 A 的视图数组就是 [99,100], 事务 B 的视图数组是 [99,100,101], 事务 C 的视图数组是 [99,100,101,102]</p>
+
+<p>下面是时间线：</p>
+
+<p><img src="tx-timeline.png" style="zoom:50%;" /></p>
+
+<h3 id="查询逻辑">查询逻辑</h3>
+
+<p>可以看到事务A得到的结果是1，也就是row trx_id=90的那个版本，因为它处于低水位之下。</p>
+
+<h3 id="更新逻辑">更新逻辑</h3>
+
+<p>可以看到事务B把结果从2变成了3，按照道理说事务C[102]处于高水位之外，应该看不到才对啊。这是因为<strong>更新数据都是先读后写的，而这个读，只能读当前的值，称为“当前读”（current read）</strong>。因为如果不这么做事务C的更新就会被冲掉。</p>
+
+<p>从而，事务B后面的select得到的是3。</p>
+
+<h2 id="附录-开启事务的两种方式">附录：开启事务的两种方式</h2>
+
+<p>前面已经看到了，可以使用<code>start transaction with consistent snapshot</code>来开启事务，同时它还会创建一个一致性视图。但是这个语句只有当事务隔离级别是RR的时候才有用，否则它和下面的<code>begin/start transaction</code>效果是一样的。</p>
+
+<p><code>begin/start transaction</code>也可以开启一个事务，但是它不会创建一个一致性视图，只有当后面执行第一条操作InnoDB表的语句才会创建一致性视图。</p>
+
+<p>下面是RC（Read Commit）级别下的时间线：</p>
+
+<p><img src="tx-timeline.png" style="zoom:50%;" /></p>
+
+<p>考虑到执行第一条快照读语句时才会创建一致性视图（也就是那个数组），那么可得出：</p>
+
+<ul>
+<li>A能够读到C提交的结果，2</li>
+<li>B因为更新的时候当前读，所以得到结果3</li>
+</ul></article>
+    <footer class="post-footer">
+      
+      <ul class="post-tags">
+        
+          <li><a href="https://chanjarster.github.io/tags/mysql"><span class="tag">Mysql</span></a></li>
+        
+      </ul>
+      
+      <p class="post-copyright">
+        
+      </p>
+    </footer>
+    
+      
+    
+  </section>
+  <footer class="site-footer">
+  <p>© 2017-2019 颇忒脱的技术博客</p>
+  <p>Powered by <a href="https://gohugo.io/" target="_blank">Hugo</a> with theme <a href="https://github.com/laozhu/hugo-nuo" target="_blank">Nuo</a>.</p>
+  
+</footer>
+
+
+
+<script async src="//cdn.bootcss.com/video.js/6.2.8/alt/video.novtt.min.js"></script>
+<script async src="//cdn.bootcss.com/mathjax/2.7.2/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    tex2jax: {
+      inlineMath: [['$','$'], ['\\(','\\)']],
+      displayMath: [['$$','$$'], ['\\[','\\]']],
+      processEscapes: true,
+      processEnvironments: true,
+      skipTags: ['script', 'noscript', 'style', 'textarea', 'pre'],
+      TeX: { equationNumbers: { autoNumber: "AMS" },
+      extensions: ["AMSmath.js", "AMSsymbols.js"] }
+    }
+  });
+</script>
+<script type="text/x-mathjax-config">
+  // Fix <code> tags after MathJax finishes running. This is a
+  // hack to overcome a shortcoming of Markdown. Discussion at
+  // https://github.com/mojombo/jekyll/issues/199
+  MathJax.Hub.Queue(() => {
+    MathJax.Hub.getAllJax().map(v => v.SourceElement().parentNode.className += ' has-jax');
+  });
+</script>
+
+<script src="https://chanjarster.github.io/js/bundle.273f9ac6f0.js"></script>
+
+
+
+
+  </body>
+</html>
