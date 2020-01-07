@@ -5,7 +5,7 @@
   <meta charset="utf-8" />
 
   
-  <title>MySQL - MVCC</title>
+  <title>MySQL - MVCC和事务隔离</title>
 
   
   
@@ -23,7 +23,7 @@
   
     <meta name="twitter:card" content="summary" />
     <meta name="twitter:site" content="@gohugoio" />
-    <meta name="twitter:title" content="MySQL - MVCC" />
+    <meta name="twitter:title" content="MySQL - MVCC和事务隔离" />
     <meta name="twitter:description" content="
 " />
     <meta name="twitter:image" content="https://chanjarster.github.io/img/avatar.jpg" />
@@ -31,7 +31,7 @@
 
   
   <meta property="og:type" content="article" />
-  <meta property="og:title" content="MySQL - MVCC" />
+  <meta property="og:title" content="MySQL - MVCC和事务隔离" />
   <meta property="og:description" content="
 " />
   <meta property="og:url" content="https://chanjarster.github.io/post/mysql/mvcc/" />
@@ -245,8 +245,8 @@
 
   <section class="main post-detail">
     <header class="post-header">
-      <h1 class="post-title">MySQL - MVCC</h1>
-      <p class="post-meta">@颇忒脱 · Dec 30, 2019 · 1 min read</p>
+      <h1 class="post-title">MySQL - MVCC和事务隔离</h1>
+      <p class="post-meta">@颇忒脱 · Dec 30, 2019 · 2 min read</p>
     </header>
     <article class="post-content"><p></p>
 
@@ -398,7 +398,7 @@
 
 <p>从而，事务B后面的select得到的是3。</p>
 
-<h2 id="附录-开启事务的两种方式">附录：开启事务的两种方式</h2>
+<h2 id="开启事务的两种方式">开启事务的两种方式</h2>
 
 <p>前面已经看到了，可以使用<code>start transaction with consistent snapshot</code>来开启事务，同时它还会创建一个一致性视图。但是这个语句只有当事务隔离级别是RR的时候才有用，否则它和下面的<code>begin/start transaction</code>效果是一样的。</p>
 
@@ -413,6 +413,157 @@
 <ul>
 <li>A能够读到C提交的结果，2</li>
 <li>B因为更新的时候当前读，所以得到结果3</li>
+</ul>
+
+<h2 id="小节">小节</h2>
+
+<p>InnoDB 的行数据有多个版本，每个数据版本有自己的 row trx_id，每个事务或者语句有自己的一致性视图。普通查询语句是一致性读，一致性读会根据 row trx_id 和一致性视图确定数据版本的可见性。</p>
+
+<ul>
+<li>对于可重复读（RR），查询只承认在事务启动前就已经提交完成的数据；</li>
+<li>对于读提交（RC），查询只承认在语句启动前就已经提交完成的数据；而当前读，总是读取已经提交完成的最新版本。</li>
+</ul>
+
+<h2 id="题目">题目</h2>
+
+<p>下面描述了一个场景：数据明明没有变，为何却无法更新。</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql">mysql<span style="color:#f92672">&gt;</span> <span style="color:#66d9ef">CREATE</span> <span style="color:#66d9ef">TABLE</span> <span style="color:#f92672">`</span>t<span style="color:#f92672">`</span> (
+  <span style="color:#f92672">`</span>id<span style="color:#f92672">`</span> int(<span style="color:#ae81ff">11</span>) <span style="color:#66d9ef">NOT</span> <span style="color:#66d9ef">NULL</span>,
+  <span style="color:#f92672">`</span><span style="color:#66d9ef">c</span><span style="color:#f92672">`</span> int(<span style="color:#ae81ff">11</span>) <span style="color:#66d9ef">DEFAULT</span> <span style="color:#66d9ef">NULL</span>,
+  <span style="color:#66d9ef">PRIMARY</span> <span style="color:#66d9ef">KEY</span> (<span style="color:#f92672">`</span>id<span style="color:#f92672">`</span>)
+) ENGINE<span style="color:#f92672">=</span>InnoDB;
+<span style="color:#66d9ef">insert</span> <span style="color:#66d9ef">into</span> t(id, <span style="color:#66d9ef">c</span>) <span style="color:#66d9ef">values</span>(<span style="color:#ae81ff">1</span>,<span style="color:#ae81ff">1</span>),(<span style="color:#ae81ff">2</span>,<span style="color:#ae81ff">2</span>),(<span style="color:#ae81ff">3</span>,<span style="color:#ae81ff">3</span>),(<span style="color:#ae81ff">4</span>,<span style="color:#ae81ff">4</span>);</code></pre></div><div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">mysql&gt; begin;
+Query OK, <span style="color:#ae81ff">0</span> rows affected <span style="color:#f92672">(</span><span style="color:#ae81ff">0</span>.00 sec<span style="color:#f92672">)</span>
+
+mysql&gt; <span style="color:#66d9ef">select</span> * from t;
++----+------+
+| id | c    |
++----+------+
+| <span style="color:#ae81ff">1</span>  | <span style="color:#ae81ff">1</span>    |
+| <span style="color:#ae81ff">2</span>  | <span style="color:#ae81ff">2</span>    |
+| <span style="color:#ae81ff">3</span>  | <span style="color:#ae81ff">3</span>    |
+| <span style="color:#ae81ff">4</span>  | <span style="color:#ae81ff">4</span>    |
++----+------+
+<span style="color:#ae81ff">4</span> rows in set <span style="color:#f92672">(</span><span style="color:#ae81ff">0</span>.00 sec<span style="color:#f92672">)</span>
+
+mysql&gt; update t set c<span style="color:#f92672">=</span><span style="color:#ae81ff">0</span> where id<span style="color:#f92672">=</span>c;
+Query OK, <span style="color:#ae81ff">0</span> rows affected <span style="color:#f92672">(</span><span style="color:#ae81ff">0</span>.00 sec<span style="color:#f92672">)</span>
+Rows matched: <span style="color:#ae81ff">0</span> Changed: <span style="color:#ae81ff">0</span> Warnings: <span style="color:#ae81ff">0</span>
+
+mysql&gt; <span style="color:#66d9ef">select</span> * from t;
++----+------+
+| id | c    |
++----+------+
+| <span style="color:#ae81ff">1</span>  | <span style="color:#ae81ff">1</span>    |
+| <span style="color:#ae81ff">2</span>  | <span style="color:#ae81ff">2</span>    |
+| <span style="color:#ae81ff">3</span>  | <span style="color:#ae81ff">3</span>    |
+| <span style="color:#ae81ff">4</span>  | <span style="color:#ae81ff">4</span>    |
++----+------+
+<span style="color:#ae81ff">4</span> rows in set <span style="color:#f92672">(</span><span style="color:#ae81ff">0</span>.00 sec<span style="color:#f92672">)</span></code></pre></div>
+<p>要怎样做才能产生这种情况呢？回顾这张图：</p>
+
+<p><img src="hi-lo.png" style="zoom:50%;" /></p>
+
+<ul>
+<li>当row tx_id 在 红色区域里，对当前事务不可见</li>
+<li>当row tx_id 在 黄色区域里，且在数组中时，对当前事务不可见</li>
+</ul>
+
+<p>那么就有两种做法能够产生这个效果，第一种：</p>
+
+<table>
+<thead>
+<tr>
+<th align="center">事务A</th>
+<th align="center">事务B</th>
+</tr>
+</thead>
+
+<tbody>
+<tr>
+<td align="center">begin</td>
+<td align="center"></td>
+</tr>
+
+<tr>
+<td align="center">select * from t</td>
+<td align="center"></td>
+</tr>
+
+<tr>
+<td align="center"></td>
+<td align="center">update t set c=c+1</td>
+</tr>
+
+<tr>
+<td align="center">update t set c=0 where id=c</td>
+<td align="center"></td>
+</tr>
+
+<tr>
+<td align="center">select * from t</td>
+<td align="center"></td>
+</tr>
+</tbody>
+</table>
+
+<ul>
+<li>事务A的select产生transaction id 100</li>
+<li>事务B在事务A之后开始，transaction id 101，更新行，row trx_id=101</li>
+<li>事务A的update是当前读，所以没有行被更新</li>
+<li>事务A的select看row tx_id（101）是在红色区域，那么对当前事务不可见，所以得到的结果还是没变的</li>
+</ul>
+
+<p>第二种：</p>
+
+<table>
+<thead>
+<tr>
+<th align="center">事务A</th>
+<th align="center">事务B</th>
+</tr>
+</thead>
+
+<tbody>
+<tr>
+<td align="center"></td>
+<td align="center">begin</td>
+</tr>
+
+<tr>
+<td align="center">begin</td>
+<td align="center">update t set c=c+1</td>
+</tr>
+
+<tr>
+<td align="center">select * from t</td>
+<td align="center"></td>
+</tr>
+
+<tr>
+<td align="center"></td>
+<td align="center">commit</td>
+</tr>
+
+<tr>
+<td align="center">update t set c=0 where id=c</td>
+<td align="center"></td>
+</tr>
+
+<tr>
+<td align="center">select * from t</td>
+<td align="center"></td>
+</tr>
+</tbody>
+</table>
+
+<ul>
+<li>事务B产生transaction id 100</li>
+<li>事务B update，row tx_id=100</li>
+<li>事务A产生transaction id 101，发现目前<strong>活跃事务</strong>100，形成数组[100, 101]</li>
+<li>事务B commit（如果没有commit，后面的事务A的操作会阻塞住的）</li>
+<li>事务A update，当前读，所以没有行被更新</li>
+<li>事务A select，发现row trx_id(101)在数组内，是活跃事务提交的，因此不可见，得到的结果还是没变的</li>
 </ul></article>
     <footer class="post-footer">
       
@@ -431,7 +582,7 @@
     
   </section>
   <footer class="site-footer">
-  <p>© 2017-2019 颇忒脱的技术博客</p>
+  <p>© 2017-2020 颇忒脱的技术博客</p>
   <p>Powered by <a href="https://gohugo.io/" target="_blank">Hugo</a> with theme <a href="https://github.com/laozhu/hugo-nuo" target="_blank">Nuo</a>.</p>
   
 </footer>
