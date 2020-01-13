@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+<head>
+
+  <meta charset="utf-8" />
+
+  
+  <title>MySQL - 数据库选错索引怎么办</title>
+
+  
+  
+
+
+
+
+
+  
+  <meta name="author" content="颇忒脱" />
+  <meta name="description" content="
+" />
+
+  
+  
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:site" content="@gohugoio" />
+    <meta name="twitter:title" content="MySQL - 数据库选错索引怎么办" />
+    <meta name="twitter:description" content="
+" />
+    <meta name="twitter:image" content="https://chanjarster.github.io/img/avatar.jpg" />
+  
+
+  
+  <meta property="og:type" content="article" />
+  <meta property="og:title" content="MySQL - 数据库选错索引怎么办" />
+  <meta property="og:description" content="
+" />
+  <meta property="og:url" content="https://chanjarster.github.io/post/mysql/force-index/" />
+  <meta property="og:image" content="https://chanjarster.github.io/img/avatar.jpg" />
+
+
+
+
+<meta name="generator" content="Hugo 0.49.2" />
+
+
+<link rel="canonical" href="https://chanjarster.github.io/post/mysql/force-index/" />
+
+<meta name="renderer" content="webkit" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<meta name="format-detection" content="telephone=no,email=no,adress=no" />
+<meta http-equiv="Cache-Control" content="no-transform" />
+
+
+<meta name="robots" content="index,follow" />
+<meta name="referrer" content="origin-when-cross-origin" />
+
+
+
+
+
+
+
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="颇忒脱的技术博客" />
+<meta name="msapplication-tooltip" content="颇忒脱的技术博客" />
+<meta name='msapplication-navbutton-color' content="#5fbf5e" />
+<meta name="msapplication-TileColor" content="#5fbf5e" />
+<meta name="msapplication-TileImage" content="/img/tile-image-windows.png" />
+<link rel="icon" href="https://chanjarster.github.io/img/favicon.ico" />
+<link rel="icon" type="image/png" sizes="16x16" href="https://chanjarster.github.io/img/favicon-16x16.png" />
+<link rel="icon" type="image/png" sizes="32x32" href="https://chanjarster.github.io/img/favicon-32x32.png" />
+<link rel="icon" sizes="192x192" href="https://chanjarster.github.io/img/touch-icon-android.png" />
+<link rel="apple-touch-icon" href="https://chanjarster.github.io/img/touch-icon-apple.png" />
+<link rel="mask-icon" href="https://chanjarster.github.io/img/safari-pinned-tab.svg" color="#5fbf5e" />
+
+
+
+<link rel="stylesheet" href="//cdn.bootcss.com/video.js/6.2.8/alt/video-js-cdn.min.css" />
+
+<link rel="stylesheet" href="https://chanjarster.github.io/css/bundle.8e3aef2bc5.css" />
+
+
+  
+  <!--[if lt IE 9]>
+    <script src="//cdn.bootcss.com/html5shiv/3.7.3/html5shiv.min.js"></script>
+    <script src="//cdn.bootcss.com/respond.js/1.4.2/respond.min.js"></script>
+    <script src="//cdn.bootcss.com/video.js/6.2.8/ie8/videojs-ie8.min.js"></script>
+  <![endif]-->
+
+<!--[if lte IE 11]>
+    <script src="//cdn.bootcss.com/classlist/1.1.20170427/classList.min.js"></script>
+  <![endif]-->
+
+
+<script src="//cdn.bootcss.com/object-fit-images/3.2.3/ofi.min.js"></script>
+
+
+<script src="//cdn.bootcss.com/smooth-scroll/12.1.4/js/smooth-scroll.polyfills.min.js"></script>
+
+
+</head>
+  <body>
+    
+    <div class="suspension">
+      <a title="Go to top" class="to-top is-hide"><span class="icon icon-up"></span></a>
+      
+        
+      
+    </div>
+    
+    
+  <header class="site-header">
+  <img class="avatar" src="https://chanjarster.github.io/img/avatar2.jpg" alt="Avatar">
+  
+  <h2 class="title">颇忒脱的技术博客</h2>
+  
+  <p class="subtitle"></p>
+  <button class="menu-toggle" type="button">
+    <span class="icon icon-menu"></span>
+  </button>
+  <nav class="site-menu collapsed">
+    <h2 class="offscreen">Main Menu</h2>
+    <ul class="menu-list">
+      
+      
+      
+      
+        <li class="menu-item
+            
+            
+            
+              is-active
+            ">
+            <a href="https://chanjarster.github.io/">Home</a>
+          </li>
+      
+        <li class="menu-item
+            
+            
+            ">
+            <a href="https://chanjarster.github.io/tags/%E6%94%B6%E8%97%8F%E5%A4%B9/">Bookmarks</a>
+          </li>
+      
+        <li class="menu-item
+            
+            
+            ">
+            <a href="https://chanjarster.github.io/post/jvm/index-page">JVM</a>
+          </li>
+      
+        <li class="menu-item
+            
+            
+            ">
+            <a href="https://chanjarster.github.io/post/concurrent-programming/index-page">并发编程</a>
+          </li>
+      
+        <li class="menu-item
+            
+            
+            ">
+            <a href="https://chanjarster.github.io/post/mysql/index-page">MySQL</a>
+          </li>
+      
+        <li class="menu-item
+            
+            
+            ">
+            <a href="https://github.com/chanjarster">Works</a>
+          </li>
+      
+        <li class="menu-item
+            
+            
+            ">
+            <a href="https://chanjarster.github.io/tags/">Tags</a>
+          </li>
+      
+        <li class="menu-item
+            
+            
+            ">
+            <a href="https://chanjarster.github.io/links/">Links</a>
+          </li>
+      
+    </ul>
+  </nav>
+  <nav class="social-menu collapsed">
+    <h2 class="offscreen">Social Networks</h2>
+    <ul class="social-list">
+
+      
+
+      
+      <li class="social-item">
+        <a href="//github.com/chanjarster" title="GitHub"><span class="icon icon-github"></span></a>
+      </li>
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      <li class="social-item">
+        <a rel="alternate" type="application/rss+xml" href="https://chanjarster.github.io/index.xml"><span class="icon icon-rss" title="RSS"></span></a>
+      </li>
+
+    </ul>
+  </nav>
+</header>
+
+  <section class="main post-detail">
+    <header class="post-header">
+      <h1 class="post-title">MySQL - 数据库选错索引怎么办</h1>
+      <p class="post-meta">@颇忒脱 · Jan 12, 2020 · 1 min read</p>
+    </header>
+    <article class="post-content"><p></p>
+
+<p>在<a href="../basic-arch">基础架构</a>里提到在执行查询时优化器负责选择使用哪个索引。</p>
+
+<h2 id="实验1">实验1</h2>
+
+<p>建表：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#66d9ef">CREATE</span> <span style="color:#66d9ef">TABLE</span> <span style="color:#f92672">`</span>t<span style="color:#f92672">`</span> (
+  <span style="color:#f92672">`</span>id<span style="color:#f92672">`</span> int(<span style="color:#ae81ff">11</span>) <span style="color:#66d9ef">NOT</span> <span style="color:#66d9ef">NULL</span>,
+  <span style="color:#f92672">`</span>a<span style="color:#f92672">`</span> int(<span style="color:#ae81ff">11</span>) <span style="color:#66d9ef">DEFAULT</span> <span style="color:#66d9ef">NULL</span>,
+  <span style="color:#f92672">`</span>b<span style="color:#f92672">`</span> int(<span style="color:#ae81ff">11</span>) <span style="color:#66d9ef">DEFAULT</span> <span style="color:#66d9ef">NULL</span>,
+  <span style="color:#66d9ef">PRIMARY</span> <span style="color:#66d9ef">KEY</span> (<span style="color:#f92672">`</span>id<span style="color:#f92672">`</span>),
+  <span style="color:#66d9ef">KEY</span> <span style="color:#f92672">`</span>a<span style="color:#f92672">`</span> (<span style="color:#f92672">`</span>a<span style="color:#f92672">`</span>),
+  <span style="color:#66d9ef">KEY</span> <span style="color:#f92672">`</span>b<span style="color:#f92672">`</span> (<span style="color:#f92672">`</span>b<span style="color:#f92672">`</span>)
+) ENGINE<span style="color:#f92672">=</span>InnoDB<span style="color:#960050;background-color:#1e0010">；</span></code></pre></div>
+<p>插入数据：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#66d9ef">delimiter</span> ;;
+<span style="color:#66d9ef">create</span> <span style="color:#66d9ef">procedure</span> idata()
+<span style="color:#66d9ef">begin</span>
+  <span style="color:#66d9ef">declare</span> i int;
+  <span style="color:#66d9ef">set</span> i<span style="color:#f92672">=</span><span style="color:#ae81ff">1</span>;
+  while(i<span style="color:#f92672">&lt;=</span><span style="color:#ae81ff">100000</span>)<span style="color:#66d9ef">do</span>
+    <span style="color:#66d9ef">insert</span> <span style="color:#66d9ef">into</span> t <span style="color:#66d9ef">values</span>(i, i, i);
+    <span style="color:#66d9ef">set</span> i<span style="color:#f92672">=</span>i<span style="color:#f92672">+</span><span style="color:#ae81ff">1</span>;
+  <span style="color:#66d9ef">end</span> while;
+<span style="color:#66d9ef">end</span>;;
+<span style="color:#66d9ef">delimiter</span> ;
+<span style="color:#66d9ef">call</span> idata();</code></pre></div>
+<p>用explain`来观察MySQL会选择哪个索引：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql">mysql<span style="color:#f92672">&gt;</span> <span style="color:#66d9ef">explain</span> <span style="color:#66d9ef">select</span> <span style="color:#f92672">*</span> <span style="color:#66d9ef">from</span> t <span style="color:#66d9ef">where</span> a <span style="color:#66d9ef">between</span> <span style="color:#ae81ff">10000</span> <span style="color:#66d9ef">and</span> <span style="color:#ae81ff">20000</span>;</code></pre></div>
+<p><img src="explain-1.png" /></p>
+
+<p>结果表明MySQL会选择索引<strong>a</strong>，并且预计扫描10001行，为什么是10001行而不是10000行？这是因为在扫描的时候要扫描到第一个不满足条件的数据为止，因此会多扫一行。</p>
+
+<h2 id="选错索引的逻辑">选错索引的逻辑</h2>
+
+<p>优化器选择索引考虑的因素：</p>
+
+<ul>
+<li>cardinality（基数），基数代表区分度，基数越大区分度则越大，不同值越多则区分度越大，区分度大的索引被选择的概率大</li>
+</ul>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql">mysql<span style="color:#f92672">&gt;</span> <span style="color:#66d9ef">show</span> <span style="color:#66d9ef">index</span> <span style="color:#66d9ef">from</span> t;</code></pre></div>
+<p><img src="cardinality.png" /></p>
+
+<p>基数的值并非精确值而是一个估算值，InnoDB选取N个数据页统计不同值，计算基数平均值。当更新的行超过1/M时，重新计算基数。可以用<code>innodb_stats_persistent</code>来控制这个统计信息存在哪里。</p>
+
+<ul>
+<li>预估执行该语句本身会扫描多少行，同时会预估回表的代价</li>
+</ul>
+
+<h2 id="纠正办法">纠正办法</h2>
+
+<p>重新统计索引信息：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#66d9ef">ANALYZE</span> <span style="color:#66d9ef">TABLE</span> t;</code></pre></div>
+<p>强制告诉使用哪个索引，<code>force index</code>：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#66d9ef">select</span> <span style="color:#f92672">*</span> <span style="color:#66d9ef">from</span> t <span style="color:#66d9ef">force</span> <span style="color:#66d9ef">index</span>(a) <span style="color:#66d9ef">where</span> ...</code></pre></div>
+<p>其他tricky的方法，这里不做介绍了。</p></article>
+    <footer class="post-footer">
+      
+      <ul class="post-tags">
+        
+          <li><a href="https://chanjarster.github.io/tags/mysql"><span class="tag">Mysql</span></a></li>
+        
+      </ul>
+      
+      <p class="post-copyright">
+        
+      </p>
+    </footer>
+    
+      
+    
+  </section>
+  <footer class="site-footer">
+  <p>© 2017-2020 颇忒脱的技术博客</p>
+  <p>Powered by <a href="https://gohugo.io/" target="_blank">Hugo</a> with theme <a href="https://github.com/laozhu/hugo-nuo" target="_blank">Nuo</a>.</p>
+  
+</footer>
+
+
+
+<script async src="//cdn.bootcss.com/video.js/6.2.8/alt/video.novtt.min.js"></script>
+<script async src="//cdn.bootcss.com/mathjax/2.7.2/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    tex2jax: {
+      inlineMath: [['$','$'], ['\\(','\\)']],
+      displayMath: [['$$','$$'], ['\\[','\\]']],
+      processEscapes: true,
+      processEnvironments: true,
+      skipTags: ['script', 'noscript', 'style', 'textarea', 'pre'],
+      TeX: { equationNumbers: { autoNumber: "AMS" },
+      extensions: ["AMSmath.js", "AMSsymbols.js"] }
+    }
+  });
+</script>
+<script type="text/x-mathjax-config">
+  // Fix <code> tags after MathJax finishes running. This is a
+  // hack to overcome a shortcoming of Markdown. Discussion at
+  // https://github.com/mojombo/jekyll/issues/199
+  MathJax.Hub.Queue(() => {
+    MathJax.Hub.getAllJax().map(v => v.SourceElement().parentNode.className += ' has-jax');
+  });
+</script>
+
+<script src="https://chanjarster.github.io/js/bundle.273f9ac6f0.js"></script>
+
+
+
+
+  </body>
+</html>
