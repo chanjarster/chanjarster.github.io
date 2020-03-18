@@ -258,7 +258,7 @@
 
 <p><img src="step-1.png" style="zoom:50%" /></p>
 
-<p>然后，开启项目的监控：</p>
+<p>然后，开启项目的监控（可选）：</p>
 
 <p><img src="step-2.png" style="zoom:50%" /></p>
 
@@ -311,6 +311,10 @@ spec:
 
 <h2 id="添加servicemonitor">添加ServiceMonitor</h2>
 
+<h3 id="利用项目prometheus采集">利用项目Prometheus采集</h3>
+
+<p>如果你前面开启了项目监控，并且想用项目Prometheus来收集数据，那么这么做：</p>
+
 <p>ServiceMonitor是Prometheus Operator定义的CRD：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-yaml" data-lang="yaml">apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
@@ -326,6 +330,25 @@ spec:
     path: /metrics</code></pre></div>
 <p>这样Prometheus就能把同namespace下的所有<code>needMonitor: 'true'</code>的Service的JMX Exporter都采集到。</p>
 
+<h3 id="利用集群prometheus采集">利用集群Prometheus采集</h3>
+
+<p>如果你想直接利用集群的Prometheus，那么你得把ServiceMonitor建在<code>cattle-prometheus</code>下，并且设置<code>namespaceSelector</code>属性：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-yaml" data-lang="yaml">apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: ...
+  namespace: cattle-prometheus
+spec:
+  selector:
+    matchLabels:
+      needMonitor: <span style="color:#e6db74">&#39;true&#39;</span>
+  endpoints:
+  - port: http-metrics
+    path: /metrics
+  namespaceSelector:
+    matchNames:
+    - namespace-<span style="color:#ae81ff">1</span>
+    - namespace-<span style="color:#ae81ff">2</span></code></pre></div>
 <h2 id="给grafana添加jvm-dashboard">给Grafana添加JVM Dashboard</h2>
 
 <p>你需要给Grafana添加JVM Dashboard，在这之前你需要设置Grafana的admin密码，进入项目找到Grafana，进入其Shell：</p>
