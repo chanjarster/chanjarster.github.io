@@ -17,7 +17,6 @@
   
   <meta name="author" content="颇忒脱" />
   <meta name="description" content="本文介绍Spring Boot连接Redis Sentinel的例子。
-
 " />
 
   
@@ -26,7 +25,6 @@
     <meta name="twitter:site" content="@gohugoio" />
     <meta name="twitter:title" content="Spring Boot配置Redis Sentinel的例子" />
     <meta name="twitter:description" content="本文介绍Spring Boot连接Redis Sentinel的例子。
-
 " />
     <meta name="twitter:image" content="https://chanjarster.github.io/img/avatar.jpg" />
   
@@ -35,7 +33,6 @@
   <meta property="og:type" content="article" />
   <meta property="og:title" content="Spring Boot配置Redis Sentinel的例子" />
   <meta property="og:description" content="本文介绍Spring Boot连接Redis Sentinel的例子。
-
 " />
   <meta property="og:url" content="https://chanjarster.github.io/post/redis-sentinel-spring-boot-example/" />
   <meta property="og:image" content="https://chanjarster.github.io/img/avatar.jpg" />
@@ -43,7 +40,7 @@
 
 
 
-<meta name="generator" content="Hugo 0.49.2" />
+<meta name="generator" content="Hugo 0.68.1" />
 
 
 <link rel="canonical" href="https://chanjarster.github.io/post/redis-sentinel-spring-boot-example/" />
@@ -252,13 +249,8 @@
       <p class="post-meta">@颇忒脱 · Jun 14, 2019 · 2 min read</p>
     </header>
     <article class="post-content"><p>本文介绍Spring Boot连接<a href="https://redis.io/topics/sentinel">Redis Sentinel</a>的例子。</p>
-
-<p></p>
-
 <p>本文关联的源码：<a href="https://github.com/chanjarster/spring-boot-redis-sentinel-example">github</a></p>
-
 <h2 id="基本信息">基本信息</h2>
-
 <p>拓扑（M代表redis-master，S代表redis-sentinel，R代表redis-slave，C代表Spring Boot Application）：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-txt" data-lang="txt">     +---------------------------+
      |                           |
@@ -268,32 +260,28 @@
      |             |
      |          +-----+
      +----------|  C  |
-                +-----+</code></pre></div>
-<p><code>application.yaml</code>配置：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-yaml" data-lang="yaml">spring:
-  redis:
+                +-----+
+</code></pre></div><p><code>application.yaml</code>配置：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-yaml" data-lang="yaml"><span style="color:#66d9ef">spring</span>:
+  <span style="color:#66d9ef">redis</span>:
 <span style="color:#75715e">#    host: redis-master</span>
 <span style="color:#75715e">#    port: 6379</span>
-    password: abc
-    sentinel:
-      master: springboot
-      nodes:
-        - redis-sentinel:<span style="color:#ae81ff">26379</span></code></pre></div>
-<p>注意这里不需要配置master的host和port，这些信息会从Redis Sentinel中得到。</p>
-
+    <span style="color:#66d9ef">password</span>: abc
+    <span style="color:#66d9ef">sentinel</span>:
+      <span style="color:#66d9ef">master</span>: springboot
+      <span style="color:#66d9ef">nodes</span>:
+        - redis-sentinel:<span style="color:#ae81ff">26379</span>
+</code></pre></div><p>注意这里不需要配置master的host和port，这些信息会从Redis Sentinel中得到。</p>
 <h2 id="演示步骤">演示步骤</h2>
-
 <p>打包并构建镜像：<code>mvn clean install dockerfile:build</code></p>
-
 <p>进入<code>docker</code>目录，执行<code>docker-compose up -d</code></p>
-
 <p>观察Spring Boot Application的日志：<code>docker logs -f docker_spring-boot_1</code>，会发现每隔3秒执行<code>INCR foo</code>：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-txt" data-lang="txt">07:53:49.205  INFO  hello.Application                    : INCR foo: 1
 07:53:52.212  INFO  hello.Application                    : INCR foo: 2
 07:53:55.213  INFO  hello.Application                    : INCR foo: 3
 07:53:58.216  INFO  hello.Application                    : INCR foo: 4
-07:54:01.217  INFO  hello.Application                    : INCR foo: 5</code></pre></div>
-<p>停止redis-master：<code>docker stop docker_redis-master_1</code>，会看到Spring Boot Application的Redis链接出现了问题：</p>
+07:54:01.217  INFO  hello.Application                    : INCR foo: 5
+</code></pre></div><p>停止redis-master：<code>docker stop docker_redis-master_1</code>，会看到Spring Boot Application的Redis链接出现了问题：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-txt" data-lang="txt">07:54:37.206  INFO  hello.Application                    : INCR foo: 17
 07:54:40.204  INFO  hello.Application                    : INCR foo: 18
 07:54:42.238  INFO  i.l.core.protocol.ConnectionWatchdog : Reconnecting, last destination was /10.0.19.4:6379
@@ -304,15 +292,15 @@
 ...
 07:55:29.582  INFO i.l.core.protocol.ConnectionWatchdog  : Reconnecting, last destination was 10.0.19.4:6379
 07:55:32.353  WARN i.l.core.protocol.ConnectionWatchdog  : Cannot reconnect: io.netty.channel.AbstractChannel$AnnotatedNoRouteToHostException: Host is unreachable: /10.0.19.4:6379
-...</code></pre></div>
-<p>等待大约60秒，Redis Sentinel介入，将redis-slave提拔为master，链接恢复：</p>
+...
+</code></pre></div><p>等待大约60秒，Redis Sentinel介入，将redis-slave提拔为master，链接恢复：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-txt" data-lang="txt">07:55:43.860  INFO i.l.core.protocol.ConnectionWatchdog  : Reconnecting, last destination was 10.0.19.4:6379
 07:55:43.882  INFO i.l.core.protocol.ReconnectionHandler : Reconnected to 10.0.19.6:6379
 07:55:43.887  INFO hello.Application                     : INCR foo: 20
 07:55:43.889  INFO hello.Application                     : INCR foo: 21
 07:55:43.891  INFO hello.Application                     : INCR foo: 22
-07:55:43.892  INFO hello.Application                     : INCR foo: 23</code></pre></div>
-<p>此时拓扑变成这样：</p>
+07:55:43.892  INFO hello.Application                     : INCR foo: 23
+</code></pre></div><p>此时拓扑变成这样：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-txt" data-lang="txt">     +-------------//------------+
      |                           |
   +-----+       +-----+       +-----+
@@ -321,37 +309,29 @@
      |             |             |
      |          +-----+          |
      +----//----|  C  |----------+
-                +-----+</code></pre></div>
-<p>清理容器：<code>docker-compose down</code>。</p>
-
+                +-----+
+</code></pre></div><p>清理容器：<code>docker-compose down</code>。</p>
 <h2 id="master重启之后的问题">Master重启之后的问题</h2>
-
 <p>这个问题和Spring Boot没有关系，是Redis本身的。如果我们把前面停掉的master重启，sentinel是不会感知到这个master的，因为这个master的ip变了（见这个<a href="https://github.com/bitnami/bitnami-docker-redis-sentinel/issues/2#issuecomment-501613810">comment</a>）：</p>
-
 <p>你可以观察重启之以后的master的INFO：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ docker exec docker_redis-master_1 redis-cli -a abc INFO replication
-<span style="color:#75715e"># Replication
-</span><span style="color:#75715e"></span>role:master
-...</code></pre></div>
-<p>可以看到它启动之后还是master，不是slave。这样的话就等于出现了两个master，这就出问题了。</p>
-
+<span style="color:#75715e"># Replication</span>
+role:master
+...
+</code></pre></div><p>可以看到它启动之后还是master，不是slave。这样的话就等于出现了两个master，这就出问题了。</p>
 <p>BTW，redis的配置中可以使用hostname，比如<code>slaveof redis-master</code>。但是redis-sentinel，使用的是ip，即使你配置的是hostname，最终也是ip。执行下面命令可以看见sentinel的配置：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ docker exec docker_redis-sentinel_1 cat /bitnami/redis-sentinel/conf/sentinel.conf | grep springboot
 
-sentinel monitor springboot <span style="color:#ae81ff">10</span>.0.25.2 <span style="color:#ae81ff">6379</span> <span style="color:#ae81ff">1</span>
+sentinel monitor springboot 10.0.25.2 <span style="color:#ae81ff">6379</span> <span style="color:#ae81ff">1</span>
 sentinel down-after-milliseconds springboot <span style="color:#ae81ff">60000</span>
 sentinel auth-pass springboot abc
 sentinel config-epoch springboot <span style="color:#ae81ff">0</span>
 sentinel leader-epoch springboot <span style="color:#ae81ff">0</span>
-sentinel known-slave springboot <span style="color:#ae81ff">10</span>.0.25.5 <span style="color:#ae81ff">6379</span></code></pre></div>
-<h3 id="解决办法1-使用host-network">解决办法1：使用host network</h3>
-
+sentinel known-slave springboot 10.0.25.5 <span style="color:#ae81ff">6379</span>
+</code></pre></div><h3 id="解决办法1使用host-network">解决办法1：使用host network</h3>
 <p>使用host network来部署redis-master、redis-slave，使用<code>&lt;host-ip&gt;:&lt;container-port&gt;</code>来访问它们，因为host的ip是比较固定的，可以缓解这个问题。</p>
-
 <p>用host network则还有一个限制：不能在同一个host上启动两个相同container-port的容器。</p>
-
-<h3 id="解决办法2-publish端口">解决办法2：publish端口</h3>
-
+<h3 id="解决办法2publish端口">解决办法2：publish端口</h3>
 <p>把redis-master、redis-slave的端口publish到host上，redis.config中把<code>slave-announce-ip</code>和<code>slave-announce-port</code>设置为host-ip和host-port，最后使用<code>&lt;host-ip&gt;:&lt;host-port&gt;</code>访问，同样也是利用host的ip固定特性来解决这个问题。</p></article>
     <footer class="post-footer">
       
@@ -364,7 +344,7 @@ sentinel known-slave springboot <span style="color:#ae81ff">10</span>.0.25.5 <sp
       </ul>
       
       <p class="post-copyright">
-        This post was published <strong>277</strong> days ago, content in the post may be inaccurate, even wrong now, please take risk yourself.
+        This post was published <strong>286</strong> days ago, content in the post may be inaccurate, even wrong now, please take risk yourself.
       </p>
     </footer>
     

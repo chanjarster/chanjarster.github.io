@@ -17,7 +17,6 @@
   
   <meta name="author" content="颇忒脱" />
   <meta name="description" content="当JVM时区和数据库时区不一致的时候，会发生什么？这个问题也许你从来没有注意过，但是当把Java程序容器化的时候，问题就浮现出来了，因为目前几乎所有的Docker Image的时区都是UTC。本文探究了Oracle及其JDBC驱动对于时区的处理方式，并尝试给出最佳实践。
-
 " />
 
   
@@ -26,7 +25,6 @@
     <meta name="twitter:site" content="@gohugoio" />
     <meta name="twitter:title" content="数据库时区那些事儿 - Oracle的时区处理" />
     <meta name="twitter:description" content="当JVM时区和数据库时区不一致的时候，会发生什么？这个问题也许你从来没有注意过，但是当把Java程序容器化的时候，问题就浮现出来了，因为目前几乎所有的Docker Image的时区都是UTC。本文探究了Oracle及其JDBC驱动对于时区的处理方式，并尝试给出最佳实践。
-
 " />
     <meta name="twitter:image" content="https://chanjarster.github.io/img/avatar.jpg" />
   
@@ -35,7 +33,6 @@
   <meta property="og:type" content="article" />
   <meta property="og:title" content="数据库时区那些事儿 - Oracle的时区处理" />
   <meta property="og:description" content="当JVM时区和数据库时区不一致的时候，会发生什么？这个问题也许你从来没有注意过，但是当把Java程序容器化的时候，问题就浮现出来了，因为目前几乎所有的Docker Image的时区都是UTC。本文探究了Oracle及其JDBC驱动对于时区的处理方式，并尝试给出最佳实践。
-
 " />
   <meta property="og:url" content="https://chanjarster.github.io/post/oracle-timezone/" />
   <meta property="og:image" content="https://chanjarster.github.io/img/avatar.jpg" />
@@ -43,7 +40,7 @@
 
 
 
-<meta name="generator" content="Hugo 0.49.2" />
+<meta name="generator" content="Hugo 0.68.1" />
 
 
 <link rel="canonical" href="https://chanjarster.github.io/post/oracle-timezone/" />
@@ -252,37 +249,30 @@
       <p class="post-meta">@颇忒脱 · Sep 18, 2018 · 2 min read</p>
     </header>
     <article class="post-content"><p>当JVM时区和数据库时区不一致的时候，会发生什么？这个问题也许你从来没有注意过，但是当把Java程序容器化的时候，问题就浮现出来了，因为目前几乎所有的Docker Image的时区都是UTC。本文探究了Oracle及其JDBC驱动对于时区的处理方式，并尝试给出最佳实践。</p>
-
-<p></p>
-
 <h2 id="先给总结">先给总结</h2>
-
 <ul>
 <li><code>DATE</code>和<code>TIMESTAMP</code>类型不支持时区转换。</li>
 <li>如果应用和Oracle的时区不一致，那么应该使用<code>TIMESTAMP WITH LOCAL TIME ZONE</code>。
-
 <ul>
 <li>对于JDBC程序来说，JVM时区和用户时区保持一致就行了。</li>
-</ul></li>
+</ul>
+</li>
 <li>如果应用和Oracle的时区不一致，而且需要保存时区信息，那么应该使用<code>TIMESTAMP WITH TIME ZONE</code>。</li>
 <li>格式化日期时间字符串函数<code>TO_CHAR</code>：
-
 <ul>
 <li>对于<code>TIMESTAMP WITH TIME ZONE</code>来说，使用<code>TO_CHAR</code>时要注意让它输出时区信息（<code>TZH:TZM TZR TZD</code>），否则结果会是截断的。</li>
 <li>对于<code>TIMESTAMP WITH LOCAL TIME ZONE</code>来说，使用<code>TO_CHAR</code>返回的结果会转换时区。</li>
-</ul></li>
+</ul>
+</li>
 <li>当前日期时间的函数：
-
 <ul>
 <li>除非必要，不要使用<code>SYSDATE</code>和<code>SYSTIMESTAMP</code>，这个返回的是数据库所在操作系统的时间。</li>
 <li>尽量使用<code>CURRENT_TIMESTAMP</code>，它返回的是<code>TIMESTAMP WITH TIME ZONE</code>，能够用来安全的比较时间。</li>
-</ul></li>
 </ul>
-
+</li>
+</ul>
 <h2 id="日期时间类型的时区">日期时间类型的时区</h2>
-
 <p><a href="https://docs.oracle.com/cd/B19306_01/server.102/b14225/ch4datetime.htm#i1005983">Oracle Datetime Datatypes</a>有这么几种：</p>
-
 <ul>
 <li><a href="https://docs.oracle.com/cd/B19306_01/server.102/b14225/ch4datetime.htm#i1006006">DATE</a>，保存<code>YYYY-MM-DD HH24:MI:SS</code>。</li>
 <li><a href="https://docs.oracle.com/cd/B19306_01/server.102/b14225/ch4datetime.htm#i1006050">TIMESTAMP</a>，比<code>DATE</code>多存了fractional seconds（<code>FF</code>）。</li>
@@ -291,24 +281,22 @@
 </ul>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">docker run --name oracle-xe-timezone-test <span style="color:#ae81ff">\
 </span><span style="color:#ae81ff"></span>  -e ORACLE_ALLOW_REMOTE<span style="color:#f92672">=</span>true <span style="color:#ae81ff">\
-</span><span style="color:#ae81ff"></span>  -p <span style="color:#ae81ff">1521</span>:1521 <span style="color:#ae81ff">\
-</span><span style="color:#ae81ff"></span>  -d wnameless/oracle-xe-11g:16.04</code></pre></div>
-<p>然后用system/oracle用户登录到oracle，执行下列sql建表：</p>
+</span><span style="color:#ae81ff"></span>  -p 1521:1521 <span style="color:#ae81ff">\
+</span><span style="color:#ae81ff"></span>  -d wnameless/oracle-xe-11g:16.04
+</code></pre></div><p>然后用system/oracle用户登录到oracle，执行下列sql建表：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#66d9ef">create</span> <span style="color:#66d9ef">table</span> test (
   date_field date,
   ts_field <span style="color:#66d9ef">timestamp</span>,
   ts_tz_field <span style="color:#66d9ef">timestamp</span> <span style="color:#66d9ef">with</span> time <span style="color:#66d9ef">zone</span>,
   ts_ltz_field <span style="color:#66d9ef">timestamp</span> <span style="color:#66d9ef">with</span> <span style="color:#66d9ef">local</span> time <span style="color:#66d9ef">zone</span>
-);</code></pre></div>
-<p>为了验证这个结论，我写了一段程序来实验，这个程序做了三件事情：</p>
-
+);
+</code></pre></div><p>为了验证这个结论，我写了一段程序来实验，这个程序做了三件事情：</p>
 <ol>
 <li>使用Asia/Shanghai时区构造一个日期java.util.Date：2018-09-14 10:00:00，然后插入到数据库里。</li>
 <li>使用Asia/Shanghai时区把这个值再查出来，看看结果。</li>
 <li>使用Asia/Shanghai时区，获得这个字段的格式化字符串（使用DATE_FORMAT()函数）。</li>
 <li>使用Europe/Paris时区重复第2-3步的动作。</li>
 </ol>
-
 <p>运行程序获得以下结果：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-txt" data-lang="txt">JVM Time Zone      : 中国标准时间
 Retrieve java.util.Date from DATE column                              : 2018-09-14 10:00:00.0
@@ -328,17 +316,12 @@ Retrieve java.util.Date from TIMESTAMP WITH LOCAL TIME ZONE column    : 2018-09-
 Retrieve formatted string from DATE column                            : 2018-09-14 10:00:00
 Retrieve formatted string from TIMESTAMP column                       : 2018-09-14 10:00:00
 Retrieve formatted string from TIMESTAMP WITH TIME ZONE column        : 2018-09-14 10:00:00 +08:00 ASIA/SHANGHAI CST
-Retrieve formatted string from TIMESTAMP WITH LOCAL TIME ZONE column  : 2018-09-14 04:00:00</code></pre></div>
-<p>可以看到，<code>DATE</code>和<code>TIMESTAMP</code>是不支持时区转换的，实际上<code>DATE</code>和<code>TIMESTAMP</code>会丢弃掉时区信息。</p>
-
+Retrieve formatted string from TIMESTAMP WITH LOCAL TIME ZONE column  : 2018-09-14 04:00:00
+</code></pre></div><p>可以看到，<code>DATE</code>和<code>TIMESTAMP</code>是不支持时区转换的，实际上<code>DATE</code>和<code>TIMESTAMP</code>会丢弃掉时区信息。</p>
 <p>对于<code>TIMESTAMP WITH TIME ZONE</code>来说，使用<code>TO_CHAR</code>时要注意让它输出时区信息（<code>TZH:TZM TZR TZD</code>），否则结果会是截断的。</p>
-
 <p>对于<code>TIMESTAMP WITH LOCAL TIME ZONE</code>来说，使用<code>TO_CHAR</code>返回的结果会转换时区。</p>
-
 <h2 id="当前日期时间相关函数">当前日期时间相关函数</h2>
-
 <p><a href="https://docs.oracle.com/cd/B19306_01/server.102/b14225/ch4datetime.htm#i1006333">Oracle和当前时间有关的函数</a>有这么几个：</p>
-
 <ul>
 <li><code>CURRENT_DATE</code>，返回的是<code>DATE</code>类型</li>
 <li><code>CURRENT_TIMESTAMP</code>，返回的是<code>TIMESTAMP WITH TIME ZONE</code>类型</li>
@@ -346,7 +329,6 @@ Retrieve formatted string from TIMESTAMP WITH LOCAL TIME ZONE column  : 2018-09-
 <li><code>SYSDATE</code>，返回的是<code>DATE</code>类型</li>
 <li><code>SYSTIMESTAMP</code>，返回的是<code>TIMESTAMP</code>类型</li>
 </ul>
-
 <p>写了一段程序，输出结果是这样的：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-txt" data-lang="txt">=========TEST CURRENT DATE/TIME FUNCTIONS===========
 JVM Time Zone               : 中国标准时间
@@ -361,19 +343,16 @@ Test CURRENT_DATE           : 2018-09-18 04:27:45.0
 Test CURRENT_TIMESTAMP      : 2018-09-18 04:27:45.429024 Europe/Paris
 Test LOCALTIMESTAMP         : 2018-09-18 04:27:45.482485
 Test SYSDATE                : 2018-09-18 02:27:45.0
-Test SYSTIMESTAMP           : 2018-09-18 02:27:45.48582 +0:00</code></pre></div>
-<p>可以发现，<code>CURRENT_DATE</code>、<code>CURRENT_TIMESTAMP</code>、<code>LOCALTIMESTAMP</code>的结果都根据客户端时区做了转换。而<code>SYSDATE</code>和<code>SYSTIMESTAMP</code>返回的则是数据库所在操作系统所在时区的时间。</p>
-
+Test SYSTIMESTAMP           : 2018-09-18 02:27:45.48582 +0:00
+</code></pre></div><p>可以发现，<code>CURRENT_DATE</code>、<code>CURRENT_TIMESTAMP</code>、<code>LOCALTIMESTAMP</code>的结果都根据客户端时区做了转换。而<code>SYSDATE</code>和<code>SYSTIMESTAMP</code>返回的则是数据库所在操作系统所在时区的时间。</p>
 <h2 id="在oracle客户端操作时区">在Oracle客户端操作时区</h2>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#75715e">-- 查询系统时区和session时区
 </span><span style="color:#75715e"></span><span style="color:#66d9ef">SELECT</span> DBTIMEZONE, SESSIONTIMEZONE <span style="color:#66d9ef">FROM</span> DUAL;
 
 <span style="color:#75715e">-- 设置session时区
-</span><span style="color:#75715e"></span><span style="color:#66d9ef">ALTER</span> <span style="color:#66d9ef">SESSION</span> <span style="color:#66d9ef">SET</span> TIME_ZONE<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;Asia/Shanghai&#39;</span>;</code></pre></div>
-<p>参见<a href="https://docs.oracle.com/cd/B19306_01/server.102/b14225/ch4datetime.htm#i1006705">Setting the Database Time Zone</a> 和 <a href="https://docs.oracle.com/cd/B19306_01/server.102/b14225/ch4datetime.htm#i1006728">Setting the Session Time Zone</a></p>
-
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">ALTER</span> <span style="color:#66d9ef">SESSION</span> <span style="color:#66d9ef">SET</span> TIME_ZONE<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;Asia/Shanghai&#39;</span>;
+</code></pre></div><p>参见<a href="https://docs.oracle.com/cd/B19306_01/server.102/b14225/ch4datetime.htm#i1006705">Setting the Database Time Zone</a> 和 <a href="https://docs.oracle.com/cd/B19306_01/server.102/b14225/ch4datetime.htm#i1006728">Setting the Session Time Zone</a></p>
 <h2 id="参考资料">参考资料</h2>
-
 <ul>
 <li><a href="https://docs.oracle.com/cd/B19306_01/server.102/b14225/ch4datetime.htm#i1005983">Oracle Datetime Datatypes</a></li>
 <li><a href="https://docs.oracle.com/cd/B19306_01/server.102/b14225/ch4datetime.htm#i1006333">Oracle和当前时间有关的函数</a></li>
@@ -383,9 +362,7 @@ Test SYSTIMESTAMP           : 2018-09-18 02:27:45.48582 +0:00</code></pre></div>
 <li><a href="https://docs.oracle.com/database/121/JAJDB/constant-values.html#oracle_jdbc_OracleConnection_ACCESSMODE_SYSTEMPROP">Oracle JDBC Connection Constant Field Values</a></li>
 <li><a href="https://www.w3.org/TR/timezone/">W3C- Working with timezone</a></li>
 </ul>
-
 <h2 id="相关代码">相关代码</h2>
-
 <p><a href="https://github.com/chanjarster/jdbc-timezone">https://github.com/chanjarster/jdbc-timezone</a></p></article>
     <footer class="post-footer">
       
@@ -400,7 +377,7 @@ Test SYSTIMESTAMP           : 2018-09-18 02:27:45.48582 +0:00</code></pre></div>
       </ul>
       
       <p class="post-copyright">
-        This post was published <strong>547</strong> days ago, content in the post may be inaccurate, even wrong now, please take risk yourself.
+        This post was published <strong>555</strong> days ago, content in the post may be inaccurate, even wrong now, please take risk yourself.
       </p>
     </footer>
     

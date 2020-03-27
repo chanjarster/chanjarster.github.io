@@ -17,7 +17,6 @@
   
   <meta name="author" content="颇忒脱" />
   <meta name="description" content="本笔记是对Redis Cluster Spec - Configuration handling, propagation, and failovers的归纳总结。
-
 " />
 
   
@@ -26,7 +25,6 @@
     <meta name="twitter:site" content="@gohugoio" />
     <meta name="twitter:title" content="Redis Cluster配置传播及故障恢复笔记" />
     <meta name="twitter:description" content="本笔记是对Redis Cluster Spec - Configuration handling, propagation, and failovers的归纳总结。
-
 " />
     <meta name="twitter:image" content="https://chanjarster.github.io/img/avatar.jpg" />
   
@@ -35,7 +33,6 @@
   <meta property="og:type" content="article" />
   <meta property="og:title" content="Redis Cluster配置传播及故障恢复笔记" />
   <meta property="og:description" content="本笔记是对Redis Cluster Spec - Configuration handling, propagation, and failovers的归纳总结。
-
 " />
   <meta property="og:url" content="https://chanjarster.github.io/post/redis-cluster-config-propagation/" />
   <meta property="og:image" content="https://chanjarster.github.io/img/avatar.jpg" />
@@ -43,7 +40,7 @@
 
 
 
-<meta name="generator" content="Hugo 0.49.2" />
+<meta name="generator" content="Hugo 0.68.1" />
 
 
 <link rel="canonical" href="https://chanjarster.github.io/post/redis-cluster-config-propagation/" />
@@ -252,148 +249,88 @@
       <p class="post-meta">@颇忒脱 · Jul 10, 2019 · 1 min read</p>
     </header>
     <article class="post-content"><p>本笔记是对<a href="https://redis.io/topics/cluster-spec#configuration-handling-propagation-and-failovers">Redis Cluster Spec - Configuration handling, propagation, and failovers</a>的归纳总结。</p>
-
-<p></p>
-
 <h2 id="epoch">Epoch</h2>
-
 <p>因为Redis Cluster没有中心节点，因此Cluster中的每个Node都存有：1）自己的状态（<a href="https://github.com/antirez/redis/blob/5.0.0/src/cluster.h#L116-L141">ClusterNode源码</a>）；2）Cluster的状态（<a href="https://github.com/antirez/redis/blob/5.0.0/src/cluster.h#L143-L181">ClusterState源码</a>）。换句话说每个Node都有一个自己的视角来观察Cluster。</p>
-
 <p>如果大家眼中看到的是一致的自然没有什么问题，如果不一致怎么办？Redis Cluster用是Epoch来解决。那么Epoch是什么？Epoch翻译过来的意思是时代。Redis Cluster定下了规矩，旧时代的说了不算，要听新时代的，某些情况下旧时代发来的请求不予理会（比如一个死了很久的Master复活）。</p>
-
 <p>你可以看到Cluster状态中有一个currentEpoch字段，意思是整个集群当前的时代。考虑到这个Cluster状态是Node从自己的视角观察到的，因此也可以认为是这个Node所处的时代。</p>
-
 <p>Node状态中有一个configEpoch字段，意思并非这个Node所处的时代，而是用来表示Slots由哪个Node掌管的意思——回忆一下有一个Slots-&gt;Node的Map。</p>
-
 <p>集群状态发生变更就要产生一个新时代，准确点说当发生Slots易主的情况就要产生一个新时代。你可以理解为Cluster就是当今世界，Slots易主就是世界格局发生变更，每一次变更都是一个新时代。</p>
-
 <p>Redis Cluster中的Node通过Gossip协议传播自己的状态+自己所认为的Cluster的状态，传播过程中都会带上configEpoch和currentEpoch（<a href="https://github.com/antirez/redis/blob/5.0.0/src/cluster.h#L252-L275">ClusterMsg源码</a>），运用旧时代听新时代的规则，使得Node们达成一致，也就是Cluster状态达成一致。</p>
-
 <p>下面是一些实现细节的总结：</p>
-
 <ul>
 <li>Epoch是一个64位无符号整形</li>
 <li>每个Master有自己的ConfigEpoch且在整个Cluster中唯一、Slave的ConfigEpoch随其Master</li>
 <li>CurrentEpoch = max(ConfigEpoch)</li>
 <li>Master的ConfigEpoch初始值是0，也就是说CurrentEpoch的初始值也是0</li>
 </ul>
-
 <h2 id="slave-promotion">Slave Promotion</h2>
-
 <h3 id="slave的动作">Slave的动作</h3>
-
 <p>下面是总结的在发生Slave Promotion时，Slave做的事情。</p>
-
-<p><img src="slave-promotion.png" alt="" /></p>
-
+<p><img src="slave-promotion.png" alt=""></p>
 <h3 id="master的动作">Master的动作</h3>
-
 <p>下面是总结的在发生Slave Promotion时，Master做的事情。</p>
-
-<p><img src="master-voting.png" alt="" /></p>
-
+<p><img src="master-voting.png" alt=""></p>
 <h2 id="传播slots的配置">传播Slots的配置</h2>
-
 <p>Slave赢得选举之后会在己侧更新Slots上的归属信息，然后在定时的PING/PONG中将这个信息传播出去。</p>
-
 <p>PING/PONG总是会携带上Slots所属Master的信息（包括ConfigEpoch）</p>
-
 <p>PING的Reciever如果发现Sender的某个Slot上的Master.ConfigEpoch比自己这里记录的小，那么就会返回<code>UPDATE</code>告诉Sender更新Slots归属信息。</p>
-
 <p>下面是两个规则：</p>
-
 <ol>
 <li>如果一个Slot不属于任何Master，然后有一个Master宣称拥有它，那么就修改己侧的Slots信息把这个Slot关联到这个Master上。</li>
 <li>如果一个Slot已经归属一个Master，然后又有一个Master宣称拥有它，那么就看谁的ConfigEpoch大，大的那个赢</li>
 </ol>
-
 <h2 id="node复活后遇到的问题">Node复活后遇到的问题</h2>
-
 <p>Node A有两个Slot，然后它死了，它被顶替了，等它复活时发现两个Slot一个被Node B接管，另一个被Node C接管了，那么它：</p>
-
 <ol>
 <li>因为自己的ConfigEpoch已经很旧了，所以它复活后不负责任何Slot</li>
 <li>然后它会成为最后一个Slot的Master的Slave</li>
 </ol>
-
 <h2 id="slave迁移算法">Slave迁移算法</h2>
-
 <p>Slave迁移时一个自动过程。</p>
-
 <p>举个例子，现在有Master A、B，它们对应的Slave有A1、B1、B2。现在A死了，A1顶替上去，不过这个时候A1就是一个光棍Master（它没有Slave），B有富余的Slave（B1和B2），把其中一个匀给A1当Slave。</p>
-
 <p>这个过程不需要共识，因为只是修改Slave的归属，也不会修改ConfigEpoch。</p>
-
 <p>Slave迁移有两个规则：</p>
-
 <ol>
 <li>当有多个Slave富余时，选择NodeID字典顺最小的那个来迁移</li>
 <li>只有当Master的Slave数量&gt;=<code>cluster-migration-barrier</code>时，才会挑选它的Slave做Migration</li>
 </ol>
-
 <h2 id="两个跳过共识修改configepoch的操作">两个跳过共识修改ConfigEpoch的操作</h2>
-
 <p>下面两个操作比较危险，最好确定一个成功后再执行另一个：</p>
-
 <ul>
 <li><code>CLUSTER_FAILOVER TAKEOVER</code>（手动Failover）直接将一个Slave提升为Master，不需要大多数Master同意。</li>
 <li>Slot Migration同样不需要大多数Master同意。</li>
 </ul>
-
 <p>所以就有可能出现同一个Slot有两个相同ConfigEpoch的Master宣称由自己负责，这种冲突的解决算法是：</p>
-
 <ul>
 <li>如果Master A发现Master B也宣称了对Slot X的主权，并且两者的ConfigEpoch一样</li>
 <li>如果Master A的NodeID的字典顺比Master B的小</li>
 <li>那么Master A就把己侧的CurrentEpoch+1，同时ConfigEpoch改成和CurrentEpoch一样</li>
 </ul>
-
 <h2 id="node重置">Node重置</h2>
-
 <p>略，见<a href="https://redis.io/topics/cluster-spec#node-resets">文档</a>。</p>
-
 <h2 id="移除node">移除Node</h2>
-
 <p>略，见<a href="https://redis.io/topics/cluster-spec#removing-nodes-from-a-cluster">文档</a>。</p>
-
 <h2 id="一些自问自答">一些自问自答</h2>
-
 <p>Q：ConfigEpoch何时变化？</p>
-
 <p>A：Slave Promotion时、手动Failover时、Slot Migration时</p>
-
 <p>Q：ConfigEpoch怎么变化？</p>
-
 <p>A：Node-&gt;ConfigEpoch = Cluster-&gt;CurrentEpoch + 1，结果也就是Cluster-&gt;CurrentEpoch加1了。<a href="https://github.com/antirez/redis/blob/5.0.0/src/cluster.c#L983-L1029">源码见这里</a>。</p>
-
 <p>Q：两个Master的ConfigEpoch一样怎么办？</p>
-
 <p>A：这个会出现在两个Slave同时Promotion时，解决办法是NodeID字典序比较小的那个会再一次Bump ConfigEpoch，<a href="https://github.com/antirez/redis/blob/5.0.0/src/cluster.c#L1031-L1092">源码见这里</a>。</p>
-
 <p>Q：ConfigEpoch有什么用？</p>
-
 <p>A：当有两个Master宣称自己拥有同一个/批Slot时，ConfigEpoch大的那个赢，因为大的那个代表最新信息，其他Node只会采用赢的那方所宣称的信息。</p>
-
 <p>Q：CurrentEpoch有什么用？</p>
-
 <p>A：1）用来判定Node所获得的Cluster信息的新旧。2）当Node要变更ConfigEpoch时派用处。</p>
-
 <h3 id="参考资料">参考资料</h3>
-
 <p>官方文档，有些不是太清楚：</p>
-
 <ul>
 <li><a href="https://redis.io/topics/cluster-spec#configuration-handling-propagation-and-failovers">Redis Cluster Spec - Configuration handling, propagation, and failovers</a></li>
 </ul>
-
 <p>下面是饿了么工程师写的文章，比较透彻</p>
-
 <ul>
 <li><a href="https://zhuanlan.zhihu.com/p/25060071">Redis Cluster 原理与管理</a></li>
 </ul>
-
 <p>下面是两篇阿里工程师的，写的没有上面的好</p>
-
 <ul>
 <li><a href="https://yq.aliyun.com/articles/638627">深入理解redis cluster的failover机制</a></li>
 <li><a href="https://yq.aliyun.com/articles/680237">深入解析redis cluster gossip机制</a></li>
@@ -409,7 +346,7 @@
       </ul>
       
       <p class="post-copyright">
-        This post was published <strong>251</strong> days ago, content in the post may be inaccurate, even wrong now, please take risk yourself.
+        This post was published <strong>260</strong> days ago, content in the post may be inaccurate, even wrong now, please take risk yourself.
       </p>
     </footer>
     

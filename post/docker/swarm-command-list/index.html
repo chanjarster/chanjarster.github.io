@@ -17,7 +17,6 @@
   
   <meta name="author" content="颇忒脱" />
   <meta name="description" content="Docker swarm基本命令，更复杂的生产环境请仔细参阅文档。
-
 " />
 
   
@@ -26,7 +25,6 @@
     <meta name="twitter:site" content="@gohugoio" />
     <meta name="twitter:title" content="Docker Swarm基本命令清单" />
     <meta name="twitter:description" content="Docker swarm基本命令，更复杂的生产环境请仔细参阅文档。
-
 " />
     <meta name="twitter:image" content="https://chanjarster.github.io/img/avatar.jpg" />
   
@@ -35,7 +33,6 @@
   <meta property="og:type" content="article" />
   <meta property="og:title" content="Docker Swarm基本命令清单" />
   <meta property="og:description" content="Docker swarm基本命令，更复杂的生产环境请仔细参阅文档。
-
 " />
   <meta property="og:url" content="https://chanjarster.github.io/post/docker/swarm-command-list/" />
   <meta property="og:image" content="https://chanjarster.github.io/img/avatar.jpg" />
@@ -43,7 +40,7 @@
 
 
 
-<meta name="generator" content="Hugo 0.49.2" />
+<meta name="generator" content="Hugo 0.68.1" />
 
 
 <link rel="canonical" href="https://chanjarster.github.io/post/docker/swarm-command-list/" />
@@ -252,24 +249,16 @@
       <p class="post-meta">@颇忒脱 · Jan 9, 2019 · 1 min read</p>
     </header>
     <article class="post-content"><p>Docker swarm基本命令，更复杂的生产环境请仔细参阅文档。</p>
-
-<p></p>
-
 <h2 id="创建swarm">创建Swarm</h2>
-
 <p>准备两台服务器A、B</p>
-
 <p>给服务器安装docker</p>
-
 <p>确保所有服务器的防火墙开启了以下端口</p>
-
 <ul>
 <li>TCP/2377</li>
 <li>TCP/7946</li>
 <li>UDP/7946</li>
 <li>UDP/4789</li>
 </ul>
-
 <p>ssh到A上，执行<code>docker swarm init</code>，A将作为manager，会输出类似下列的内容：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-txt" data-lang="txt">Swarm initialized: current node (dxn1zf6l61qsb1josjja83ngz) is now a manager.
 
@@ -279,67 +268,47 @@ To add a worker to this swarm, run the following command:
     --token SWMTKN-1-49nj1cmql0jkz5s954yi3oex3nedyz0fb0xx14ie39trti4wxv-8vxv8rssmk743ojnwacrr2e7c \
     &lt;ip&gt;:2377
 
-To add a manager to this swarm, run &#39;docker swarm join-token manager&#39; and follow the instructions.</code></pre></div>
-<p>ssh到B上，执行上面提到的<code>docker swarm join ...</code>指令，B将作为worker</p>
-
+To add a manager to this swarm, run &#39;docker swarm join-token manager&#39; and follow the instructions.
+</code></pre></div><p>ssh到B上，执行上面提到的<code>docker swarm join ...</code>指令，B将作为worker</p>
 <p>执行<code>docker node ls</code>，查看Swarm集群node</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-txt" data-lang="txt">ID                            HOSTNAME            STATUS              AVAILABILITY        MANAGER STATUS      ENGINE VERSION
 yd05eu5uvcqm0pbi8g6r25b2c *   docker-learn-1      Ready               Active              Leader              18.09.0
-jkycxb3c7swrn5t37fp1d1xwb     docker-learn-2      Ready               Active                                  18.09.0</code></pre></div>
-<h2 id="node管理">node管理</h2>
-
+jkycxb3c7swrn5t37fp1d1xwb     docker-learn-2      Ready               Active                                  18.09.0
+</code></pre></div><h2 id="node管理">node管理</h2>
 <h3 id="添加manager">添加manager</h3>
-
 <p>生产环境中应该有多个manager来保证高可用，manager的数量应该是单数，比如1、3、5。</p>
-
 <p>到manager机器上，执行<code>docker swarm join-token manager</code>，得到以下输出：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-txt" data-lang="txt">To add a manager to this swarm, run the following command:
 
-    docker swarm join --token SWMTKN-1-0tfd7v1bu05od7fdsedqdu6tuny6ozjmfrq3hiwmc1xb5yaxix-e7kpq257cyblpdna9j89cjgyw &lt;ip&gt;:2377</code></pre></div>
-<p>到新机器上执行上述指令，添加manager</p>
-
+    docker swarm join --token SWMTKN-1-0tfd7v1bu05od7fdsedqdu6tuny6ozjmfrq3hiwmc1xb5yaxix-e7kpq257cyblpdna9j89cjgyw &lt;ip&gt;:2377
+</code></pre></div><p>到新机器上执行上述指令，添加manager</p>
 <h3 id="添加worker">添加worker</h3>
-
 <p>到manager node上执行<code>docker swarm join-token worker</code>，得到以下输出：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-txt" data-lang="txt">To add a worker to this swarm, run the following command:
 
-    docker swarm join --token SWMTKN-1-0tfd7v1bu05od7fdsedqdu6tuny6ozjmfrq3hiwmc1xb5yaxix-1fc3updzbx9tssop55yznh79w &lt;ip&gt;:2377</code></pre></div>
-<p>到新机器上执行上述指令，添加worker</p>
-
+    docker swarm join --token SWMTKN-1-0tfd7v1bu05od7fdsedqdu6tuny6ozjmfrq3hiwmc1xb5yaxix-1fc3updzbx9tssop55yznh79w &lt;ip&gt;:2377
+</code></pre></div><p>到新机器上执行上述指令，添加worker</p>
 <h3 id="更新节点availability">更新节点AVAILABILITY</h3>
-
 <p>节点AVAILABILITY有三种状态：</p>
-
 <ul>
 <li><code>ACTIVE</code>：可以安排新的工作负载到这个节点</li>
 <li><code>PAUSE</code>：不会安排新的工作负载到这个节点，但是已经存在的负载继续运行</li>
 <li><code>DRAIN</code>：不会安排新的工作负载到这个节点，已经存在的负载会被驱逐到其他node上</li>
 </ul>
-
 <p>注意，上面提到的禁止安排、驱逐工作负载仅针对于<code>docker service create ...</code>、<code>docker stack deploy ...</code>创建的工作负载。对于<code>docker run ...</code>、<code>docker compose up ...</code>的工作负载不起作用。</p>
-
 <p>运行以下命令更新节点的AVAILIBALITY：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">docker node update --availability &lt;active|pause|drain&gt; &lt;NODE-ID&gt;</code></pre></div>
-<p>比如：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">docker node update --availability drain &lt;NODE-ID&gt;</code></pre></div>
-<h3 id="禁止manager承担工作负载">禁止manager承担工作负载</h3>
-
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">docker node update --availability &lt;active|pause|drain&gt; &lt;NODE-ID&gt;
+</code></pre></div><p>比如：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">docker node update --availability drain &lt;NODE-ID&gt;
+</code></pre></div><h3 id="禁止manager承担工作负载">禁止manager承担工作负载</h3>
 <p>默认情况下manager也承担工作负载，在生产环境中这样不太好，因为manager可能会因为工作负载过多而变得卡顿，导致无法工作。</p>
-
 <p>解决办法很简单，将manager的AVAILIBALITY变成<code>DRAIN</code>就行了</p>
-
 <h3 id="删除节点">删除节点</h3>
-
 <p>到服务器上执行 <code>docker swarm leave</code></p>
-
 <p>如果是manager，则可能会报warning，你只需要这样<code>docker swarm leave --force</code></p>
-
 <h3 id="清理swarm">清理swarm</h3>
-
 <p>删除所有manager和worker节点，swarm就被清理掉了。</p>
-
 <h2 id="参考文档">参考文档</h2>
-
 <ul>
 <li><a href="https://docs.docker.com/engine/swarm/swarm-tutorial/">Getting started with swarm mode</a></li>
 <li><a href="https://docs.docker.com/engine/swarm/swarm-tutorial/create-swarm/">Create a swarm</a></li>
@@ -356,7 +325,7 @@ jkycxb3c7swrn5t37fp1d1xwb     docker-learn-2      Ready               Active    
       </ul>
       
       <p class="post-copyright">
-        This post was published <strong>434</strong> days ago, content in the post may be inaccurate, even wrong now, please take risk yourself.
+        This post was published <strong>443</strong> days ago, content in the post may be inaccurate, even wrong now, please take risk yourself.
       </p>
     </footer>
     

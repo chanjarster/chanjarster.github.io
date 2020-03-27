@@ -16,31 +16,28 @@
 
   
   <meta name="author" content="颇忒脱" />
-  <meta name="description" content="
-" />
+  <meta name="description" content="" />
 
   
   
     <meta name="twitter:card" content="summary" />
     <meta name="twitter:site" content="@gohugoio" />
     <meta name="twitter:title" content="Cracking Coding Interview - 8.9 Parens" />
-    <meta name="twitter:description" content="
-" />
+    <meta name="twitter:description" content="" />
     <meta name="twitter:image" content="https://chanjarster.github.io/img/avatar.jpg" />
   
 
   
   <meta property="og:type" content="article" />
   <meta property="og:title" content="Cracking Coding Interview - 8.9 Parens" />
-  <meta property="og:description" content="
-" />
+  <meta property="og:description" content="" />
   <meta property="og:url" content="https://chanjarster.github.io/post/cracking-coding-interview/8.9-parens/" />
   <meta property="og:image" content="https://chanjarster.github.io/img/avatar.jpg" />
 
 
 
 
-<meta name="generator" content="Hugo 0.49.2" />
+<meta name="generator" content="Hugo 0.68.1" />
 
 
 <link rel="canonical" href="https://chanjarster.github.io/post/cracking-coding-interview/8.9-parens/" />
@@ -248,24 +245,18 @@
       <h1 class="post-title">Cracking Coding Interview - 8.9 Parens</h1>
       <p class="post-meta">@颇忒脱 · Aug 26, 2019 · 1 min read</p>
     </header>
-    <article class="post-content"><p></p>
-
-<p><strong>Parens</strong>: Implement an algorithm to print all valid (e.g., properly opened and closed) combinations of <code>n</code> pairs of parentheses.</p>
+    <article class="post-content"><p><strong>Parens</strong>: Implement an algorithm to print all valid (e.g., properly opened and closed) combinations of <code>n</code> pairs of parentheses.</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-txt" data-lang="txt">EXAMPLE
 Input:  3
-Output: ((())), (()()), (())(), ()(()), ()()()</code></pre></div>
-<p>Hints: #138, #174, #187, #209, #243, #265, #295</p>
-
+Output: ((())), (()()), (())(), ()(()), ()()()
+</code></pre></div><p>Hints: #138, #174, #187, #209, #243, #265, #295</p>
 <h2 id="解法1">解法1</h2>
-
 <p>这个问题的难点在于如果你把所有的可插入点都去插一下，那么会得到重复的结果，比如插入点有这么几个：</p>
-
 <ol>
 <li><code>()</code>的里面</li>
 <li><code>()</code>的左边</li>
 <li><code>()</code>点右边</li>
 </ol>
-
 <p>即使我们去掉左边这个插入点，那么依然会存在重复，比如：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-txt" data-lang="txt">下面用()代表之前得到的结果，[]代表本步骤新插入的结果：
 
@@ -286,25 +277,19 @@ f(3) = 在 f(2) 的插入点插入
        (())[]  case 7 插右边
 
 case 1和case 7重复
-case 2和case 4重复</code></pre></div>
-<p>用什么办法做插入才能不产生重复？如果用HashSet来排重的话太复杂了。</p>
-
-<h2 id="解法2-正确">解法2(正确)</h2>
-
+case 2和case 4重复
+</code></pre></div><p>用什么办法做插入才能不产生重复？如果用HashSet来排重的话太复杂了。</p>
+<h2 id="解法2正确">解法2(正确)</h2>
 <p>把<code>(</code>记为L，把<code>)</code>记为R，这个问题是否可以理解为给定2 * n个空位，让你在里面填上L和R。</p>
-
 <p>要求一：结果的L和R的数量相等</p>
-
-<p>如果我们从第一个空格开始填，那么应该填什么？基本上来说你填L肯定是安全的（只要没超数量就行），那么什么时候填R呢？当count&reg; &lt; count(L)的时候可以。如果你从左到右读一个合法的结果，在读的时候给L和R计数，那么你会发现R的计数永远不会超过L。所以总结一下：</p>
-
+<p>如果我们从第一个空格开始填，那么应该填什么？基本上来说你填L肯定是安全的（只要没超数量就行），那么什么时候填R呢？当count(R) &lt; count(L)的时候可以。如果你从左到右读一个合法的结果，在读的时候给L和R计数，那么你会发现R的计数永远不会超过L。所以总结一下：</p>
 <ol>
-<li>最终结果count(L) == count&reg;</li>
+<li>最终结果count(L) == count(R)</li>
 <li>count(L) == n</li>
-<li>当count&reg; &lt; count(L) 的时候可以填写R</li>
+<li>当count(R) &lt; count(L) 的时候可以填写R</li>
 <li>当count(L) &lt; n的时候可以填写L</li>
-<li>当count&reg; == count(L) == n的时候构造完成</li>
+<li>当count(R) == count(L) == n的时候构造完成</li>
 </ol>
-
 <p>代码：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#66d9ef">public</span> List<span style="color:#f92672">&lt;</span>String<span style="color:#f92672">&gt;</span> <span style="color:#a6e22e">parens</span><span style="color:#f92672">(</span><span style="color:#66d9ef">int</span> n<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
   List<span style="color:#f92672">&lt;</span>String<span style="color:#f92672">&gt;</span> result <span style="color:#f92672">=</span> <span style="color:#66d9ef">new</span> ArrayList<span style="color:#f92672">&lt;&gt;();</span>
@@ -329,7 +314,8 @@ case 2和case 4重复</code></pre></div>
    parens<span style="color:#f92672">(</span>sb<span style="color:#f92672">,</span> lCount<span style="color:#f92672">,</span> rCount <span style="color:#f92672">-</span> 1<span style="color:#f92672">,</span> result<span style="color:#f92672">);</span>
    sb<span style="color:#f92672">.</span><span style="color:#a6e22e">deleteAt</span><span style="color:#f92672">(</span>sb<span style="color:#f92672">.</span><span style="color:#a6e22e">length</span><span style="color:#f92672">()</span> <span style="color:#f92672">-</span> 1<span style="color:#f92672">);</span>
  <span style="color:#f92672">}</span>
-<span style="color:#f92672">}</span></code></pre></div></article>
+<span style="color:#f92672">}</span>
+</code></pre></div></article>
     <footer class="post-footer">
       
       <ul class="post-tags">
@@ -341,7 +327,7 @@ case 2和case 4重复</code></pre></div>
       </ul>
       
       <p class="post-copyright">
-        This post was published <strong>204</strong> days ago, content in the post may be inaccurate, even wrong now, please take risk yourself.
+        This post was published <strong>213</strong> days ago, content in the post may be inaccurate, even wrong now, please take risk yourself.
       </p>
     </footer>
     

@@ -16,31 +16,28 @@
 
   
   <meta name="author" content="颇忒脱" />
-  <meta name="description" content="
-" />
+  <meta name="description" content="" />
 
   
   
     <meta name="twitter:card" content="summary" />
     <meta name="twitter:site" content="@gohugoio" />
     <meta name="twitter:title" content="Netflix Hystrix笔记" />
-    <meta name="twitter:description" content="
-" />
+    <meta name="twitter:description" content="" />
     <meta name="twitter:image" content="https://chanjarster.github.io/img/avatar.jpg" />
   
 
   
   <meta property="og:type" content="article" />
   <meta property="og:title" content="Netflix Hystrix笔记" />
-  <meta property="og:description" content="
-" />
+  <meta property="og:description" content="" />
   <meta property="og:url" content="https://chanjarster.github.io/post/hystrix-note/" />
   <meta property="og:image" content="https://chanjarster.github.io/img/avatar.jpg" />
 
 
 
 
-<meta name="generator" content="Hugo 0.49.2" />
+<meta name="generator" content="Hugo 0.68.1" />
 
 
 <link rel="canonical" href="https://chanjarster.github.io/post/hystrix-note/" />
@@ -248,18 +245,13 @@
       <h1 class="post-title">Netflix Hystrix笔记</h1>
       <p class="post-meta">@颇忒脱 · Dec 3, 2019 · 1 min read</p>
     </header>
-    <article class="post-content"><p></p>
-
-<h2 id="语境">语境</h2>
-
+    <article class="post-content"><h2 id="语境">语境</h2>
 <ul>
 <li>微服务架构下，各服务之间的依赖层级关系复杂，甚至成网状</li>
 <li>依赖：A调用B，称为A依赖B，也可称A有一个对B对依赖</li>
 <li>Client：依赖的形式基本上是A使用B提供的client来调用B，也可以是A使用HttpClient这样的通用client来调用B</li>
 </ul>
-
 <h2 id="能做什么">能做什么？</h2>
-
 <ul>
 <li>避免因一个节点的超时，导致下游节点级联式的请求堆积，崩溃整个系统</li>
 <li>避免对一个故障节点发出请求，节省网络资源</li>
@@ -269,9 +261,7 @@
 <li>一些报警，监控，运行时控制的功能</li>
 <li>hystrix不仅仅局限于网络通信，用在其他地方也是可以的</li>
 </ul>
-
 <h2 id="设计原则">设计原则</h2>
-
 <ul>
 <li>防止单个依赖用尽容器（如Tomcat）的所有线程</li>
 <li>使用减载和快速失败，而不是排队</li>
@@ -280,9 +270,7 @@
 <li>防止整个客户端的执行失败，而不只是网络流量</li>
 <li>支持运行时修改配置</li>
 </ul>
-
 <h2 id="架构">架构</h2>
-
 <ul>
 <li>对外部系统调用的包装：HystrixCommand、HystrixObservableCommand</li>
 <li>超时阈值：建议稍微低于99.5%线</li>
@@ -292,68 +280,48 @@
 <li>fallback（降级）：请求失败时、超时时、拒绝时、熔断时</li>
 <li>近实时修改：监控指标和配置变更</li>
 </ul>
-
 <h3 id="断路器">断路器</h3>
-
 <p>三个状态：OPEN、CLOSED、HALF-OPEN</p>
-
 <h4 id="open">OPEN</h4>
-
 <p>意思：断开，请求被直接短路
 触发条件：</p>
-
 <ol>
 <li>当断路器流量达到基础值</li>
 <li>failure比例到达设定阈值</li>
 </ol>
-
 <p>维持时间：通过参数控制，比如1秒</p>
-
 <h4 id="closed">CLOSED</h4>
-
 <p>意思：闭合，请求可以通过</p>
-
 <h4 id="half-open">HALF-OPEN</h4>
-
 <p>意思：半开，如果下一个请求成功则闭合，否则断开
 触发条件：在OPEN之后过了一段时间变成半开状态，时间可设置
 状态迁移：</p>
-
 <ul>
 <li>在HALF-OPEN之后第一个请求成功 -&gt; CLOSED</li>
 <li>失败 -&gt; OPEN</li>
 </ul>
-
 <h3 id="隔离机制">隔离机制</h3>
-
 <h4 id="线程池">线程池</h4>
-
 <ul>
 <li>为单个Client提供一个线程池（5-20个线程）</li>
 <li>将Caller线程（如Tomcat线程）和实际工作线程解耦</li>
 <li>不会阻塞Caller线程</li>
 <li>开销：任务排队、调度、上下文切换</li>
 </ul>
-
 <h4 id="信号量">信号量</h4>
-
 <ul>
 <li>为单个Client提供一个Semaphore</li>
 <li>caller线程和实际工作线程同一个</li>
 <li>会阻塞Caller线程</li>
 <li>开销：比线程池模式小多了</li>
 </ul>
-
 <h3 id="请求折叠">请求折叠</h3>
-
 <ul>
 <li>在一段时间里对同一个依赖的请求折叠起来，变成一个请求，降低对依赖的实际并发数，比如把get 100个id的动作合并成一个</li>
 <li>怎么折叠要用户自己实现</li>
 <li>代价：会增加一定的延迟，因为要等待一批请求折叠起来</li>
 </ul>
-
 <h3 id="请求缓存">请求缓存</h3>
-
 <ul>
 <li>把在同一请求上下文内的重复请求去重，比如在同一请求内，调用了两次getById(1)</li>
 <li>在代码复杂的时候，你很难避免重复调用的代码路径存在</li>
@@ -371,7 +339,7 @@
       </ul>
       
       <p class="post-copyright">
-        This post was published <strong>105</strong> days ago, content in the post may be inaccurate, even wrong now, please take risk yourself.
+        This post was published <strong>114</strong> days ago, content in the post may be inaccurate, even wrong now, please take risk yourself.
       </p>
     </footer>
     

@@ -16,31 +16,28 @@
 
   
   <meta name="author" content="颇忒脱" />
-  <meta name="description" content="
-" />
+  <meta name="description" content="" />
 
   
   
     <meta name="twitter:card" content="summary" />
     <meta name="twitter:site" content="@gohugoio" />
     <meta name="twitter:title" content="算法 - 基于时间过期策略的缓存" />
-    <meta name="twitter:description" content="
-" />
+    <meta name="twitter:description" content="" />
     <meta name="twitter:image" content="https://chanjarster.github.io/img/avatar.jpg" />
   
 
   
   <meta property="og:type" content="article" />
   <meta property="og:title" content="算法 - 基于时间过期策略的缓存" />
-  <meta property="og:description" content="
-" />
+  <meta property="og:description" content="" />
   <meta property="og:url" content="https://chanjarster.github.io/post/code-snippets/time-based-expiring-cache/" />
   <meta property="og:image" content="https://chanjarster.github.io/img/avatar.jpg" />
 
 
 
 
-<meta name="generator" content="Hugo 0.49.2" />
+<meta name="generator" content="Hugo 0.68.1" />
 
 
 <link rel="canonical" href="https://chanjarster.github.io/post/code-snippets/time-based-expiring-cache/" />
@@ -248,28 +245,22 @@
       <h1 class="post-title">算法 - 基于时间过期策略的缓存</h1>
       <p class="post-meta">@颇忒脱 · Feb 20, 2020 · 2 min read</p>
     </header>
-    <article class="post-content"><p></p>
-
-<p>有这么一个要求，实现一个缓存，缓存的key在5分钟之后过期，清除可以在另一个线程中做。</p>
-
+    <article class="post-content"><p>有这么一个要求，实现一个缓存，缓存的key在5分钟之后过期，清除可以在另一个线程中做。</p>
 <p>实现思路：</p>
-
 <ul>
-<li>一个Map<K, V>保存缓存</li>
+<li>一个Map&lt;K, V&gt;保存缓存</li>
 <li>一个Queue用来保存put操作，并记录每个put动作所发生的时间</li>
-<li>在对缓存put的时候，不仅对Map<K, V> put，也对Queue add。那么这个Queue就变成了一个按照时间顺序存放的队列。</li>
+<li>在对缓存put的时候，不仅对Map&lt;K, V&gt; put，也对Queue add。那么这个Queue就变成了一个按照时间顺序存放的队列。</li>
 <li>弄一个线程定时
-
 <ol>
 <li>peek Queue</li>
 <li>如果Queue是空的，啥都不做</li>
 <li>如果头元素记录的时间已经距离当前时间超过5分钟，那么就remove它，然后重复第一步</li>
 <li>如果不是，则结束</li>
-</ol></li>
+</ol>
+</li>
 </ul>
-
 <p>代码实现如下：</p>
-
 <p>ExpiryPolicy：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#66d9ef">public</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">ExpiryPolicy</span> <span style="color:#f92672">{</span>
 
@@ -311,8 +302,8 @@
       <span style="color:#f92672">}</span>
     <span style="color:#f92672">}</span>
   <span style="color:#f92672">}</span>
-<span style="color:#f92672">}</span></code></pre></div>
-<p>Cache：</p>
+<span style="color:#f92672">}</span>
+</code></pre></div><p>Cache：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#66d9ef">public</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">Cache</span><span style="color:#f92672">&lt;</span>K<span style="color:#f92672">,</span> V<span style="color:#f92672">&gt;</span> <span style="color:#f92672">{</span>
 
   <span style="color:#66d9ef">private</span> ConcurrentHashMap<span style="color:#f92672">&lt;</span>K<span style="color:#f92672">,</span> Node<span style="color:#f92672">&lt;</span>K<span style="color:#f92672">,</span> V<span style="color:#f92672">&gt;&gt;</span> cacheMap <span style="color:#f92672">=</span> <span style="color:#66d9ef">new</span> ConcurrentHashMap<span style="color:#f92672">&lt;&gt;();</span>
@@ -339,8 +330,8 @@
     <span style="color:#66d9ef">this</span><span style="color:#f92672">.</span><span style="color:#a6e22e">expiryPolicy</span> <span style="color:#f92672">=</span> expiryPolicy<span style="color:#f92672">;</span>
   <span style="color:#f92672">}</span>
 
-<span style="color:#f92672">}</span></code></pre></div>
-<p>Node：</p>
+<span style="color:#f92672">}</span>
+</code></pre></div><p>Node：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#66d9ef">public</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">Node</span><span style="color:#f92672">&lt;</span>K<span style="color:#f92672">,</span> V<span style="color:#f92672">&gt;</span> <span style="color:#f92672">{</span>
   <span style="color:#66d9ef">private</span> K key<span style="color:#f92672">;</span>
   <span style="color:#66d9ef">private</span> V value<span style="color:#f92672">;</span>
@@ -353,8 +344,8 @@
   <span style="color:#f92672">}</span>
   
   <span style="color:#75715e">// getters, equals, hashCode
-</span><span style="color:#75715e"></span><span style="color:#f92672">}</span></code></pre></div>
-<p>用法：</p>
+</span><span style="color:#75715e"></span><span style="color:#f92672">}</span>
+</code></pre></div><p>用法：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#66d9ef">public</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">CacheTest</span> <span style="color:#f92672">{</span>
 
   <span style="color:#a6e22e">@Test</span>
@@ -376,8 +367,8 @@
     assertEquals<span style="color:#f92672">(</span>cache<span style="color:#f92672">.</span><span style="color:#a6e22e">get</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34;bar&#34;</span><span style="color:#f92672">),</span> <span style="color:#66d9ef">null</span><span style="color:#f92672">);</span>
   <span style="color:#f92672">}</span>
 
-<span style="color:#f92672">}</span></code></pre></div>
-<p>相关代码在<a href="https://github.com/chanjarster/code-snippets/tree/master/time-based-expiring-cache">这里</a>。</p></article>
+<span style="color:#f92672">}</span>
+</code></pre></div><p>相关代码在<a href="https://github.com/chanjarster/code-snippets/tree/master/time-based-expiring-cache">这里</a>。</p></article>
     <footer class="post-footer">
       
       <ul class="post-tags">

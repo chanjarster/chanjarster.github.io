@@ -16,31 +16,28 @@
 
   
   <meta name="author" content="颇忒脱" />
-  <meta name="description" content="
-" />
+  <meta name="description" content="" />
 
   
   
     <meta name="twitter:card" content="summary" />
     <meta name="twitter:site" content="@gohugoio" />
     <meta name="twitter:title" content="ClassLoader（一）- 介绍" />
-    <meta name="twitter:description" content="
-" />
+    <meta name="twitter:description" content="" />
     <meta name="twitter:image" content="https://chanjarster.github.io/img/avatar.jpg" />
   
 
   
   <meta property="og:type" content="article" />
   <meta property="og:title" content="ClassLoader（一）- 介绍" />
-  <meta property="og:description" content="
-" />
+  <meta property="og:description" content="" />
   <meta property="og:url" content="https://chanjarster.github.io/post/jvm/classloader/1-intro/" />
   <meta property="og:image" content="https://chanjarster.github.io/img/avatar.jpg" />
 
 
 
 
-<meta name="generator" content="Hugo 0.49.2" />
+<meta name="generator" content="Hugo 0.68.1" />
 
 
 <link rel="canonical" href="https://chanjarster.github.io/post/jvm/classloader/1-intro/" />
@@ -248,33 +245,23 @@
       <h1 class="post-title">ClassLoader（一）- 介绍</h1>
       <p class="post-meta">@颇忒脱 · Jan 24, 2019 · 4 min read</p>
     </header>
-    <article class="post-content"><p></p>
-
-<p>本文源代码在<a href="https://github.com/chanjarster/java-relearn/tree/master/classloader">Github</a>。</p>
-
+    <article class="post-content"><p>本文源代码在<a href="https://github.com/chanjarster/java-relearn/tree/master/classloader">Github</a>。</p>
 <h2 id="什么是classloader">什么是ClassLoader</h2>
-
 <p><a href="https://docs.oracle.com/javase/7/docs/api/java/lang/ClassLoader.html">javadoc ClassLoader</a>：</p>
-
 <blockquote>
 <p>A class loader is an object that is responsible for loading classes.
 &hellip;
 Given the binary name of a class, a class loader should attempt to locate or generate data that constitutes a definition for the class.
 A typical strategy is to transform the name into a file name and then read a &ldquo;class file&rdquo; of that name from a file system.</p>
 </blockquote>
-
 <p>简单来说：</p>
-
 <ol>
 <li>ClassLoader是一个负责加载Class的对象。</li>
 <li>给ClassLoader一个类名（需符合Java语言规范），那么它就应该尝试<strong>定位</strong>，或者<strong>生成</strong>包含该类定义的数据。</li>
 <li>一个典型的定位策略是把类名转换成class文件名，然后从文件系统里读取这个class文件。</li>
 </ol>
-
 <h3 id="三种classloader实现">三种ClassLoader实现</h3>
-
 <p>讲到bootstrap class loader就不得不说三种常见的ClassLoader实现。</p>
-
 <p>执行下面代码会看到三种类型的ClassLoader实现：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#f92672">import</span> com.sun.javafx.util.Logging<span style="color:#f92672">;</span>
 <span style="color:#f92672">import</span> java.util.ArrayList<span style="color:#f92672">;</span>
@@ -284,45 +271,35 @@ A typical strategy is to transform the name into a file name and then read a &ld
     System<span style="color:#f92672">.</span><span style="color:#a6e22e">out</span><span style="color:#f92672">.</span><span style="color:#a6e22e">println</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34;Classloader for Logging: &#34;</span> <span style="color:#f92672">+</span> Logging<span style="color:#f92672">.</span><span style="color:#a6e22e">class</span><span style="color:#f92672">.</span><span style="color:#a6e22e">getClassLoader</span><span style="color:#f92672">());</span>
     System<span style="color:#f92672">.</span><span style="color:#a6e22e">out</span><span style="color:#f92672">.</span><span style="color:#a6e22e">println</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34;Classloader for this class: &#34;</span> <span style="color:#f92672">+</span> PrintClassLoader<span style="color:#f92672">.</span><span style="color:#a6e22e">class</span><span style="color:#f92672">.</span><span style="color:#a6e22e">getClassLoader</span><span style="color:#f92672">());</span>
   <span style="color:#f92672">}</span>
-<span style="color:#f92672">}</span></code></pre></div>
-<p>结果如下：</p>
+<span style="color:#f92672">}</span>
+</code></pre></div><p>结果如下：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-txt" data-lang="txt">Classloader for ArrayList: null
 Classloader for Logging: sun.misc.Launcher$ExtClassLoader@5e2de80c
-Classloader for this class: sun.misc.Launcher$AppClassLoader@18b4aac2</code></pre></div>
-<ul>
+Classloader for this class: sun.misc.Launcher$AppClassLoader@18b4aac2
+</code></pre></div><ul>
 <li>Bootstrap class loader。bootstrap class loader是native code写的。它是所有ClassLoader的祖先，它是顶级ClassLoader。它负责加载JDK的内部类型，一般来说就是位于<code>$JAVA_HOME/jre/lib</code>下的核心库和<code>rt.jar</code>。</li>
 <li>Extension class loader。即Extension class loader，负责加载Java核心类的扩展，加载<code>$JAVA_HOME/lib/ext</code>目录和System Property <code>java.ext.dirs</code>所指定目录下的类（见<a href="https://docs.oracle.com/javase/6/docs/technotes/guides/extensions/spec.htm">Java Extension Mechanism Architecture</a>）。</li>
 <li>System class loader，又称Application class loader。它的parent class loader是extension class loader（可以从<code>sun.misc.Launcher</code>的构造函数里看到），负责加载<code>CLASSPATH</code>环境变量、<code>-classpath/-cp</code>启动参数指定路径下的类。</li>
 </ul>
-
 <h3 id="类的classloader">类的ClassLoader</h3>
-
 <p>每个Class对象引用了当初加载自己的ClassLoader（<a href="https://docs.oracle.com/javase/7/docs/api/java/lang/ClassLoader.html">javadoc ClassLoader</a>）：</p>
-
 <blockquote>
 <p>Every Class object contains a reference to the ClassLoader that defined it.</p>
 </blockquote>
-
 <p>其实Class对象的<code>getClassLoader()</code>方法就能够得到这个ClassLoader，并且说了如果该方法返回空，则说明此Class对象是被bootstrap class loader加载的，见<a href="https://docs.oracle.com/javase/7/docs/api/java/lang/Class.html#getClassLoader()">getClassLoader() javadoc</a>：</p>
-
 <blockquote>
 <p>Returns the class loader for the class. Some implementations may use null to represent the bootstrap class loader. This method will return null in such implementations if this class was loaded by the bootstrap class loader.</p>
 </blockquote>
-
 <h3 id="数组类的classloader">数组类的ClassLoader</h3>
-
 <blockquote>
 <p>Class objects for array classes are not created by class loaders, but are created automatically as required by the Java runtime. The class loader for an array class, as returned by Class.getClassLoader() is the same as the class loader for its element type; if the element type is a primitive type, then the array class has no class loader.</p>
 </blockquote>
-
 <p>简单来说说了三点：</p>
-
 <ol>
 <li>数组也是类，但是它的Class对象不是由ClassLoader创建的，而是由Java runtime根据需要自动创建的。</li>
 <li>数组的<code>getClassLoader()</code>的结果同其元素类型的ClassLoader</li>
 <li>如果元素是基础类型，则数组类没有ClassLoader</li>
 </ol>
-
 <p>下面是一段实验代码：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#f92672">import</span> com.sun.javafx.util.Logging<span style="color:#f92672">;</span>
 <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">PrintArrayClassLoader</span> <span style="color:#f92672">{</span>
@@ -332,13 +309,13 @@ Classloader for this class: sun.misc.Launcher$AppClassLoader@18b4aac2</code></pr
     System<span style="color:#f92672">.</span><span style="color:#a6e22e">out</span><span style="color:#f92672">.</span><span style="color:#a6e22e">println</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34;ClassLoader for Logging[]: &#34;</span> <span style="color:#f92672">+</span> <span style="color:#66d9ef">new</span> Logging<span style="color:#f92672">[</span>0<span style="color:#f92672">].</span><span style="color:#a6e22e">getClass</span><span style="color:#f92672">().</span><span style="color:#a6e22e">getClassLoader</span><span style="color:#f92672">());</span>
     System<span style="color:#f92672">.</span><span style="color:#a6e22e">out</span><span style="color:#f92672">.</span><span style="color:#a6e22e">println</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34;ClassLoader for this class[]: &#34;</span> <span style="color:#f92672">+</span> <span style="color:#66d9ef">new</span> PrintArrayClassLoader<span style="color:#f92672">[</span>0<span style="color:#f92672">].</span><span style="color:#a6e22e">getClass</span><span style="color:#f92672">().</span><span style="color:#a6e22e">getClassLoader</span><span style="color:#f92672">());</span>
   <span style="color:#f92672">}</span>
-<span style="color:#f92672">}</span></code></pre></div>
-<p>得到的结果如下，符合上面的说法：</p>
+<span style="color:#f92672">}</span>
+</code></pre></div><p>得到的结果如下，符合上面的说法：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-txt" data-lang="txt">ClassLoader for int[]: null
 ClassLoader for string[]: null
 ClassLoader for Logging[]: sun.misc.Launcher$ExtClassLoader@5e2de80c
-ClassLoader for this class[]: sun.misc.Launcher$AppClassLoader@18b4aac2</code></pre></div>
-<p>那如果是二维数组会怎样呢？下面是实验代码：</p>
+ClassLoader for this class[]: sun.misc.Launcher$AppClassLoader@18b4aac2
+</code></pre></div><p>那如果是二维数组会怎样呢？下面是实验代码：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#f92672">import</span> com.sun.javafx.util.Logging<span style="color:#f92672">;</span>
 <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">PrintArrayArrayClassLoader</span> <span style="color:#f92672">{</span>
   <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">static</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">main</span><span style="color:#f92672">(</span>String<span style="color:#f92672">[]</span> args<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
@@ -348,22 +325,19 @@ ClassLoader for this class[]: sun.misc.Launcher$AppClassLoader@18b4aac2</code></
     System<span style="color:#f92672">.</span><span style="color:#a6e22e">out</span><span style="color:#f92672">.</span><span style="color:#a6e22e">println</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34;ClassLoader for this class[][]: &#34;</span> <span style="color:#f92672">+</span> <span style="color:#66d9ef">new</span> PrintArrayClassLoader<span style="color:#f92672">[</span>0<span style="color:#f92672">][].</span><span style="color:#a6e22e">getClass</span><span style="color:#f92672">().</span><span style="color:#a6e22e">getClassLoader</span><span style="color:#f92672">());</span>
     System<span style="color:#f92672">.</span><span style="color:#a6e22e">out</span><span style="color:#f92672">.</span><span style="color:#a6e22e">println</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34;ClassLoader for this Object[][] of this class[]: &#34;</span> <span style="color:#f92672">+</span> <span style="color:#66d9ef">new</span> Object<span style="color:#f92672">[][]{</span><span style="color:#66d9ef">new</span> PrintArrayArrayClassLoader<span style="color:#f92672">[</span>0<span style="color:#f92672">]}.</span><span style="color:#a6e22e">getClass</span><span style="color:#f92672">().</span><span style="color:#a6e22e">getClassLoader</span><span style="color:#f92672">());</span>
   <span style="color:#f92672">}</span>
-<span style="color:#f92672">}</span></code></pre></div>
-<p>结果是：</p>
+<span style="color:#f92672">}</span>
+</code></pre></div><p>结果是：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-txt" data-lang="txt">ClassLoader for int[][]: null
 ClassLoader for string[][]: null
 ClassLoader for Logging[][]: sun.misc.Launcher$ExtClassLoader@5e2de80c
 ClassLoader for this class[][]: sun.misc.Launcher$AppClassLoader@18b4aac2
-ClassLoader for this Object[][] of this class[]: null</code></pre></div>
-<p>注意第四行的结果，我们构建了一个<code>Object[][]</code>，里面放的是<code>PrintArrayArrayClassLoader[]</code>，但结果依然是null。所以：</p>
-
+ClassLoader for this Object[][] of this class[]: null
+</code></pre></div><p>注意第四行的结果，我们构建了一个<code>Object[][]</code>，里面放的是<code>PrintArrayArrayClassLoader[]</code>，但结果依然是null。所以：</p>
 <ol>
 <li>二维数组的ClassLoader和其定义的类型（元素类型）的ClassLoader相同。</li>
 <li>与其实际内部存放的类型无关。</li>
 </ol>
-
 <h3 id="classloader类的classloader">ClassLoader类的ClassLoader</h3>
-
 <p>ClassLoader本身也是类，那么是谁加载它们的呢？实际上ClassLoader类的ClassLoader就是bootstrap class loader。下面是实验代码：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#f92672">import</span> com.sun.javafx.util.Logging<span style="color:#f92672">;</span>
 <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">PrintClassLoaderClassLoader</span> <span style="color:#f92672">{</span>
@@ -377,52 +351,37 @@ ClassLoader for this Object[][] of this class[]: null</code></pre></div>
   <span style="color:#f92672">}</span>
   <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">static</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">DummyClassLoader</span> <span style="color:#66d9ef">extends</span> ClassLoader <span style="color:#f92672">{</span>
   <span style="color:#f92672">}</span>
-<span style="color:#f92672">}</span></code></pre></div>
-<p>结果是：</p>
+<span style="color:#f92672">}</span>
+</code></pre></div><p>结果是：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-txt" data-lang="txt">ClassLoader for Logging&#39;s ClassLoader: null
 ClassLoader for this class&#39;s ClassLoader: null
-ClassLoader for custom ClassLoader: null</code></pre></div>
-<h2 id="classloader解决了什么问题">ClassLoader解决了什么问题</h2>
-
+ClassLoader for custom ClassLoader: null
+</code></pre></div><h2 id="classloader解决了什么问题">ClassLoader解决了什么问题</h2>
 <p>简单来说ClassLoader就是解决类加载问题的，当然这是一句废话。JDK里的ClassLoader是一个抽象类，这样做的目的是能够让应用开发者定制自己的ClassLoader实现（比如添加解密/加密）、动态插入字节码等，我认为这才是ClassLoader存在的最大意义。</p>
-
 <h2 id="classloader的工作原理">ClassLoader的工作原理</h2>
-
 <p>还是看<a href="https://docs.oracle.com/javase/7/docs/api/java/lang/ClassLoader.html">javadoc的说法</a>：</p>
-
 <blockquote>
 <p>The ClassLoader class uses a delegation model to search for classes and resources. Each instance of ClassLoader has an associated parent class loader. When requested to find a class or resource, a ClassLoader instance will delegate the search for the class or resource to its parent class loader before attempting to find the class or resource itself. The virtual machine&rsquo;s built-in class loader, called the &ldquo;bootstrap class loader&rdquo;, does not itself have a parent but may serve as the parent of a ClassLoader instance.</p>
 </blockquote>
-
 <p>简单来说：</p>
-
 <ol>
 <li>ClassLoader使用委托模型（国内普遍称之为双亲委派模型）查找Class或Resource。</li>
 <li>每个 ClassLoader 实例都有一个parent ClassLoader。</li>
 <li>当要查找Class或者Resource的时候，递归委托给parent，如果parent找不到，才会自己找。举例说明：如果ClassLoader层级关系是这样A-&gt;B-&gt;C，如果被查找Class只能被A找到，那么过程是A-delegate-&gt;B-delegate-&gt;C(not found)-&gt;B(not found)-&gt;A(found)。</li>
 <li>JVM有一个内置的顶级ClassLoader，叫做bootstrap class loader，它没有parent，它是老祖宗。</li>
 </ol>
-
 <h2 id="contextclassloader">ContextClassLoader</h2>
-
 <p>ClassLoader的委托模型存在这么一个问题：子ClassLoader能够看见父ClassLoader所加载的类，而父ClassLoader看不到子ClassLoader所加载的类。</p>
-
 <p>这个问题出现在Java提供的SPI上，简单举例说明：</p>
-
 <ol>
 <li>Java核心库提供了SPI A</li>
 <li>尝试提供了自己的实现 B</li>
 <li>SPI A尝试查找实现B，结果找不到</li>
 </ol>
-
 <p>这是因为B一般都是在Classpath中的，它是被System class loader加载的，而SPI A是在核心库里的，它是被bootstrap class loader加载的，而bootstrap class loader是顶级ClassLoader，它不能向下委托给System class loader，所以SPI A是找不到实现B的。</p>
-
 <p>这个时候可以通过<code>java.lang.Thread#getContextClassLoader()</code>和<code>java.lang.Thread#setContextClassLoader</code>来让SPI A加载到B。</p>
-
 <p>为何SPI A不直接使用System class loader来加载呢？我想这是因为如果写死了System class loader那就缺少灵活性的关系吧。</p>
-
 <h2 id="class的唯一性">Class的唯一性</h2>
-
 <p>如果一个类被一个ClassLoader加载两次，那么两次的结果应该是一致的，并且这个加载过程是线程安全的，见ClassLoader.java源码：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#66d9ef">protected</span> Class<span style="color:#f92672">&lt;?&gt;</span> loadClass<span style="color:#f92672">(</span>String name<span style="color:#f92672">,</span> <span style="color:#66d9ef">boolean</span> resolve<span style="color:#f92672">)</span>
       <span style="color:#66d9ef">throws</span> ClassNotFoundException
@@ -455,8 +414,8 @@ ClassLoader for custom ClassLoader: null</code></pre></div>
     <span style="color:#75715e">// ...
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">return</span> c<span style="color:#f92672">;</span>
   <span style="color:#f92672">}</span>
-<span style="color:#f92672">}</span></code></pre></div>
-<p>如果一个类被两个不同的ClassLoader加载会怎样呢？看下面代码：</p>
+<span style="color:#f92672">}</span>
+</code></pre></div><p>如果一个类被两个不同的ClassLoader加载会怎样呢？看下面代码：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#75715e">// 把这个项目打包然后放到/tmp目录下
 </span><span style="color:#75715e"></span><span style="color:#66d9ef">public</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">ClassUniqueness</span> <span style="color:#f92672">{</span>
 
@@ -472,24 +431,19 @@ ClassLoader for custom ClassLoader: null</code></pre></div>
     System<span style="color:#f92672">.</span><span style="color:#a6e22e">out</span><span style="color:#f92672">.</span><span style="color:#a6e22e">println</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34;Two ClassUniqueness class equals? &#34;</span> <span style="color:#f92672">+</span> fooClass1<span style="color:#f92672">.</span><span style="color:#a6e22e">equals</span><span style="color:#f92672">(</span>fooClass2<span style="color:#f92672">));</span>
   <span style="color:#f92672">}</span>
 
-<span style="color:#f92672">}</span></code></pre></div>
-<p>运行结果是：</p>
+<span style="color:#f92672">}</span>
+</code></pre></div><p>运行结果是：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-txt" data-lang="txt">1st ClassUniqueness&#39;s ClassLoader: sun.misc.Launcher$AppClassLoader@18b4aac2
 2nd ClassUniqueness&#39;s ClassLoader: java.net.URLClassLoader@66d3c617
-Two ClassUniqueness class equals? false```</code></pre></div>
-<p>观察到两点：</p>
-
+Two ClassUniqueness class equals? false```
+</code></pre></div><p>观察到两点：</p>
 <ol>
 <li>虽然是同一个类，但是加载它们的ClassLoader不同。</li>
 <li>虽然是同一个类，但是它们并不相等。</li>
 </ol>
-
 <p>由此可以得出结论：一个Class的唯一性不仅仅是其全限定名（Fully-qualified-name），而是由【加载其的ClassLoader + 其全限定名】联合保证唯一。</p>
-
 <p>这种机制对于解决诸如类冲突问题非常有用，类冲突问题就是在运行时存在同一个类的两个不同版本，同时代码里又都需要使用这两个不同版本的类。解决这个问题的思路就是使用不同的ClassLoader加载这两个版本的类。事实上OSGi或者Web容器就是这样做的（它们不是严格遵照委托模型，而是先自己找，找不到了再委托给parent ClassLoader）。</p>
-
 <h2 id="参考文档">参考文档</h2>
-
 <ul>
 <li><a href="https://docs.oracle.com/javase/7/docs/api/java/lang/ClassLoader.html">JDK Javadoc - ClassLoader</a></li>
 <li><a href="https://docs.oracle.com/javase/7/docs/api/java/lang/Class.html#getClassLoader()">JDK Javadoc - Class</a></li>
@@ -514,7 +468,7 @@ Two ClassUniqueness class equals? false```</code></pre></div>
       </ul>
       
       <p class="post-copyright">
-        This post was published <strong>418</strong> days ago, content in the post may be inaccurate, even wrong now, please take risk yourself.
+        This post was published <strong>427</strong> days ago, content in the post may be inaccurate, even wrong now, please take risk yourself.
       </p>
     </footer>
     

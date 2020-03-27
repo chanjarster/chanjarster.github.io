@@ -16,31 +16,28 @@
 
   
   <meta name="author" content="颇忒脱" />
-  <meta name="description" content="
-" />
+  <meta name="description" content="" />
 
   
   
     <meta name="twitter:card" content="summary" />
     <meta name="twitter:site" content="@gohugoio" />
     <meta name="twitter:title" content="MySQL - 给字符串加索引" />
-    <meta name="twitter:description" content="
-" />
+    <meta name="twitter:description" content="" />
     <meta name="twitter:image" content="https://chanjarster.github.io/img/avatar.jpg" />
   
 
   
   <meta property="og:type" content="article" />
   <meta property="og:title" content="MySQL - 给字符串加索引" />
-  <meta property="og:description" content="
-" />
+  <meta property="og:description" content="" />
   <meta property="og:url" content="https://chanjarster.github.io/post/mysql/index-for-string/" />
   <meta property="og:image" content="https://chanjarster.github.io/img/avatar.jpg" />
 
 
 
 
-<meta name="generator" content="Hugo 0.49.2" />
+<meta name="generator" content="Hugo 0.68.1" />
 
 
 <link rel="canonical" href="https://chanjarster.github.io/post/mysql/index-for-string/" />
@@ -248,68 +245,53 @@
       <h1 class="post-title">MySQL - 给字符串加索引</h1>
       <p class="post-meta">@颇忒脱 · Jan 13, 2020 · 1 min read</p>
     </header>
-    <article class="post-content"><p></p>
-
-<p>在<a href="../indices/">索引</a>里提到了索引占用的空间和索引占用值的关系。并提到了字符串可以使用最左N个字符作为索引值（最左前缀）。</p>
-
+    <article class="post-content"><p>在<a href="../indices/">索引</a>里提到了索引占用的空间和索引占用值的关系。并提到了字符串可以使用最左N个字符作为索引值（最左前缀）。</p>
 <p>在<a href="../force-index">数据库选错索引怎么办</a>里提到基数（cardinality）是选择使用哪个索引的很重要的指标。</p>
-
 <h2 id="前缀索引">前缀索引</h2>
-
 <p>下面举个例子：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#75715e">-- 使用整个字段做索引
 </span><span style="color:#75715e"></span>mysql<span style="color:#f92672">&gt;</span> <span style="color:#66d9ef">alter</span> <span style="color:#66d9ef">table</span> SUser <span style="color:#66d9ef">add</span> <span style="color:#66d9ef">index</span> index1(email);
 <span style="color:#75715e">-- 使用前6个字符做索引
-</span><span style="color:#75715e"></span>mysql<span style="color:#f92672">&gt;</span> <span style="color:#66d9ef">alter</span> <span style="color:#66d9ef">table</span> SUser <span style="color:#66d9ef">add</span> <span style="color:#66d9ef">index</span> index2(email(<span style="color:#ae81ff">6</span>));</code></pre></div>
-<p><strong>如果使用的是 index1</strong>（即 email 整个字符串的索引结构），执行顺序是这样的：</p>
-
+</span><span style="color:#75715e"></span>mysql<span style="color:#f92672">&gt;</span> <span style="color:#66d9ef">alter</span> <span style="color:#66d9ef">table</span> SUser <span style="color:#66d9ef">add</span> <span style="color:#66d9ef">index</span> index2(email(<span style="color:#ae81ff">6</span>));
+</code></pre></div><p><strong>如果使用的是 index1</strong>（即 email 整个字符串的索引结构），执行顺序是这样的：</p>
 <ol>
 <li>从 index1 索引树找到满足索引值是<code>zhangssxyz@xxx.com</code>的这条记录，取得 ID2 的值；</li>
 <li>到主键上查到主键值是 ID2 的行，判断 email 的值是正确的，将这行记录加入结果集；</li>
-<li>取 index1 索引树上刚刚查到的位置的下一条记录，发现已经不满足 email=<code>zhangssxyz@xxx.com</code>的条件了，循环结束。</li>
+<li>取 index1 索引树上刚刚查到的位置的下一条记录，发现已经不满足 <a href="mailto:email=%60zhangssxyz@xxx.com">email=`zhangssxyz@xxx.com</a>`的条件了，循环结束。</li>
 </ol>
-
 <p><strong>如果使用的是 index2</strong>（即 email(6) 索引结构），执行顺序是这样的：</p>
-
 <ol>
 <li>从 index2 索引树找到满足索引值是’zhangs’的记录，找到的第一个是 ID1；</li>
 <li>到主键上查到主键值是 ID1 的行，判断出 email 的值不是’zhangssxyz@xxx.com’，这行记录丢弃；<strong>（回表）</strong></li>
 <li>取 index2 上刚刚查到的位置的下一条记录，发现仍然是’zhangs’，取出 ID2，再到 ID 索引上取整行然后判断，这次值对了，将这行记录加入结果集；</li>
 <li>重复上一步，直到在 idxe2 上取到的值不是’zhangs’时，循环结束。</li>
 </ol>
-
 <p>可以看到使用第二种方式建索引会导致回表，那么覆盖索引也用不上了。</p>
-
 <p><strong>所以，如何给字符串建索引就成了空间（占用空间）和效率（基数）的权衡。前缀索引使用的好，就可以做到既节省空间，又不用额外增加太多的查询成本。</strong></p>
-
 <h2 id="如何确定前缀索引的长度">如何确定前缀索引的长度</h2>
-
 <p>首先，你可以使用下面这个语句，算出这个列上有多少个不同的值：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql">mysql<span style="color:#f92672">&gt;</span> <span style="color:#66d9ef">select</span> <span style="color:#66d9ef">count</span>(<span style="color:#66d9ef">distinct</span> email) <span style="color:#66d9ef">as</span> L <span style="color:#66d9ef">from</span> SUser;</code></pre></div>
-<p>然后，依次选取不同长度的前缀来看这个值，比如我们要看一下 4~7 个字节的前缀索引，可以用这个语句：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql">mysql<span style="color:#f92672">&gt;</span> <span style="color:#66d9ef">select</span> <span style="color:#66d9ef">count</span>(<span style="color:#66d9ef">distinct</span> email) <span style="color:#66d9ef">as</span> L <span style="color:#66d9ef">from</span> SUser;
+</code></pre></div><p>然后，依次选取不同长度的前缀来看这个值，比如我们要看一下 4~7 个字节的前缀索引，可以用这个语句：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql">mysql<span style="color:#f92672">&gt;</span> <span style="color:#66d9ef">select</span> 
   <span style="color:#66d9ef">count</span>(<span style="color:#66d9ef">distinct</span> <span style="color:#66d9ef">left</span>(email,<span style="color:#ae81ff">4</span>)<span style="color:#960050;background-color:#1e0010">）</span><span style="color:#66d9ef">as</span> L4,
   <span style="color:#66d9ef">count</span>(<span style="color:#66d9ef">distinct</span> <span style="color:#66d9ef">left</span>(email,<span style="color:#ae81ff">5</span>)<span style="color:#960050;background-color:#1e0010">）</span><span style="color:#66d9ef">as</span> L5,
   <span style="color:#66d9ef">count</span>(<span style="color:#66d9ef">distinct</span> <span style="color:#66d9ef">left</span>(email,<span style="color:#ae81ff">6</span>)<span style="color:#960050;background-color:#1e0010">）</span><span style="color:#66d9ef">as</span> L6,
   <span style="color:#66d9ef">count</span>(<span style="color:#66d9ef">distinct</span> <span style="color:#66d9ef">left</span>(email,<span style="color:#ae81ff">7</span>)<span style="color:#960050;background-color:#1e0010">）</span><span style="color:#66d9ef">as</span> L7,
-<span style="color:#66d9ef">from</span> SUser;</code></pre></div>
-<p>使用前缀索引很可能会损失区分度，所以你需要预先设定一个可以接受的损失比例，比如 5%。然后，在返回的 L4~L7 中，找出不小于 L * 95% 的值，假设这里 L6、L7 都满足，你就可以选择前缀长度为 6。</p>
-
+<span style="color:#66d9ef">from</span> SUser;
+</code></pre></div><p>使用前缀索引很可能会损失区分度，所以你需要预先设定一个可以接受的损失比例，比如 5%。然后，在返回的 L4~L7 中，找出不小于 L * 95% 的值，假设这里 L6、L7 都满足，你就可以选择前缀长度为 6。</p>
 <h2 id="前缀区分度不够怎么办">前缀区分度不够怎么办</h2>
-
 <p>比如身份证号，字符串很长，前缀部分区分度很低，有两个方法：</p>
-
 <ul>
 <li>倒序存储：把身份证倒过来存，因为身份证前几位区分度太低，但是后几位区分度很高：</li>
 </ul>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql">mysql<span style="color:#f92672">&gt;</span> <span style="color:#66d9ef">alter</span> <span style="color:#66d9ef">table</span> t <span style="color:#66d9ef">add</span> <span style="color:#66d9ef">index</span> id_card_i(id_card(<span style="color:#ae81ff">6</span>));
-mysql<span style="color:#f92672">&gt;</span> <span style="color:#66d9ef">select</span> field_list <span style="color:#66d9ef">from</span> t <span style="color:#66d9ef">where</span> id_card <span style="color:#f92672">=</span> reverse(<span style="color:#e6db74">&#39;input_id_card_string&#39;</span>);</code></pre></div>
-<ul>
+mysql<span style="color:#f92672">&gt;</span> <span style="color:#66d9ef">select</span> field_list <span style="color:#66d9ef">from</span> t <span style="color:#66d9ef">where</span> id_card <span style="color:#f92672">=</span> reverse(<span style="color:#e6db74">&#39;input_id_card_string&#39;</span>);
+</code></pre></div><ul>
 <li>添加一个身份证的hash字段</li>
 </ul>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql">mysql<span style="color:#f92672">&gt;</span> <span style="color:#66d9ef">alter</span> <span style="color:#66d9ef">table</span> t <span style="color:#66d9ef">add</span> id_card_crc int unsigned, <span style="color:#66d9ef">add</span> <span style="color:#66d9ef">index</span>(id_card_crc);
-mysql<span style="color:#f92672">&gt;</span> <span style="color:#66d9ef">select</span> field_list <span style="color:#66d9ef">from</span> t <span style="color:#66d9ef">where</span> id_card_crc<span style="color:#f92672">=</span>crc32(<span style="color:#e6db74">&#39;input_id_card_string&#39;</span>) <span style="color:#66d9ef">and</span> id_card<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;input_id_card_string&#39;</span></code></pre></div>
-<p>这两个方法有个共同的缺点，不支持范围查询，只支持等值查询。</p></article>
+mysql<span style="color:#f92672">&gt;</span> <span style="color:#66d9ef">select</span> field_list <span style="color:#66d9ef">from</span> t <span style="color:#66d9ef">where</span> id_card_crc<span style="color:#f92672">=</span>crc32(<span style="color:#e6db74">&#39;input_id_card_string&#39;</span>) <span style="color:#66d9ef">and</span> id_card<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;input_id_card_string&#39;</span>
+</code></pre></div><p>这两个方法有个共同的缺点，不支持范围查询，只支持等值查询。</p></article>
     <footer class="post-footer">
       
       <ul class="post-tags">

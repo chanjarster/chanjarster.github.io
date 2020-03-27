@@ -16,31 +16,28 @@
 
   
   <meta name="author" content="颇忒脱" />
-  <meta name="description" content="
-" />
+  <meta name="description" content="" />
 
   
   
     <meta name="twitter:card" content="summary" />
     <meta name="twitter:site" content="@gohugoio" />
     <meta name="twitter:title" content="查找K8S中高磁盘占用Pod" />
-    <meta name="twitter:description" content="
-" />
+    <meta name="twitter:description" content="" />
     <meta name="twitter:image" content="https://chanjarster.github.io/img/avatar.jpg" />
   
 
   
   <meta property="og:type" content="article" />
   <meta property="og:title" content="查找K8S中高磁盘占用Pod" />
-  <meta property="og:description" content="
-" />
+  <meta property="og:description" content="" />
   <meta property="og:url" content="https://chanjarster.github.io/post/k8s/find-high-disk-usage-pod/" />
   <meta property="og:image" content="https://chanjarster.github.io/img/avatar.jpg" />
 
 
 
 
-<meta name="generator" content="Hugo 0.49.2" />
+<meta name="generator" content="Hugo 0.68.1" />
 
 
 <link rel="canonical" href="https://chanjarster.github.io/post/k8s/find-high-disk-usage-pod/" />
@@ -248,33 +245,23 @@
       <h1 class="post-title">查找K8S中高磁盘占用Pod</h1>
       <p class="post-meta">@颇忒脱 · Nov 11, 2019 · 1 min read</p>
     </header>
-    <article class="post-content"><p></p>
-
-<p>这是一次排障过程，发现Worker节点磁盘占用高，K8S报告<code>kublet has disk pressure</code>。</p>
-
+    <article class="post-content"><p>这是一次排障过程，发现Worker节点磁盘占用高，K8S报告<code>kublet has disk pressure</code>。</p>
 <p>K8S是Rancher管理的，开启了监控（Grafana+Prometheus），在Grafana监控大盘观察，的确发现节点的磁盘可用空间在10%左右，节点磁盘大小为1T，如此占用不正常。</p>
-
 <p>尝试在Grafana查找哪个Pod占用的磁盘，但是并未提供这样的视图。</p>
-
 <p>在节点上执行：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">sudo du -h --max-depth <span style="color:#ae81ff">1</span> /var/lib/docker/</code></pre></div>
-<p>得到的确是Docker占用的磁盘。</p>
-
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">sudo du -h --max-depth <span style="color:#ae81ff">1</span> /var/lib/docker/
+</code></pre></div><p>得到的确是Docker占用的磁盘。</p>
 <p>在节点上执行：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">docker system df</code></pre></div>
-<p>得到Container占用磁盘特别高</p>
-
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">docker system df
+</code></pre></div><p>得到Container占用磁盘特别高</p>
 <p>在节点上执行：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">docker ps -a --format <span style="color:#e6db74">&#34;table {{.Size}}\t{{.Names}}&#34;</span></code></pre></div>
-<p>得到容器的磁盘占用，发现<code>kubelet</code>占用磁盘特别高，且符合<code>docker system df</code>的结果。</p>
-
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">docker ps -a --format <span style="color:#e6db74">&#34;table {{.Size}}\t{{.Names}}&#34;</span>
+</code></pre></div><p>得到容器的磁盘占用，发现<code>kubelet</code>占用磁盘特别高，且符合<code>docker system df</code>的结果。</p>
 <p>进入<code>kubelet</code>查看占用情况：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">docker exec -it kubelet /bin/bash
-du -h --max-depth <span style="color:#ae81ff">1</span></code></pre></div>
-<p>发现在<code>/v8</code>磁盘占用了大部分空间，进入后查看发现大量应用日志。</p>
-
+du -h --max-depth <span style="color:#ae81ff">1</span>
+</code></pre></div><p>发现在<code>/v8</code>磁盘占用了大部分空间，进入后查看发现大量应用日志。</p>
 <p>找到相关应用开发人员，原来是他们使用了hostPath来挂载卷，把日志都写到了节点上，且没有开启日志滚动和压缩，导致占用大量节点磁盘。</p>
-
 <p>后经研究发现，hostPath挂载的卷在Deployment/StatefulSets删除后也依然存在，手动删除后问题解决，并让开发人员不要使用hostPath后解决。</p></article>
     <footer class="post-footer">
       
@@ -287,7 +274,7 @@ du -h --max-depth <span style="color:#ae81ff">1</span></code></pre></div>
       </ul>
       
       <p class="post-copyright">
-        This post was published <strong>128</strong> days ago, content in the post may be inaccurate, even wrong now, please take risk yourself.
+        This post was published <strong>137</strong> days ago, content in the post may be inaccurate, even wrong now, please take risk yourself.
       </p>
     </footer>
     

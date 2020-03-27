@@ -17,7 +17,6 @@
   
   <meta name="author" content="颇忒脱" />
   <meta name="description" content="一些docker daemon生产环境中要注意的参数配置。
-
 " />
 
   
@@ -26,7 +25,6 @@
     <meta name="twitter:site" content="@gohugoio" />
     <meta name="twitter:title" content="Docker Daemon生产环境配置" />
     <meta name="twitter:description" content="一些docker daemon生产环境中要注意的参数配置。
-
 " />
     <meta name="twitter:image" content="https://chanjarster.github.io/img/avatar.jpg" />
   
@@ -35,7 +33,6 @@
   <meta property="og:type" content="article" />
   <meta property="og:title" content="Docker Daemon生产环境配置" />
   <meta property="og:description" content="一些docker daemon生产环境中要注意的参数配置。
-
 " />
   <meta property="og:url" content="https://chanjarster.github.io/post/docker-daemon-prod/" />
   <meta property="og:image" content="https://chanjarster.github.io/img/avatar.jpg" />
@@ -43,7 +40,7 @@
 
 
 
-<meta name="generator" content="Hugo 0.49.2" />
+<meta name="generator" content="Hugo 0.68.1" />
 
 
 <link rel="canonical" href="https://chanjarster.github.io/post/docker-daemon-prod/" />
@@ -252,69 +249,47 @@
       <p class="post-meta">@颇忒脱 · Jan 11, 2019 · 2 min read</p>
     </header>
     <article class="post-content"><p>一些docker daemon生产环境中要注意的参数配置。</p>
-
-<p></p>
-
 <p>本文介绍一些生产环境中dockerd要特别注意的参数，这些参数可以通过在<code>dockerd</code>命令行参数形式给，也可以通过在<code>/etc/docker/daemon.json</code>里配置。本文介绍的就是<code>daemon.json</code>配置方式。</p>
-
 <p>在开始之前，请先查看<code>/etc/docker/daemon.json</code>是否存在，如果不存在则新建一个，内容是<code>{}</code>。然后你要懂JSON文件格式。</p>
-
 <h2 id="如何应用配置">如何应用配置</h2>
-
 <p>下面所讲的配置最好在Docker安装完之后马上做，如果已经有容器运行了，那么先stop掉所有容器，然后再做。</p>
-
 <p>修改完之后重启Docker daemon，比如在Ubuntu 16.04下：<code>sudo systemctl restart docker.service</code>。</p>
-
 <p>然后执行<code>docker info</code>来验证配置是否生效。</p>
-
 <h2 id="1-当前用户添加到docker用户组">1. 当前用户添加到docker用户组</h2>
-
 <p>执行<code>sudo usermod -aG docker $USER</code>将当前用户添加到docker用户组。</p>
-
 <p>执行完成后重新登录服务器，你所登录的用户就能够执行docker命令了。</p>
-
 <h2 id="2-registry-mirrors">2. <code>registry-mirrors</code></h2>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-json" data-lang="json">{
   <span style="color:#f92672">&#34;registry-mirrors&#34;</span>: []
-}</code></pre></div>
-<p>此参数配置的是Docker registry的镜像网站，国内访问docker hub有时候会抽风，所以配置一个国内的镜像网站能够加速Docker image的下载。</p>
-
+}
+</code></pre></div><p>此参数配置的是Docker registry的镜像网站，国内访问docker hub有时候会抽风，所以配置一个国内的镜像网站能够加速Docker image的下载。</p>
 <p>可以使用<a href="https://www.daocloud.io/mirror#accelerator-doc">Daocloud加速器</a>（需注册，使用免费）或者其他云厂商提供的免费的加速服务。它们的原理就是修改<code>registry-mirrors</code>参数。</p>
-
 <h2 id="3-dns">3. <code>dns</code></h2>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-json" data-lang="json">{
   <span style="color:#f92672">&#34;dns&#34;</span>: []
-}</code></pre></div>
-<p>Docker内置了一个DNS Server，它用来做两件事情：</p>
-
+}
+</code></pre></div><p>Docker内置了一个DNS Server，它用来做两件事情：</p>
 <ol>
 <li>解析docker network里的容器或Service的IP地址</li>
 <li>把解析不了的交给外部DNS Server解析（<code>dns</code>参数设定的地址）</li>
 </ol>
-
 <p>默认情况下，<code>dns</code>参数值为Google DNS nameserver：<code>8.8.8.8</code>和<code>8.8.4.4</code>。我们得改成国内的DNS地址，比如：</p>
-
 <ol>
 <li><code>1.2.4.8</code></li>
 <li>阿里DNS：<code>223.5.5.5</code>和<code>223.6.6.6</code></li>
 <li>114DNS：<code>114.114.114.114</code>和<code>114.114.115.115</code></li>
 </ol>
-
 <p>比如：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-json" data-lang="json">{
   <span style="color:#f92672">&#34;dns&#34;</span>: [<span style="color:#e6db74">&#34;223.5.5.5&#34;</span>, <span style="color:#e6db74">&#34;223.6.6.6&#34;</span>]
-}</code></pre></div>
-<h2 id="4-log-driver">4. <code>log-driver</code></h2>
-
+}
+</code></pre></div><h2 id="4-log-driver">4. <code>log-driver</code></h2>
 <p><a href="https://docs.docker.com/config/containers/logging/configure/">Log driver</a>是Docker用来接收来自容器内部<code>stdout/stderr</code>的日志的模块，Docker默认的log driver是<a href="https://docs.docker.com/config/containers/logging/json-file/">JSON File logging driver</a>。这里只讲<code>json-file</code>的配置，其他的请查阅相关文档。</p>
-
 <p><code>json-file</code>会将容器日志存储在docker host machine的<code>/var/lib/docker/containers/&lt;container id&gt;/&lt;container id&gt;-json.log</code>（需要root权限才能够读），既然日志是存在磁盘上的，那么就要磁盘消耗的问题。下面介绍两个关键参数：</p>
-
 <ol>
 <li><code>max-size</code>，单个日志文件最大尺寸，当日志文件超过此尺寸时会滚动，即不再往这个文件里写，而是写到一个新的文件里。默认值是-1，代表无限。</li>
 <li><code>max-files</code>，最多保留多少个日志文件。默认值是1。</li>
 </ol>
-
 <p>根据服务器的硬盘尺寸设定合理大小，比如：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-json" data-lang="json">{
   <span style="color:#f92672">&#34;log-driver&#34;</span>: <span style="color:#e6db74">&#34;json-file&#34;</span>,
@@ -322,74 +297,63 @@
     <span style="color:#f92672">&#34;max-size&#34;</span>: <span style="color:#e6db74">&#34;100m&#34;</span>,
     <span style="color:#f92672">&#34;max-files&#34;</span>:<span style="color:#e6db74">&#34;5&#34;</span>
   }
-}</code></pre></div>
-<h2 id="5-storage-driver">5. <code>storage-driver</code></h2>
-
+}
+</code></pre></div><h2 id="5-storage-driver">5. <code>storage-driver</code></h2>
 <p>Docker推荐使用<a href="https://docs.docker.com/storage/storagedriver/overlayfs-driver/#configure-docker-with-the-overlay-or-overlay2-storage-driver">overlay2</a>作为Storage driver。你可以通过<code>docker info | grep Storage</code>来确认一下当前使用的是什么：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ docker info | grep <span style="color:#e6db74">&#39;Storage&#39;</span>
-Storage Driver: overlay2</code></pre></div>
-<p>如果结果不是overlay2，那你就需要配置一下了：</p>
+Storage Driver: overlay2
+</code></pre></div><p>如果结果不是overlay2，那你就需要配置一下了：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-json" data-lang="json">{
   <span style="color:#f92672">&#34;storage-driver&#34;</span>: <span style="color:#e6db74">&#34;overlay2&#34;</span>
-}</code></pre></div>
-<h2 id="6-bridge网络的-mtu">6. bridge网络的<code>mtu</code></h2>
-
+}
+</code></pre></div><h2 id="6-bridge网络的mtu">6. bridge网络的<code>mtu</code></h2>
 <p><strong>如果docker host machine的网卡MTU为1500，则不需要此步骤</strong></p>
-
 <p>MTU是一个很容易被忽略的参数，Docker默认的MTU是1500，这也是大多数网卡的MTU值。但是！在虚拟化环境下，docker host machine网卡的MTU可能不是1500，比如在openstack创建的虚拟的网卡的MTU是1450：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ ip link
-<span style="color:#ae81ff">1</span>: ens3: &lt;BROADCAST,MULTICAST,UP,LOWER_UP&gt; mtu <span style="color:#ae81ff">1450</span> qdisc pfifo_fast state UP mode DEFAULT group default qlen <span style="color:#ae81ff">1000</span>
-    link/ether fa:16:3e:71:09:f5 brd ff:ff:ff:ff:ff:ff</code></pre></div>
-<p>也可以通过下列命令观察<code>bridge</code>网络的MTU：</p>
+1: ens3: &lt;BROADCAST,MULTICAST,UP,LOWER_UP&gt; mtu <span style="color:#ae81ff">1450</span> qdisc pfifo_fast state UP mode DEFAULT group default qlen <span style="color:#ae81ff">1000</span>
+    link/ether fa:16:3e:71:09:f5 brd ff:ff:ff:ff:ff:ff
+</code></pre></div><p>也可以通过下列命令观察<code>bridge</code>网络的MTU：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ docker network inspect -f <span style="color:#e6db74">&#39;{{json .Options}}&#39;</span> bridge
 
-<span style="color:#f92672">{</span><span style="color:#e6db74">&#34;com.docker.network.bridge.default_bridge&#34;</span>:<span style="color:#e6db74">&#34;true&#34;</span>,<span style="color:#e6db74">&#34;com.docker.network.bridge.enable_icc&#34;</span>:<span style="color:#e6db74">&#34;true&#34;</span>,<span style="color:#e6db74">&#34;com.docker.network.bridge.enable_ip_masquerade&#34;</span>:<span style="color:#e6db74">&#34;true&#34;</span>,<span style="color:#e6db74">&#34;com.docker.network.bridge.host_binding_ipv4&#34;</span>:<span style="color:#e6db74">&#34;0.0.0.0&#34;</span>,<span style="color:#e6db74">&#34;com.docker.network.bridge.name&#34;</span>:<span style="color:#e6db74">&#34;docker0&#34;</span>,<span style="color:#e6db74">&#34;com.docker.network.driver.mtu&#34;</span>:<span style="color:#e6db74">&#34;1500&#34;</span><span style="color:#f92672">}</span></code></pre></div>
-<p>当Docker网络的MTU比docker host machine网卡MTU大的时候可能会发生：</p>
-
+<span style="color:#f92672">{</span><span style="color:#e6db74">&#34;com.docker.network.bridge.default_bridge&#34;</span>:<span style="color:#e6db74">&#34;true&#34;</span>,<span style="color:#e6db74">&#34;com.docker.network.bridge.enable_icc&#34;</span>:<span style="color:#e6db74">&#34;true&#34;</span>,<span style="color:#e6db74">&#34;com.docker.network.bridge.enable_ip_masquerade&#34;</span>:<span style="color:#e6db74">&#34;true&#34;</span>,<span style="color:#e6db74">&#34;com.docker.network.bridge.host_binding_ipv4&#34;</span>:<span style="color:#e6db74">&#34;0.0.0.0&#34;</span>,<span style="color:#e6db74">&#34;com.docker.network.bridge.name&#34;</span>:<span style="color:#e6db74">&#34;docker0&#34;</span>,<span style="color:#e6db74">&#34;com.docker.network.driver.mtu&#34;</span>:<span style="color:#e6db74">&#34;1500&#34;</span><span style="color:#f92672">}</span>
+</code></pre></div><p>当Docker网络的MTU比docker host machine网卡MTU大的时候可能会发生：</p>
 <ol>
 <li>容器外出通信失败</li>
 <li>影响网络性能</li>
 </ol>
-
 <p>所以将Docker网络MTU设置成和host machine网卡保持一致就行了，比如：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-json" data-lang="json">{
   <span style="color:#f92672">&#34;mtu&#34;</span>: <span style="color:#ae81ff">1450</span>
-}</code></pre></div>
-<p>验证：</p>
+}
+</code></pre></div><p>验证：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ ip link
-<span style="color:#ae81ff">3</span>: docker0: &lt;NO-CARRIER,BROADCAST,MULTICAST,UP&gt; mtu <span style="color:#ae81ff">1500</span> qdisc noqueue state DOWN mode DEFAULT group default
-    link/ether <span style="color:#ae81ff">02</span>:42:6b:de:95:71 brd ff:ff:ff:ff:ff:ff</code></pre></div>
-<p>注意到docker0的MTU还是1500，不用惊慌，创建一个容器再观察就变成1450了（下面的veth是容器的虚拟网卡设备）：</p>
+3: docker0: &lt;NO-CARRIER,BROADCAST,MULTICAST,UP&gt; mtu <span style="color:#ae81ff">1500</span> qdisc noqueue state DOWN mode DEFAULT group default
+    link/ether 02:42:6b:de:95:71 brd ff:ff:ff:ff:ff:ff
+</code></pre></div><p>注意到docker0的MTU还是1500，不用惊慌，创建一个容器再观察就变成1450了（下面的veth是容器的虚拟网卡设备）：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ docker run -itd --name busybox --rm busybox
 $ ip link
-<span style="color:#ae81ff">3</span>: docker0: &lt;BROADCAST,MULTICAST,UP,LOWER_UP&gt; mtu <span style="color:#ae81ff">1450</span> qdisc noqueue state UP mode DEFAULT group default
-    link/ether <span style="color:#ae81ff">02</span>:42:6b:de:95:71 brd ff:ff:ff:ff:ff:ff
-<span style="color:#ae81ff">268</span>: vethdf32b1b@if267: &lt;BROADCAST,MULTICAST,UP,LOWER_UP&gt; mtu <span style="color:#ae81ff">1450</span> qdisc noqueue master docker0 state UP mode DEFAULT group default
-    link/ether 1a:d3:8a:3e:d3:dd brd ff:ff:ff:ff:ff:ff link-netnsid <span style="color:#ae81ff">2</span></code></pre></div>
-<p>在到容器里看看它的网卡，MTU也是1450：</p>
+3: docker0: &lt;BROADCAST,MULTICAST,UP,LOWER_UP&gt; mtu <span style="color:#ae81ff">1450</span> qdisc noqueue state UP mode DEFAULT group default
+    link/ether 02:42:6b:de:95:71 brd ff:ff:ff:ff:ff:ff
+268: vethdf32b1b@if267: &lt;BROADCAST,MULTICAST,UP,LOWER_UP&gt; mtu <span style="color:#ae81ff">1450</span> qdisc noqueue master docker0 state UP mode DEFAULT group default
+    link/ether 1a:d3:8a:3e:d3:dd brd ff:ff:ff:ff:ff:ff link-netnsid <span style="color:#ae81ff">2</span>
+</code></pre></div><p>在到容器里看看它的网卡，MTU也是1450：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ docker exec busybox ip link
-<span style="color:#ae81ff">267</span>: eth0@if268: &lt;BROADCAST,MULTICAST,UP,LOWER_UP,M-DOWN&gt; mtu <span style="color:#ae81ff">1450</span> qdisc noqueue
-    link/ether <span style="color:#ae81ff">02</span>:42:ac:11:00:02 brd ff:ff:ff:ff:ff:ff</code></pre></div>
-<h2 id="7-bridge网络的子网">7. bridge网络的子网</h2>
-
+267: eth0@if268: &lt;BROADCAST,MULTICAST,UP,LOWER_UP,M-DOWN&gt; mtu <span style="color:#ae81ff">1450</span> qdisc noqueue
+    link/ether 02:42:ac:11:00:02 brd ff:ff:ff:ff:ff:ff
+</code></pre></div><h2 id="7-bridge网络的子网">7. bridge网络的子网</h2>
 <p>观察默认<code>bridge</code>的子网是否与已有网络冲突：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ docker network inspect -f <span style="color:#e6db74">&#39;{{json .IPAM}}&#39;</span> bridge
 
-<span style="color:#f92672">{</span><span style="color:#e6db74">&#34;Driver&#34;</span>:<span style="color:#e6db74">&#34;default&#34;</span>,<span style="color:#e6db74">&#34;Options&#34;</span>:null,<span style="color:#e6db74">&#34;Config&#34;</span>:<span style="color:#f92672">[{</span><span style="color:#e6db74">&#34;Subnet&#34;</span>:<span style="color:#e6db74">&#34;172.17.0.0/16&#34;</span>,<span style="color:#e6db74">&#34;Gateway&#34;</span>:<span style="color:#e6db74">&#34;172.17.0.1&#34;</span><span style="color:#f92672">}]}</span></code></pre></div>
-<p>如果有则参考<a href="https://docs.docker.com/network/bridge/#configure-the-default-bridge-network">Configure the default bridge network</a>（可忽略IPv6部分的配置）。</p>
-
+<span style="color:#f92672">{</span><span style="color:#e6db74">&#34;Driver&#34;</span>:<span style="color:#e6db74">&#34;default&#34;</span>,<span style="color:#e6db74">&#34;Options&#34;</span>:null,<span style="color:#e6db74">&#34;Config&#34;</span>:<span style="color:#f92672">[{</span><span style="color:#e6db74">&#34;Subnet&#34;</span>:<span style="color:#e6db74">&#34;172.17.0.0/16&#34;</span>,<span style="color:#e6db74">&#34;Gateway&#34;</span>:<span style="color:#e6db74">&#34;172.17.0.1&#34;</span><span style="color:#f92672">}]}</span>
+</code></pre></div><p>如果有则参考<a href="https://docs.docker.com/network/bridge/#configure-the-default-bridge-network">Configure the default bridge network</a>（可忽略IPv6部分的配置）。</p>
 <h2 id="8-live-restore">8. live restore</h2>
-
 <p>开启live restore特性能够在Docker daemon停止的时候依旧让容器保持运行。</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-json" data-lang="json">{
   <span style="color:#f92672">&#34;live-restore&#34;</span>: <span style="color:#66d9ef">true</span>
-}</code></pre></div>
-<p>注意：在Daemon停机期间，容器的日志被暂存在一个缓冲区中，如果缓冲区满了（默认大小64K），则容器就会被阻塞住。</p>
-
+}
+</code></pre></div><p>注意：在Daemon停机期间，容器的日志被暂存在一个缓冲区中，如果缓冲区满了（默认大小64K），则容器就会被阻塞住。</p>
 <p>本特性不支持，对Docker daemon做major或minor升级所引起的daemon停机。</p>
-
 <h2 id="参考资料">参考资料</h2>
-
 <ul>
 <li><a href="https://docs.docker.com/engine/reference/commandline/dockerd/">Daemon CLI</a></li>
 <li><a href="https://docs.docker.com/config/containers/logging/configure/">Configure logging drivers</a></li>
@@ -408,7 +372,7 @@ $ ip link
       </ul>
       
       <p class="post-copyright">
-        This post was published <strong>432</strong> days ago, content in the post may be inaccurate, even wrong now, please take risk yourself.
+        This post was published <strong>441</strong> days ago, content in the post may be inaccurate, even wrong now, please take risk yourself.
       </p>
     </footer>
     

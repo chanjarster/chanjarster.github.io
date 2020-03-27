@@ -17,7 +17,6 @@
   
   <meta name="author" content="颇忒脱" />
   <meta name="description" content="当JVM时区和数据库时区不一致的时候，会发生什么？这个问题也许你从来没有注意过，但是当把Java程序容器化的时候，问题就浮现出来了，因为目前几乎所有的Docker Image的时区都是UTC。本文探究了MySQL及其JDBC驱动对于时区的处理方式，并尝试给出最佳实践。
-
 " />
 
   
@@ -26,7 +25,6 @@
     <meta name="twitter:site" content="@gohugoio" />
     <meta name="twitter:title" content="数据库时区那些事儿 - MySQL的时区处理" />
     <meta name="twitter:description" content="当JVM时区和数据库时区不一致的时候，会发生什么？这个问题也许你从来没有注意过，但是当把Java程序容器化的时候，问题就浮现出来了，因为目前几乎所有的Docker Image的时区都是UTC。本文探究了MySQL及其JDBC驱动对于时区的处理方式，并尝试给出最佳实践。
-
 " />
     <meta name="twitter:image" content="https://chanjarster.github.io/img/avatar.jpg" />
   
@@ -35,7 +33,6 @@
   <meta property="og:type" content="article" />
   <meta property="og:title" content="数据库时区那些事儿 - MySQL的时区处理" />
   <meta property="og:description" content="当JVM时区和数据库时区不一致的时候，会发生什么？这个问题也许你从来没有注意过，但是当把Java程序容器化的时候，问题就浮现出来了，因为目前几乎所有的Docker Image的时区都是UTC。本文探究了MySQL及其JDBC驱动对于时区的处理方式，并尝试给出最佳实践。
-
 " />
   <meta property="og:url" content="https://chanjarster.github.io/post/mysql-timezone/" />
   <meta property="og:image" content="https://chanjarster.github.io/img/avatar.jpg" />
@@ -43,7 +40,7 @@
 
 
 
-<meta name="generator" content="Hugo 0.49.2" />
+<meta name="generator" content="Hugo 0.68.1" />
 
 
 <link rel="canonical" href="https://chanjarster.github.io/post/mysql-timezone/" />
@@ -252,27 +249,20 @@
       <p class="post-meta">@颇忒脱 · Sep 17, 2018 · 2 min read</p>
     </header>
     <article class="post-content"><p>当JVM时区和数据库时区不一致的时候，会发生什么？这个问题也许你从来没有注意过，但是当把Java程序容器化的时候，问题就浮现出来了，因为目前几乎所有的Docker Image的时区都是UTC。本文探究了MySQL及其JDBC驱动对于时区的处理方式，并尝试给出最佳实践。</p>
-
-<p></p>
-
 <h2 id="先给总结">先给总结</h2>
-
 <ul>
 <li><code>DATE</code>和<code>TIME</code>类型不支持时区转换。</li>
 <li>对于<code>TIMESTAMP</code>类型，MySQL会正确的根据connection时区（对于JDBC来说就是JVM时区）/服务端时区做转换。
-
 <ul>
 <li>JDBC程序不需要特别注意什么事情。只要保证JVM时区和用户所在时区保持一致即可。</li>
-</ul></li>
+</ul>
+</li>
 <li>不要在服务器端做日期时间的字符串格式化（<code>DATE_FORMAT()</code>），因为返回的结果是服务端的时区，而不是connection的时区（对于JDBC来说就是JVM时区）。</li>
 <li><code>CURRENT_TIMESTAMP()</code>, <code>CURRENT_TIME()</code>, <code>CURRENT_DATE()</code>可以安全的使用，返回的结果会转换成connection时区（对于JDBC来说就是JVM时区）。</li>
 <li><code>CURRENT_TIME()</code>有一个不知道是不是BUG的<a href="https://bugs.mysql.com/bug.php?id=92453">Bug #92453</a>。</li>
 </ul>
-
 <h2 id="日期时间类型的时区">日期时间类型的时区</h2>
-
 <p><a href="https://dev.mysql.com/doc/refman/8.0/en/datetime.html">MySQL - The DATE, DATETIME, and TIMESTAMP Types</a>：</p>
-
 <blockquote>
 <p>MySQL converts <code>TIMESTAMP</code> values from the current time zone to UTC for storage, and back from UTC to the
 current time zone for retrieval. (This does not occur for other types such as <code>DATETIME</code>.)
@@ -283,32 +273,27 @@ If you store a <code>TIMESTAMP</code> value, and then change the time zone and r
 is different from the value you stored. This occurs because the same time zone was not used for conversion
 in both directions.</p>
 </blockquote>
-
 <p>简而言之就是两句话：</p>
-
 <ol>
 <li>查询<code>TIMESTAMP</code>类型所返回的值，会根据connection的时区（对于JDBC来说就是JVM时区）做转换</li>
 <li>在MySQL中只有<code>TIMESTAMP</code>类型会做时区转换</li>
 </ol>
-
 <p>为了验证这个结论，我写了一段程序来实验，这个程序做了三件事情：</p>
-
 <ol>
 <li>使用<code>Asia/Shanghai</code>时区构造一个日期<code>java.util.Date</code>：<code>2018-09-14 10:00:00</code>，然后插入到数据库里（表：test，列：timestamp类型）</li>
 <li>使用<code>Asia/Shanghai</code>时区把这个值再查出来，看看结果。</li>
 <li>使用<code>Asia/Shanghai</code>时区，获得这个字段的格式化字符串（使用<code>DATE_FORMAT()</code>函数）。</li>
 <li>使用<code>Europe/Paris</code>时区重复第2-3步的动作</li>
 </ol>
-
 <p>在运行程序之前，我们先用Docker启动一个MySQL，它所在的MySQL的时区是UTC（除非特别设定，所有Docker Image时区都默认为UTC）：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">docker run --name mysql-timezone-test <span style="color:#ae81ff">\
 </span><span style="color:#ae81ff"></span>  -e MYSQL_RANDOM_ROOT_PASSWORD<span style="color:#f92672">=</span>yes <span style="color:#ae81ff">\
 </span><span style="color:#ae81ff"></span>  -e MYSQL_DATABASE<span style="color:#f92672">=</span>testdb <span style="color:#ae81ff">\
 </span><span style="color:#ae81ff"></span>  -e MYSQL_USER<span style="color:#f92672">=</span>tz <span style="color:#ae81ff">\
 </span><span style="color:#ae81ff"></span>  -e MYSQL_PASSWORD<span style="color:#f92672">=</span>tz <span style="color:#ae81ff">\
-</span><span style="color:#ae81ff"></span>  -p <span style="color:#ae81ff">3306</span>:3306 <span style="color:#ae81ff">\
-</span><span style="color:#ae81ff"></span>  -d mysql:8</code></pre></div>
-<p>下面是结果：</p>
+</span><span style="color:#ae81ff"></span>  -p 3306:3306 <span style="color:#ae81ff">\
+</span><span style="color:#ae81ff"></span>  -d mysql:8
+</code></pre></div><p>下面是结果：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-txt" data-lang="txt">Insert data, Time Zone        : 中国标准时间
 java.util.Date                : 2018-09-14 10:00:00
 Insert into timestamp column  : 2018-09-14 10:00:00
@@ -319,22 +304,16 @@ Retrieve formatted string     : 2018-09-14 02:00:00
 --------------------
 Retrieve data, Time Zone      : 中欧时间
 Retrieve java.util.Date       : 2018-09-14 04:00:00
-Retrieve formatted string     : 2018-09-14 02:00:00</code></pre></div>
-<p>可以看到<code>Retrieve java.util.Date</code>返回的结果根据JVM时区做了转换的。而<code>Retrieve formatted string</code>返回的结果则是UTC时间。</p>
-
+Retrieve formatted string     : 2018-09-14 02:00:00
+</code></pre></div><p>可以看到<code>Retrieve java.util.Date</code>返回的结果根据JVM时区做了转换的。而<code>Retrieve formatted string</code>返回的结果则是UTC时间。</p>
 <h2 id="当前日期时间相关函数">当前日期时间相关函数</h2>
-
-<p>MySQL与&rdquo;当前日期时间&rdquo;相关的函数有这么些，<a href="https://dev.mysql.com/doc/refman/8.0/en/date-and-time-functions.html">MySQL - Date and Time Functions</a>：</p>
-
+<p>MySQL与&quot;当前日期时间&quot;相关的函数有这么些，<a href="https://dev.mysql.com/doc/refman/8.0/en/date-and-time-functions.html">MySQL - Date and Time Functions</a>：</p>
 <blockquote>
 <p>The <code>CURRENT_TIMESTAMP()</code>, <code>CURRENT_TIME()</code>, <code>CURRENT_DATE()</code>, and <code>FROM_UNIXTIME()</code> functions return values
 in the connection&rsquo;s current time zone, which is available as the value of the time_zone system variable.</p>
 </blockquote>
-
 <p>而且根据文档所讲，它们返回的结果匹配当前连接所设定的时区。</p>
-
 <p>为了验证这个结论，同样写了一段程序，分别使用<code>Asia/Shanghai</code>和<code>Europe/Paris</code>来调用<code>CURRENT_TIMESTAMP()</code>、<code>CURRENT_TIME()</code>、<code>CURRENT_DATE()</code>。</p>
-
 <p>下面是运行结果：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-txt" data-lang="txt">JVM Time Zone              : 中国标准时间
 Test CURRENT_DATE()        : 2018-09-18
@@ -344,29 +323,22 @@ Test CURRENT_TIMESTAMP()   : 2018-09-18 10:55:41.0
 JVM Time Zone              : 中欧时间
 Test CURRENT_DATE()        : 2018-09-18
 Test CURRENT_TIME()        : 03:56:02
-Test CURRENT_TIMESTAMP()   : 2018-09-18 04:56:02.0</code></pre></div>
-<p>可以看到结果是基本符合文档里的说明的，但是要注意，在<code>Europe/Paris</code>时区，<code>CURRENT_TIME()</code>和<code>CURRENT_TIMESTAMP()</code>的时间部分相差一小时。
+Test CURRENT_TIMESTAMP()   : 2018-09-18 04:56:02.0
+</code></pre></div><p>可以看到结果是基本符合文档里的说明的，但是要注意，在<code>Europe/Paris</code>时区，<code>CURRENT_TIME()</code>和<code>CURRENT_TIMESTAMP()</code>的时间部分相差一小时。
 看上去<code>CURRENT_TIMESTAMP()</code>返回的是UTC DST offset结果，而<code>CURRENT_TIME()</code>返回的是UTC offset结果，关于这个我登记了<a href="https://bugs.mysql.com/bug.php?id=92453">Bug #92453</a>。
 关于<code>Europe/Paris</code>的DST信息可以在这里找到<a href="https://en.wikipedia.org/wiki/List_of_tz_database_time_zones">Wiki - List of tz database time zones</a>。</p>
-
 <h2 id="在mysql客户端操作时区">在MySQL客户端操作时区</h2>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#75715e">-- 查询系统时区和session时区
 </span><span style="color:#75715e"></span><span style="color:#66d9ef">SELECT</span> <span style="color:#f92672">@@</span><span style="color:#66d9ef">global</span>.time_zone, <span style="color:#f92672">@@</span><span style="color:#66d9ef">session</span>.time_zone;
 
 <span style="color:#75715e">-- 设置session时区
-</span><span style="color:#75715e"></span><span style="color:#66d9ef">SET</span> time_zone <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39;Asia/Shanghai&#39;</span>;</code></pre></div>
-<p>详见：<a href="https://dev.mysql.com/doc/refman/8.0/en/time-zone-support.html">MySQL Server Time Zone Support</a></p>
-
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">SET</span> time_zone <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39;Asia/Shanghai&#39;</span>;
+</code></pre></div><p>详见：<a href="https://dev.mysql.com/doc/refman/8.0/en/time-zone-support.html">MySQL Server Time Zone Support</a></p>
 <h2 id="docker启动时设定时区">Docker启动时设定时区</h2>
-
-<p><del>你可以在docker启动的时候设定MySQL容器的时区，比如这样<code>-e TZ=Asia/Shanghai</code>。</del></p>
-
+<p><!-- raw HTML omitted -->你可以在docker启动的时候设定MySQL容器的时区，比如这样<code>-e TZ=Asia/Shanghai</code>。<!-- raw HTML omitted --></p>
 <p>这个方法有问题，会出现时间错乱，workaround是root用户连接到MySQL，然后执行<code>SET GLOBAL time_zone = 'Asia/Shanghai';</code>。</p>
-
 <p>这样客户端（非JDBC）连接MySQL时，查询的时间的时区都是<code>Asia/Shanghai</code>了。</p>
-
 <h2 id="参考资料">参考资料</h2>
-
 <ul>
 <li><a href="https://dev.mysql.com/doc/refman/8.0/en/datetime.html">MySQL - The DATE, DATETIME, and TIMESTAMP Types</a></li>
 <li><a href="https://dev.mysql.com/doc/refman/8.0/en/date-and-time-functions.html">MySQL - Date and Time Functions</a></li>
@@ -374,9 +346,7 @@ Test CURRENT_TIMESTAMP()   : 2018-09-18 04:56:02.0</code></pre></div>
 <li><a href="https://en.wikipedia.org/wiki/List_of_tz_database_time_zones">Wiki - List of tz database time zones</a></li>
 <li><a href="https://www.w3.org/TR/timezone/">W3C- Working with timezone</a></li>
 </ul>
-
 <h2 id="相关代码">相关代码</h2>
-
 <p><a href="https://github.com/chanjarster/jdbc-timezone">https://github.com/chanjarster/jdbc-timezone</a></p></article>
     <footer class="post-footer">
       
@@ -391,7 +361,7 @@ Test CURRENT_TIMESTAMP()   : 2018-09-18 04:56:02.0</code></pre></div>
       </ul>
       
       <p class="post-copyright">
-        This post was published <strong>547</strong> days ago, content in the post may be inaccurate, even wrong now, please take risk yourself.
+        This post was published <strong>556</strong> days ago, content in the post may be inaccurate, even wrong now, please take risk yourself.
       </p>
     </footer>
     

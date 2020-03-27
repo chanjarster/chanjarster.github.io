@@ -16,31 +16,28 @@
 
   
   <meta name="author" content="颇忒脱" />
-  <meta name="description" content="
-" />
+  <meta name="description" content="" />
 
   
   
     <meta name="twitter:card" content="summary" />
     <meta name="twitter:site" content="@gohugoio" />
     <meta name="twitter:title" content="What every programmer should know about memory, Part 3: Virtual Memory" />
-    <meta name="twitter:description" content="
-" />
+    <meta name="twitter:description" content="" />
     <meta name="twitter:image" content="https://chanjarster.github.io/img/avatar.jpg" />
   
 
   
   <meta property="og:type" content="article" />
   <meta property="og:title" content="What every programmer should know about memory, Part 3: Virtual Memory" />
-  <meta property="og:description" content="
-" />
+  <meta property="og:description" content="" />
   <meta property="og:url" content="https://chanjarster.github.io/post/kernel/know-memory-cpu-virtual-memory/" />
   <meta property="og:image" content="https://chanjarster.github.io/img/avatar.jpg" />
 
 
 
 
-<meta name="generator" content="Hugo 0.49.2" />
+<meta name="generator" content="Hugo 0.68.1" />
 
 
 <link rel="canonical" href="https://chanjarster.github.io/post/kernel/know-memory-cpu-virtual-memory/" />
@@ -248,34 +245,20 @@
       <h1 class="post-title">What every programmer should know about memory, Part 3: Virtual Memory</h1>
       <p class="post-meta">@颇忒脱 · Mar 10, 2019 · 2 min read</p>
     </header>
-    <article class="post-content"><p></p>
-
-<p>原文：<a href="https://lwn.net/Articles/253361/">What every programmer should know about memory, Part 3: Virtual Memory</a></p>
-
+    <article class="post-content"><p>原文：<a href="https://lwn.net/Articles/253361/">What every programmer should know about memory, Part 3: Virtual Memory</a></p>
 <h1 id="4-virtual-memory">4 Virtual Memory</h1>
-
 <p>虚拟内存（virtual memory）是处理器的一个子系统，它给<strong>每个进程</strong>提供虚拟地址空间（virtual address space）。这让每个进程以为自己在系统中是独自一人。</p>
-
 <p><a href="https://en.wikipedia.org/wiki/Virtual_memory">wiki词条</a>：</p>
-
 <blockquote>
 <p>虚拟内存的作用在于为进程提供“看上去”连续的地址空间，这么做的好处在于程序不需要处理内存碎片的问题了。</p>
 </blockquote>
-
 <p>虚拟地址空间由CPU的Memory Management Unit（MMU）实现，操作系统必须填写页表数据结构（page table data structures，见<a href="https://en.wikipedia.org/wiki/Page_table">wiki词条</a>），大多数CPU自己完成余下的工作。</p>
-
 <p>把虚拟地址（virtual address）作为输入交给MMU做翻译。在32位系统中虚拟地址是32位的，在64位系统中是64位的。</p>
-
-<h2 id="4-1-simplest-address-translation">4.1 Simplest Address Translation</h2>
-
+<h2 id="41-simplest-address-translation">4.1 Simplest Address Translation</h2>
 <p>MMU可以逐页（page）的将虚拟地址翻译成物理地址的，和cache line一样，虚拟地址被分割成多个部分，这些部分则被索引到不同的表（table）里，这些表用来构造最终的物理地址。最简单的模型则只拥有一个级别的表（only one level of tables）。</p>
-
-<p><img src="https://static.lwn.net/images/cpumemory/cpumemory.18.png" alt="" /></p>
-
+<p><img src="https://static.lwn.net/images/cpumemory/cpumemory.18.png" alt=""></p>
 <p><strong>Figure 4.1: 1-Level Address Translation</strong></p>
-
 <p>虚拟地址的结构：</p>
-
 <ul>
 <li>虚拟地址的头部被用来在一个页目录（Page Directory）中选择条目（entry），</li>
 <li>页目录中存储的是条目（entry），每个条目可由操作系统单独设置。</li>
@@ -284,58 +267,41 @@
 <li>所以页的物理地址+偏移量=物理地址</li>
 <li>页目录的条目还包含一些辅助信息，比如访问权限</li>
 </ul>
-
 <p>页目录的存储：</p>
-
 <ul>
 <li>页目录是存在内存里的，</li>
 <li>操纵系统为其分配一段连续的物理内存空间，并将基地址（base address）存在一个特殊的寄存器里</li>
 <li>而条目在目录里就是一个数组（记住这是数组，这对于理解下面多级目录，多级索引很重要）</li>
 </ul>
-
 <p>先弄个速算表，下面会用得着：</p>
-
 <ul>
-<li>2<sup>9</sup>=512</li>
-<li>2<sup>10</sup>=512 * 2=1024=1K</li>
-<li>2<sup>20</sup>=1024 * 1024=1MB</li>
+<li>2<!-- raw HTML omitted -->9<!-- raw HTML omitted -->=512</li>
+<li>2<!-- raw HTML omitted -->10<!-- raw HTML omitted -->=512 * 2=1024=1K</li>
+<li>2<!-- raw HTML omitted -->20<!-- raw HTML omitted -->=1024 * 1024=1MB</li>
 </ul>
-
 <p>拿x86系统，4MB页举例：</p>
-
 <ul>
 <li>虚拟地址的偏移量部分占用22位（可以覆盖4MB的空间）</li>
 <li>目录部分则还剩10位，即可以存放1024个条目</li>
 <li>每个条目存了10位的物理页内存的基地址</li>
 <li>10位+22位=32位，形成了完整的物理内存地址</li>
 </ul>
-
-<h2 id="4-2-multi-level-page-tables">4.2 Multi-Level Page Tables</h2>
-
+<h2 id="42-multi-level-page-tables">4.2 Multi-Level Page Tables</h2>
 <p>多级页表（page table），注意原文写到这里用页表（page table）而不是页目录（page directory），这两个实际上是一个东西。</p>
-
 <p>上面的例子拿4MB页来举例的，不过4MB页表不常见，这是因为操作系统执行的很多操作是按照页来对齐的，意思是每个页的基地址之间都差4MB的倍数，就算你要用1k内存也要申请了一个4MB的页，这造成了大量的浪费。</p>
-
 <p>真实世界里32位机器大多用4kB页，同样多见于64位机器。</p>
-
 <p>为啥4kB页，单级页表不行：</p>
-
 <ul>
 <li>虚拟地址偏移量占12位</li>
 <li>虚拟地址页目录部分占20位（64位机器就是52位）</li>
-<li>页表条目数=2<sup>20</sup>，就算每个条目只占4 bytes（32位）那整个页表页要占4MB</li>
+<li>页表条目数=2<!-- raw HTML omitted -->20<!-- raw HTML omitted -->，就算每个条目只占4 bytes（32位）那整个页表页要占4MB</li>
 <li>然后<strong>每个进程会拥有自己的页表</strong>，那么大量的物理内存就会被用在页表上。</li>
 <li>实际上不光是物理内存用量太大的问题，因页表就是一个数组，需要连续的内存空间，到时候很难分配。</li>
 </ul>
-
 <p>解决办法是使用多级页表。它们能够代表一个稀疏的巨大的页表，可以做到对没有被使用的区域（原文没有讲区域是啥）不需要分配内存。这种形式跟为紧凑，可以为许多进程提供页表，同时又不对性能产生太大影响。</p>
-
-<p><img src="https://static.lwn.net/images/cpumemory/cpumemory.19-sm.png" alt="" /></p>
-
+<p><img src="https://static.lwn.net/images/cpumemory/cpumemory.19-sm.png" alt=""></p>
 <p><strong>Figure 4.2: 4-Level Address Translation</strong></p>
-
 <p>上面是一个4级页表：</p>
-
 <ul>
 <li>虚拟地址被分割成5个部分，其中4个部分是不同页表的索引</li>
 <li>第4级页表通过CPU里的一个特殊目的的register来引用</li>
@@ -343,28 +309,24 @@
 <li>第1级页表存储的物理地址的一部分（应该就是去掉偏移量的那一部分）和辅助数据，比如访问权限</li>
 <li>所以整个形成了一个页表树（page table tree），稀疏又紧凑（sparse and compact）</li>
 </ul>
-
 <p>得到物理地址的步骤，Page tree walking：</p>
-
 <ul>
 <li>先从register中得到第4级页表的地址，</li>
 <li>拿到第4级页表
-
 <ul>
 <li>拿虚拟地址中Level 4 Index取得页表中的条目，这个条目里存的是第3级页表的地址</li>
-</ul></li>
+</ul>
+</li>
 <li>拿到第3级页表
-
 <ul>
 <li>拿虚拟地址中Level 3 Index取得页表中的条目，这个条目里存的是第2级页表的地址</li>
-</ul></li>
+</ul>
+</li>
 <li>如此反复直到拿到第1级页表里的条目，这个条目里存的是物理地址的高位部分</li>
 <li>结合虚拟地址中的偏移量，得到最终的物理地址</li>
 <li>Page tree walking在x86、x86-64处理器里是发生在硬件层面的</li>
 </ul>
-
 <p>Page table tree尺寸对性能的影响：</p>
-
 <ul>
 <li>每个进程可能需要自己的page table tree，几个进程共享树的一部分是存在的，但这只是特例。</li>
 <li>如果页表树所需内存越小，那就越有利于性能和扩展性（performance and scalability）</li>
@@ -372,54 +334,42 @@
 <li>举例，4kB/页，512条目/页表，1页表/每级，那么可以寻址2MB连续的地址空间（512*4kB=2MB）</li>
 <li>举例，4kB/页，512条目/页表，4-2级只有1个页表，1级有512个页表，那么可以寻址1GB连续的地址空间（512 * 512 * 4KB=1G）</li>
 </ul>
-
 <p>Page table tree布局：</p>
-
 <ul>
 <li>假设所有内存都能够连续的被分配太过简单了</li>
 <li>比如，出于灵活性的考虑（flexibility），stack和heap分占地址空间的两端，所以极有可能有2个2级页表，每个二级页表有一个1级页表。</li>
 <li>显示中比上面这个更复杂，处于安全性考虑，不同的可执行部分（code、data、heap、stack、DSOs又称共享库）是被影射到随机地址上的。所以进程所使用的不同内存区域是遍布整个虚拟地址空间的。所以一个进程不可能只有一两个2级3级页表的。</li>
 </ul>
-
 <p>个人总结，前面讲的对于多少连续的寻址空间，各级别页表需要多少个是这么计算的：</p>
-
 <ul>
 <li>首先得知道前提，对于4-2级页表，在同一页表内，不同页表条目不会指向同一个下一级页表</li>
 <li>对于1级页表，不同页表条目不会指向相同的物理地址（准确的说是物理地址去掉offset的部分）</li>
 <li>对于4-2级页表，每个页表条目指向一个下级页表，即上级页表条目数目=下级页表数</li>
-<li>假设现在是32位系统，每个页表至多保存2<sup>9</sup>=512个页表项</li>
+<li>假设现在是32位系统，每个页表至多保存2<!-- raw HTML omitted -->9<!-- raw HTML omitted -->=512个页表项</li>
 </ul>
-
 <p>下面举连续的2MB寻址空间（页大小为4kB）：</p>
-
 <ul>
-<li>2MB=2<sup>10</sup> * 2<sup>10</sup> * 2=2<sup>21</sup> bytes</li>
-<li>所以需要：2MB / 4kB = 2<sup>21</sup> / 2<sup>12</sup> = 2<sup>9</sup>个1级页表条目</li>
-<li>所以需要：2<sup>9</sup> / 2<sup>9</sup>=1个一级页表=1个2级页表条目</li>
+<li>2MB=2<!-- raw HTML omitted -->10<!-- raw HTML omitted --> * 2<!-- raw HTML omitted -->10<!-- raw HTML omitted --> * 2=2<!-- raw HTML omitted -->21<!-- raw HTML omitted --> bytes</li>
+<li>所以需要：2MB / 4kB = 2<!-- raw HTML omitted -->21<!-- raw HTML omitted --> / 2<!-- raw HTML omitted -->12<!-- raw HTML omitted --> = 2<!-- raw HTML omitted -->9<!-- raw HTML omitted -->个1级页表条目</li>
+<li>所以需要：2<!-- raw HTML omitted -->9<!-- raw HTML omitted --> / 2<!-- raw HTML omitted -->9<!-- raw HTML omitted -->=1个一级页表=1个2级页表条目</li>
 <li>所以前面说，4kB/页，512条目/页表，1页表/每级，那么可以寻址2MB连续的地址空间</li>
 </ul>
-
 <p>下面举例连续的1GB寻址空间（页大小为4kB）：</p>
-
 <ul>
-<li>1GB=2<sup>10</sup> * 2<sup>10</sup> * 2<sup>10</sup>=2<sup>30</sup> bytes</li>
-<li>所以需要1级页表条目：1GB / 4kB = 2<sup>30</sup> / 2<sup>12</sup>=2<sup>18</sup>个1级页表条目</li>
-<li>所以需要：2<sup>18</sup> / 2<sup>9</sup>=2<sup>9</sup>个1级页表=2<sup>9</sup>个2级页表条目</li>
-<li>所以需要：2<sup>9</sup> / 2<sup>9</sup>=1个2级页表</li>
+<li>1GB=2<!-- raw HTML omitted -->10<!-- raw HTML omitted --> * 2<!-- raw HTML omitted -->10<!-- raw HTML omitted --> * 2<!-- raw HTML omitted -->10<!-- raw HTML omitted -->=2<!-- raw HTML omitted -->30<!-- raw HTML omitted --> bytes</li>
+<li>所以需要1级页表条目：1GB / 4kB = 2<!-- raw HTML omitted -->30<!-- raw HTML omitted --> / 2<!-- raw HTML omitted -->12<!-- raw HTML omitted -->=2<!-- raw HTML omitted -->18<!-- raw HTML omitted -->个1级页表条目</li>
+<li>所以需要：2<!-- raw HTML omitted -->18<!-- raw HTML omitted --> / 2<!-- raw HTML omitted -->9<!-- raw HTML omitted -->=2<!-- raw HTML omitted -->9<!-- raw HTML omitted -->个1级页表=2<!-- raw HTML omitted -->9<!-- raw HTML omitted -->个2级页表条目</li>
+<li>所以需要：2<!-- raw HTML omitted -->9<!-- raw HTML omitted --> / 2<!-- raw HTML omitted -->9<!-- raw HTML omitted -->=1个2级页表</li>
 <li>所以前面说，4kB/页，512条目/页表，4-2级只有1个页表，1级有512个页表，那么可以寻址1GB连续的地址空间（512 * 512 * 4KB=1G）</li>
 </ul>
-
 <p>同理如果是连续的2GB寻址空间（页大小为4kB）：</p>
-
 <ul>
-<li>1GB=2<sup>10</sup> * 2<sup>10</sup> * 2<sup>10</sup> * 2=2<sup>31</sup> bytes</li>
-<li>所以需要：1GB / 4kB = 2<sup>31</sup> / 2<sup>12</sup>=2<sup>19</sup>个1级页表条目</li>
-<li>所以需要：2<sup>19</sup> / 2<sup>9</sup>=2<sup>10</sup>个1级页表=2<sup>10</sup>个2级页表条目</li>
-<li>所以需要：2<sup>10</sup> / 2<sup>9</sup>=2个二级页表=2个3级页表条目</li>
+<li>1GB=2<!-- raw HTML omitted -->10<!-- raw HTML omitted --> * 2<!-- raw HTML omitted -->10<!-- raw HTML omitted --> * 2<!-- raw HTML omitted -->10<!-- raw HTML omitted --> * 2=2<!-- raw HTML omitted -->31<!-- raw HTML omitted --> bytes</li>
+<li>所以需要：1GB / 4kB = 2<!-- raw HTML omitted -->31<!-- raw HTML omitted --> / 2<!-- raw HTML omitted -->12<!-- raw HTML omitted -->=2<!-- raw HTML omitted -->19<!-- raw HTML omitted -->个1级页表条目</li>
+<li>所以需要：2<!-- raw HTML omitted -->19<!-- raw HTML omitted --> / 2<!-- raw HTML omitted -->9<!-- raw HTML omitted -->=2<!-- raw HTML omitted -->10<!-- raw HTML omitted -->个1级页表=2<!-- raw HTML omitted -->10<!-- raw HTML omitted -->个2级页表条目</li>
+<li>所以需要：2<!-- raw HTML omitted -->10<!-- raw HTML omitted --> / 2<!-- raw HTML omitted -->9<!-- raw HTML omitted -->=2个二级页表=2个3级页表条目</li>
 </ul>
-
-<h2 id="4-3-optimizing-page-table-access">4.3 Optimizing Page Table Access</h2>
-
+<h2 id="43-optimizing-page-table-access">4.3 Optimizing Page Table Access</h2>
 <ul>
 <li>所有页表是存在main memory中的，操作系统负责构建和更新页表</li>
 <li>创建进程或更新页表时CPU会收到通知</li>
@@ -427,9 +377,7 @@
 <li>当解析虚拟地址的时候，每级都至少有一个页表在page tree walking中被使用</li>
 <li>所以每次解析虚拟地址要访问4次内存，这很慢</li>
 </ul>
-
 <p>TLB：</p>
-
 <ul>
 <li>现代CPU将虚拟地址的计算结果保存在一个叫做TLB（Tranlsation Look-Aside Buffer）的cache中。</li>
 <li>TLB是一个很小的cache，而且速度极快</li>
@@ -437,17 +385,11 @@
 <li>因为虚拟地址的offset不参与page tree walking，所以使用其余部分作为cache的tag</li>
 <li>通过软件或硬件prefetch code/data会隐式的prefetch TLB条目，如果地址是在另一个page上时</li>
 </ul>
-
-<h3 id="4-3-1-caveats-of-using-a-tlb">4.3.1 Caveats Of Using A TLB</h3>
-
+<h3 id="431-caveats-of-using-a-tlb">4.3.1 Caveats Of Using A TLB</h3>
 <p>讲了几种优化TLB cache flush的手段，不过没有讲现代CPU使用的是哪一种。</p>
-
 <p>个人认为这段不用太仔细读，只需要知道存在一种手段可以最少范围的flush TLB cache entry就行了。</p>
-
-<h3 id="4-3-2-influencing-tlb-performance">4.3.2 Influencing TLB Performance</h3>
-
+<h3 id="432-influencing-tlb-performance">4.3.2 Influencing TLB Performance</h3>
 <p>使用大页：</p>
-
 <ul>
 <li>页尺寸越大，则页表需要存储的条目就越少，则需要做的虚拟地址-&gt;物理地址翻译工作就越少，则需要TLB的条目就越少。有些x86/x86-64支持4kB、2MB、4MB的页尺寸。</li>
 <li>不过大页存在问题，给大页使用的内存区域必须是连续的。</li>
@@ -456,9 +398,7 @@
 <li>Linux系统在操作系统启动时遇险分配了一块内存区域存放大页（<code>hugetlbs</code>文件系统），固定数量的物理页被保留给虚拟大页使用。</li>
 <li>所以大页适合在以下场景：性能优先、资源充足、不怕配置繁琐，比如数据库应用。</li>
 </ul>
-
 <p>提高虚拟页最小尺寸（前面讲的大页是可选的）也会产生问题：</p>
-
 <ul>
 <li>内存影射操作（比如加载应用程序）必须能够适配页尺寸。比页尺寸更小的映射是不允许的。</li>
 <li>一个可执行程序的各个部分，在大多数架构中，的关系是固定的。</li>
@@ -470,21 +410,15 @@ Program Headers:
 ...
   LOAD   0x000000 0x0000000000400000 0x0000000000400000 0x0132ac 0x0132ac R E 0x200000
   LOAD   0x0132b0 0x00000000006132b0 0x00000000006132b0 0x001a71 0x001a71 RW  0x200000
-...</code></pre></div>
-<p><strong>Figure 4.3: ELF Program Header Indicating Alignment Requirements</strong></p>
-
+...
+</code></pre></div><p><strong>Figure 4.3: ELF Program Header Indicating Alignment Requirements</strong></p>
 <p>这是一个x86-64可执行二进制的头，里面规定了内存对齐单位是0x200000 = 2,097,152 = 2MB，如果页尺寸比这个大就不行了。</p>
-
 <p>另一个使用大页的影响是减少page table tree的层级，因为offset变大了，那么剩下的留给页表的部分就变少了，那么page tree walking就更快了，那么TLB missing所要产生的工作就变少了。</p>
-
 <p>下面这段没有看懂：</p>
-
 <blockquote>
 <p>Beyond using large page sizes, it is possible to reduce the number of TLB entries needed by moving data which is used at the same time to fewer pages. This is similar to some optimizations for cache use we talked about above. Only now the alignment required is large. Given that the number of TLB entries is quite small this can be an important optimization.</p>
 </blockquote>
-
-<h2 id="4-4-impact-of-virtualization">4.4 Impact Of Virtualization</h2>
-
+<h2 id="44-impact-of-virtualization">4.4 Impact Of Virtualization</h2>
 <p>大致意思是现代虚拟化技术能够消解大部分因虚拟化导致的TLB性能损失，但是这个开销不会完全消失。</p></article>
     <footer class="post-footer">
       
@@ -499,7 +433,7 @@ Program Headers:
       </ul>
       
       <p class="post-copyright">
-        This post was published <strong>373</strong> days ago, content in the post may be inaccurate, even wrong now, please take risk yourself.
+        This post was published <strong>382</strong> days ago, content in the post may be inaccurate, even wrong now, please take risk yourself.
       </p>
     </footer>
     

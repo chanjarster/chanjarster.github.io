@@ -17,7 +17,6 @@
   
   <meta name="author" content="颇忒脱" />
   <meta name="description" content="记一次容器打印到控制台阻塞，且容器停止响应的问题。
-
 " />
 
   
@@ -26,7 +25,6 @@
     <meta name="twitter:site" content="@gohugoio" />
     <meta name="twitter:title" content="容器打印日志到控制台阻塞的排障" />
     <meta name="twitter:description" content="记一次容器打印到控制台阻塞，且容器停止响应的问题。
-
 " />
     <meta name="twitter:image" content="https://chanjarster.github.io/img/avatar.jpg" />
   
@@ -35,7 +33,6 @@
   <meta property="og:type" content="article" />
   <meta property="og:title" content="容器打印日志到控制台阻塞的排障" />
   <meta property="og:description" content="记一次容器打印到控制台阻塞，且容器停止响应的问题。
-
 " />
   <meta property="og:url" content="https://chanjarster.github.io/post/docker-console-logging-hangs/" />
   <meta property="og:image" content="https://chanjarster.github.io/img/avatar.jpg" />
@@ -43,7 +40,7 @@
 
 
 
-<meta name="generator" content="Hugo 0.49.2" />
+<meta name="generator" content="Hugo 0.68.1" />
 
 
 <link rel="canonical" href="https://chanjarster.github.io/post/docker-console-logging-hangs/" />
@@ -252,11 +249,7 @@
       <p class="post-meta">@颇忒脱 · Feb 17, 2019 · 1 min read</p>
     </header>
     <article class="post-content"><p>记一次容器打印到控制台阻塞，且容器停止响应的问题。</p>
-
-<p></p>
-
 <p>今日生产环境发现有些容器停止响应了，但是容器没有死，<code>docker exec -it &lt;container-name&gt; /bin/bash</code>也能正常使用。</p>
-
 <p>在容器内部使用<code>jstack &lt;pid&gt;</code>发现log4j2的Console Appender一直处于运行状态：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-txt" data-lang="txt">&#34;AsyncAppender-asyncConsole&#34; #21 daemon prio=5 os_prio=0 tid=0x00007fd968d07000 nid=0x1f runnable [0x00007fd91bffd000]
    java.lang.Thread.State: RUNNABLE
@@ -290,17 +283,12 @@
 	at org.apache.logging.log4j.core.config.AppenderControl.callAppenderPreventRecursion(AppenderControl.java:120)
 	at org.apache.logging.log4j.core.config.AppenderControl.callAppender(AppenderControl.java:84)
 	at org.apache.logging.log4j.core.appender.AsyncAppender$AsyncThread.callAppenders(AsyncAppender.java:459)
-	at org.apache.logging.log4j.core.appender.AsyncAppender$AsyncThread.run(AsyncAppender.java:412)</code></pre></div>
-<p>但用<code>docker logs -f &lt;container-name&gt;</code>没有发现有新的日志输出，且访问该应用肯定会输出日志的接口也是没有任何日志输出，因此怀疑log4j2阻塞住了。</p>
-
+	at org.apache.logging.log4j.core.appender.AsyncAppender$AsyncThread.run(AsyncAppender.java:412)
+</code></pre></div><p>但用<code>docker logs -f &lt;container-name&gt;</code>没有发现有新的日志输出，且访问该应用肯定会输出日志的接口也是没有任何日志输出，因此怀疑log4j2阻塞住了。</p>
 <p>Google到有人在log4j提出了类似了问题<a href="https://jira.apache.org/jira/browse/LOG4J2-2239">LOG4J2-2239</a>，官方给出的解释是问题出在log4j2之外。</p>
-
 <p>于是查一下logback是否也有类似问题，找到<a href="https://jira.qos.ch/browse/LOGBACK-1422">LOGBACK-1422</a>，同样给出的解释是问题出在logback之外。</p>
-
 <p>两个问题的共通点都是用docker运行，于是把应用直接进程方式运行，没有出现问题。</p>
-
 <p>于是Google搜索<code>docker logging to stdout hangs</code>，找到SO的这个<a href="https://stackoverflow.com/a/52619471/1287790">回答</a>，以及这个<a href="https://github.com/moby/moby/issues/35865#issuecomment-407641385">issue</a>，解决方案将Docker升级到18.06。</p>
-
 <p>查看生产环境的docker版本是18.03，升级到18.09后问题解决。</p></article>
     <footer class="post-footer">
       
@@ -317,7 +305,7 @@
       </ul>
       
       <p class="post-copyright">
-        This post was published <strong>395</strong> days ago, content in the post may be inaccurate, even wrong now, please take risk yourself.
+        This post was published <strong>404</strong> days ago, content in the post may be inaccurate, even wrong now, please take risk yourself.
       </p>
     </footer>
     

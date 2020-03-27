@@ -16,31 +16,28 @@
 
   
   <meta name="author" content="颇忒脱" />
-  <meta name="description" content="
-" />
+  <meta name="description" content="" />
 
   
   
     <meta name="twitter:card" content="summary" />
     <meta name="twitter:site" content="@gohugoio" />
     <meta name="twitter:title" content="Kafka的消息发送语义" />
-    <meta name="twitter:description" content="
-" />
+    <meta name="twitter:description" content="" />
     <meta name="twitter:image" content="https://chanjarster.github.io/img/avatar.jpg" />
   
 
   
   <meta property="og:type" content="article" />
   <meta property="og:title" content="Kafka的消息发送语义" />
-  <meta property="og:description" content="
-" />
+  <meta property="og:description" content="" />
   <meta property="og:url" content="https://chanjarster.github.io/post/message-queue/kafa-message-delivery-semantics/" />
   <meta property="og:image" content="https://chanjarster.github.io/img/avatar.jpg" />
 
 
 
 
-<meta name="generator" content="Hugo 0.49.2" />
+<meta name="generator" content="Hugo 0.68.1" />
 
 
 <link rel="canonical" href="https://chanjarster.github.io/post/message-queue/kafa-message-delivery-semantics/" />
@@ -248,42 +245,28 @@
       <h1 class="post-title">Kafka的消息发送语义</h1>
       <p class="post-meta">@颇忒脱 · Nov 21, 2019 · 1 min read</p>
     </header>
-    <article class="post-content"><p></p>
-
-<p>相关文档：<a href="https://kafka.apache.org/documentation/#semantics">https://kafka.apache.org/documentation/#semantics</a></p>
-
+    <article class="post-content"><p>相关文档：https://kafka.apache.org/documentation/#semantics</p>
 <p>消息发送保证有三种：</p>
-
 <ul>
 <li>最多一次</li>
 <li>至少一次</li>
 <li>正好一次</li>
 </ul>
-
 <p>Kafka发送消息时，会有一条committed的日志，committed的消息保证不会被丢失。</p>
-
 <p>当生产者发送消息时遇到网络故障，那么它是没有办法知道这个消息是不是已经被committed。</p>
-
 <h3 id="生产者角度">生产者角度</h3>
-
 <ol>
 <li>至少一次的语义：在0.11.0.0之前，如果生产者没有收到committed的响应，那么它只能再发一遍。</li>
 <li>正好一次的语义：在0.11.0.0之后，kafka提供了幂等发送选项，因此重发不会形成重复的日志。实现方法：每个生产者给了一个ID，每个消息都有一个增长的sequence number用来给消息去重。</li>
 </ol>
-
 <p>0.11.0.0之后还引入了事务语义，发送消息给多个topic partition的时候，要么全部成功，要么全部失败。</p>
-
 <h3 id="消费者角度">消费者角度</h3>
-
 <p>消费者会记录自己读到哪里了（offset），不论这个信息存在持久化设备还是内存中，她有这么两种做法：</p>
-
 <ol>
 <li>最多一次的语义：读取消息，记录offset，处理消息。如果在处理消息前crash，那么下次从offset恢复的时候就有可能丢失上次未处理的消息。</li>
 <li>至少一次的语义：读取消息，处理消息，记录offset。如果记录offset前crash，那么下次从offset恢复的时候就有可能重复处理消息。大多数情况下会在处理消息时保证幂等性。</li>
 </ol>
-
 <p>【正好一次】怎么实现？在从一个Topic A消费消息然后发送消息到另一个Topic B的场景里（Kafka Streams），在消费消息的时候可以同时把offset作为一个消息发送到一个Topic C中，并且这个过程放在事务里，如果事务中断了，那么这个offset消息会回滚，而Topic B也会回滚。再配合Topic B消费者隔离级别设置为read_committed。</p>
-
 <p>在把消息写到外部系统的场景中（比如写到数据库），可以把offset一起写到数据库里，这样就避免了2PC（特别是如果外部系统不支持2PC）。</p></article>
     <footer class="post-footer">
       
@@ -298,7 +281,7 @@
       </ul>
       
       <p class="post-copyright">
-        This post was published <strong>118</strong> days ago, content in the post may be inaccurate, even wrong now, please take risk yourself.
+        This post was published <strong>127</strong> days ago, content in the post may be inaccurate, even wrong now, please take risk yourself.
       </p>
     </footer>
     

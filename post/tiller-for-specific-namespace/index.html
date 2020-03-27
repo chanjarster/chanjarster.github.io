@@ -17,7 +17,6 @@
   
   <meta name="author" content="颇忒脱" />
   <meta name="description" content="本文如何控制Tiller只能操作特定Namespace的方法。
-
 " />
 
   
@@ -26,7 +25,6 @@
     <meta name="twitter:site" content="@gohugoio" />
     <meta name="twitter:title" content="配置Tiller只能操作特定Namespace的方法" />
     <meta name="twitter:description" content="本文如何控制Tiller只能操作特定Namespace的方法。
-
 " />
     <meta name="twitter:image" content="https://chanjarster.github.io/img/avatar.jpg" />
   
@@ -35,7 +33,6 @@
   <meta property="og:type" content="article" />
   <meta property="og:title" content="配置Tiller只能操作特定Namespace的方法" />
   <meta property="og:description" content="本文如何控制Tiller只能操作特定Namespace的方法。
-
 " />
   <meta property="og:url" content="https://chanjarster.github.io/post/tiller-for-specific-namespace/" />
   <meta property="og:image" content="https://chanjarster.github.io/img/avatar.jpg" />
@@ -43,7 +40,7 @@
 
 
 
-<meta name="generator" content="Hugo 0.49.2" />
+<meta name="generator" content="Hugo 0.68.1" />
 
 
 <link rel="canonical" href="https://chanjarster.github.io/post/tiller-for-specific-namespace/" />
@@ -252,48 +249,35 @@
       <p class="post-meta">@颇忒脱 · Oct 11, 2019 · 1 min read</p>
     </header>
     <article class="post-content"><p>本文如何控制Tiller只能操作特定Namespace的方法。</p>
-
-<p></p>
-
 <p>在Helm的官方文档介绍的安装方法里，会给Tiller的Service Account绑定cluster-admin集群角色，这就意味着只要你的Helm能够和Tiller通信，那么就能通过Tiller控制所有Namespace下的Release。</p>
-
 <p>在更多情况下，我们希望能够按照Namespace把Tiller的权限分割开来，比如A用户只能通过Tiller来控制Namespace A的Release，B用户只能通过Tiller来控制Namespace B的Release。</p>
-
 <p><a href="https://medium.com/@elijudah/configuring-minimal-rbac-permissions-for-helm-and-tiller-e7d792511d10">Configuring minimal RBAC permissions for Helm and Tiller</a>文章提供了解决办法，原理是给每个Namespace部署一个Tiller，然后给其分配一个只能操作这个Namespace的Service Account。</p>
-
 <blockquote>
 <p>注意：Configuring &hellip; 文章中提到了给CI/CD用的helm账号，本文没有涉及此内容。</p>
 </blockquote>
-
 <p>我在这篇文章的基础上做了一些脚本，并列举一些常用的命令。</p>
-
 <h2 id="操作步骤">操作步骤</h2>
-
 <p>1）使用<a href="https://gist.github.com/chanjarster/d5116cad45e8643c2675f541b0aa1939"><code>init-tiller-sa.sh</code></a>在Namespace下创建Service Account：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">./init-tiller-sa.sh &lt;namespace&gt;</code></pre></div>
-<p>2）安装Tiller：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">./init-tiller-sa.sh &lt;namespace&gt;
+</code></pre></div><p>2）安装Tiller：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">helm init --service-account tiller <span style="color:#ae81ff">\
-</span><span style="color:#ae81ff"></span>  --tiller-namespace &lt;namespace&gt; <span style="color:#960050;background-color:#1e0010">\</span></code></pre></div>
-<p>如果安装不成功，比如因为Tiller镜像Pull不下来，你可以这样：</p>
+</span><span style="color:#ae81ff"></span>  --tiller-namespace &lt;namespace&gt; <span style="color:#ae81ff">\
+</span></code></pre></div><p>如果安装不成功，比如因为Tiller镜像Pull不下来，你可以这样：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">helm init --service-account tiller <span style="color:#ae81ff">\
 </span><span style="color:#ae81ff"></span>  --tiller-namespace &lt;namespace&gt; <span style="color:#ae81ff">\
 </span><span style="color:#ae81ff"></span>  --upgrade <span style="color:#ae81ff">\
-</span><span style="color:#ae81ff"></span>  --tiller-image<span style="color:#f92672">=</span>&lt;另外一个tiller的镜像&gt;</code></pre></div>
-<p>3）使用Helm部署Charts，比如这样：</p>
+</span><span style="color:#ae81ff"></span>  --tiller-image<span style="color:#f92672">=</span>&lt;另外一个tiller的镜像&gt;
+</code></pre></div><p>3）使用Helm部署Charts，比如这样：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">helm --tiller-namespace &lt;namespace&gt; <span style="color:#ae81ff">\
 </span><span style="color:#ae81ff"></span>  install &lt;chart&gt; <span style="color:#ae81ff">\
 </span><span style="color:#ae81ff"></span>  --name &lt;release&gt; <span style="color:#ae81ff">\
-</span><span style="color:#ae81ff"></span>  --namespace &lt;namespace&gt;</code></pre></div>
-<p>&ndash;namespace`参数可以不提供，如果不提供则和你kubectl的默认namespace相同。</p>
-
+</span><span style="color:#ae81ff"></span>  --namespace &lt;namespace&gt;
+</code></pre></div><p>&ndash;namespace`参数可以不提供，如果不提供则和你kubectl的默认namespace相同。</p>
 <p><strong>注意：</strong></p>
-
 <p>所有的helm指令你都需要加上<code>--tiller-namespace</code>参数。</p>
-
 <p>如果你要删除Tiller，则：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">helm --tiller-namespace &lt;namespace&gt; reset</code></pre></div>
-<h2 id="参考资料">参考资料</h2>
-
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">helm --tiller-namespace &lt;namespace&gt; reset
+</code></pre></div><h2 id="参考资料">参考资料</h2>
 <ul>
 <li><a href="https://medium.com/@elijudah/configuring-minimal-rbac-permissions-for-helm-and-tiller-e7d792511d10">Configuring minimal RBAC permissions for Helm and Tiller</a></li>
 <li><a href="https://helm.sh/docs/using_helm/#role-based-access-control">Helm - Role-based Access Control</a></li>
@@ -311,7 +295,7 @@
       </ul>
       
       <p class="post-copyright">
-        This post was published <strong>158</strong> days ago, content in the post may be inaccurate, even wrong now, please take risk yourself.
+        This post was published <strong>167</strong> days ago, content in the post may be inaccurate, even wrong now, please take risk yourself.
       </p>
     </footer>
     

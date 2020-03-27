@@ -17,7 +17,6 @@
   
   <meta name="author" content="颇忒脱" />
   <meta name="description" content="介绍如何使用Prometheus的dns service discovery机制，自动发现并抓取Docker swarm overlay网络中的容器所提供的指标。
-
 " />
 
   
@@ -26,7 +25,6 @@
     <meta name="twitter:site" content="@gohugoio" />
     <meta name="twitter:title" content="Prometehus监控Docker Swarm Overlay网络中的容器" />
     <meta name="twitter:description" content="介绍如何使用Prometheus的dns service discovery机制，自动发现并抓取Docker swarm overlay网络中的容器所提供的指标。
-
 " />
     <meta name="twitter:image" content="https://chanjarster.github.io/img/avatar.jpg" />
   
@@ -35,7 +33,6 @@
   <meta property="og:type" content="article" />
   <meta property="og:title" content="Prometehus监控Docker Swarm Overlay网络中的容器" />
   <meta property="og:description" content="介绍如何使用Prometheus的dns service discovery机制，自动发现并抓取Docker swarm overlay网络中的容器所提供的指标。
-
 " />
   <meta property="og:url" content="https://chanjarster.github.io/post/p8s-scrape-container-in-docker-swarm-overlay-network/" />
   <meta property="og:image" content="https://chanjarster.github.io/img/avatar.jpg" />
@@ -43,7 +40,7 @@
 
 
 
-<meta name="generator" content="Hugo 0.49.2" />
+<meta name="generator" content="Hugo 0.68.1" />
 
 
 <link rel="canonical" href="https://chanjarster.github.io/post/p8s-scrape-container-in-docker-swarm-overlay-network/" />
@@ -252,36 +249,29 @@
       <p class="post-meta">@颇忒脱 · Jan 9, 2019 · 1 min read</p>
     </header>
     <article class="post-content"><p>介绍如何使用Prometheus的dns service discovery机制，自动发现并抓取Docker swarm overlay网络中的容器所提供的指标。</p>
-
-<p></p>
-
 <p>使用<code>docker service create</code>/<code>docker stack deploy</code>能够很方便管理多个docker host，并且对应用做扩缩容。那么我们如何抓取这些动态创建的容器应用所提供的指标呢？</p>
-
 <p>在<a href="../prom-grafana-jvm/">《使用Prometheus+Grafana监控JVM》</a>一文里我们使用了<code>static_config</code>静态配置指标抓取目标，这显然在docker swarm环境里是不合适的。我们需要一种动态发现容器的方法。</p>
-
 <p>解决思路如下：</p>
-
 <ol>
 <li>使用<a href="../docker-overlay-network/">《一种生产环境Docker Overlay Network的配置方案》</a>提到的方法配置overlay网络，并且把docker service、stack、standalone container都挂到这个overlay网络里。</li>
 <li>把Prometheus也挂到这个overlay网络里。</li>
 <li>使用Prometheus的DNS service discovery机制，半自动的发现容器。</li>
 </ol>
-
 <p>本文所提到的脚本可以在<a href="https://github.com/chanjarster/prometheus-learn/tree/master/docker-swarm-sd">这里</a>下载</p>
-
 <p>下面构建一个实验环境以说明方法。</p>
-
-<h2 id="第一步-构建overlay-network">第一步：构建overlay network</h2>
-
+<h2 id="第一步构建overlay-network">第一步：构建overlay network</h2>
 <p>根据<a href="../docker-overlay-network/">《一种生产环境Docker Overlay Network的配置方案》</a>里提到的方法，创建Docker swarm，和一个overlay网络，名字叫做<code>test-overlay</code>：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">docker network create -d overlay --attachable test-overlay</code></pre></div>
-<h2 id="第二步-启动容器">第二步：启动容器</h2>
-
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">docker network create -d overlay --attachable test-overlay
+</code></pre></div><h2 id="第二步启动容器">第二步：启动容器</h2>
 <p>为了方便起见，使用<a href="https://github.com/chanjarster/prometheus-mock-data">prometheus-mock-data</a>来模拟一个提供指标的应用，这样就能够避免繁琐的jmx-exporter。</p>
-
-<p>1) 新建一个目录，名字叫做docker-swarm-demo</p>
-
-<p>2) 新建一个文件<code>scrape-data.txt</code>，这个文件就是我们要提供的假指标，内容如下：</p>
+<ol>
+<li>
+<p>新建一个目录，名字叫做docker-swarm-demo</p>
+</li>
+<li>
+<p>新建一个文件<code>scrape-data.txt</code>，这个文件就是我们要提供的假指标，内容如下：</p>
+</li>
+</ol>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-txt" data-lang="txt"># HELP x mock metric
 # TYPE x gauge
 x 1
@@ -296,58 +286,66 @@ x 3
 ---
 # HELP x mock metric
 # TYPE x gauge
-x 4</code></pre></div>
-<p>3) 为了演示docker service和standalone container都能被采集到，会启动这两种形式的容器：</p>
-
-<p>4) 使用<code>docker service create</code>启动一个service，replicas=3（注意<code>--name</code>参数）：</p>
+x 4
+</code></pre></div><ol start="3">
+<li>
+<p>为了演示docker service和standalone container都能被采集到，会启动这两种形式的容器：</p>
+</li>
+<li>
+<p>使用<code>docker service create</code>启动一个service，replicas=3（注意<code>--name</code>参数）：</p>
+</li>
+</ol>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">docker service create <span style="color:#ae81ff">\
 </span><span style="color:#ae81ff"></span>    --name mock <span style="color:#ae81ff">\
 </span><span style="color:#ae81ff"></span>    --replicas <span style="color:#ae81ff">3</span> <span style="color:#ae81ff">\
 </span><span style="color:#ae81ff"></span>    --network test-overlay <span style="color:#ae81ff">\
 </span><span style="color:#ae81ff"></span>    --limit-memory 96M <span style="color:#ae81ff">\
 </span><span style="color:#ae81ff"></span>    --mount type<span style="color:#f92672">=</span>bind,src<span style="color:#f92672">=</span><span style="color:#66d9ef">$(</span>pwd<span style="color:#66d9ef">)</span>/scrape-data.txt,dst<span style="color:#f92672">=</span>/home/java-app/etc/scrape-data.txt <span style="color:#ae81ff">\
-</span><span style="color:#ae81ff"></span>    chanjarster/prometheus-mock-data:latest</code></pre></div>
-<p>4) 使用<code>docker run</code>启动一个standalone container（注意<code>--name</code>参数）：</p>
+</span><span style="color:#ae81ff"></span>    chanjarster/prometheus-mock-data:latest
+</code></pre></div><ol start="4">
+<li>使用<code>docker run</code>启动一个standalone container（注意<code>--name</code>参数）：</li>
+</ol>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">docker run -d <span style="color:#ae81ff">\
 </span><span style="color:#ae81ff"></span>    -v <span style="color:#66d9ef">$(</span>pwd<span style="color:#66d9ef">)</span>/scrape-data.txt:/home/java-app/etc/scrape-data.txt <span style="color:#ae81ff">\
 </span><span style="color:#ae81ff"></span>    --network test-overlay <span style="color:#ae81ff">\
 </span><span style="color:#ae81ff"></span>    --name standalone-mock <span style="color:#ae81ff">\
-</span><span style="color:#ae81ff"></span>    chanjarster/prometheus-mock-data:latest</code></pre></div>
-<h2 id="第三步-启动prometheus">第三步：启动Prometheus</h2>
-
-<p>1) 在之前新建目录docker-swarm-demo里创建文件<code>prom-config.yml</code>，内容如下：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-yaml" data-lang="yaml">scrape_configs:
-  - job_name: <span style="color:#e6db74">&#39;swarm-service&#39;</span>
-    scrape_interval: 30s
-    dns_sd_configs:
-      - names:
+</span><span style="color:#ae81ff"></span>    chanjarster/prometheus-mock-data:latest
+</code></pre></div><h2 id="第三步启动prometheus">第三步：启动Prometheus</h2>
+<ol>
+<li>在之前新建目录docker-swarm-demo里创建文件<code>prom-config.yml</code>，内容如下：</li>
+</ol>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-yaml" data-lang="yaml"><span style="color:#66d9ef">scrape_configs</span>:
+  - <span style="color:#66d9ef">job_name</span>: <span style="color:#e6db74">&#39;swarm-service&#39;</span>
+    <span style="color:#66d9ef">scrape_interval</span>: 30s
+    <span style="color:#66d9ef">dns_sd_configs</span>:
+      - <span style="color:#66d9ef">names</span>:
         - tasks.mock
         - standalone-mock
-        type: A
-        port: <span style="color:#ae81ff">8080</span>
-    relabel_configs:
-      - source_labels: [<span style="color:#e6db74">&#39;__meta_dns_name&#39;</span>]
-        target_label: <span style="color:#e6db74">&#39;service&#39;</span></code></pre></div>
-<p>注意到上面的两个关键配置：</p>
-
+        <span style="color:#66d9ef">type</span>: A
+        <span style="color:#66d9ef">port</span>: <span style="color:#ae81ff">8080</span>
+    <span style="color:#66d9ef">relabel_configs</span>:
+      - <span style="color:#66d9ef">source_labels</span>: [<span style="color:#e6db74">&#39;__meta_dns_name&#39;</span>]
+        <span style="color:#66d9ef">target_label</span>: <span style="color:#e6db74">&#39;service&#39;</span>
+</code></pre></div><p>注意到上面的两个关键配置：</p>
 <ol>
 <li>设定了两个DNS A记录，<code>tasks.mock</code>和<code>standalone-mock</code>。
 <code>tasks.mock</code>是Docker自动为docker service <code>mock</code>创建的，而<code>standalone-mock</code>就是容器名。文章最开始说到的半自动就是这个意思，我们得事先知道DNS A记录有哪些，然后让Prometheus去发现这些DNS A记录背后对应的容器有哪些。</li>
 <li>把<code>__meta_dns_name</code>的值设置到指标的<code>service</code> 这个label里。</li>
 </ol>
-
-<p>2) 启动Prometheus：</p>
+<ol start="2">
+<li>启动Prometheus：</li>
+</ol>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">docker run -d <span style="color:#ae81ff">\
 </span><span style="color:#ae81ff"></span>    --name<span style="color:#f92672">=</span>prometheus <span style="color:#ae81ff">\
 </span><span style="color:#ae81ff"></span>    --network test-overlay <span style="color:#ae81ff">\
-</span><span style="color:#ae81ff"></span>    -p <span style="color:#ae81ff">9090</span>:9090 <span style="color:#ae81ff">\
+</span><span style="color:#ae81ff"></span>    -p 9090:9090 <span style="color:#ae81ff">\
 </span><span style="color:#ae81ff"></span>    -v <span style="color:#66d9ef">$(</span>pwd<span style="color:#66d9ef">)</span>:/prometheus-config <span style="color:#ae81ff">\
 </span><span style="color:#ae81ff"></span>    -v <span style="color:#66d9ef">$(</span>pwd<span style="color:#66d9ef">)</span>/prom-data:/prometheus <span style="color:#ae81ff">\
-</span><span style="color:#ae81ff"></span>    prom/prometheus --config.file<span style="color:#f92672">=</span>/prometheus-config/prom-config.yml</code></pre></div>
-<p>3) 访问 <a href="http://localhost:9090">http://localhost:9090</a> 看看Prometheus是否启动成功，在输入框里输入x然后执行，应该可以看到如下图的结果：</p>
-
-<p><img src="prom.png" alt="" /></p>
-
+</span><span style="color:#ae81ff"></span>    prom/prometheus --config.file<span style="color:#f92672">=</span>/prometheus-config/prom-config.yml
+</code></pre></div><ol start="3">
+<li>访问 http://localhost:9090 看看Prometheus是否启动成功，在输入框里输入x然后执行，应该可以看到如下图的结果：</li>
+</ol>
+<p><img src="prom.png" alt=""></p>
 <p>其中3个instance是属于<code>tasks.mock</code>的，还有一个则是standalone container（如果没有看到4个instance，那么等一会儿再试）。</p></article>
     <footer class="post-footer">
       
@@ -360,7 +358,7 @@ x 4</code></pre></div>
       </ul>
       
       <p class="post-copyright">
-        This post was published <strong>433</strong> days ago, content in the post may be inaccurate, even wrong now, please take risk yourself.
+        This post was published <strong>442</strong> days ago, content in the post may be inaccurate, even wrong now, please take risk yourself.
       </p>
     </footer>
     

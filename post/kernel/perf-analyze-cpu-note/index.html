@@ -16,31 +16,28 @@
 
   
   <meta name="author" content="颇忒脱" />
-  <meta name="description" content="
-" />
+  <meta name="description" content="" />
 
   
   
     <meta name="twitter:card" content="summary" />
     <meta name="twitter:site" content="@gohugoio" />
     <meta name="twitter:title" content="Perf分析CPU性能问题笔记" />
-    <meta name="twitter:description" content="
-" />
+    <meta name="twitter:description" content="" />
     <meta name="twitter:image" content="https://chanjarster.github.io/img/avatar.jpg" />
   
 
   
   <meta property="og:type" content="article" />
   <meta property="og:title" content="Perf分析CPU性能问题笔记" />
-  <meta property="og:description" content="
-" />
+  <meta property="og:description" content="" />
   <meta property="og:url" content="https://chanjarster.github.io/post/kernel/perf-analyze-cpu-note/" />
   <meta property="og:image" content="https://chanjarster.github.io/img/avatar.jpg" />
 
 
 
 
-<meta name="generator" content="Hugo 0.49.2" />
+<meta name="generator" content="Hugo 0.68.1" />
 
 
 <link rel="canonical" href="https://chanjarster.github.io/post/kernel/perf-analyze-cpu-note/" />
@@ -248,65 +245,48 @@
       <h1 class="post-title">Perf分析CPU性能问题笔记</h1>
       <p class="post-meta">@颇忒脱 · Apr 12, 2019 · 2 min read</p>
     </header>
-    <article class="post-content"><p></p>
-
-<h2 id="场景">场景</h2>
-
+    <article class="post-content"><h2 id="场景">场景</h2>
 <h3 id="观察进程的cpu使用情况">观察进程的CPU使用情况</h3>
-
 <p>观察进程内各个函数的CPU使用情况：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">sudo perf top -p &lt;pid&gt;</code></pre></div>
-<p>同时显示函数调用链：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">sudo perf top -g -p &lt;pid&gt;</code></pre></div>
-<p>记录采样结果，以供后续分析，加上<code>-g</code>会记录调用链：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">sudo perf record -g -p &lt;pid&gt;</code></pre></div>
-<p>读取采样结果：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">sudo perf report</code></pre></div>
-<h3 id="观察容器内进程cpu使用情况">观察容器内进程CPU使用情况</h3>
-
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">sudo perf top -p &lt;pid&gt;
+</code></pre></div><p>同时显示函数调用链：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">sudo perf top -g -p &lt;pid&gt;
+</code></pre></div><p>记录采样结果，以供后续分析，加上<code>-g</code>会记录调用链：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">sudo perf record -g -p &lt;pid&gt;
+</code></pre></div><p>读取采样结果：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">sudo perf report
+</code></pre></div><h3 id="观察容器内进程cpu使用情况">观察容器内进程CPU使用情况</h3>
 <p>容器内的进程实际上可以在host machine上看到，<code>ps -ef | grep &lt;text&gt;</code>可以找得到。</p>
-
 <p>因此同样可以用<code>perf top -p &lt;pid&gt;</code>观察，但是会出现无法显示函数符号的问题，注意观察<code>perf top</code>最下面一行：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-txt" data-lang="txt">Failed to open /opt/bitnami/php/lib/php/extensions/opcache.so, continuing without symbols</code></pre></div>
-<p>解决办法是先用<code>perf record</code>记录采样数据，然后将容器内文件系统绑定到host上，然后用<code>perf report --symfs &lt;path&gt;</code>指定符号目录。你得先安装bindfs（下面有安装方法）。</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-txt" data-lang="txt">Failed to open /opt/bitnami/php/lib/php/extensions/opcache.so, continuing without symbols
+</code></pre></div><p>解决办法是先用<code>perf record</code>记录采样数据，然后将容器内文件系统绑定到host上，然后用<code>perf report --symfs &lt;path&gt;</code>指定符号目录。你得先安装bindfs（下面有安装方法）。</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">mkdir /tmp/foo
 PID<span style="color:#f92672">=</span><span style="color:#66d9ef">$(</span>docker inspect --format <span style="color:#f92672">{{</span>.State.Pid<span style="color:#f92672">}}</span> &lt;container-name&gt;<span style="color:#66d9ef">)</span>
 bindfs /proc/$PID/root /tmp/foo
 perf report --symfs /tmp/foo
 
-<span style="color:#75715e"># 使用完成后不要忘记解除绑定
-</span><span style="color:#75715e"></span>umount /tmp/foo/</code></pre></div>
-<p>把上面的<code>&lt;container-name&gt;</code>改成你要观察的容器名。</p>
-
+<span style="color:#75715e"># 使用完成后不要忘记解除绑定</span>
+umount /tmp/foo/
+</code></pre></div><p>把上面的<code>&lt;container-name&gt;</code>改成你要观察的容器名。</p>
 <h3 id="观察java进程的cpu使用情况">观察Java进程的CPU使用情况</h3>
-
 <p>你得要先安装<a href="https://github.com/jvm-profiling-tools/perf-map-agent">perf-map-agent</a>（下面有安装方法），在启动Java进程的时候添加<code>-XX:+PreserveFramePointer</code>参数，下面是几个用法：</p>
-
 <ul>
 <li><code>perf-java-top &lt;pid&gt; &lt;perf-top-options&gt;</code></li>
 <li><code>PERF_RECORD_SECONDS=30 perf-java-record-stack &lt;pid&gt; &lt;perf-record-options&gt;</code></li>
 <li><code>PERF_RECORD_SECONDS=30 perf-java-report-stack &lt;pid&gt; &lt;perf-report-options&gt;</code></li>
 </ul>
-
 <p>更多用法见官网说明。</p>
-
 <p>还可以使用<code>PERF_RECORD_SECONDS=30 perf-java-flames &lt;pid&gt; &lt;perf-record-options&gt;</code>生成火焰图，你得先安装<a href="https://github.com/brendangregg/FlameGraph">FlameGraph</a>（下面有安装方法）。关于火焰图的解读看<a href="https://medium.com/netflix-techblog/java-in-flames-e763b3d32166">netflix的这篇博客</a>。</p>
-
 <h3 id="观察容器内java进程cpu使用情况">观察容器内Java进程CPU使用情况</h3>
-
 <p>目前没有办法。</p>
-
-<h2 id="附录-安装方法">附录：安装方法</h2>
-
+<h2 id="附录安装方法">附录：安装方法</h2>
 <p>下面讲的都是在Ubuntu 16.04系统上的安装方法。</p>
-
 <h3 id="perf">perf</h3>
-
 <p>安装perf</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ sudo apt install -y linux-tools-common</code></pre></div>
-<p>运行perf会出现：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ sudo apt install -y linux-tools-common
+</code></pre></div><p>运行perf会出现：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ perf
-WARNING: perf not found <span style="color:#66d9ef">for</span> kernel <span style="color:#ae81ff">4</span>.4.0-145
+WARNING: perf not found <span style="color:#66d9ef">for</span> kernel 4.4.0-145
 
   You may need to install the following packages <span style="color:#66d9ef">for</span> this specific kernel:
     linux-tools-4.4.0-145-generic
@@ -314,53 +294,44 @@ WARNING: perf not found <span style="color:#66d9ef">for</span> kernel <span styl
 
   You may also want to install one of the following packages to keep up to date:
     linux-tools-generic
-    linux-cloud-tools-generic</code></pre></div>
-<p>于是安装：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">sudo apt install linux-tools-4.4.0-145-generic linux-cloud-tools-4.4.0-145-generic linux-cloud-tools-generic</code></pre></div>
-<h3 id="bindfs">bindfs</h3>
-
+    linux-cloud-tools-generic
+</code></pre></div><p>于是安装：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">sudo apt install linux-tools-4.4.0-145-generic linux-cloud-tools-4.4.0-145-generic linux-cloud-tools-generic
+</code></pre></div><h3 id="bindfs">bindfs</h3>
 <p>到<a href="https://bindfs.org/">bindfs官网</a>下载源码包（本文写是版本为1.13.11）。</p>
-
 <p>先安装编译需要的工具：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">sudo apt install -y cmake pkg-config libfuse-dev libfuse2 autoconf </code></pre></div>
-<p>解压缩源码包，进入bindfs目录，编译：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">./configure <span style="color:#f92672">&amp;&amp;</span> make <span style="color:#f92672">&amp;&amp;</span> sudo make install</code></pre></div>
-<h3 id="perf-map-agent">perf-map-agent</h3>
-
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">sudo apt install -y cmake pkg-config libfuse-dev libfuse2 autoconf 
+</code></pre></div><p>解压缩源码包，进入bindfs目录，编译：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">./configure <span style="color:#f92672">&amp;&amp;</span> make <span style="color:#f92672">&amp;&amp;</span> sudo make install
+</code></pre></div><h3 id="perf-map-agent">perf-map-agent</h3>
 <p>到<a href="https://github.com/jvm-profiling-tools/perf-map-agent">github</a> clone perf-map-agent的源码仓库。</p>
-
 <p>安装JDK，你之后要监测的程序都得用这个JDK启动，这个JDK也用来编译perf-map-agent。用apt安装openjdk的方法见下面。</p>
-
 <p>编译：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">cmake .
 make
 
-<span style="color:#75715e"># will create links to run scripts in /usr/local/bin
-</span><span style="color:#75715e"></span>sudo bin/create-links-in /usr/local/bin</code></pre></div>
-<h3 id="安装openjdk">安装openjdk</h3>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">sudo apt-get install -y openjdk-8-jdk</code></pre></div>
-<p>通过这种方式安装是没有JAVA_HOME环境变量的，因此我们要自己设置一个，查找openjdk的安装路径：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">dpkg-query -L openjdk-8-jdk</code></pre></div>
-<p>将发现结果写到<code>~/.bashrc</code>里：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">export JAVA_HOME<span style="color:#f92672">=</span>/usr/lib/jvm/java-8-openjdk-amd64</code></pre></div>
-<h4 id="flamegraph">FlameGraph</h4>
-
+<span style="color:#75715e"># will create links to run scripts in /usr/local/bin</span>
+sudo bin/create-links-in /usr/local/bin
+</code></pre></div><h3 id="安装openjdk">安装openjdk</h3>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">sudo apt-get install -y openjdk-8-jdk
+</code></pre></div><p>通过这种方式安装是没有JAVA_HOME环境变量的，因此我们要自己设置一个，查找openjdk的安装路径：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">dpkg-query -L openjdk-8-jdk
+</code></pre></div><p>将发现结果写到<code>~/.bashrc</code>里：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">export JAVA_HOME<span style="color:#f92672">=</span>/usr/lib/jvm/java-8-openjdk-amd64
+</code></pre></div><h4 id="flamegraph">FlameGraph</h4>
 <p>到<a href="https://github.com/brendangregg/FlameGraph">github</a> clone FlameGraph的源码仓库。</p>
-
 <p>到<code>~/.bashrc</code>设置环境变量：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">export FLAMEGRAPH_DIR<span style="color:#f92672">=</span>&lt;path-to-flame-graph&gt;</code></pre></div>
-<h4 id="bcc">BCC</h4>
-
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">export FLAMEGRAPH_DIR<span style="color:#f92672">=</span>&lt;path-to-flame-graph&gt;
+</code></pre></div><h4 id="bcc">BCC</h4>
 <p>官方<a href="https://github.com/iovisor/bcc/blob/master/INSTALL.md#ubuntu---binary">安装文档</a>。</p>
-
 <p>如果你是Ubuntu 18.04：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">sudo apt-get install bpfcc-tools linux-headers-<span style="color:#66d9ef">$(</span>uname -r<span style="color:#66d9ef">)</span></code></pre></div>
-<p>如果你是Ubuntu 16.40：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">sudo apt-get install bpfcc-tools linux-headers-<span style="color:#66d9ef">$(</span>uname -r<span style="color:#66d9ef">)</span>
+</code></pre></div><p>如果你是Ubuntu 16.40：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 4052245BD4284CDD
 echo <span style="color:#e6db74">&#34;deb https://repo.iovisor.org/apt/</span><span style="color:#66d9ef">$(</span>lsb_release -cs<span style="color:#66d9ef">)</span><span style="color:#e6db74"> </span><span style="color:#66d9ef">$(</span>lsb_release -cs<span style="color:#66d9ef">)</span><span style="color:#e6db74"> main&#34;</span> | sudo tee /etc/apt/sources.list.d/iovisor.list
 sudo apt-get update
-sudo apt-get install bcc-tools libbcc-examples linux-headers-<span style="color:#66d9ef">$(</span>uname -r<span style="color:#66d9ef">)</span></code></pre></div>
-<p>安装路径在：<code>/usr/share/bcc/tools</code>。</p></article>
+sudo apt-get install bcc-tools libbcc-examples linux-headers-<span style="color:#66d9ef">$(</span>uname -r<span style="color:#66d9ef">)</span>
+</code></pre></div><p>安装路径在：<code>/usr/share/bcc/tools</code>。</p></article>
     <footer class="post-footer">
       
       <ul class="post-tags">
@@ -376,7 +347,7 @@ sudo apt-get install bcc-tools libbcc-examples linux-headers-<span style="color:
       </ul>
       
       <p class="post-copyright">
-        This post was published <strong>340</strong> days ago, content in the post may be inaccurate, even wrong now, please take risk yourself.
+        This post was published <strong>349</strong> days ago, content in the post may be inaccurate, even wrong now, please take risk yourself.
       </p>
     </footer>
     

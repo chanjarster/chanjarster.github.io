@@ -16,31 +16,28 @@
 
   
   <meta name="author" content="颇忒脱" />
-  <meta name="description" content="
-" />
+  <meta name="description" content="" />
 
   
   
     <meta name="twitter:card" content="summary" />
     <meta name="twitter:site" content="@gohugoio" />
     <meta name="twitter:title" content="Atomic Variables and Nonblocking Synchronization" />
-    <meta name="twitter:description" content="
-" />
+    <meta name="twitter:description" content="" />
     <meta name="twitter:image" content="https://chanjarster.github.io/img/avatar.jpg" />
   
 
   
   <meta property="og:type" content="article" />
   <meta property="og:title" content="Atomic Variables and Nonblocking Synchronization" />
-  <meta property="og:description" content="
-" />
+  <meta property="og:description" content="" />
   <meta property="og:url" content="https://chanjarster.github.io/post/concurrent-programming/atomic-vars-and-nonblocking-synchronization/" />
   <meta property="og:image" content="https://chanjarster.github.io/img/avatar.jpg" />
 
 
 
 
-<meta name="generator" content="Hugo 0.49.2" />
+<meta name="generator" content="Hugo 0.68.1" />
 
 
 <link rel="canonical" href="https://chanjarster.github.io/post/concurrent-programming/atomic-vars-and-nonblocking-synchronization/" />
@@ -248,86 +245,60 @@
       <h1 class="post-title">Atomic Variables and Nonblocking Synchronization</h1>
       <p class="post-meta">@颇忒脱 · Nov 24, 2019 · 3 min read</p>
     </header>
-    <article class="post-content"><p></p>
-
-<p>非阻塞算法比基于锁的算法设计起来和实现起来更复杂，但是</p>
-
+    <article class="post-content"><p>非阻塞算法比基于锁的算法设计起来和实现起来更复杂，但是</p>
 <ul>
 <li>它们能够提供巨大的伸缩性和liveness优势。</li>
 <li>它们在一个更细粒度的层级上协作，能够极大降低调度的开销。</li>
 <li>对死锁和其他liveness问题免疫。</li>
 </ul>
-
 <h2 id="cas和锁的优劣">CAS和锁的优劣</h2>
-
 <h3 id="锁的劣势">锁的劣势</h3>
-
 <p>如果多个线程同时请求锁，JVM会请求操作系统的帮助：</p>
-
 <ul>
 <li>一些线程会被挂起（suspended），在后面还不得不恢复（resumed）——上下文切换。</li>
 <li>线程恢复的时候，它还得等其他线程把它们的时间片用完，然后才能轮到它——调度。</li>
 </ul>
-
 <p>基于锁的类在细粒度的操作上，如果竞争频繁，那么调度开销对实际工作的比率是非常高的。</p>
-
 <p>锁的其他劣势：</p>
-
 <ul>
 <li>当一个线程在等待锁的时候，它干不了别的事情</li>
 <li>优先级倒置（priority inversion），高优先级线程等待一个被低优先线程占用的锁。</li>
 <li>锁对于细粒度操作比如++来说，还是太重量级了</li>
 </ul>
-
 <h3 id="锁的优势">锁的优势</h3>
-
 <ul>
 <li>用起来方便，语法紧凑</li>
 <li>可以方便的组合复杂操作</li>
 </ul>
-
 <h3 id="cas的优势">CAS的优势</h3>
-
 <ul>
 <li>在【少量竞争】和【没有竞争】的情况下基于CAS的表现要比基于锁的好，因为：
-
 <ul>
 <li>无竞争锁获取的fast path，包括至少一个CAS操作</li>
 <li>大多数情况下CAS能够成功，硬件可以预测分支，降低控制逻辑的开销</li>
 <li>锁虽然在语法上紧凑，但实际上包含了相对复杂的JVM代码，并且可能使用操作系统级别的locking、线程挂起、上下文切换。这些CAS没有。</li>
-</ul></li>
 </ul>
-
+</li>
+</ul>
 <h3 id="cas的劣势">CAS的劣势</h3>
-
 <ul>
 <li>把处理竞争的工作交给了调用方：是重试，然是backing off，还是放弃。</li>
 <li>对细粒度操作比较友好</li>
 </ul>
-
 <h2 id="硬件对并发的支持">硬件对并发的支持</h2>
-
 <p>对于细粒度操作来说可以用一种乐观的机制（锁是悲观的），这种机制依赖于“冲突检测”，检查在操作期间是否有其他线程插入进来，如果有则操作失败，然后可以选择重试还是不重试。</p>
-
 <p>处理器支持的指令：</p>
-
 <ul>
 <li>test-and-set</li>
 <li>fetch-and-increment</li>
 <li>compare-and-swap</li>
 <li>load-linked/store-conditional</li>
 </ul>
-
 <h3 id="compare-and-swap">Compare and swap</h3>
-
 <p>CAS有三个操作数：内存地址V、预期的旧值A、新值B</p>
-
 <p>语义：如果V中的值等于A，那么就更新为B，否则啥都不做</p>
-
 <p>返回值：V中的值</p>
-
 <p>CAS操作失败的线程不会阻塞，它可自行决定是否重试，或者其他措施。</p>
-
 <p>下面是一个模拟的CAS：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#a6e22e">@ThreadSafe</span>
 <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">SimulatedCAS</span> <span style="color:#f92672">{</span>
@@ -350,9 +321,8 @@
     <span style="color:#66d9ef">return</span> <span style="color:#f92672">(</span>expectedValue
         <span style="color:#f92672">==</span> compareAndSwap<span style="color:#f92672">(</span>expectedValue<span style="color:#f92672">,</span> newValue<span style="color:#f92672">));</span>
   <span style="color:#f92672">}</span>
-<span style="color:#f92672">}</span></code></pre></div>
-<h3 id="一个非阻塞的计数器">一个非阻塞的计数器</h3>
-
+<span style="color:#f92672">}</span>
+</code></pre></div><h3 id="一个非阻塞的计数器">一个非阻塞的计数器</h3>
 <p>下面是一个非阻塞的计数器的例子：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#a6e22e">@ThreadSafe</span>
 <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">CasCounter</span> <span style="color:#f92672">{</span>
@@ -369,16 +339,13 @@
     <span style="color:#f92672">}</span> <span style="color:#66d9ef">while</span> <span style="color:#f92672">(</span>v <span style="color:#f92672">!=</span> value<span style="color:#f92672">.</span><span style="color:#a6e22e">compareAndSwap</span><span style="color:#f92672">(</span>v<span style="color:#f92672">,</span> v <span style="color:#f92672">+</span> 1<span style="color:#f92672">));</span>
     <span style="color:#66d9ef">return</span> v <span style="color:#f92672">+</span> 1<span style="color:#f92672">;</span>
   <span style="color:#f92672">}</span>
-<span style="color:#f92672">}</span></code></pre></div>
-<h2 id="atomic-variable-classes">Atomic Variable classes</h2>
-
+<span style="color:#f92672">}</span>
+</code></pre></div><h2 id="atomic-variable-classes">Atomic Variable classes</h2>
 <p>更新一个原子变量的</p>
-
 <ul>
 <li>fast path（无竞争）不比获得锁的fast path慢，并且通常更快。</li>
 <li>slow path（有竞争）绝对比获得锁的slow path快，因为没有线程挂起和调度开销。</li>
 </ul>
-
 <h3 id="atomics-vs-better-volatiles">Atomics vs “better volatiles”</h3>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#a6e22e">@ThreadSafe</span>
 <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">CasNumberRange</span> <span style="color:#f92672">{</span>
@@ -427,31 +394,22 @@
         <span style="color:#66d9ef">return</span><span style="color:#f92672">;</span>
     <span style="color:#f92672">}</span>
   <span style="color:#f92672">}</span>
-<span style="color:#f92672">}</span></code></pre></div>
-<h3 id="锁和原子变量">锁和原子变量</h3>
-
+<span style="color:#f92672">}</span>
+</code></pre></div><h3 id="锁和原子变量">锁和原子变量</h3>
 <p>代码就不贴了，说结论：</p>
-
 <ul>
 <li>在高竞争等级下，锁要比原子变量好那么一点点（吞吐量）。为什么？因为原子变量的版本在失败后立马又重试了，反而加剧了竞争。</li>
 <li>但是现实中竞争等级没有那么高，所以原子变量比锁要好挺多（吞吐量）。</li>
 </ul>
-
 <p>总结：</p>
-
 <ul>
 <li>在低竞争等级下，原子变量提供了更好的伸缩性。</li>
 <li>在高竞争等级下，锁提供了更好的竞争规避</li>
 </ul>
-
 <h2 id="非阻塞算法">非阻塞算法</h2>
-
 <p>如果一个算法是“非阻塞”的，那么当一个线程失败或者挂起的时候，都不会导致其他线程的失败或挂起（你可以认为没有死锁）。</p>
-
 <p>如果一个算法是“无锁”的，那么在每一步上，总有一些线程可以取得进展。</p>
-
 <h3 id="一个非阻塞栈">一个非阻塞栈</h3>
-
 <p>注意：<code>compareAndSet</code>同时提供了可见性和原子性。</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#a6e22e">@ThreadSafe</span>
   <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">ConcurrentStack</span> <span style="color:#f92672">&lt;</span>E<span style="color:#f92672">&gt;</span> <span style="color:#f92672">{</span>
@@ -486,19 +444,13 @@
       <span style="color:#66d9ef">this</span><span style="color:#f92672">.</span><span style="color:#a6e22e">item</span> <span style="color:#f92672">=</span> item<span style="color:#f92672">;</span>
     <span style="color:#f92672">}</span>
   <span style="color:#f92672">}</span>
-<span style="color:#f92672">}</span></code></pre></div>
-<h3 id="一个非阻塞链表">一个非阻塞链表</h3>
-
+<span style="color:#f92672">}</span>
+</code></pre></div><h3 id="一个非阻塞链表">一个非阻塞链表</h3>
 <p>构建非阻塞的算法的关键在于限定原子性变更仅限定在单个变量上，如果有多个变量要原子性更新，那么需要一些技巧：</p>
-
 <p>第一个技巧，保证数据结构总是处于一致性的状态下，就算在一个多步骤更新的当中也是如此。如果A更新到一半B进来了，B可以知道这个情况，并且不会立即做自己的更新，B可以等待A完成，这样两个就不会互相影响了。</p>
-
 <p>如果A操作在半当中失败了，那么B操作就永远没法获得进展，这个时候就可以有第二个技巧来确保一个线程的失败不会导致另一个线程无法进展。</p>
-
 <p>第二，如果B操作发现数据结构处于A操作当中状态时，B有足够的信息帮助A把接下来的事情完成，然后在把自己的事情做掉。当A回来的时候会发现自己没做完的事情已经被B做了。</p>
-
 <p>下面是一个LinkedQueue的例子，具体讲解要看书，这里点两个关键：</p>
-
 <ul>
 <li>当结构处在完整状态时，tail.next是不为null的</li>
 <li>当结构处在中间状态时，tail.next是为null的</li>
@@ -542,32 +494,24 @@
       <span style="color:#f92672">}</span>
     <span style="color:#f92672">}</span>
   <span style="color:#f92672">}</span>
-<span style="color:#f92672">}</span></code></pre></div>
-<h3 id="atomic-field-updaters">Atomic field updaters</h3>
-
+<span style="color:#f92672">}</span>
+</code></pre></div><h3 id="atomic-field-updaters">Atomic field updaters</h3>
 <p><code>AtomicReferenceFieldUpdater</code>：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#66d9ef">private</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">Node</span><span style="color:#f92672">&lt;</span>E<span style="color:#f92672">&gt;</span> <span style="color:#f92672">{</span>
   <span style="color:#66d9ef">private</span> <span style="color:#66d9ef">final</span> E item<span style="color:#f92672">;</span>
   <span style="color:#66d9ef">private</span> <span style="color:#66d9ef">volatile</span> Node<span style="color:#f92672">&lt;</span>E<span style="color:#f92672">&gt;</span> next<span style="color:#f92672">;</span>
 <span style="color:#f92672">}</span>
 <span style="color:#66d9ef">private</span> <span style="color:#66d9ef">static</span> AtomicReferenceFieldUpdater<span style="color:#f92672">&lt;</span>Node<span style="color:#f92672">,</span> Node<span style="color:#f92672">&gt;</span> nextUpdater
-  <span style="color:#f92672">=</span> AtomicReferenceFieldUpdater<span style="color:#f92672">.</span><span style="color:#a6e22e">newUpdater</span><span style="color:#f92672">(</span>Node<span style="color:#f92672">.</span><span style="color:#a6e22e">class</span><span style="color:#f92672">,</span> Node<span style="color:#f92672">.</span><span style="color:#a6e22e">class</span><span style="color:#f92672">,</span> <span style="color:#e6db74">&#34;next&#34;</span><span style="color:#f92672">);</span></code></pre></div>
-<p>Atomic field updater代表了一个对volatile字段的反射视图，然后你可以利用它使用CAS。</p>
-
+  <span style="color:#f92672">=</span> AtomicReferenceFieldUpdater<span style="color:#f92672">.</span><span style="color:#a6e22e">newUpdater</span><span style="color:#f92672">(</span>Node<span style="color:#f92672">.</span><span style="color:#a6e22e">class</span><span style="color:#f92672">,</span> Node<span style="color:#f92672">.</span><span style="color:#a6e22e">class</span><span style="color:#f92672">,</span> <span style="color:#e6db74">&#34;next&#34;</span><span style="color:#f92672">);</span>
+</code></pre></div><p>Atomic field updater代表了一个对volatile字段的反射视图，然后你可以利用它使用CAS。</p>
 <p>为何要用Atomic field updater是因为性能原因：</p>
-
 <ul>
 <li>对于频繁创建的，短命的对象（比如队列的Node），每次都创建<code>AtomicReference</code>是一笔开销，用Atomic field updater则免去了这个开销。</li>
 </ul>
-
 <p>另外Atomic field updater还可以帮助你保留对象的序列化形式。</p>
-
 <h3 id="aba问题">ABA问题</h3>
-
 <p>CAS解决的是“V的值是否依然是A？”，但如果V的值再很短的时间内变成过B，又变回A，那么这个就是ABA问题。</p>
-
 <p>在大多数情况下ABA无所谓，但是有些情况下则不行，比如对于链表来说，head依然指向某个node不代表这个链表没有变过。</p>
-
 <p>解决办法，在更新值的同时更新版本号，对比的时候连值和版本号一起对比。<code>AtomicStampedReference</code>可以干这个，<code>AtomicMarkableReference</code>也差不多。</p></article>
     <footer class="post-footer">
       
@@ -582,7 +526,7 @@
       </ul>
       
       <p class="post-copyright">
-        This post was published <strong>114</strong> days ago, content in the post may be inaccurate, even wrong now, please take risk yourself.
+        This post was published <strong>123</strong> days ago, content in the post may be inaccurate, even wrong now, please take risk yourself.
       </p>
     </footer>
     

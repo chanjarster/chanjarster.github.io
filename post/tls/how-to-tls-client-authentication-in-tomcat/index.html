@@ -16,31 +16,28 @@
 
   
   <meta name="author" content="颇忒脱" />
-  <meta name="description" content="
-" />
+  <meta name="description" content="" />
 
   
   
     <meta name="twitter:card" content="summary" />
     <meta name="twitter:site" content="@gohugoio" />
     <meta name="twitter:title" content="如何在Tomcat中做TLS客户端认证" />
-    <meta name="twitter:description" content="
-" />
+    <meta name="twitter:description" content="" />
     <meta name="twitter:image" content="https://chanjarster.github.io/img/avatar.jpg" />
   
 
   
   <meta property="og:type" content="article" />
   <meta property="og:title" content="如何在Tomcat中做TLS客户端认证" />
-  <meta property="og:description" content="
-" />
+  <meta property="og:description" content="" />
   <meta property="og:url" content="https://chanjarster.github.io/post/tls/how-to-tls-client-authentication-in-tomcat/" />
   <meta property="og:image" content="https://chanjarster.github.io/img/avatar.jpg" />
 
 
 
 
-<meta name="generator" content="Hugo 0.49.2" />
+<meta name="generator" content="Hugo 0.68.1" />
 
 
 <link rel="canonical" href="https://chanjarster.github.io/post/tls/how-to-tls-client-authentication-in-tomcat/" />
@@ -248,105 +245,71 @@
       <h1 class="post-title">如何在Tomcat中做TLS客户端认证</h1>
       <p class="post-meta">@颇忒脱 · Mar 27, 2019 · 5 min read</p>
     </header>
-    <article class="post-content"><p></p>
-
-<p>常见的https网站做的是服务端认证（server authentication），浏览器通过证书判断你所访问的<a href="https://baidu.com是否真的是百度，而不是其他人伪造的网站。同时还对流量加密，防止别人窃听你的流量。">https://baidu.com是否真的是百度，而不是其他人伪造的网站。同时还对流量加密，防止别人窃听你的流量。</a></p>
-
+    <article class="post-content"><p>常见的https网站做的是服务端认证（server authentication），浏览器通过证书判断你所访问的https://baidu.com是否真的是百度，而不是其他人伪造的网站。同时还对流量加密，防止别人窃听你的流量。</p>
 <p>tls还可以做客户端认证（client authentication），即服务端判断客户端是否为其所信任的客户端。由此可见，客户端认证用于那些需要受控访问服务端。</p>
-
 <p>在数据中心中，有些服务是非常敏感的，那么我们要做到：</p>
-
 <ol>
 <li>客户端和我的流量是加密的，防止别人监听</li>
 <li>客户端能够确认所访问的服务端的确是我们提供的服务端，而不是别人伪造的服务端</li>
 <li>只有我信任的客户端可以访问我，防止恶意请求</li>
 </ol>
-
 <p>所以很明显，前两个问题可以通过服务端认证解决，最后一个问题可以通过客户端认证解决。顺便一提，如果要使用客户端认证就必须使用服务端认证。</p>
-
 <p>先来讲讲概念然后举个tomcat的例子讲讲怎么做。</p>
-
 <h2 id="概念">概念</h2>
-
 <h3 id="服务端认证">服务端认证</h3>
-
 <p>不论是做Server authentication还是Client authentication都需要证书。证书的来源有两种：</p>
-
 <ul>
 <li>由权威CA签发，一般都是去购买。也可以使用let&rsquo;s encrypt申请免费证书。</li>
 <li>自己签发</li>
 </ul>
-
 <p>在一切可能的情况下都应该使用权威CA签发的证书，为什么这么建议？因为这里牵涉到一个信任问题，浏览器、编程语言SDK和某些工具都维护了一个信任CA证书清单，只要是由这些CA签发的证书那就信任，否则就不信任。而这个链条是可以多级的，这里就不展开了。你只需要知道由信任CA签发的所有证书都是可信的。比如JDK自带的信任CA证书可以通过下面命令看到：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">keytool -list -keystore $JAVA_HOME/jre/lib/security/cacerts
 
-verisignclass2g2ca <span style="color:#f92672">[</span>jdk<span style="color:#f92672">]</span>, <span style="color:#ae81ff">2016</span>-8-25, trustedCertEntry,
+verisignclass2g2ca <span style="color:#f92672">[</span>jdk<span style="color:#f92672">]</span>, 2016-8-25, trustedCertEntry,
 证书指纹 <span style="color:#f92672">(</span>SHA1<span style="color:#f92672">)</span>: B3:EA:C4:47:76:C9:C8:1C:EA:F2:9D:95:B6:CC:A0:08:1B:67:EC:9D
-digicertassuredidg3 <span style="color:#f92672">[</span>jdk<span style="color:#f92672">]</span>, <span style="color:#ae81ff">2016</span>-8-25, trustedCertEntry,
+digicertassuredidg3 <span style="color:#f92672">[</span>jdk<span style="color:#f92672">]</span>, 2016-8-25, trustedCertEntry,
 证书指纹 <span style="color:#f92672">(</span>SHA1<span style="color:#f92672">)</span>: F5:17:A2:4F:9A:48:C6:C9:F8:A2:00:26:9F:DC:0F:48:2C:AB:30:89
-verisignuniversalrootca <span style="color:#f92672">[</span>jdk<span style="color:#f92672">]</span>, <span style="color:#ae81ff">2016</span>-8-25, trustedCertEntry,
-...</code></pre></div>
-<p>让你输密码的时候输入<code>changeit</code>。</p>
-
+verisignuniversalrootca <span style="color:#f92672">[</span>jdk<span style="color:#f92672">]</span>, 2016-8-25, trustedCertEntry,
+...
+</code></pre></div><p>让你输密码的时候输入<code>changeit</code>。</p>
 <p>如果这个证书不是由信任CA签发的（比如自己签发）会发生什么？浏览器、编程语言SDK、你所使用的工具会报告以下错误：</p>
-
 <p>curl：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-txt" data-lang="txt">curl: (60) SSL certificate problem: self signed certificate in certificate chain</code></pre></div>
-<p>Java：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-txt" data-lang="txt">curl: (60) SSL certificate problem: self signed certificate in certificate chain
+</code></pre></div><p>Java：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-txt" data-lang="txt">Exception in thread &#34;main&#34; javax.net.ssl.SSLHandshakeException: sun.security.validator.ValidatorException: PKIX path building failed: sun.security.provider.certpath.SunCertPathBuilderException: unable to find valid certification path to requested target
 	at sun.security.ssl.Alerts.getSSLException(Alerts.java:192)
 	at sun.security.ssl.SSLSocketImpl.fatal(SSLSocketImpl.java:1964)
 	at sun.security.ssl.Handshaker.fatalSE(Handshaker.java:328)
 	at sun.security.ssl.Handshaker.fatalSE(Handshaker.java:322)
 	at sun.security.ssl.ClientHandshaker.serverCertificate(ClientHandshaker.java:1614)
-...</code></pre></div>
-<p>浏览器：</p>
-
-<p><img src="browser-warning.png" alt="" /></p>
-
+...
+</code></pre></div><p>浏览器：</p>
+<p><img src="browser-warning.png" alt=""></p>
 <p>这个错误实际上就是在告诉你这个证书不可信任，可能是一个伪造站点，让你小心点儿。如果这个证书由权威CA签发，那么就没有这个问题了。但是权威CA签发的证书要求申请人拥有域名，如果你这个服务是内部使用的没有域名，那就只能自己签发了。那么如何解决上面的问题呢？你得把自己签发的证书加入到信任CA证书清单里。</p>
-
 <p>下图是权威CA签发证书的示例：</p>
-
-<p><img src="server-authentication-ca.png" alt="" /></p>
-
+<p><img src="server-authentication-ca.png" alt=""></p>
 <p>可以看到客户端有一个truststore，这个就是存放信任CA证书的地方，服务端有一个keystore，存放的自己的证书及对应的私钥。</p>
-
 <p>下图是自签发证书的示例：</p>
-
-<p><img src="server-authentication-self-sign.png" alt="" /></p>
-
+<p><img src="server-authentication-self-sign.png" alt=""></p>
 <p>在上面可以看到我们自己成为了一个Root CA，把它放到客户端的truststore里。</p>
-
 <h3 id="客户端认证">客户端认证</h3>
-
 <p>前面讲过客户端认证是服务端来验证客户端是否可信的机制，其实做法和服务端认证类似只不过方向相反。客户端认证大多数情况下只能是自签发的（因为没有域名），虽然不是不可以从权威CA签发但是存在一些问题。下面解释为什么，假设权威CA是let&rsquo;s encrypt，然后服务端信任它签发的所有证书。但是let&rsquo;s encrypt是阿猫阿狗都可以申请的，现在有一个黑客申请了这个证书，然后请求你的服务端，服务端就认可了。</p>
-
 <p>上面这个问题可以用这个方法解决：比如你用let&rsquo;s encrypt申请了A证书，黑客用let&rsquo;s encrypt申请了B证书，你的服务端的truststore只信任A证书，那么黑客用B证书访问你的时候就会被拒绝。但是这就带来另一个问题，比如你在开发的时候客户端证书有这么几套：生产用、调试用、开发用，那么每次客户端签发一个证书都要更新到你的服务器的truststore里，这也太麻烦了。</p>
-
 <p>所以结合安全性和便利性，我们把自己变成Root CA，然后服务端信任它，这样一来服务端就可以在开发的时候把Client Root CA内置进去，大大减轻了维护truststore的工作量，看下图：</p>
-
-<p><img src="client-authentication.png" alt="" /></p>
-
+<p><img src="client-authentication.png" alt=""></p>
 <h2 id="用tomcat举个例子">用Tomcat举个例子</h2>
-
 <p>下面举一个Tomcat做客户端认证的例子，因为是测试用，所以服务端认证也是用的自签发证书。</p>
-
 <p>我们用了<a href="https://github.com/cloudflare/cfssl">cfssl</a>这个工具来生成证书。</p>
-
 <h3 id="服务端">服务端</h3>
-
 <p>先弄一套目录：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash"><span style="color:#75715e"># 放自签发的服务端CA根证书
-</span><span style="color:#75715e"></span>server-secrets/ca
-<span style="color:#75715e"># 放自签发的服务端的证书
-</span><span style="color:#75715e"></span>server-secrets/cert
-<span style="color:#75715e"># 放服务端的keystore和truststore
-</span><span style="color:#75715e"></span>server-secrets/jks</code></pre></div>
-<h4 id="生成自签名ca证书">生成自签名CA证书</h4>
-
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash"><span style="color:#75715e"># 放自签发的服务端CA根证书</span>
+server-secrets/ca
+<span style="color:#75715e"># 放自签发的服务端的证书</span>
+server-secrets/cert
+<span style="color:#75715e"># 放服务端的keystore和truststore</span>
+server-secrets/jks
+</code></pre></div><h4 id="生成自签名ca证书">生成自签名CA证书</h4>
 <p>新建文件：server-secrets/ca/server-root-ca-csr.json</p>
-
 <p>内容如下：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-json" data-lang="json">{
   <span style="color:#f92672">&#34;key&#34;</span>: {
@@ -363,15 +326,15 @@ verisignuniversalrootca <span style="color:#f92672">[</span>jdk<span style="colo
     }
   ],
   <span style="color:#f92672">&#34;CN&#34;</span>: <span style="color:#e6db74">&#34;server-root-ca&#34;</span>
-}</code></pre></div>
-<p>运行下面命令生成Server ROOT CA证书：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">cfssl gencert --initca<span style="color:#f92672">=</span>true ./server-root-ca-csr.json | cfssljson --bare server-root-ca</code></pre></div>
-<p>会得到下面几个文件：</p>
+}
+</code></pre></div><p>运行下面命令生成Server ROOT CA证书：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">cfssl gencert --initca<span style="color:#f92672">=</span>true ./server-root-ca-csr.json | cfssljson --bare server-root-ca
+</code></pre></div><p>会得到下面几个文件：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-txt" data-lang="txt">server-secrets/ca/
 ├── server-root-ca-key.pem
 ├── server-root-ca.csr
-└── server-root-ca.pem</code></pre></div>
-<p>用下面命令验证证书：</p>
+└── server-root-ca.pem
+</code></pre></div><p>用下面命令验证证书：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">openssl x509 -in ./server-root-ca.pem -text -noout
 
 Certificate:
@@ -382,13 +345,11 @@ Certificate:
     Signature Algorithm: sha256WithRSAEncryption
         Issuer: C<span style="color:#f92672">=</span>CN, ST<span style="color:#f92672">=</span>Shanghai, L<span style="color:#f92672">=</span>Shanghai, O<span style="color:#f92672">=</span>Company, OU<span style="color:#f92672">=</span>Datacenter, CN<span style="color:#f92672">=</span>server-root-ca
         Validity
-            Not Before: Mar <span style="color:#ae81ff">27</span> <span style="color:#ae81ff">05</span>:14:00 <span style="color:#ae81ff">2019</span> GMT
-            Not After : Mar <span style="color:#ae81ff">25</span> <span style="color:#ae81ff">05</span>:14:00 <span style="color:#ae81ff">2024</span> GMT
-        Subject: C<span style="color:#f92672">=</span>CN, ST<span style="color:#f92672">=</span>Shanghai, L<span style="color:#f92672">=</span>Shanghai, O<span style="color:#f92672">=</span>Company, OU<span style="color:#f92672">=</span>Datacenter, CN<span style="color:#f92672">=</span>server-root-ca</code></pre></div>
-<p>可以看到签发人和被签发人是同一个。</p>
-
+            Not Before: Mar <span style="color:#ae81ff">27</span> 05:14:00 <span style="color:#ae81ff">2019</span> GMT
+            Not After : Mar <span style="color:#ae81ff">25</span> 05:14:00 <span style="color:#ae81ff">2024</span> GMT
+        Subject: C<span style="color:#f92672">=</span>CN, ST<span style="color:#f92672">=</span>Shanghai, L<span style="color:#f92672">=</span>Shanghai, O<span style="color:#f92672">=</span>Company, OU<span style="color:#f92672">=</span>Datacenter, CN<span style="color:#f92672">=</span>server-root-ca
+</code></pre></div><p>可以看到签发人和被签发人是同一个。</p>
 <h4 id="生成自签发证书">生成自签发证书</h4>
-
 <p>新建文件 server-secrets/cert/server-gencert.json，内容如下：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-json" data-lang="json">{
   <span style="color:#f92672">&#34;signing&#34;</span>: {
@@ -401,9 +362,8 @@ Certificate:
         <span style="color:#f92672">&#34;expiry&#34;</span>: <span style="color:#e6db74">&#34;87600h&#34;</span>
     }
   }
-}</code></pre></div>
-<p>可以看到我们会生成用来做server auth的证书。</p>
-
+}
+</code></pre></div><p>可以看到我们会生成用来做server auth的证书。</p>
 <p>新建文件 server-secrets/cert/demo-csr.json，内容如下：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-json" data-lang="json">{
   <span style="color:#f92672">&#34;key&#34;</span>: {
@@ -424,21 +384,20 @@ Certificate:
     <span style="color:#e6db74">&#34;127.0.0.1&#34;</span>,
     <span style="color:#e6db74">&#34;localhost&#34;</span>
   ]
-}</code></pre></div>
-<p>看上面的hosts，你可以根据自己的需要填写域名或IP，这里因为是本地演示所以是127.0.0.1和localhost。</p>
-
+}
+</code></pre></div><p>看上面的hosts，你可以根据自己的需要填写域名或IP，这里因为是本地演示所以是127.0.0.1和localhost。</p>
 <p>运行下面命令生成证书</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">cfssl gencert <span style="color:#ae81ff">\
 </span><span style="color:#ae81ff"></span>  --ca ../ca/server-root-ca.pem <span style="color:#ae81ff">\
 </span><span style="color:#ae81ff"></span>  --ca-key ../ca/server-root-ca-key.pem <span style="color:#ae81ff">\
 </span><span style="color:#ae81ff"></span>  --config ./server-gencert.json <span style="color:#ae81ff">\
-</span><span style="color:#ae81ff"></span>  ./demo-csr.json | cfssljson --bare ./demo</code></pre></div>
-<p>得到文件：</p>
+</span><span style="color:#ae81ff"></span>  ./demo-csr.json | cfssljson --bare ./demo
+</code></pre></div><p>得到文件：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-txt" data-lang="txt">server-secrets/cert/
 ├── demo-key.pem
 ├── demo.csr
-└── demo.pem</code></pre></div>
-<p>验证结果：</p>
+└── demo.pem
+</code></pre></div><p>验证结果：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">openssl x509 -in ./demo.pem -text -noout
 
 Certificate:
@@ -449,13 +408,11 @@ Certificate:
     Signature Algorithm: sha256WithRSAEncryption
         Issuer: C<span style="color:#f92672">=</span>CN, ST<span style="color:#f92672">=</span>Shanghai, L<span style="color:#f92672">=</span>Shanghai, O<span style="color:#f92672">=</span>Company, OU<span style="color:#f92672">=</span>Datacenter, CN<span style="color:#f92672">=</span>server-root-ca
         Validity
-            Not Before: Mar <span style="color:#ae81ff">27</span> <span style="color:#ae81ff">05</span>:17:00 <span style="color:#ae81ff">2019</span> GMT
-            Not After : Mar <span style="color:#ae81ff">24</span> <span style="color:#ae81ff">05</span>:17:00 <span style="color:#ae81ff">2029</span> GMT
-        Subject: C<span style="color:#f92672">=</span>CN, ST<span style="color:#f92672">=</span>Shanghai, L<span style="color:#f92672">=</span>Shanghai, O<span style="color:#f92672">=</span>Company, OU<span style="color:#f92672">=</span>Datacenter, CN<span style="color:#f92672">=</span>server-demo</code></pre></div>
-<p>可以看到签发者是server-root-ca，Subject是server-demo。</p>
-
+            Not Before: Mar <span style="color:#ae81ff">27</span> 05:17:00 <span style="color:#ae81ff">2019</span> GMT
+            Not After : Mar <span style="color:#ae81ff">24</span> 05:17:00 <span style="color:#ae81ff">2029</span> GMT
+        Subject: C<span style="color:#f92672">=</span>CN, ST<span style="color:#f92672">=</span>Shanghai, L<span style="color:#f92672">=</span>Shanghai, O<span style="color:#f92672">=</span>Company, OU<span style="color:#f92672">=</span>Datacenter, CN<span style="color:#f92672">=</span>server-demo
+</code></pre></div><p>可以看到签发者是server-root-ca，Subject是server-demo。</p>
 <h4 id="将证书导入keystore">将证书导入keystore</h4>
-
 <p>到 server-secrets/jks，执行下面命令生成pkcs12格式的keystore（JDK识别这个格式）</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">openssl pkcs12 -export <span style="color:#ae81ff">\
 </span><span style="color:#ae81ff"></span>  -in ../cert/demo.pem <span style="color:#ae81ff">\
@@ -463,30 +420,26 @@ Certificate:
 </span><span style="color:#ae81ff"></span>  -out server-demo.keystore <span style="color:#ae81ff">\
 </span><span style="color:#ae81ff"></span>  -name server-demo <span style="color:#ae81ff">\
 </span><span style="color:#ae81ff"></span>  -CAfile ../ca/server-root-ca.pem <span style="color:#ae81ff">\
-</span><span style="color:#ae81ff"></span>  -caname root -chain</code></pre></div>
-<p>过程中会让你输入密码，你就输入：server-demo-ks。</p>
-
+</span><span style="color:#ae81ff"></span>  -caname root -chain
+</code></pre></div><p>过程中会让你输入密码，你就输入：server-demo-ks。</p>
 <p>得到文件：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-txt" data-lang="txt">server-secrets/jks/
-└── server-demo.keystore</code></pre></div>
-<p>用JDK提供的keytool看看里面的内容：</p>
+└── server-demo.keystore
+</code></pre></div><p>用JDK提供的keytool看看里面的内容：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">keytool -list -keystore server-demo.keystore
 
-server-demo, <span style="color:#ae81ff">2019</span>-3-27, PrivateKeyEntry,
-证书指纹 <span style="color:#f92672">(</span>SHA1<span style="color:#f92672">)</span>: B2:E5:46:63:BB:00:E7:82:48:A4:2F:EC:01:41:CE:B4:4B:CE:68:7A</code></pre></div>
-<p>让你输入密码的时候就输入：server-demo-ks。</p>
-
+server-demo, 2019-3-27, PrivateKeyEntry,
+证书指纹 <span style="color:#f92672">(</span>SHA1<span style="color:#f92672">)</span>: B2:E5:46:63:BB:00:E7:82:48:A4:2F:EC:01:41:CE:B4:4B:CE:68:7A
+</code></pre></div><p>让你输入密码的时候就输入：server-demo-ks。</p>
 <h3 id="客户端">客户端</h3>
-
 <p>先弄一套目录：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-txt" data-lang="txt"># 放自签发的客户端CA根证书
 client-secrets/ca
 # 放自签发的客户端的证书
 client-secrets/cert
 # 放客户端的keystore和truststore
-client-secrets/jks</code></pre></div>
-<h4 id="生成自签名ca证书-1">生成自签名CA证书</h4>
-
+client-secrets/jks
+</code></pre></div><h4 id="生成自签名ca证书-1">生成自签名CA证书</h4>
 <p>新建文件 client-secrets/ca/client-root-ca-csr.json：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-json" data-lang="json">{
   <span style="color:#f92672">&#34;key&#34;</span>: {
@@ -503,15 +456,15 @@ client-secrets/jks</code></pre></div>
     }
   ],
   <span style="color:#f92672">&#34;CN&#34;</span>: <span style="color:#e6db74">&#34;client-root-ca&#34;</span>
-}</code></pre></div>
-<p>运行下面命令生成Client ROOT CA证书：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">cfssl gencert --initca<span style="color:#f92672">=</span>true ./client-root-ca-csr.json | cfssljson --bare client-root-ca</code></pre></div>
-<p>会得到下面几个文件：</p>
+}
+</code></pre></div><p>运行下面命令生成Client ROOT CA证书：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">cfssl gencert --initca<span style="color:#f92672">=</span>true ./client-root-ca-csr.json | cfssljson --bare client-root-ca
+</code></pre></div><p>会得到下面几个文件：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-txt" data-lang="txt">client-secrets/ca/
 ├── client-root-ca-key.pem
 ├── client-root-ca.csr
-└── client-root-ca.pem</code></pre></div>
-<p>用下面命令验证证书：</p>
+└── client-root-ca.pem
+</code></pre></div><p>用下面命令验证证书：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">openssl x509 -in ./client-root-ca.pem -text -noout
 
 Certificate:
@@ -522,13 +475,11 @@ Certificate:
     Signature Algorithm: sha256WithRSAEncryption
         Issuer: C<span style="color:#f92672">=</span>CN, ST<span style="color:#f92672">=</span>Shanghai, L<span style="color:#f92672">=</span>Shanghai, O<span style="color:#f92672">=</span>Company, OU<span style="color:#f92672">=</span>Datacenter, CN<span style="color:#f92672">=</span>client-root-ca
         Validity
-            Not Before: Mar <span style="color:#ae81ff">27</span> <span style="color:#ae81ff">05</span>:20:00 <span style="color:#ae81ff">2019</span> GMT
-            Not After : Mar <span style="color:#ae81ff">25</span> <span style="color:#ae81ff">05</span>:20:00 <span style="color:#ae81ff">2024</span> GMT
-        Subject: C<span style="color:#f92672">=</span>CN, ST<span style="color:#f92672">=</span>Shanghai, L<span style="color:#f92672">=</span>Shanghai, O<span style="color:#f92672">=</span>Company, OU<span style="color:#f92672">=</span>Datacenter, CN<span style="color:#f92672">=</span>client-root-ca</code></pre></div>
-<p>可以看到签发人和被签发人是同一个。</p>
-
+            Not Before: Mar <span style="color:#ae81ff">27</span> 05:20:00 <span style="color:#ae81ff">2019</span> GMT
+            Not After : Mar <span style="color:#ae81ff">25</span> 05:20:00 <span style="color:#ae81ff">2024</span> GMT
+        Subject: C<span style="color:#f92672">=</span>CN, ST<span style="color:#f92672">=</span>Shanghai, L<span style="color:#f92672">=</span>Shanghai, O<span style="color:#f92672">=</span>Company, OU<span style="color:#f92672">=</span>Datacenter, CN<span style="color:#f92672">=</span>client-root-ca
+</code></pre></div><p>可以看到签发人和被签发人是同一个。</p>
 <h4 id="生成自签发证书-1">生成自签发证书</h4>
-
 <p>新建文件 client-secrets/cert/client-gencert.json，内容如下：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-json" data-lang="json">{
   <span style="color:#f92672">&#34;signing&#34;</span>: {
@@ -541,9 +492,8 @@ Certificate:
         <span style="color:#f92672">&#34;expiry&#34;</span>: <span style="color:#e6db74">&#34;87600h&#34;</span>
     }
   }
-}</code></pre></div>
-<p>可以看到我们会生成用来做client auth的证书。</p>
-
+}
+</code></pre></div><p>可以看到我们会生成用来做client auth的证书。</p>
 <p>新建文件 client-secrets/cert/demo-csr.json，内容如下：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-json" data-lang="json">{
   <span style="color:#f92672">&#34;key&#34;</span>: {
@@ -560,21 +510,20 @@ Certificate:
     }
   ],
   <span style="color:#f92672">&#34;CN&#34;</span>: <span style="color:#e6db74">&#34;client-demo&#34;</span>
-}</code></pre></div>
-<p>这里没有hosts，这是因为我们不需要用这个证书来做服务端认证。</p>
-
+}
+</code></pre></div><p>这里没有hosts，这是因为我们不需要用这个证书来做服务端认证。</p>
 <p>运行下面命令生成证书</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">cfssl gencert <span style="color:#ae81ff">\
 </span><span style="color:#ae81ff"></span>  --ca ../ca/client-root-ca.pem <span style="color:#ae81ff">\
 </span><span style="color:#ae81ff"></span>  --ca-key ../ca/client-root-ca-key.pem <span style="color:#ae81ff">\
 </span><span style="color:#ae81ff"></span>  --config ./client-gencert.json <span style="color:#ae81ff">\
-</span><span style="color:#ae81ff"></span>  ./demo-csr.json | cfssljson --bare ./demo</code></pre></div>
-<p>得到文件：</p>
+</span><span style="color:#ae81ff"></span>  ./demo-csr.json | cfssljson --bare ./demo
+</code></pre></div><p>得到文件：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-txt" data-lang="txt">client-secrets/cert/
 ├── demo-key.pem
 ├── demo.csr
-└── demo.pem</code></pre></div>
-<p>验证结果：</p>
+└── demo.pem
+</code></pre></div><p>验证结果：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">openssl x509 -in ./demo.pem -text -noout
 
 Certificate:
@@ -585,13 +534,11 @@ Certificate:
     Signature Algorithm: sha256WithRSAEncryption
         Issuer: C<span style="color:#f92672">=</span>CN, ST<span style="color:#f92672">=</span>Shanghai, L<span style="color:#f92672">=</span>Shanghai, O<span style="color:#f92672">=</span>Company, OU<span style="color:#f92672">=</span>Datacenter, CN<span style="color:#f92672">=</span>client-root-ca
         Validity
-            Not Before: Mar <span style="color:#ae81ff">27</span> <span style="color:#ae81ff">05</span>:21:00 <span style="color:#ae81ff">2019</span> GMT
-            Not After : Mar <span style="color:#ae81ff">24</span> <span style="color:#ae81ff">05</span>:21:00 <span style="color:#ae81ff">2029</span> GMT
-        Subject: C<span style="color:#f92672">=</span>CN, ST<span style="color:#f92672">=</span>Shanghai, L<span style="color:#f92672">=</span>Shanghai, O<span style="color:#f92672">=</span>Company, OU<span style="color:#f92672">=</span>Datacenter, CN<span style="color:#f92672">=</span>client-demo</code></pre></div>
-<p>可以看到签发者是client-root-ca，Subject是client-demo。</p>
-
+            Not Before: Mar <span style="color:#ae81ff">27</span> 05:21:00 <span style="color:#ae81ff">2019</span> GMT
+            Not After : Mar <span style="color:#ae81ff">24</span> 05:21:00 <span style="color:#ae81ff">2029</span> GMT
+        Subject: C<span style="color:#f92672">=</span>CN, ST<span style="color:#f92672">=</span>Shanghai, L<span style="color:#f92672">=</span>Shanghai, O<span style="color:#f92672">=</span>Company, OU<span style="color:#f92672">=</span>Datacenter, CN<span style="color:#f92672">=</span>client-demo
+</code></pre></div><p>可以看到签发者是client-root-ca，Subject是client-demo。</p>
 <h4 id="将证书导入keystore-1">将证书导入keystore</h4>
-
 <p>到 client-secrets/jks，执行下面命令生成pkcs12格式的keystore（JDK识别这个格式）</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">openssl pkcs12 -export <span style="color:#ae81ff">\
 </span><span style="color:#ae81ff"></span>  -in ../cert/demo.pem <span style="color:#ae81ff">\
@@ -599,23 +546,19 @@ Certificate:
 </span><span style="color:#ae81ff"></span>  -out client-demo.keystore <span style="color:#ae81ff">\
 </span><span style="color:#ae81ff"></span>  -name client-demo <span style="color:#ae81ff">\
 </span><span style="color:#ae81ff"></span>  -CAfile ../ca/client-root-ca.pem <span style="color:#ae81ff">\
-</span><span style="color:#ae81ff"></span>  -caname root -chain</code></pre></div>
-<p>过程中会让你输入密码，你就输入：client-demo-ks。</p>
-
+</span><span style="color:#ae81ff"></span>  -caname root -chain
+</code></pre></div><p>过程中会让你输入密码，你就输入：client-demo-ks。</p>
 <p>得到文件：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-txt" data-lang="txt">client-secrets/jks/
-└── client-demo.keystore</code></pre></div>
-<p>用JDK提供的keytool看看里面的内容：</p>
+└── client-demo.keystore
+</code></pre></div><p>用JDK提供的keytool看看里面的内容：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">keytool -list -keystore client-demo.keystore
 
-client-demo, <span style="color:#ae81ff">2019</span>-3-27, PrivateKeyEntry,
-证书指纹 <span style="color:#f92672">(</span>SHA1<span style="color:#f92672">)</span>: <span style="color:#ae81ff">83</span>:AE:0E:5E:0C:CE:86:C9:D1:84:D7:6F:87:F3:76:1F:B4:3E:46:31</code></pre></div>
-<p>让你输入密码的时候就输入：client-demo-ks。</p>
-
+client-demo, 2019-3-27, PrivateKeyEntry,
+证书指纹 <span style="color:#f92672">(</span>SHA1<span style="color:#f92672">)</span>: 83:AE:0E:5E:0C:CE:86:C9:D1:84:D7:6F:87:F3:76:1F:B4:3E:46:31
+</code></pre></div><p>让你输入密码的时候就输入：client-demo-ks。</p>
 <h3 id="两端互信">两端互信</h3>
-
 <p>好了，到此为止server和client的证书都已经生成了，接下来只需要将各自的root-ca添加到彼此都truststore中。</p>
-
 <h4 id="把server-root-ca导入到client的truststore中">把server-root-ca导入到client的truststore中</h4>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">cd client-secrets/jks
 
@@ -624,19 +567,17 @@ keytool -importcert <span style="color:#ae81ff">\
 </span><span style="color:#ae81ff"></span>  -storetype pkcs12 <span style="color:#ae81ff">\
 </span><span style="color:#ae81ff"></span>  -keystore client.truststore <span style="color:#ae81ff">\
 </span><span style="color:#ae81ff"></span>  -storepass client-ts <span style="color:#ae81ff">\
-</span><span style="color:#ae81ff"></span>  -file ../../server-secrets/ca/server-root-ca.pem -noprompt</code></pre></div>
-<p>注意上面的-storepass参数，这个是trustore的密码：client-ts。</p>
-
+</span><span style="color:#ae81ff"></span>  -file ../../server-secrets/ca/server-root-ca.pem -noprompt
+</code></pre></div><p>注意上面的-storepass参数，这个是trustore的密码：client-ts。</p>
 <p>得到文件：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-txt" data-lang="txt">client-secrets/jks/
-└── client.truststore</code></pre></div>
-<p>用JDK提供的keytool看看里面的内容：</p>
+└── client.truststore
+</code></pre></div><p>用JDK提供的keytool看看里面的内容：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">keytool -list -keystore client.truststore
 
-server-root-ca, <span style="color:#ae81ff">2019</span>-3-27, trustedCertEntry,
-证书指纹 <span style="color:#f92672">(</span>SHA1<span style="color:#f92672">)</span>: <span style="color:#ae81ff">75</span>:E3:78:97:85:B2:29:38:25:3C:FD:EC:68:97:9B:78:A0:5F:BB:9D</code></pre></div>
-<p>让你输入密码的时候就输入：client-ts。</p>
-
+server-root-ca, 2019-3-27, trustedCertEntry,
+证书指纹 <span style="color:#f92672">(</span>SHA1<span style="color:#f92672">)</span>: 75:E3:78:97:85:B2:29:38:25:3C:FD:EC:68:97:9B:78:A0:5F:BB:9D
+</code></pre></div><p>让你输入密码的时候就输入：client-ts。</p>
 <h4 id="把client-root-ca导入到server的truststore中">把client-root-ca导入到server的truststore中</h4>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">cd server-secrets/jks
 
@@ -645,23 +586,19 @@ keytool -importcert <span style="color:#ae81ff">\
 </span><span style="color:#ae81ff"></span>  -storetype pkcs12 <span style="color:#ae81ff">\
 </span><span style="color:#ae81ff"></span>  -keystore server.truststore <span style="color:#ae81ff">\
 </span><span style="color:#ae81ff"></span>  -storepass server-ts <span style="color:#ae81ff">\
-</span><span style="color:#ae81ff"></span>  -file ../../client-secrets/ca/client-root-ca.pem -noprompt</code></pre></div>
-<p>注意上面的-storepass参数，这个是trustore的密码：server-ts。</p>
-
+</span><span style="color:#ae81ff"></span>  -file ../../client-secrets/ca/client-root-ca.pem -noprompt
+</code></pre></div><p>注意上面的-storepass参数，这个是trustore的密码：server-ts。</p>
 <p>得到文件：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-txt" data-lang="txt">server-secrets/jks/
-└── server.truststore</code></pre></div>
-<p>用JDK提供的keytool看看里面的内容：</p>
+└── server.truststore
+</code></pre></div><p>用JDK提供的keytool看看里面的内容：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">keytool -list -keystore server.truststore
 
-client-root-ca, <span style="color:#ae81ff">2019</span>-3-27, trustedCertEntry,
-证书指纹 <span style="color:#f92672">(</span>SHA1<span style="color:#f92672">)</span>: 1E:95:2C:12:AA:7E:6D:E7:74:F1:83:C2:B8:73:6F:EE:57:FB:CA:46</code></pre></div>
-<p>让你输入密码的时候就输入：server-ts。</p>
-
+client-root-ca, 2019-3-27, trustedCertEntry,
+证书指纹 <span style="color:#f92672">(</span>SHA1<span style="color:#f92672">)</span>: 1E:95:2C:12:AA:7E:6D:E7:74:F1:83:C2:B8:73:6F:EE:57:FB:CA:46
+</code></pre></div><p>让你输入密码的时候就输入：server-ts。</p>
 <h3 id="配置tomcat">配置Tomcat</h3>
-
 <p>好了，我们现在client和server都有了自己证书放在了自己的keystore中，而且把彼此的root-ca证书放到了自己的truststore里。现在我们弄一个tomcat作为server，然后为他配置SSL。</p>
-
 <p>修改tomcat/conf/server.xml，添加如下Connector：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-xml" data-lang="xml"><span style="color:#f92672">&lt;Connector</span> <span style="color:#a6e22e">port=</span><span style="color:#e6db74">&#34;8443&#34;</span> <span style="color:#a6e22e">protocol=</span><span style="color:#e6db74">&#34;org.apache.coyote.http11.Http11NioProtocol&#34;</span>
            <span style="color:#a6e22e">maxThreads=</span><span style="color:#e6db74">&#34;150&#34;</span> <span style="color:#a6e22e">SSLEnabled=</span><span style="color:#e6db74">&#34;true&#34;</span><span style="color:#f92672">&gt;</span>
@@ -677,9 +614,8 @@ client-root-ca, <span style="color:#ae81ff">2019</span>-3-27, trustedCertEntry,
           <span style="color:#a6e22e">certificateKeystorePassword=</span><span style="color:#e6db74">&#34;server-demo-ks&#34;</span>
           <span style="color:#a6e22e">type=</span><span style="color:#e6db74">&#34;RSA&#34;</span> <span style="color:#f92672">/&gt;</span>
     <span style="color:#f92672">&lt;/SSLHostConfig&gt;</span>
-<span style="color:#f92672">&lt;/Connector&gt;</span></code></pre></div>
-<p>可以看到我们开启了客户端认证<code>certificateVerification=&quot;required&quot;</code>，也开启了服务端认证<code>&lt;Certificate&gt;</code>。记得修改上面的keystore和truststore的路径。</p>
-
+<span style="color:#f92672">&lt;/Connector&gt;</span>
+</code></pre></div><p>可以看到我们开启了客户端认证<code>certificateVerification=&quot;required&quot;</code>，也开启了服务端认证<code>&lt;Certificate&gt;</code>。记得修改上面的keystore和truststore的路径。</p>
 <p>修改tomcat/conf/web.xml，添加如下元素：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-xml" data-lang="xml"><span style="color:#f92672">&lt;security-constraint&gt;</span>
   <span style="color:#f92672">&lt;web-resource-collection&gt;</span>
@@ -689,24 +625,21 @@ client-root-ca, <span style="color:#ae81ff">2019</span>-3-27, trustedCertEntry,
   <span style="color:#f92672">&lt;user-data-constraint&gt;</span>
     <span style="color:#f92672">&lt;transport-guarantee&gt;</span>CONFIDENTIAL<span style="color:#f92672">&lt;/transport-guarantee&gt;</span>
   <span style="color:#f92672">&lt;/user-data-constraint&gt;</span>
-<span style="color:#f92672">&lt;/security-constraint&gt;</span></code></pre></div>
-<p>这个作用是当访问8080端口时，都跳转到8443端口，强制走HTTPS。</p>
-
+<span style="color:#f92672">&lt;/security-constraint&gt;</span>
+</code></pre></div><p>这个作用是当访问8080端口时，都跳转到8443端口，强制走HTTPS。</p>
 <p>启动tomcat：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">tomcat/bin/catalina.sh run</code></pre></div>
-<h3 id="用curl测试">用curl测试</h3>
-
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">tomcat/bin/catalina.sh run
+</code></pre></div><h3 id="用curl测试">用curl测试</h3>
 <p>好了，我们现在用curl来测试访问一下：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">curl https://localhost:8443/
 
-curl: <span style="color:#f92672">(</span><span style="color:#ae81ff">60</span><span style="color:#f92672">)</span> SSL certificate problem: self signed certificate in certificate chain
-...</code></pre></div>
-<p>看到curl说服务端用的是一个自签发的证书，不可信，也就是说服务端认证失败。添加<code>--insecure</code>试试：</p>
+curl: <span style="color:#f92672">(</span>60<span style="color:#f92672">)</span> SSL certificate problem: self signed certificate in certificate chain
+...
+</code></pre></div><p>看到curl说服务端用的是一个自签发的证书，不可信，也就是说服务端认证失败。添加<code>--insecure</code>试试：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">curl --insecure https://localhost:8443/
 
-curl: <span style="color:#f92672">(</span><span style="color:#ae81ff">35</span><span style="color:#f92672">)</span> error:1401E412:SSL routines:CONNECT_CR_FINISHED:sslv3 alert bad certificate</code></pre></div>
-<p>这里就说明客户端认证失败。</p>
-
+curl: <span style="color:#f92672">(</span>35<span style="color:#f92672">)</span> error:1401E412:SSL routines:CONNECT_CR_FINISHED:sslv3 alert bad certificate
+</code></pre></div><p>这里就说明客户端认证失败。</p>
 <p>所以如果要正确访问得像下面这样，指定server-root-ca证书，以及客户端自己签发的证书及private key：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">curl --cacert server-secrets/ca/server-root-ca.pem <span style="color:#ae81ff">\
 </span><span style="color:#ae81ff"></span>  --key client-secrets/cert/demo-key.pem <span style="color:#ae81ff">\
@@ -715,16 +648,15 @@ curl: <span style="color:#f92672">(</span><span style="color:#ae81ff">35</span><
 
 &lt;!DOCTYPE html&gt;
 &lt;html lang<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;en&#34;</span>&gt;
-...</code></pre></div>
-<h3 id="httpclient测试">Httpclient测试</h3>
-
+...
+</code></pre></div><h3 id="httpclient测试">Httpclient测试</h3>
 <p>我们现在用Httpclient来访问看看。pom.xml中添加依赖：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-xml" data-lang="xml"><span style="color:#f92672">&lt;dependency&gt;</span>
   <span style="color:#f92672">&lt;groupId&gt;</span>org.apache.httpcomponents<span style="color:#f92672">&lt;/groupId&gt;</span>
   <span style="color:#f92672">&lt;artifactId&gt;</span>httpclient<span style="color:#f92672">&lt;/artifactId&gt;</span>
   <span style="color:#f92672">&lt;version&gt;</span>4.5.7<span style="color:#f92672">&lt;/version&gt;</span>
-<span style="color:#f92672">&lt;/dependency&gt;</span></code></pre></div>
-<p>Java代码，记得把文件路径改掉：</p>
+<span style="color:#f92672">&lt;/dependency&gt;</span>
+</code></pre></div><p>Java代码，记得把文件路径改掉：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#f92672">import</span> org.apache.http.HttpEntity<span style="color:#f92672">;</span>
 <span style="color:#f92672">import</span> org.apache.http.HttpException<span style="color:#f92672">;</span>
 <span style="color:#f92672">import</span> org.apache.http.client.methods.CloseableHttpResponse<span style="color:#f92672">;</span>
@@ -773,24 +705,17 @@ curl: <span style="color:#f92672">(</span><span style="color:#ae81ff">35</span><
     <span style="color:#f92672">}</span>
 
   <span style="color:#f92672">}</span>
-<span style="color:#f92672">}</span></code></pre></div>
-<h2 id="安全性考虑">安全性考虑</h2>
-
+<span style="color:#f92672">}</span>
+</code></pre></div><h2 id="安全性考虑">安全性考虑</h2>
 <ul>
 <li>所有private key都很重要！如果它被泄漏了，就要回收它所对应都证书。如果CA的private key泄漏了，那么用它签发的所有证书都要被回收。</li>
 <li>keystore和truststore的密码设置的要复杂一些。</li>
 </ul>
-
 <h2 id="关于反向代理">关于反向代理</h2>
-
 <p>因为服务端认证所需要的证书直接配置在Tomcat上的，因此在做反向代理的时候不能使用SSL Termination模式，而是得使用SSL Passthrough模式。</p>
-
-<h2 id="其他语言-sdk-工具">其他语言、SDK、工具</h2>
-
+<h2 id="其他语言sdk工具">其他语言、SDK、工具</h2>
 <p>上面讲的方法不是只适用于Tomcat和Httpclient的，TLS的服务端认证与客户端认证应该在绝大部分的语言、SDK、类库都有支持，请自行参阅文档实践。文中的keystore和truststore是Java特有的，不过不必迷惑，因为它们仅仅起到一个存放证书和private key的保险箱，有些语言或工具则是直接使用证书和private key，比如前面提到的curl。</p>
-
 <h2 id="参考资料">参考资料</h2>
-
 <ul>
 <li><a href="https://github.com/cloudflare/cfssl">cfssl</a></li>
 <li><a href="https://tomcat.apache.org/tomcat-8.5-doc/ssl-howto.html">SSL/TLS Configuration HOW-TO</a></li>
@@ -799,18 +724,14 @@ curl: <span style="color:#f92672">(</span><span style="color:#ae81ff">35</span><
 <li><a href="https://hc.apache.org/httpcomponents-client-ga/httpclient/examples/org/apache/http/examples/client/ClientCustomSSL.java">ClientCustomSSL.java</a></li>
 <li><a href="https://docs.oracle.com/javase/8/docs/technotes/guides/security/jsse/JSSERefGuide.html">JSSE Reference Guide</a></li>
 </ul>
-
 <p>一些基础概念：</p>
-
 <ul>
 <li><a href="https://sites.google.com/site/ddmwsst/digital-certificates">Basics of Digital Certificates and Certificate Authority</a>，基础概念，挺重要</li>
 <li><a href="https://sites.google.com/site/ddmwsst/create-your-own-certificate-and-ca">Create Your Own Certificate and CA</a>，这篇文章挺重要的，主要讲了如何使用keytool和openssl来生成证书的过程</li>
 <li><a href="https://blog.cloudflare.com/introducing-tls-client-auth/">Introducing TLS with Client Authentication</a></li>
 <li><a href="https://medium.com/sitewards/the-magic-of-tls-x509-and-mutual-authentication-explained-b2162dec4401">The magic of TLS, X509 and mutual authentication explained</a></li>
 </ul>
-
 <p>其他运用客户端认证的软件的相关文档，很有启发：</p>
-
 <ul>
 <li><a href="http://play.etcd.io/install">Etcd - Play etcd</a> TLS部分</li>
 <li><a href="https://github.com/etcd-io/etcd/blob/master/Documentation/op-guide/security.md#example-2-client-to-server-authentication-with-https-client-certificates">Etcd - Example 2: Client-to-server authentication with HTTPS client certificates</a></li>
@@ -829,7 +750,7 @@ curl: <span style="color:#f92672">(</span><span style="color:#ae81ff">35</span><
       </ul>
       
       <p class="post-copyright">
-        This post was published <strong>356</strong> days ago, content in the post may be inaccurate, even wrong now, please take risk yourself.
+        This post was published <strong>365</strong> days ago, content in the post may be inaccurate, even wrong now, please take risk yourself.
       </p>
     </footer>
     

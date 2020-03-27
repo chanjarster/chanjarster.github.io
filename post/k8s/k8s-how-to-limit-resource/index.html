@@ -17,7 +17,6 @@
   
   <meta name="author" content="颇忒脱" />
   <meta name="description" content="本文介绍几种在K8S中限制资源使用的几种方法。
-
 " />
 
   
@@ -26,7 +25,6 @@
     <meta name="twitter:site" content="@gohugoio" />
     <meta name="twitter:title" content="K8S如何限制资源使用" />
     <meta name="twitter:description" content="本文介绍几种在K8S中限制资源使用的几种方法。
-
 " />
     <meta name="twitter:image" content="https://chanjarster.github.io/img/avatar.jpg" />
   
@@ -35,7 +33,6 @@
   <meta property="og:type" content="article" />
   <meta property="og:title" content="K8S如何限制资源使用" />
   <meta property="og:description" content="本文介绍几种在K8S中限制资源使用的几种方法。
-
 " />
   <meta property="og:url" content="https://chanjarster.github.io/post/k8s/k8s-how-to-limit-resource/" />
   <meta property="og:image" content="https://chanjarster.github.io/img/avatar.jpg" />
@@ -43,7 +40,7 @@
 
 
 
-<meta name="generator" content="Hugo 0.49.2" />
+<meta name="generator" content="Hugo 0.68.1" />
 
 
 <link rel="canonical" href="https://chanjarster.github.io/post/k8s/k8s-how-to-limit-resource/" />
@@ -252,22 +249,14 @@
       <p class="post-meta">@颇忒脱 · Oct 22, 2018 · 1 min read</p>
     </header>
     <article class="post-content"><p>本文介绍几种在K8S中限制资源使用的几种方法。</p>
-
-<p></p>
-
 <h2 id="资源类型">资源类型</h2>
-
 <p>在K8S中可以对两类资源进行限制：cpu和内存。</p>
-
 <p>CPU的单位有：</p>
-
 <ul>
 <li><code>正实数</code>，代表分配几颗CPU，可以是小数点，比如<code>0.5</code>代表0.5颗CPU，意思是一颗CPU的一半时间。<code>2</code>代表两颗CPU。</li>
 <li><code>正整数m</code>，也代表<code>1000m=1</code>，所以<code>500m</code>等价于<code>0.5</code>。</li>
 </ul>
-
 <p>内存的单位：</p>
-
 <ul>
 <li><code>正整数</code>，直接的数字代表Byte</li>
 <li><code>k</code>、<code>K</code>、<code>Ki</code>，Kilobyte</li>
@@ -276,101 +265,84 @@
 <li><code>t</code>、<code>T</code>、<code>Ti</code>，Terabyte</li>
 <li><code>p</code>、<code>P</code>、<code>Pi</code>，Petabyte</li>
 </ul>
-
-<h2 id="方法一-在pod-container-spec中设定资源限制">方法一：在Pod Container Spec中设定资源限制</h2>
-
+<h2 id="方法一在pod-container-spec中设定资源限制">方法一：在Pod Container Spec中设定资源限制</h2>
 <p>在K8S中，对于资源的设定是落在Pod里的Container上的，主要有两类，<code>limits</code>控制上限，<code>requests</code>控制下限。其位置在：</p>
-
 <ul>
 <li><code>spec.containers[].resources.limits.cpu</code></li>
 <li><code>spec.containers[].resources.limits.memory</code></li>
 <li><code>spec.containers[].resources.requests.cpu</code></li>
 <li><code>spec.containers[].resources.requests.memory</code></li>
 </ul>
-
 <p>举例：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-yaml" data-lang="yaml">apiVersion: v1
-kind: Pod
-metadata:
-  name: frontend
-spec:
-  containers:
-  - name: ...
-    image: ...
-    resources:
-      requests:
-        memory: <span style="color:#e6db74">&#34;64Mi&#34;</span>
-        cpu: <span style="color:#e6db74">&#34;250m&#34;</span>
-      limits:
-        memory: <span style="color:#e6db74">&#34;128Mi&#34;</span>
-        cpu: <span style="color:#e6db74">&#34;500m&#34;</span></code></pre></div>
-<h2 id="方法二-在namespace中限定">方法二：在Namespace中限定</h2>
-
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-yaml" data-lang="yaml"><span style="color:#66d9ef">apiVersion</span>: v1
+<span style="color:#66d9ef">kind</span>: Pod
+<span style="color:#66d9ef">metadata</span>:
+  <span style="color:#66d9ef">name</span>: frontend
+<span style="color:#66d9ef">spec</span>:
+  <span style="color:#66d9ef">containers</span>:
+  - <span style="color:#66d9ef">name</span>: ...
+    <span style="color:#66d9ef">image</span>: ...
+    <span style="color:#66d9ef">resources</span>:
+      <span style="color:#66d9ef">requests</span>:
+        <span style="color:#66d9ef">memory</span>: <span style="color:#e6db74">&#34;64Mi&#34;</span>
+        <span style="color:#66d9ef">cpu</span>: <span style="color:#e6db74">&#34;250m&#34;</span>
+      <span style="color:#66d9ef">limits</span>:
+        <span style="color:#66d9ef">memory</span>: <span style="color:#e6db74">&#34;128Mi&#34;</span>
+        <span style="color:#66d9ef">cpu</span>: <span style="color:#e6db74">&#34;500m&#34;</span>
+</code></pre></div><h2 id="方法二在namespace中限定">方法二：在Namespace中限定</h2>
 <p>方法一虽然很好，但是其不是强制性的，因此很容易出现因忘记设定<code>limits</code>/<code>request</code>，导致Host资源使用过度的情形，因此我们需要一种全局性的资源限制设定，以防止这种情况发生。K8S通过在<code>Namespace</code>设定<code>LimitRange</code>来达成这一目的。</p>
-
-<h3 id="配置默认-request-limit">配置默认<code>request</code>/<code>limit</code>：</h3>
-
+<h3 id="配置默认requestlimit">配置默认<code>request</code>/<code>limit</code>：</h3>
 <p>如果配置里默认的<code>request</code>/<code>limit</code>，那么当Pod Spec没有设定<code>request</code>/<code>limit</code>的时候，会使用这个配置，有效避免无限使用资源的情况。</p>
-
 <p>配置位置在：</p>
-
 <ul>
 <li><code>spec.limits[].default.cpu</code>，default limit</li>
 <li><code>spec.limits[].default.memory</code>，同上</li>
 <li><code>spec.limits[].defaultRequest.cpu</code>，default request</li>
 <li><code>spec.limits[].defaultRequest.memory</code>，同上</li>
 </ul>
-
 <p>例子：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-yaml" data-lang="yaml">apiVersion: v1
-kind: LimitRange
-metadata:
-  name: &lt;name<span style="color:#e6db74">&gt;
-</span><span style="color:#e6db74">spec:
-</span><span style="color:#e6db74">  limits:
-</span><span style="color:#e6db74">  - default:
-</span><span style="color:#e6db74">      memory: 512Mi
-</span><span style="color:#e6db74">      cpu: 1
-</span><span style="color:#e6db74">    defaultRequest:
-</span><span style="color:#e6db74">      memory: 256Mi
-</span><span style="color:#e6db74">      cpu: 0.5
-</span><span style="color:#e6db74">    type: Container</span></code></pre></div>
-<h3 id="配置-request-limit-的约束">配置<code>request</code>/<code>limit</code>的约束</h3>
-
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-yaml" data-lang="yaml"><span style="color:#66d9ef">apiVersion</span>: v1
+<span style="color:#66d9ef">kind</span>: LimitRange
+<span style="color:#66d9ef">metadata</span>:
+  <span style="color:#66d9ef">name</span>: &lt;name&gt;
+<span style="color:#66d9ef">spec</span>:
+  <span style="color:#66d9ef">limits</span>:
+  - <span style="color:#66d9ef">default</span>:
+      <span style="color:#66d9ef">memory</span>: 512Mi
+      <span style="color:#66d9ef">cpu</span>: <span style="color:#ae81ff">1</span>
+    <span style="color:#66d9ef">defaultRequest</span>:
+      <span style="color:#66d9ef">memory</span>: 256Mi
+      <span style="color:#66d9ef">cpu</span>: <span style="color:#ae81ff">0.5</span>
+    <span style="color:#66d9ef">type</span>: Container
+</code></pre></div><h3 id="配置requestlimit的约束">配置<code>request</code>/<code>limit</code>的约束</h3>
 <p>我们还可以在K8S里对<code>request</code>/<code>limit</code>进行以下限定：</p>
-
 <ul>
 <li>某资源的<code>request</code>必须<code>&gt;=某值</code></li>
 <li>某资源的<code>limit</code>必须<code>&lt;=某值</code></li>
 </ul>
-
 <p>这样的话就能有效避免Pod Spec中乱设<code>limit</code>导致资源耗尽的情况，或者乱设<code>request</code>导致Pod无法得到足够资源的情况。</p>
-
 <p>配置位置在：</p>
-
 <ul>
 <li><code>spec.limits[].max.cpu</code>，<code>limit</code>必须<code>&lt;=某值</code></li>
 <li><code>spec.limits[].max.memory</code>，同上</li>
 <li><code>spec.limits[].min.cpu</code>，<code>request</code>必须<code>&gt;=某值</code></li>
 <li><code>spec.limits[].min.memory</code>，同上</li>
 </ul>
-
 <p>例子：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-yaml" data-lang="yaml">apiVersion: v1
-kind: LimitRange
-metadata:
-  name: &lt;name<span style="color:#e6db74">&gt;
-</span><span style="color:#e6db74">spec:
-</span><span style="color:#e6db74">  limits:
-</span><span style="color:#e6db74">  - max:
-</span><span style="color:#e6db74">      memory: 1Gi
-</span><span style="color:#e6db74">      cpu: 800m
-</span><span style="color:#e6db74">    min:
-</span><span style="color:#e6db74">      memory: 500Mi
-</span><span style="color:#e6db74">      cpu: 200m
-</span><span style="color:#e6db74">    type: Container</span></code></pre></div>
-<h2 id="参考资料">参考资料</h2>
-
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-yaml" data-lang="yaml"><span style="color:#66d9ef">apiVersion</span>: v1
+<span style="color:#66d9ef">kind</span>: LimitRange
+<span style="color:#66d9ef">metadata</span>:
+  <span style="color:#66d9ef">name</span>: &lt;name&gt;
+<span style="color:#66d9ef">spec</span>:
+  <span style="color:#66d9ef">limits</span>:
+  - <span style="color:#66d9ef">max</span>:
+      <span style="color:#66d9ef">memory</span>: 1Gi
+      <span style="color:#66d9ef">cpu</span>: 800m
+    <span style="color:#66d9ef">min</span>:
+      <span style="color:#66d9ef">memory</span>: 500Mi
+      <span style="color:#66d9ef">cpu</span>: 200m
+    <span style="color:#66d9ef">type</span>: Container
+</code></pre></div><h2 id="参考资料">参考资料</h2>
 <ul>
 <li><a href="https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/">Managing Compute Resources for Containers</a></li>
 <li><a href="https://kubernetes.io/docs/tasks/administer-cluster/manage-resources/memory-default-namespace/">Configure Default Memory Requests and Limits for a Namespace</a></li>
@@ -387,7 +359,7 @@ metadata:
       </ul>
       
       <p class="post-copyright">
-        This post was published <strong>513</strong> days ago, content in the post may be inaccurate, even wrong now, please take risk yourself.
+        This post was published <strong>522</strong> days ago, content in the post may be inaccurate, even wrong now, please take risk yourself.
       </p>
     </footer>
     

@@ -16,31 +16,28 @@
 
   
   <meta name="author" content="颇忒脱" />
-  <meta name="description" content="
-" />
+  <meta name="description" content="" />
 
   
   
     <meta name="twitter:card" content="summary" />
     <meta name="twitter:site" content="@gohugoio" />
     <meta name="twitter:title" content="Cancellation and Shutdown" />
-    <meta name="twitter:description" content="
-" />
+    <meta name="twitter:description" content="" />
     <meta name="twitter:image" content="https://chanjarster.github.io/img/avatar.jpg" />
   
 
   
   <meta property="og:type" content="article" />
   <meta property="og:title" content="Cancellation and Shutdown" />
-  <meta property="og:description" content="
-" />
+  <meta property="og:description" content="" />
   <meta property="og:url" content="https://chanjarster.github.io/post/concurrent-programming/cancellation-and-shutdown/" />
   <meta property="og:image" content="https://chanjarster.github.io/img/avatar.jpg" />
 
 
 
 
-<meta name="generator" content="Hugo 0.49.2" />
+<meta name="generator" content="Hugo 0.68.1" />
 
 
 <link rel="canonical" href="https://chanjarster.github.io/post/concurrent-programming/cancellation-and-shutdown/" />
@@ -248,14 +245,9 @@
       <h1 class="post-title">Cancellation and Shutdown</h1>
       <p class="post-meta">@颇忒脱 · Oct 13, 2019 · 3 min read</p>
     </header>
-    <article class="post-content"><p></p>
-
-<p><img src="cancellation-and-shutdown.png" alt="" /></p>
-
+    <article class="post-content"><p><img src="cancellation-and-shutdown.png" alt=""></p>
 <h2 id="任务取消">任务取消</h2>
-
-<p><img src="task-cancellation.png" alt="" /></p>
-
+<p><img src="task-cancellation.png" alt=""></p>
 <p>一种做法是设置cancel flag，但是存在永远无法响应的风险：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#66d9ef">public</span> Task <span style="color:#f92672">{</span>
   <span style="color:#66d9ef">private</span> <span style="color:#66d9ef">volatile</span> <span style="color:#66d9ef">boolean</span> cancelled <span style="color:#f92672">=</span> <span style="color:#66d9ef">false</span><span style="color:#f92672">;</span>
@@ -268,14 +260,14 @@
 </span><span style="color:#75715e"></span>      someBlockingMethod<span style="color:#f92672">();</span>      
     <span style="color:#f92672">}</span>
   <span style="color:#f92672">}</span>
-<span style="color:#f92672">}</span></code></pre></div>
-<h3 id="线程中断">线程中断</h3>
+<span style="color:#f92672">}</span>
+</code></pre></div><h3 id="线程中断">线程中断</h3>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#66d9ef">public</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">Thread</span> <span style="color:#f92672">{</span>
   <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">interrupt</span><span style="color:#f92672">();</span> <span style="color:#75715e">// 通知target thread中断
 </span><span style="color:#75715e"></span>  <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">boolean</span> <span style="color:#a6e22e">isInterrupted</span><span style="color:#f92672">();</span> <span style="color:#75715e">// 查询target thread的中断状态
 </span><span style="color:#75715e"></span>  <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">static</span> <span style="color:#66d9ef">boolean</span> <span style="color:#a6e22e">interrupted</span><span style="color:#f92672">();</span> <span style="color:#75715e">// 清空当前thread的中断状态，返回前一个中断状态
-</span><span style="color:#75715e"></span><span style="color:#f92672">}</span></code></pre></div>
-<h3 id="利用线程中断来取消任务的例子">利用线程中断来取消任务的例子</h3>
+</span><span style="color:#75715e"></span><span style="color:#f92672">}</span>
+</code></pre></div><h3 id="利用线程中断来取消任务的例子">利用线程中断来取消任务的例子</h3>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#66d9ef">public</span> Task <span style="color:#66d9ef">implements</span> Runnable <span style="color:#f92672">{</span>
   <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">run</span><span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
     <span style="color:#66d9ef">try</span> <span style="color:#f92672">{</span>
@@ -289,8 +281,8 @@
 </span><span style="color:#75715e"></span>      Thread<span style="color:#f92672">.</span><span style="color:#a6e22e">currentThread</span><span style="color:#f92672">().</span><span style="color:#a6e22e">interrupt</span><span style="color:#f92672">();</span>
     <span style="color:#f92672">}</span>
   <span style="color:#f92672">}</span>
-<span style="color:#f92672">}</span></code></pre></div>
-<h3 id="就算某个任务不可中断也要在它结束后恢复中断状态">就算某个任务不可中断也要在它结束后恢复中断状态</h3>
+<span style="color:#f92672">}</span>
+</code></pre></div><h3 id="就算某个任务不可中断也要在它结束后恢复中断状态">就算某个任务不可中断也要在它结束后恢复中断状态</h3>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#66d9ef">public</span> Task <span style="color:#f92672">{</span>
   <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">run</span><span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
     <span style="color:#66d9ef">try</span> <span style="color:#f92672">{</span>
@@ -307,8 +299,8 @@
       <span style="color:#f92672">}</span>
     <span style="color:#f92672">}</span>
   <span style="color:#f92672">}</span>
-<span style="color:#f92672">}</span></code></pre></div>
-<p>阻塞库的方法一旦探知线程中断状态，就会抛出异常，下面代码会造成死循环，他会不停抛出InterruptedException：</p>
+<span style="color:#f92672">}</span>
+</code></pre></div><p>阻塞库的方法一旦探知线程中断状态，就会抛出异常，下面代码会造成死循环，他会不停抛出InterruptedException：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#66d9ef">public</span> Task <span style="color:#f92672">{</span>
   <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">run</span><span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
     <span style="color:#66d9ef">while</span> <span style="color:#f92672">(!</span>blockingQueue<span style="color:#f92672">.</span><span style="color:#a6e22e">isEmpty</span><span style="color:#f92672">())</span> <span style="color:#f92672">{</span>
@@ -319,9 +311,8 @@
       <span style="color:#f92672">}</span>
     <span style="color:#f92672">}</span>
   <span style="color:#f92672">}</span>
-<span style="color:#f92672">}</span></code></pre></div>
-<h3 id="反面例子-擅自中断">反面例子，擅自中断</h3>
-
+<span style="color:#f92672">}</span>
+</code></pre></div><h3 id="反面例子擅自中断">反面例子，擅自中断</h3>
 <ol>
 <li>不知道线程拥有者的中断策略就擅自中断</li>
 <li><code>r.run()</code>里面如果抛出了RuntimeException，返回到了caller那里，然后时间到了触发了caller线程的interruption</li>
@@ -333,8 +324,8 @@
   <span style="color:#66d9ef">final</span> Thread taskThread <span style="color:#f92672">=</span> Thread<span style="color:#f92672">.</span><span style="color:#a6e22e">currentThread</span><span style="color:#f92672">();</span>
   scheduledExecutor<span style="color:#f92672">.</span><span style="color:#a6e22e">schedule</span><span style="color:#f92672">(()</span> <span style="color:#f92672">-&gt;</span> taskThread<span style="color:#f92672">.</span><span style="color:#a6e22e">interrupt</span><span style="color:#f92672">(),</span> timeout<span style="color:#f92672">,</span> unit<span style="color:#f92672">);</span>
   r<span style="color:#f92672">.</span><span style="color:#a6e22e">run</span><span style="color:#f92672">();</span>
-<span style="color:#f92672">}</span></code></pre></div>
-<h3 id="用future中断">用Future中断</h3>
+<span style="color:#f92672">}</span>
+</code></pre></div><h3 id="用future中断">用Future中断</h3>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#66d9ef">public</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">timedRun</span><span style="color:#f92672">(</span>Runnable r<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
   Future f <span style="color:#f92672">=</span> executorService<span style="color:#f92672">.</span><span style="color:#a6e22e">submit</span><span style="color:#f92672">(</span>r<span style="color:#f92672">);</span>
   <span style="color:#66d9ef">try</span> <span style="color:#f92672">{</span>
@@ -348,9 +339,8 @@
     <span style="color:#75715e">// 对一个正常结束的future执行cancel是没有伤害的
 </span><span style="color:#75715e"></span>    f<span style="color:#f92672">.</span><span style="color:#a6e22e">cancel</span><span style="color:#f92672">(</span><span style="color:#66d9ef">true</span><span style="color:#f92672">);</span> <span style="color:#75715e">// true代表interrupt
 </span><span style="color:#75715e"></span>  <span style="color:#f92672">}</span>
-<span style="color:#f92672">}</span></code></pre></div>
-<h3 id="对付不响应中断">对付不响应中断</h3>
-
+<span style="color:#f92672">}</span>
+</code></pre></div><h3 id="对付不响应中断">对付不响应中断</h3>
 <p>有些方法不响应中断，但是我们要中断咋整？下面给了一个思路：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#66d9ef">public</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">ReaderThread</span> <span style="color:#66d9ef">extends</span> Thread <span style="color:#f92672">{</span>
   <span style="color:#66d9ef">private</span> <span style="color:#66d9ef">final</span> Socket socket<span style="color:#f92672">;</span>
@@ -368,9 +358,8 @@
   <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">run</span><span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
     in<span style="color:#f92672">.</span><span style="color:#a6e22e">read</span><span style="color:#f92672">(</span>buf<span style="color:#f92672">);</span> <span style="color:#75715e">// 这个方法阻塞但是不响应中断
 </span><span style="color:#75715e"></span>  <span style="color:#f92672">}</span>
-<span style="color:#f92672">}</span></code></pre></div>
-<h3 id="对付不响应中断2">对付不响应中断2</h3>
-
+<span style="color:#f92672">}</span>
+</code></pre></div><h3 id="对付不响应中断2">对付不响应中断2</h3>
 <p>如果你是用Executor执行，则可以这样做提供自己的<code>ThreadPoolExecutor.newTaskFor</code>实现，并提供自己的<code>Future.cancel(boolean)</code>：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#66d9ef">public</span> <span style="color:#66d9ef">interface</span> <span style="color:#a6e22e">CancellableTask</span><span style="color:#f92672">&lt;</span>T<span style="color:#f92672">&gt;</span> <span style="color:#66d9ef">extends</span> Callable<span style="color:#f92672">&lt;</span>T<span style="color:#f92672">&gt;</span> <span style="color:#f92672">{</span>
   <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">cancel</span><span style="color:#f92672">();</span>
@@ -410,11 +399,9 @@
       <span style="color:#f92672">}</span>
     <span style="color:#f92672">}</span>
   <span style="color:#f92672">}</span>
-<span style="color:#f92672">}</span></code></pre></div>
-<h2 id="停止基于线程的service">停止基于线程的Service</h2>
-
-<p><img src="stopping-service.png" alt="" /></p>
-
+<span style="color:#f92672">}</span>
+</code></pre></div><h2 id="停止基于线程的service">停止基于线程的Service</h2>
+<p><img src="stopping-service.png" alt=""></p>
 <h3 id="利用executorservice">利用ExecutorService</h3>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#66d9ef">public</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">LogService</span> <span style="color:#f92672">{</span>
   <span style="color:#66d9ef">private</span> <span style="color:#66d9ef">final</span> ExecutorService exec <span style="color:#f92672">=</span> <span style="color:#f92672">...;</span>
@@ -431,15 +418,14 @@
       exec<span style="color:#f92672">.</span><span style="color:#a6e22e">execute</span><span style="color:#f92672">(</span><span style="color:#66d9ef">new</span> WriteTask<span style="color:#f92672">(</span>msg<span style="color:#f92672">));</span>
     <span style="color:#f92672">}</span> <span style="color:#66d9ef">catch</span> <span style="color:#f92672">(</span>RejectedExecutionException ignored<span style="color:#f92672">)</span> <span style="color:#f92672">{}</span>
   <span style="color:#f92672">}</span>
-<span style="color:#f92672">}</span></code></pre></div>
-<h3 id="利用poison-pills">利用Poison Pills</h3>
+<span style="color:#f92672">}</span>
+</code></pre></div><h3 id="利用poison-pills">利用Poison Pills</h3>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java">producer<span style="color:#f92672">.(</span>POISON_PILL<span style="color:#f92672">);</span>
 
 <span style="color:#66d9ef">if</span> <span style="color:#f92672">(</span>POISON_PILL <span style="color:#f92672">==</span> consumer<span style="color:#f92672">.</span><span style="color:#a6e22e">take</span><span style="color:#f92672">())</span> <span style="color:#f92672">{</span>
   doShutdownWork<span style="color:#f92672">();</span>
-<span style="color:#f92672">}</span></code></pre></div>
-<h3 id="跟踪shutdownnow时开始但未结束的任务">跟踪shutdownNow时开始但未结束的任务</h3>
-
+<span style="color:#f92672">}</span>
+</code></pre></div><h3 id="跟踪shutdownnow时开始但未结束的任务">跟踪shutdownNow时开始但未结束的任务</h3>
 <p><code>ExecutorService.shutdownNow</code>会返回还未开始的任务，但是不会返回开始了但是没有结束的任务，用类似下面的代码可以得到这些任务：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#66d9ef">public</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">TrackingExecutor</span> <span style="color:#66d9ef">extends</span> AbstractExecutorService <span style="color:#f92672">{</span>
   <span style="color:#66d9ef">private</span> <span style="color:#66d9ef">final</span> ExecutorService exec<span style="color:#f92672">;</span>
@@ -462,11 +448,9 @@
       <span style="color:#f92672">}</span>
     <span style="color:#f92672">})</span>
   <span style="color:#f92672">}</span>
-<span style="color:#f92672">}</span></code></pre></div>
-<h2 id="线程异常退出">线程异常退出</h2>
-
-<p><img src="abnormal-termination.png" alt="" /></p>
-
+<span style="color:#f92672">}</span>
+</code></pre></div><h2 id="线程异常退出">线程异常退出</h2>
+<p><img src="abnormal-termination.png" alt=""></p>
 <p>下面的代码在线程异常退出前告知框架它死了：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#66d9ef">public</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">run</span><span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
   Throwable thrown <span style="color:#f92672">=</span> <span style="color:#66d9ef">null</span><span style="color:#f92672">;</span>
@@ -479,10 +463,9 @@
   <span style="color:#f92672">}</span> <span style="color:#66d9ef">finally</span> <span style="color:#f92672">{</span>
     threadExited<span style="color:#f92672">(</span><span style="color:#66d9ef">this</span><span style="color:#f92672">,</span> thrown<span style="color:#f92672">);</span>
   <span style="color:#f92672">}</span>
-<span style="color:#f92672">}</span></code></pre></div>
-<h2 id="jvm-shutdown">JVM shutdown</h2>
-
-<p><img src="jvm-shutdown.png" alt="" /></p></article>
+<span style="color:#f92672">}</span>
+</code></pre></div><h2 id="jvm-shutdown">JVM shutdown</h2>
+<p><img src="jvm-shutdown.png" alt=""></p></article>
     <footer class="post-footer">
       
       <ul class="post-tags">
@@ -496,7 +479,7 @@
       </ul>
       
       <p class="post-copyright">
-        This post was published <strong>156</strong> days ago, content in the post may be inaccurate, even wrong now, please take risk yourself.
+        This post was published <strong>165</strong> days ago, content in the post may be inaccurate, even wrong now, please take risk yourself.
       </p>
     </footer>
     

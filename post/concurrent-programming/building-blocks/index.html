@@ -16,31 +16,28 @@
 
   
   <meta name="author" content="颇忒脱" />
-  <meta name="description" content="
-" />
+  <meta name="description" content="" />
 
   
   
     <meta name="twitter:card" content="summary" />
     <meta name="twitter:site" content="@gohugoio" />
     <meta name="twitter:title" content="Building Blocks" />
-    <meta name="twitter:description" content="
-" />
+    <meta name="twitter:description" content="" />
     <meta name="twitter:image" content="https://chanjarster.github.io/img/avatar.jpg" />
   
 
   
   <meta property="og:type" content="article" />
   <meta property="og:title" content="Building Blocks" />
-  <meta property="og:description" content="
-" />
+  <meta property="og:description" content="" />
   <meta property="og:url" content="https://chanjarster.github.io/post/concurrent-programming/building-blocks/" />
   <meta property="og:image" content="https://chanjarster.github.io/img/avatar.jpg" />
 
 
 
 
-<meta name="generator" content="Hugo 0.49.2" />
+<meta name="generator" content="Hugo 0.68.1" />
 
 
 <link rel="canonical" href="https://chanjarster.github.io/post/concurrent-programming/building-blocks/" />
@@ -248,31 +245,23 @@
       <h1 class="post-title">Building Blocks</h1>
       <p class="post-meta">@颇忒脱 · Sep 19, 2019 · 2 min read</p>
     </header>
-    <article class="post-content"><p></p>
-
-<p><img src="building-blocks.png" alt="" /></p>
-
+    <article class="post-content"><p><img src="building-blocks.png" alt=""></p>
 <h2 id="synchronized集合">Synchronized集合</h2>
-
-<h3 id="看你怎么用-有可能线程不安全">看你怎么用，有可能线程不安全</h3>
-
+<h3 id="看你怎么用有可能线程不安全">看你怎么用，有可能线程不安全</h3>
 <p>有时候虽然用了Synchronized集合，也不代表线程安全，比如下面的就是：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#66d9ef">public</span> <span style="color:#66d9ef">static</span> Object <span style="color:#a6e22e">getLast</span><span style="color:#f92672">(</span>Vector list<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
   <span style="color:#66d9ef">int</span> lastIndex <span style="color:#f92672">=</span> list<span style="color:#f92672">.</span><span style="color:#a6e22e">size</span><span style="color:#f92672">()</span> <span style="color:#f92672">-</span> 1<span style="color:#f92672">;</span> <span style="color:#75715e">// 1
 </span><span style="color:#75715e"></span>  <span style="color:#66d9ef">return</span> list<span style="color:#f92672">.</span><span style="color:#a6e22e">get</span><span style="color:#f92672">(</span>lastIndex<span style="color:#f92672">);</span>      <span style="color:#75715e">// 2
-</span><span style="color:#75715e"></span><span style="color:#f92672">}</span></code></pre></div>
-<p>因为在1和2之间可能会有对Vector的其他写操作。正确的做法是：</p>
+</span><span style="color:#75715e"></span><span style="color:#f92672">}</span>
+</code></pre></div><p>因为在1和2之间可能会有对Vector的其他写操作。正确的做法是：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#66d9ef">public</span> <span style="color:#66d9ef">static</span> Object <span style="color:#a6e22e">getLast</span><span style="color:#f92672">(</span>Vector list<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
   <span style="color:#66d9ef">synchronized</span> <span style="color:#f92672">(</span>list<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
     <span style="color:#75715e">// ...
 </span><span style="color:#75715e"></span>  <span style="color:#f92672">}</span>
-<span style="color:#f92672">}</span></code></pre></div>
-<h3 id="iterators的concurrentmodificationexception">Iterators的ConcurrentModificationException</h3>
-
+<span style="color:#f92672">}</span>
+</code></pre></div><h3 id="iterators的concurrentmodificationexception">Iterators的ConcurrentModificationException</h3>
 <p>这个问题在迭代集合的同时在删除集合元素时发生。</p>
-
 <h3 id="隐藏的iterators">隐藏的Iterators</h3>
-
 <p>有些时候Iterator不是明显的，比如下面代码：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#66d9ef">public</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">HiddentIterator</span> <span style="color:#f92672">{</span>
   <span style="color:#66d9ef">private</span> <span style="color:#66d9ef">final</span> Set<span style="color:#f92672">&lt;</span>Integer<span style="color:#f92672">&gt;</span> set <span style="color:#f92672">=</span> <span style="color:#66d9ef">new</span> HashSet<span style="color:#f92672">&lt;&gt;();</span>
@@ -283,17 +272,12 @@
     <span style="color:#f92672">}</span>
     System<span style="color:#f92672">.</span><span style="color:#a6e22e">out</span><span style="color:#f92672">.</span><span style="color:#a6e22e">println</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34;Set: &#34;</span> <span style="color:#f92672">+</span> set<span style="color:#f92672">);</span>
   <span style="color:#f92672">}</span>
-<span style="color:#f92672">}</span></code></pre></div>
-<p>上面<code>println</code>隐式调用了Set的toString，而toString有隐式做了迭代器。</p>
-
+<span style="color:#f92672">}</span>
+</code></pre></div><p>上面<code>println</code>隐式调用了Set的toString，而toString有隐式做了迭代器。</p>
 <h2 id="concurrent集合">Concurrent集合</h2>
-
-<p><img src="concurrent-collections.png" alt="" /></p>
-
+<p><img src="concurrent-collections.png" alt=""></p>
 <h2 id="阻塞及可中断方法">阻塞及可中断方法</h2>
-
-<p><img src="blocking-methods.png" alt="" /></p>
-
+<p><img src="blocking-methods.png" alt=""></p>
 <p>InterruptedException没法往上抛的处理例子：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#66d9ef">public</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">TaskRunnable</span> <span style="color:#66d9ef">implements</span> Runnable <span style="color:#f92672">{</span>
   <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">run</span><span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
@@ -303,8 +287,8 @@
       Thread<span style="color:#f92672">.</span><span style="color:#a6e22e">currentThread</span><span style="color:#f92672">().</span><span style="color:#a6e22e">interrupt</span><span style="color:#f92672">();</span>
     <span style="color:#f92672">}</span>
   <span style="color:#f92672">}</span>
-<span style="color:#f92672">}</span></code></pre></div>
-<h2 id="一种cache的实现">一种Cache的实现</h2>
+<span style="color:#f92672">}</span>
+</code></pre></div><h2 id="一种cache的实现">一种Cache的实现</h2>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#66d9ef">public</span> <span style="color:#66d9ef">interface</span> <span style="color:#a6e22e">Computable</span><span style="color:#f92672">&lt;</span>A<span style="color:#f92672">,</span> V<span style="color:#f92672">&gt;</span> <span style="color:#f92672">{</span>
   V <span style="color:#a6e22e">compute</span><span style="color:#f92672">(</span>A arg<span style="color:#f92672">)</span> <span style="color:#66d9ef">throws</span> InterruptedException<span style="color:#f92672">;</span>
 <span style="color:#f92672">}</span>
@@ -338,7 +322,8 @@
       <span style="color:#f92672">}</span>
     <span style="color:#f92672">}</span>
   <span style="color:#f92672">}</span>
-<span style="color:#f92672">}</span></code></pre></div></article>
+<span style="color:#f92672">}</span>
+</code></pre></div></article>
     <footer class="post-footer">
       
       <ul class="post-tags">
@@ -352,7 +337,7 @@
       </ul>
       
       <p class="post-copyright">
-        This post was published <strong>180</strong> days ago, content in the post may be inaccurate, even wrong now, please take risk yourself.
+        This post was published <strong>189</strong> days ago, content in the post may be inaccurate, even wrong now, please take risk yourself.
       </p>
     </footer>
     

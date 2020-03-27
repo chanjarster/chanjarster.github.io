@@ -16,31 +16,28 @@
 
   
   <meta name="author" content="颇忒脱" />
-  <meta name="description" content="
-" />
+  <meta name="description" content="" />
 
   
   
     <meta name="twitter:card" content="summary" />
     <meta name="twitter:site" content="@gohugoio" />
     <meta name="twitter:title" content="Avoiding Liveness Hazards" />
-    <meta name="twitter:description" content="
-" />
+    <meta name="twitter:description" content="" />
     <meta name="twitter:image" content="https://chanjarster.github.io/img/avatar.jpg" />
   
 
   
   <meta property="og:type" content="article" />
   <meta property="og:title" content="Avoiding Liveness Hazards" />
-  <meta property="og:description" content="
-" />
+  <meta property="og:description" content="" />
   <meta property="og:url" content="https://chanjarster.github.io/post/concurrent-programming/avoiding-liveness-hazards/" />
   <meta property="og:image" content="https://chanjarster.github.io/img/avatar.jpg" />
 
 
 
 
-<meta name="generator" content="Hugo 0.49.2" />
+<meta name="generator" content="Hugo 0.68.1" />
 
 
 <link rel="canonical" href="https://chanjarster.github.io/post/concurrent-programming/avoiding-liveness-hazards/" />
@@ -248,12 +245,8 @@
       <h1 class="post-title">Avoiding Liveness Hazards</h1>
       <p class="post-meta">@颇忒脱 · Oct 21, 2019 · 2 min read</p>
     </header>
-    <article class="post-content"><p></p>
-
-<p><img src="avoiding-liveness-hazards.png" alt="" /></p>
-
+    <article class="post-content"><p><img src="avoiding-liveness-hazards.png" alt=""></p>
 <h3 id="lock-ordering-deadlocks">Lock-ordering deadlocks</h3>
-
 <p>不同线程，获得获得相同多个锁的顺序不同导致死锁：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#66d9ef">public</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">LeftRightDeadlock</span> <span style="color:#f92672">{</span>
   <span style="color:#66d9ef">private</span> <span style="color:#66d9ef">final</span> Object left <span style="color:#f92672">=</span> <span style="color:#66d9ef">new</span> Object<span style="color:#f92672">();</span>
@@ -272,9 +265,8 @@
       <span style="color:#f92672">}</span>
     <span style="color:#f92672">}</span>
   <span style="color:#f92672">}</span>
-<span style="color:#f92672">}</span></code></pre></div>
-<h3 id="dynamic-lock-order-deadlocks">Dynamic lock order deadlocks</h3>
-
+<span style="color:#f92672">}</span>
+</code></pre></div><h3 id="dynamic-lock-order-deadlocks">Dynamic lock order deadlocks</h3>
 <p>根据参数来决定locking顺序同样有死锁风险：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#66d9ef">public</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">transferMoney</span><span style="color:#f92672">(</span>Account from<span style="color:#f92672">,</span> Account to<span style="color:#f92672">,</span> <span style="color:#66d9ef">double</span> amount<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
   <span style="color:#66d9ef">synchronized</span> <span style="color:#f92672">(</span>from<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
@@ -282,8 +274,8 @@
       doSomething<span style="color:#f92672">();</span>
     <span style="color:#f92672">}</span>
   <span style="color:#f92672">}</span>
-<span style="color:#f92672">}</span></code></pre></div>
-<p>解决办法：根据参数来推导出固定的locking顺序：</p>
+<span style="color:#f92672">}</span>
+</code></pre></div><p>解决办法：根据参数来推导出固定的locking顺序：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java">priate <span style="color:#66d9ef">static</span> <span style="color:#66d9ef">final</span> Object tieLock <span style="color:#f92672">=</span> <span style="color:#66d9ef">new</span> Object<span style="color:#f92672">();</span>
 
 <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">transferMoney</span><span style="color:#f92672">(</span>Account from<span style="color:#f92672">,</span> Account to<span style="color:#f92672">,</span> <span style="color:#66d9ef">double</span> amount<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
@@ -311,9 +303,8 @@
       <span style="color:#f92672">}</span>
     <span style="color:#f92672">}</span>
   <span style="color:#f92672">}</span>
-<span style="color:#f92672">}</span></code></pre></div>
-<h3 id="deadlocks-between-cooperating-object">Deadlocks between cooperating object</h3>
-
+<span style="color:#f92672">}</span>
+</code></pre></div><h3 id="deadlocks-between-cooperating-object">Deadlocks between cooperating object</h3>
 <p>因为多个对象的协作导致的比较隐蔽的死锁：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">Taxi</span> <span style="color:#f92672">{</span>
   <span style="color:#66d9ef">private</span> <span style="color:#66d9ef">final</span> Dispatcher dispatcher<span style="color:#f92672">;</span>
@@ -339,9 +330,8 @@
     <span style="color:#f92672">}</span>
     <span style="color:#66d9ef">return</span> image<span style="color:#f92672">;</span>
   <span style="color:#f92672">}</span>
-<span style="color:#f92672">}</span></code></pre></div>
-<h3 id="open-calls">Open calls</h3>
-
+<span style="color:#f92672">}</span>
+</code></pre></div><h3 id="open-calls">Open calls</h3>
 <p>用Open calls改造，</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">Taxi</span> <span style="color:#f92672">{</span>
   <span style="color:#66d9ef">private</span> <span style="color:#66d9ef">final</span> Dispatcher dispatcher<span style="color:#f92672">;</span>
@@ -374,7 +364,8 @@
     <span style="color:#f92672">}</span>
     <span style="color:#66d9ef">return</span> image<span style="color:#f92672">;</span>
   <span style="color:#f92672">}</span>
-<span style="color:#f92672">}</span></code></pre></div></article>
+<span style="color:#f92672">}</span>
+</code></pre></div></article>
     <footer class="post-footer">
       
       <ul class="post-tags">
@@ -388,7 +379,7 @@
       </ul>
       
       <p class="post-copyright">
-        This post was published <strong>148</strong> days ago, content in the post may be inaccurate, even wrong now, please take risk yourself.
+        This post was published <strong>157</strong> days ago, content in the post may be inaccurate, even wrong now, please take risk yourself.
       </p>
     </footer>
     

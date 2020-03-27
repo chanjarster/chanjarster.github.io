@@ -16,31 +16,28 @@
 
   
   <meta name="author" content="颇忒脱" />
-  <meta name="description" content="
-" />
+  <meta name="description" content="" />
 
   
   
     <meta name="twitter:card" content="summary" />
     <meta name="twitter:site" content="@gohugoio" />
     <meta name="twitter:title" content="StatefulSets迁移PV的方法" />
-    <meta name="twitter:description" content="
-" />
+    <meta name="twitter:description" content="" />
     <meta name="twitter:image" content="https://chanjarster.github.io/img/avatar.jpg" />
   
 
   
   <meta property="og:type" content="article" />
   <meta property="og:title" content="StatefulSets迁移PV的方法" />
-  <meta property="og:description" content="
-" />
+  <meta property="og:description" content="" />
   <meta property="og:url" content="https://chanjarster.github.io/post/k8s/statefulsets-pv-migration/" />
   <meta property="og:image" content="https://chanjarster.github.io/img/avatar.jpg" />
 
 
 
 
-<meta name="generator" content="Hugo 0.49.2" />
+<meta name="generator" content="Hugo 0.68.1" />
 
 
 <link rel="canonical" href="https://chanjarster.github.io/post/k8s/statefulsets-pv-migration/" />
@@ -248,157 +245,141 @@
       <h1 class="post-title">StatefulSets迁移PV的方法</h1>
       <p class="post-meta">@颇忒脱 · Dec 9, 2019 · 2 min read</p>
     </header>
-    <article class="post-content"><p></p>
-
-<p>先说说场景，你有一个StatefulSets，通过<code>volumeClaimTemplate</code>创建了PVC。现在这些PVC所关联的PV对你来说不够用了，你希望能够使用更大的PVC。</p>
-
+    <article class="post-content"><p>先说说场景，你有一个StatefulSets，通过<code>volumeClaimTemplate</code>创建了PVC。现在这些PVC所关联的PV对你来说不够用了，你希望能够使用更大的PVC。</p>
 <p>大致步骤如下：</p>
-
 <ol>
 <li>先把StatefulSets的Yaml备份下来。</li>
 <li>利用busybox复制数据。</li>
 <li>使用新PVC。</li>
 <li>清理PVC。</li>
 </ol>
-
 <p>下面是详细步骤：</p>
-
 <h2 id="备份statefulsets">备份StatefulSets</h2>
-
 <p>把StatefulSets的Yaml备份下来，下面是代码片段，注意volumeClaimTemplate和volumeMounts部分：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-yaml" data-lang="yaml">apiVersion: apps/v1
-kind: StatefulSet
-metadata:
-  name: zookeeper
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-yaml" data-lang="yaml"><span style="color:#66d9ef">apiVersion</span>: apps/v1
+<span style="color:#66d9ef">kind</span>: StatefulSet
+<span style="color:#66d9ef">metadata</span>:
+  <span style="color:#66d9ef">name</span>: zookeeper
   <span style="color:#75715e"># ...</span>
-spec:
+<span style="color:#66d9ef">spec</span>:
   <span style="color:#75715e"># ...</span>
-  template:
+  <span style="color:#66d9ef">template</span>:
     <span style="color:#75715e"># ...</span>
-    spec:
-      containers:
-      - image: ranchercharts/confluentinc-cp-zookeeper:<span style="color:#ae81ff">5.3</span>.<span style="color:#ae81ff">0</span>
+    <span style="color:#66d9ef">spec</span>:
+      <span style="color:#66d9ef">containers</span>:
+      - <span style="color:#66d9ef">image</span>: ranchercharts/confluentinc-cp-zookeeper:<span style="color:#ae81ff">5.3.0</span>
         <span style="color:#75715e"># ...</span>
-        volumeMounts:
-        - mountPath: /var/lib/zookeeper/data
-          name: datadir
+        <span style="color:#66d9ef">volumeMounts</span>:
+        - <span style="color:#66d9ef">mountPath</span>: /var/lib/zookeeper/data
+          <span style="color:#66d9ef">name</span>: datadir
   <span style="color:#75715e"># ...</span>
-  volumeClaimTemplates:
-  - metadata:
-      name: datadir
-    spec:
-      accessModes:
+  <span style="color:#66d9ef">volumeClaimTemplates</span>:
+  - <span style="color:#66d9ef">metadata</span>:
+      <span style="color:#66d9ef">name</span>: datadir
+    <span style="color:#66d9ef">spec</span>:
+      <span style="color:#66d9ef">accessModes</span>:
       - ReadWriteOnce
-      resources:
-        requests:
-          storage: 5Gi
-      volumeMode: Filesystem</code></pre></div>
-<p>然后删掉它，删掉StatefulSets不会删除对应的PVC。</p>
-
+      <span style="color:#66d9ef">resources</span>:
+        <span style="color:#66d9ef">requests</span>:
+          <span style="color:#66d9ef">storage</span>: 5Gi
+      <span style="color:#66d9ef">volumeMode</span>: Filesystem
+</code></pre></div><p>然后删掉它，删掉StatefulSets不会删除对应的PVC。</p>
 <h2 id="复制数据">复制数据</h2>
-
 <p>StatefulSets的volumeClaimTemplate所生成的PVC的名字是这样的格式：<code>{volume-name}-{statefulsets-name}-数字</code>，比如<code>datadir-zookeeper-0</code>。</p>
-
 <p>所以我们可以创建一个busybox StatefulSets，名字也是zookeeper，并且它的volumeClaimTemplate和原来的一样，这样它就可以使用旧PVC了。同时它还得创建一个新的volumeClaimTemplate来创建新的PVC。</p>
-
 <p>注意replicas得和原来的一样。</p>
-
 <p>下面是例子：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-yaml" data-lang="yaml">apiVersion: apps/v1
-kind: StatefulSet
-metadata:
-  name: zookeeper
-spec:
-  podManagementPolicy: OrderedReady
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-yaml" data-lang="yaml"><span style="color:#66d9ef">apiVersion</span>: apps/v1
+<span style="color:#66d9ef">kind</span>: StatefulSet
+<span style="color:#66d9ef">metadata</span>:
+  <span style="color:#66d9ef">name</span>: zookeeper
+<span style="color:#66d9ef">spec</span>:
+  <span style="color:#66d9ef">podManagementPolicy</span>: OrderedReady
   <span style="color:#75715e"># 得和原来的一样</span>
-  replicas: <span style="color:#ae81ff">3</span>
-  selector:
-    matchLabels:
-      app: busybox-pvc-migration
-  serviceName: portal-cp-zookeeper
-  template:
-    metadata:
-      labels:
-        app: busybox-pvc-migration
-    spec:
-      containers:
-      - image: busybox
-        imagePullPolicy: Always
-        name: zookeeper
-        stdin: <span style="color:#66d9ef">true</span>
-        tty: <span style="color:#66d9ef">true</span>
-        volumeMounts:
+  <span style="color:#66d9ef">replicas</span>: <span style="color:#ae81ff">3</span>
+  <span style="color:#66d9ef">selector</span>:
+    <span style="color:#66d9ef">matchLabels</span>:
+      <span style="color:#66d9ef">app</span>: busybox-pvc-migration
+  <span style="color:#66d9ef">serviceName</span>: portal-cp-zookeeper
+  <span style="color:#66d9ef">template</span>:
+    <span style="color:#66d9ef">metadata</span>:
+      <span style="color:#66d9ef">labels</span>:
+        <span style="color:#66d9ef">app</span>: busybox-pvc-migration
+    <span style="color:#66d9ef">spec</span>:
+      <span style="color:#66d9ef">containers</span>:
+      - <span style="color:#66d9ef">image</span>: busybox
+        <span style="color:#66d9ef">imagePullPolicy</span>: Always
+        <span style="color:#66d9ef">name</span>: zookeeper
+        <span style="color:#66d9ef">stdin</span>: <span style="color:#66d9ef">true</span>
+        <span style="color:#66d9ef">tty</span>: <span style="color:#66d9ef">true</span>
+        <span style="color:#66d9ef">volumeMounts</span>:
         <span style="color:#75715e"># 旧PVC</span>
-        - mountPath: /datadir-old
-          name: datadir
+        - <span style="color:#66d9ef">mountPath</span>: /datadir-old
+          <span style="color:#66d9ef">name</span>: datadir
         <span style="color:#75715e"># 新PVC</span>
-        - mountPath: /datadir-new
-          name: datadir-new
-      dnsPolicy: ClusterFirst
-      restartPolicy: Always
-  updateStrategy:
-    type: RollingUpdate
-  volumeClaimTemplates:
+        - <span style="color:#66d9ef">mountPath</span>: /datadir-new
+          <span style="color:#66d9ef">name</span>: datadir-new
+      <span style="color:#66d9ef">dnsPolicy</span>: ClusterFirst
+      <span style="color:#66d9ef">restartPolicy</span>: Always
+  <span style="color:#66d9ef">updateStrategy</span>:
+    <span style="color:#66d9ef">type</span>: RollingUpdate
+  <span style="color:#66d9ef">volumeClaimTemplates</span>:
   <span style="color:#75715e"># 旧claim</span>
-  - metadata:
-      name: datadir
-    spec:
-      accessModes:
+  - <span style="color:#66d9ef">metadata</span>:
+      <span style="color:#66d9ef">name</span>: datadir
+    <span style="color:#66d9ef">spec</span>:
+      <span style="color:#66d9ef">accessModes</span>:
       - ReadWriteOnce
-      resources:
-        requests:
-          storage: 5Gi
-      volumeMode: Filesystem
+      <span style="color:#66d9ef">resources</span>:
+        <span style="color:#66d9ef">requests</span>:
+          <span style="color:#66d9ef">storage</span>: 5Gi
+      <span style="color:#66d9ef">volumeMode</span>: Filesystem
    <span style="color:#75715e"># 新claim</span>
-  - metadata:
-      name: datadir-new
-    spec:
-      accessModes:
+  - <span style="color:#66d9ef">metadata</span>:
+      <span style="color:#66d9ef">name</span>: datadir-new
+    <span style="color:#66d9ef">spec</span>:
+      <span style="color:#66d9ef">accessModes</span>:
       - ReadWriteOnce
-      resources:
-        requests:
-          storage: 10Gi
-      volumeMode: Filesystem</code></pre></div>
-<p>进入每个busybox的shell，复制旧PVC的内容到新的PVC：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">cp -r /datadir-old/* /datadir-new/</code></pre></div>
-<p>复制完之后注意检查一下文件的权限和所属用户与用户组。</p>
-
+      <span style="color:#66d9ef">resources</span>:
+        <span style="color:#66d9ef">requests</span>:
+          <span style="color:#66d9ef">storage</span>: 10Gi
+      <span style="color:#66d9ef">volumeMode</span>: Filesystem
+</code></pre></div><p>进入每个busybox的shell，复制旧PVC的内容到新的PVC：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">cp -r /datadir-old/* /datadir-new/
+</code></pre></div><p>复制完之后注意检查一下文件的权限和所属用户与用户组。</p>
 <p>最后删除busybox。同理，它所新建的PVC也不会被删除，这些PVC后面要被使用。</p>
-
 <h2 id="使用新pvc">使用新PVC</h2>
-
 <p>修改之前备份下来的Yaml，让它使用新的PVC，修改volumeClaimTemplate和volumeMounts部分：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-yaml" data-lang="yaml">apiVersion: apps/v1
-kind: StatefulSet
-metadata:
-  name: zookeeper
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-yaml" data-lang="yaml"><span style="color:#66d9ef">apiVersion</span>: apps/v1
+<span style="color:#66d9ef">kind</span>: StatefulSet
+<span style="color:#66d9ef">metadata</span>:
+  <span style="color:#66d9ef">name</span>: zookeeper
   <span style="color:#75715e"># ...</span>
-spec:
+<span style="color:#66d9ef">spec</span>:
   <span style="color:#75715e"># ...</span>
-  template:
+  <span style="color:#66d9ef">template</span>:
     <span style="color:#75715e"># ...</span>
-    spec:
-      containers:
-      - image: ranchercharts/confluentinc-cp-zookeeper:<span style="color:#ae81ff">5.3</span>.<span style="color:#ae81ff">0</span>
+    <span style="color:#66d9ef">spec</span>:
+      <span style="color:#66d9ef">containers</span>:
+      - <span style="color:#66d9ef">image</span>: ranchercharts/confluentinc-cp-zookeeper:<span style="color:#ae81ff">5.3.0</span>
         <span style="color:#75715e"># ...</span>
-        volumeMounts:
-        - mountPath: /var/lib/zookeeper/data
+        <span style="color:#66d9ef">volumeMounts</span>:
+        - <span style="color:#66d9ef">mountPath</span>: /var/lib/zookeeper/data
           <span style="color:#75715e"># 使用了新的PVC</span>
-          name: datadir-new
+          <span style="color:#66d9ef">name</span>: datadir-new
   <span style="color:#75715e"># ...</span>
-  volumeClaimTemplates:
-  - metadata:
+  <span style="color:#66d9ef">volumeClaimTemplates</span>:
+  - <span style="color:#66d9ef">metadata</span>:
       <span style="color:#75715e"># 使用了新的PVC</span>
-      name: datadir-new
-    spec:
-      accessModes:
+      <span style="color:#66d9ef">name</span>: datadir-new
+    <span style="color:#66d9ef">spec</span>:
+      <span style="color:#66d9ef">accessModes</span>:
       - ReadWriteOnce
-      resources:
-        requests:
-          storage: 10Gi
-      volumeMode: Filesystem</code></pre></div>
-<h2 id="清理pvc">清理PVC</h2>
-
+      <span style="color:#66d9ef">resources</span>:
+        <span style="color:#66d9ef">requests</span>:
+          <span style="color:#66d9ef">storage</span>: 10Gi
+      <span style="color:#66d9ef">volumeMode</span>: Filesystem
+</code></pre></div><h2 id="清理pvc">清理PVC</h2>
 <p>确认没有问题后，可以清理掉旧的PVC。</p></article>
     <footer class="post-footer">
       
@@ -409,7 +390,7 @@ spec:
       </ul>
       
       <p class="post-copyright">
-        
+        This post was published <strong>108</strong> days ago, content in the post may be inaccurate, even wrong now, please take risk yourself.
       </p>
     </footer>
     

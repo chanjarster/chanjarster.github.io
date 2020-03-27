@@ -17,7 +17,6 @@
   
   <meta name="author" content="颇忒脱" />
   <meta name="description" content="本文介绍使用Fluentd收集standalone容器日志的方法。
-
 " />
 
   
@@ -26,7 +25,6 @@
     <meta name="twitter:site" content="@gohugoio" />
     <meta name="twitter:title" content="使用Fluentd收集Docker容器日志" />
     <meta name="twitter:description" content="本文介绍使用Fluentd收集standalone容器日志的方法。
-
 " />
     <meta name="twitter:image" content="https://chanjarster.github.io/img/avatar.jpg" />
   
@@ -35,7 +33,6 @@
   <meta property="og:type" content="article" />
   <meta property="og:title" content="使用Fluentd收集Docker容器日志" />
   <meta property="og:description" content="本文介绍使用Fluentd收集standalone容器日志的方法。
-
 " />
   <meta property="og:url" content="https://chanjarster.github.io/post/collect-docker-log-by-fluentd/" />
   <meta property="og:image" content="https://chanjarster.github.io/img/avatar.jpg" />
@@ -43,7 +40,7 @@
 
 
 
-<meta name="generator" content="Hugo 0.49.2" />
+<meta name="generator" content="Hugo 0.68.1" />
 
 
 <link rel="canonical" href="https://chanjarster.github.io/post/collect-docker-log-by-fluentd/" />
@@ -252,23 +249,15 @@
       <p class="post-meta">@颇忒脱 · Jan 24, 2019 · 1 min read</p>
     </header>
     <article class="post-content"><p>本文介绍使用Fluentd收集standalone容器日志的方法。</p>
-
-<p></p>
-
 <p>Docker提供了很多<a href="https://docs.docker.com/config/containers/logging/configure/">logging driver</a>，默认情况下使用的<a href="https://docs.docker.com/config/containers/logging/json-file/">json-file</a>，它会把容器打到stdout/stderr的日志收集起来存到json文件中，<code>docker logs</code>所看到的日志就是来自于这些json文件。</p>
-
 <p>当有多个docker host的时候你会希望能够把日志汇集起来，集中存放到一处，本文讲的是如何通过<a href="https://docs.docker.com/config/containers/logging/fluentd/">fluentd logging driver</a>配合<a href="https://docs.fluentd.org/v1.0/articles/quickstart">fluentd</a>来达成这一目标。</p>
-
 <p>目标：</p>
-
 <ol>
 <li>将standalone容器打到stdout/stderror的日志收集起来</li>
 <li>收集的日志根据容器名分开存储</li>
 <li>日志文件根据每天滚动</li>
 </ol>
-
-<h2 id="第一步-配置fluentd实例">第一步：配置Fluentd实例</h2>
-
+<h2 id="第一步配置fluentd实例">第一步：配置Fluentd实例</h2>
 <p>首先是配置文件<code>fluent.conf</code>：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-txt" data-lang="txt">&lt;source&gt;
   @type   forward
@@ -316,18 +305,16 @@
     flush_mode        interval
     flush_interval    30s
   &lt;/buffer&gt;
-&lt;/match&gt;</code></pre></div>
-<p>新建一个目录比如<code>/home/ubuntu/container-logs</code>，并赋予权限<code>chmod 777 /home/ubuntu/container-logs</code>。</p>
-
+&lt;/match&gt;
+</code></pre></div><p>新建一个目录比如<code>/home/ubuntu/container-logs</code>，并赋予权限<code>chmod 777 /home/ubuntu/container-logs</code>。</p>
 <p>然后启动Fluentd实例，这里使用的Docker方式：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">docker run -it <span style="color:#ae81ff">\
 </span><span style="color:#ae81ff"></span>  -d <span style="color:#ae81ff">\
-</span><span style="color:#ae81ff"></span>  -p <span style="color:#ae81ff">24224</span>:24224 <span style="color:#ae81ff">\
+</span><span style="color:#ae81ff"></span>  -p 24224:24224 <span style="color:#ae81ff">\
 </span><span style="color:#ae81ff"></span>  -v /path/to/conf/fluent.conf:/fluentd/etc/fluent.conf <span style="color:#ae81ff">\
 </span><span style="color:#ae81ff"></span>  -v /home/ubuntu/container-logs:/fluentd/log
-  fluent/fluentd:v1.3</code></pre></div>
-<h2 id="第二步-指定容器的logging-driver">第二步：指定容器的logging driver</h2>
-
+  fluent/fluentd:v1.3
+</code></pre></div><h2 id="第二步指定容器的logging-driver">第二步：指定容器的logging driver</h2>
 <p>在启动容器的时候执行使用fluentd作为logging driver，下面以standalone容器举例：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">docker run -d <span style="color:#ae81ff">\
 </span><span style="color:#ae81ff"></span>  ...
@@ -335,45 +322,42 @@
 </span><span style="color:#ae81ff"></span>  --log-opt fluentd-address<span style="color:#f92672">=</span>&lt;fluentdhost&gt;:24224 <span style="color:#ae81ff">\
 </span><span style="color:#ae81ff"></span>  --log-opt mode<span style="color:#f92672">=</span>non-blocking <span style="color:#ae81ff">\
 </span><span style="color:#ae81ff"></span>  --log-opt tag<span style="color:#f92672">={{</span>.Name<span style="color:#f92672">}}</span> <span style="color:#ae81ff">\
-</span><span style="color:#ae81ff"></span>  &lt;image&gt;</code></pre></div>
-<p>注意上面的<code>--log-opt tag={{.Name}}</code>参数。</p>
-
+</span><span style="color:#ae81ff"></span>  &lt;image&gt;
+</code></pre></div><p>注意上面的<code>--log-opt tag={{.Name}}</code>参数。</p>
 <p>如果是docker compose / docker stack deploy部署，则在<code>docker-compose.yaml</code>中这样做 ：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-yaml" data-lang="yaml">version: <span style="color:#e6db74">&#34;3.7&#34;</span>
-x-logging:
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-yaml" data-lang="yaml"><span style="color:#66d9ef">version</span>: <span style="color:#e6db74">&#34;3.7&#34;</span>
+<span style="color:#66d9ef">x-logging</span>:
   <span style="color:#75715e">&amp;default-logging</span>
-  driver: fluentd
-  options:
-    fluentd-address: &lt;fluentdhost&gt;:<span style="color:#ae81ff">24224</span>
-    fluentd-async-connect: <span style="color:#e6db74">&#39;true&#39;</span>
-    mode: non-blocking
-    max-buffer-size: 4m
-    tag: <span style="color:#e6db74">&#34;{{.Name}}&#34;</span>
-services:
-  busybox:
-    image: busybox
-    logging: <span style="color:#75715e">*default-logging</span></code></pre></div>
-<h2 id="第三步-观察日志">第三步：观察日志</h2>
-
+  <span style="color:#66d9ef">driver</span>: fluentd
+  <span style="color:#66d9ef">options</span>:
+    <span style="color:#66d9ef">fluentd-address</span>: &lt;fluentdhost&gt;:<span style="color:#ae81ff">24224</span>
+    <span style="color:#66d9ef">fluentd-async-connect</span>: <span style="color:#e6db74">&#39;true&#39;</span>
+    <span style="color:#66d9ef">mode</span>: non-blocking
+    <span style="color:#66d9ef">max-buffer-size</span>: 4m
+    <span style="color:#66d9ef">tag</span>: <span style="color:#e6db74">&#34;{{.Name}}&#34;</span>
+<span style="color:#66d9ef">services</span>:
+  <span style="color:#66d9ef">busybox</span>:
+    <span style="color:#66d9ef">image</span>: busybox
+    <span style="color:#66d9ef">logging</span>: <span style="color:#75715e">*default-logging</span>
+</code></pre></div><h2 id="第三步观察日志">第三步：观察日志</h2>
 <p>到<code>/home/ubuntu/container-logs</code>目录下能够看到类似这样的目录结构：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-txt" data-lang="txt">.
 └── &lt;container-name&gt;
-    └── &lt;container-name&gt;.20190123.log</code></pre></div>
-<h2 id="参考文档">参考文档</h2>
-
+    └── &lt;container-name&gt;.20190123.log
+</code></pre></div><h2 id="参考文档">参考文档</h2>
 <ul>
 <li><a href="https://docs.docker.com/config/containers/logging/configure/">Configure logging drivers</a></li>
 <li><a href="https://docs.docker.com/config/containers/logging/log_tags/">Customize log driver output</a></li>
 <li><a href="https://docs.docker.com/config/containers/logging/fluentd/">Use Fluentd logging driver</a></li>
 <li><a href="https://docs.docker.com/engine/reference/commandline/run/">Docker CLI - run</a></li>
 <li><a href="https://docs.fluentd.org/v1.0/articles/quickstart">Fluentd</a>
-
 <ul>
 <li><a href="https://docs.fluentd.org/v1.0/articles/out_file">Fluentd - out_file</a></li>
 <li><a href="https://docs.fluentd.org/v1.0/articles/formatter_single_value">Fluentd - formatter_single_value</a></li>
 <li><a href="https://docs.fluentd.org/v1.0/articles/buf_file">Fluentd - buf_file</a></li>
 <li><a href="https://docs.fluentd.org/v1.0/articles/buffer-section">Fluentd - buffer</a></li>
-</ul></li>
+</ul>
+</li>
 </ul></article>
     <footer class="post-footer">
       
@@ -390,7 +374,7 @@ services:
       </ul>
       
       <p class="post-copyright">
-        This post was published <strong>419</strong> days ago, content in the post may be inaccurate, even wrong now, please take risk yourself.
+        This post was published <strong>427</strong> days ago, content in the post may be inaccurate, even wrong now, please take risk yourself.
       </p>
     </footer>
     

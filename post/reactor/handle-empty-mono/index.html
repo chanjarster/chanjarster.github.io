@@ -16,31 +16,28 @@
 
   
   <meta name="author" content="颇忒脱" />
-  <meta name="description" content="
-" />
+  <meta name="description" content="" />
 
   
   
     <meta name="twitter:card" content="summary" />
     <meta name="twitter:site" content="@gohugoio" />
     <meta name="twitter:title" content="处理Empty Mono&lt;T&gt;的方法" />
-    <meta name="twitter:description" content="
-" />
+    <meta name="twitter:description" content="" />
     <meta name="twitter:image" content="https://chanjarster.github.io/img/avatar.jpg" />
   
 
   
   <meta property="og:type" content="article" />
   <meta property="og:title" content="处理Empty Mono&lt;T&gt;的方法" />
-  <meta property="og:description" content="
-" />
+  <meta property="og:description" content="" />
   <meta property="og:url" content="https://chanjarster.github.io/post/reactor/handle-empty-mono/" />
   <meta property="og:image" content="https://chanjarster.github.io/img/avatar.jpg" />
 
 
 
 
-<meta name="generator" content="Hugo 0.49.2" />
+<meta name="generator" content="Hugo 0.68.1" />
 
 
 <link rel="canonical" href="https://chanjarster.github.io/post/reactor/handle-empty-mono/" />
@@ -248,9 +245,7 @@
       <h1 class="post-title">处理Empty Mono&lt;T&gt;的方法</h1>
       <p class="post-meta">@颇忒脱 · Apr 19, 2019 · 1 min read</p>
     </header>
-    <article class="post-content"><p></p>
-
-<p>在<a href="https://projectreactor.io/">Reactor</a>编程中有时候我们需要对empty <code>Mono&lt;T&gt;</code>做一些特定业务逻辑。下面看一段非reactor编程的代码：</p>
+    <article class="post-content"><p>在<a href="https://projectreactor.io/">Reactor</a>编程中有时候我们需要对empty <code>Mono&lt;T&gt;</code>做一些特定业务逻辑。下面看一段非reactor编程的代码：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#66d9ef">public</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">oldCheck</span><span style="color:#f92672">(</span>Token token<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
   <span style="color:#66d9ef">if</span> <span style="color:#f92672">(</span>token <span style="color:#f92672">==</span> <span style="color:#66d9ef">null</span><span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
     <span style="color:#75715e">// business logic
@@ -262,8 +257,8 @@
   <span style="color:#f92672">}</span>
   <span style="color:#75715e">// business logic
 </span><span style="color:#75715e"></span>  <span style="color:#66d9ef">return</span><span style="color:#f92672">;</span>
-<span style="color:#f92672">}</span></code></pre></div>
-<p>如果让你改成reactor你也许会改成这样：</p>
+<span style="color:#f92672">}</span>
+</code></pre></div><p>如果让你改成reactor你也许会改成这样：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#66d9ef">public</span> Mono<span style="color:#f92672">&lt;</span>Void<span style="color:#f92672">&gt;</span> <span style="color:#a6e22e">badCheck</span><span style="color:#f92672">(</span>Mono<span style="color:#f92672">&lt;</span>Token<span style="color:#f92672">&gt;</span> tokenMono<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
   <span style="color:#66d9ef">return</span> tokenMono
       <span style="color:#f92672">.</span><span style="color:#a6e22e">flatMap</span><span style="color:#f92672">(</span>token <span style="color:#f92672">-&gt;</span> <span style="color:#f92672">{</span>
@@ -279,9 +274,8 @@
         <span style="color:#75715e">// business logic
 </span><span style="color:#75715e"></span>        <span style="color:#66d9ef">return</span> Mono<span style="color:#f92672">.</span><span style="color:#a6e22e">empty</span><span style="color:#f92672">();</span>
       <span style="color:#f92672">});</span>
-<span style="color:#f92672">}</span></code></pre></div>
-<p>上面的示例代码里的注释已经写了<code>if (token == null) {}</code>的这个条件是永远成立的，这是因为当<code>Mono&lt;Token&gt;</code>是empty时，它是不会触发<code>flatMap</code>的。诸如<code>flatMap</code>的绝大部分Operator都依赖于<code>Publisher</code>（<code>Mono</code>和<code>Flux</code>都是<code>Pubisher</code>）推送数据（详情请看<a href="https://projectreactor.io/docs/core/release/api/index.html?overview-summary.html">javadoc</a>），如果<code>Publisher</code>本身无数据可推送，那么就不会触发Operator。换句话说<code>flatMap</code>内部是不可能得到null的。</p>
-
+<span style="color:#f92672">}</span>
+</code></pre></div><p>上面的示例代码里的注释已经写了<code>if (token == null) {}</code>的这个条件是永远成立的，这是因为当<code>Mono&lt;Token&gt;</code>是empty时，它是不会触发<code>flatMap</code>的。诸如<code>flatMap</code>的绝大部分Operator都依赖于<code>Publisher</code>（<code>Mono</code>和<code>Flux</code>都是<code>Pubisher</code>）推送数据（详情请看<a href="https://projectreactor.io/docs/core/release/api/index.html?overview-summary.html">javadoc</a>），如果<code>Publisher</code>本身无数据可推送，那么就不会触发Operator。换句话说<code>flatMap</code>内部是不可能得到null的。</p>
 <p>那么怎么做才可以？你可以使用Java 8的<code>Optional</code>来作为中间值：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#66d9ef">public</span> Mono<span style="color:#f92672">&lt;</span>Void<span style="color:#f92672">&gt;</span> <span style="color:#a6e22e">goodCheck</span><span style="color:#f92672">(</span>Mono<span style="color:#f92672">&lt;</span>Token<span style="color:#f92672">&gt;</span> tokenMono<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
   <span style="color:#66d9ef">return</span> tokenMono
@@ -306,8 +300,8 @@
         <span style="color:#75715e">// business logic
 </span><span style="color:#75715e"></span>        <span style="color:#66d9ef">return</span> Mono<span style="color:#f92672">.</span><span style="color:#a6e22e">empty</span><span style="color:#f92672">();</span>
       <span style="color:#f92672">});</span>
-<span style="color:#f92672">}</span></code></pre></div>
-<p>除了<code>defaultIfEmpty</code>之外，Reactor还提供了<code>switchIfEmpty</code>、<code>repeatWhenEmpty</code>来处理empty <code>Mono</code>/<code>Flux</code>。</p></article>
+<span style="color:#f92672">}</span>
+</code></pre></div><p>除了<code>defaultIfEmpty</code>之外，Reactor还提供了<code>switchIfEmpty</code>、<code>repeatWhenEmpty</code>来处理empty <code>Mono</code>/<code>Flux</code>。</p></article>
     <footer class="post-footer">
       
       <ul class="post-tags">
@@ -317,7 +311,7 @@
       </ul>
       
       <p class="post-copyright">
-        This post was published <strong>334</strong> days ago, content in the post may be inaccurate, even wrong now, please take risk yourself.
+        This post was published <strong>343</strong> days ago, content in the post may be inaccurate, even wrong now, please take risk yourself.
       </p>
     </footer>
     

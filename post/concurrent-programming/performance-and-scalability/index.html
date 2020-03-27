@@ -16,31 +16,28 @@
 
   
   <meta name="author" content="颇忒脱" />
-  <meta name="description" content="
-" />
+  <meta name="description" content="" />
 
   
   
     <meta name="twitter:card" content="summary" />
     <meta name="twitter:site" content="@gohugoio" />
     <meta name="twitter:title" content="Performance and scalability" />
-    <meta name="twitter:description" content="
-" />
+    <meta name="twitter:description" content="" />
     <meta name="twitter:image" content="https://chanjarster.github.io/img/avatar.jpg" />
   
 
   
   <meta property="og:type" content="article" />
   <meta property="og:title" content="Performance and scalability" />
-  <meta property="og:description" content="
-" />
+  <meta property="og:description" content="" />
   <meta property="og:url" content="https://chanjarster.github.io/post/concurrent-programming/performance-and-scalability/" />
   <meta property="og:image" content="https://chanjarster.github.io/img/avatar.jpg" />
 
 
 
 
-<meta name="generator" content="Hugo 0.49.2" />
+<meta name="generator" content="Hugo 0.68.1" />
 
 
 <link rel="canonical" href="https://chanjarster.github.io/post/concurrent-programming/performance-and-scalability/" />
@@ -248,27 +245,19 @@
       <h1 class="post-title">Performance and scalability</h1>
       <p class="post-meta">@颇忒脱 · Oct 24, 2019 · 1 min read</p>
     </header>
-    <article class="post-content"><p></p>
-
-<p><img src="performance-and-scalability.png" alt="" /></p>
-
+    <article class="post-content"><p><img src="performance-and-scalability.png" alt=""></p>
 <h2 id="性能">性能</h2>
-
-<p><img src="performance.png" alt="" /></p>
-
-<h2 id="amdahl-s-law">Amdahl&rsquo;s Law</h2>
-
-<p><img src="amdahls-law.png" alt="" /></p>
-
+<p><img src="performance.png" alt=""></p>
+<h2 id="amdahls-law">Amdahl&rsquo;s Law</h2>
+<p><img src="amdahls-law.png" alt=""></p>
 <p>隐藏的serial点：</p>
-
 <ol>
 <li><code>queue.take()</code></li>
 <li>代码之外的result handling，要么有地方汇总结果，要么有side effect
-
 <ol>
 <li>side effect，比如写日志、写数据库</li>
-</ol></li>
+</ol>
+</li>
 </ol>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#66d9ef">public</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">WorkerThread</span> <span style="color:#66d9ef">extends</span> Thread <span style="color:#f92672">{</span>
   <span style="color:#66d9ef">private</span> <span style="color:#66d9ef">final</span> BlockingQueue<span style="color:#f92672">&lt;</span>Runnable<span style="color:#f92672">&gt;</span> queue<span style="color:#f92672">;</span>
@@ -282,40 +271,33 @@
       <span style="color:#f92672">}</span>
     <span style="color:#f92672">}</span>  
   <span style="color:#f92672">}</span>
-<span style="color:#f92672">}</span></code></pre></div>
-<h2 id="线程的代价">线程的代价</h2>
-
-<p><img src="cost-of-thread.png" alt="" /></p>
-
+<span style="color:#f92672">}</span>
+</code></pre></div><h2 id="线程的代价">线程的代价</h2>
+<p><img src="cost-of-thread.png" alt=""></p>
 <h3 id="优化非竞争性锁">优化非竞争性锁</h3>
-
 <p>某个锁被证明不会发生竞争，JVM会优化掉它：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#66d9ef">synchronized</span> <span style="color:#f92672">(</span><span style="color:#66d9ef">new</span> Object<span style="color:#f92672">())</span> <span style="color:#f92672">{</span>
   <span style="color:#75715e">// do something
-</span><span style="color:#75715e"></span><span style="color:#f92672">}</span></code></pre></div>
-<p>通过逃逸分析发现对象从未跳出当前线程，JVM会优化掉它：</p>
+</span><span style="color:#75715e"></span><span style="color:#f92672">}</span>
+</code></pre></div><p>通过逃逸分析发现对象从未跳出当前线程，JVM会优化掉它：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#66d9ef">public</span> String <span style="color:#a6e22e">getStoogeNames</span><span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
   List<span style="color:#f92672">&lt;</span>String<span style="color:#f92672">&gt;</span> stooges <span style="color:#f92672">=</span> <span style="color:#66d9ef">new</span> Vector<span style="color:#f92672">&lt;&gt;();</span>
   stooges<span style="color:#f92672">.</span><span style="color:#a6e22e">add</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34;foo&#34;</span><span style="color:#f92672">);</span>
   stooges<span style="color:#f92672">.</span><span style="color:#a6e22e">add</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34;bar&#34;</span><span style="color:#f92672">);</span>
   <span style="color:#66d9ef">return</span> stooges<span style="color:#f92672">.</span><span style="color:#a6e22e">toString</span><span style="color:#f92672">();</span>
-<span style="color:#f92672">}</span></code></pre></div>
-<p>上述代码就算不用逃逸分析，编译器也会合并相邻的锁。</p>
-
+<span style="color:#f92672">}</span>
+</code></pre></div><p>上述代码就算不用逃逸分析，编译器也会合并相邻的锁。</p>
 <h2 id="优化竞争性锁">优化竞争性锁</h2>
-
-<p><img src="reduce-locking-contention.png" alt="" /></p>
-
+<p><img src="reduce-locking-contention.png" alt=""></p>
 <h3 id="缩小锁的范围">缩小锁的范围</h3>
-
 <p>优化前：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#66d9ef">private</span> HashMap<span style="color:#f92672">&lt;</span>String<span style="color:#f92672">,</span> String<span style="color:#f92672">&gt;</span> attributes<span style="color:#f92672">;</span>
 <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">synchronized</span> <span style="color:#66d9ef">boolean</span> <span style="color:#a6e22e">userLocationMatches</span><span style="color:#f92672">(</span>String name<span style="color:#f92672">,</span> String regexp<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
   String key <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;users.&#34;</span> <span style="color:#f92672">+</span> name <span style="color:#f92672">+</span> <span style="color:#e6db74">&#34;.location&#34;</span><span style="color:#f92672">;</span>
   String location <span style="color:#f92672">=</span> attributes<span style="color:#f92672">.</span><span style="color:#a6e22e">get</span><span style="color:#f92672">(</span>key<span style="color:#f92672">);</span>
   <span style="color:#66d9ef">return</span> Pattern<span style="color:#f92672">.</span><span style="color:#a6e22e">matches</span><span style="color:#f92672">(</span>regexp<span style="color:#f92672">,</span> location<span style="color:#f92672">);</span>
-<span style="color:#f92672">}</span></code></pre></div>
-<p>优化后：</p>
+<span style="color:#f92672">}</span>
+</code></pre></div><p>优化后：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#66d9ef">private</span> HashMap<span style="color:#f92672">&lt;</span>String<span style="color:#f92672">,</span> String<span style="color:#f92672">&gt;</span> attributes<span style="color:#f92672">;</span>
 <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">boolean</span> <span style="color:#a6e22e">userLocationMatches</span><span style="color:#f92672">(</span>String name<span style="color:#f92672">,</span> String regexp<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
   String key <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;users.&#34;</span> <span style="color:#f92672">+</span> name <span style="color:#f92672">+</span> <span style="color:#e6db74">&#34;.location&#34;</span><span style="color:#f92672">;</span>
@@ -324,11 +306,10 @@
     location <span style="color:#f92672">=</span> attributes<span style="color:#f92672">.</span><span style="color:#a6e22e">get</span><span style="color:#f92672">(</span>key<span style="color:#f92672">);</span>
   <span style="color:#f92672">}</span>
   <span style="color:#66d9ef">return</span> Pattern<span style="color:#f92672">.</span><span style="color:#a6e22e">matches</span><span style="color:#f92672">(</span>regexp<span style="color:#f92672">,</span> location<span style="color:#f92672">);</span>
-<span style="color:#f92672">}</span></code></pre></div>
-<p>或者：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#66d9ef">private</span> Map<span style="color:#f92672">&lt;</span>String<span style="color:#f92672">,</span> String<span style="color:#f92672">&gt;</span> attributes <span style="color:#f92672">=</span> Collections<span style="color:#f92672">.</span><span style="color:#a6e22e">synchronizedMap</span><span style="color:#f92672">(...);</span></code></pre></div>
-<h3 id="lock-splitting-锁分割">Lock Splitting，锁分割</h3>
-
+<span style="color:#f92672">}</span>
+</code></pre></div><p>或者：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#66d9ef">private</span> Map<span style="color:#f92672">&lt;</span>String<span style="color:#f92672">,</span> String<span style="color:#f92672">&gt;</span> attributes <span style="color:#f92672">=</span> Collections<span style="color:#f92672">.</span><span style="color:#a6e22e">synchronizedMap</span><span style="color:#f92672">(...);</span>
+</code></pre></div><h3 id="lock-splitting锁分割">Lock Splitting，锁分割</h3>
 <p>不要用一把锁保护两个独立的状态变量：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#66d9ef">public</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">ServerStatus</span> <span style="color:#f92672">{</span>
   <span style="color:#66d9ef">private</span> Set<span style="color:#f92672">&lt;</span>String<span style="color:#f92672">&gt;</span> users<span style="color:#f92672">;</span>
@@ -339,8 +320,8 @@
   pubilc <span style="color:#66d9ef">synchronized</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">addQuery</span><span style="color:#f92672">(...)</span> <span style="color:#f92672">{</span>
     queries<span style="color:#f92672">.</span><span style="color:#a6e22e">add</span><span style="color:#f92672">(...);</span>
   <span style="color:#f92672">}</span>
-<span style="color:#f92672">}</span></code></pre></div>
-<p>可以两把锁来会更好：</p>
+<span style="color:#f92672">}</span>
+</code></pre></div><p>可以两把锁来会更好：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#66d9ef">public</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">ServerStatus</span> <span style="color:#f92672">{</span>
   <span style="color:#66d9ef">private</span> Set<span style="color:#f92672">&lt;</span>String<span style="color:#f92672">&gt;</span> users<span style="color:#f92672">;</span>
   <span style="color:#66d9ef">private</span> Set<span style="color:#f92672">&lt;</span>String<span style="color:#f92672">&gt;</span> queries<span style="color:#f92672">;</span>
@@ -354,7 +335,8 @@
       queries<span style="color:#f92672">.</span><span style="color:#a6e22e">add</span><span style="color:#f92672">(...);</span>      
     <span style="color:#f92672">}</span>
   <span style="color:#f92672">}</span>
-<span style="color:#f92672">}</span></code></pre></div></article>
+<span style="color:#f92672">}</span>
+</code></pre></div></article>
     <footer class="post-footer">
       
       <ul class="post-tags">
@@ -368,7 +350,7 @@
       </ul>
       
       <p class="post-copyright">
-        This post was published <strong>146</strong> days ago, content in the post may be inaccurate, even wrong now, please take risk yourself.
+        This post was published <strong>154</strong> days ago, content in the post may be inaccurate, even wrong now, please take risk yourself.
       </p>
     </footer>
     

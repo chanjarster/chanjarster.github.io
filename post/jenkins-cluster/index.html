@@ -17,7 +17,6 @@
   
   <meta name="author" content="颇忒脱" />
   <meta name="description" content="搭建Jenkins集群的流水账。
-
 " />
 
   
@@ -26,7 +25,6 @@
     <meta name="twitter:site" content="@gohugoio" />
     <meta name="twitter:title" content="搭建Jenkins集群流水账" />
     <meta name="twitter:description" content="搭建Jenkins集群的流水账。
-
 " />
     <meta name="twitter:image" content="https://chanjarster.github.io/img/avatar.jpg" />
   
@@ -35,7 +33,6 @@
   <meta property="og:type" content="article" />
   <meta property="og:title" content="搭建Jenkins集群流水账" />
   <meta property="og:description" content="搭建Jenkins集群的流水账。
-
 " />
   <meta property="og:url" content="https://chanjarster.github.io/post/jenkins-cluster/" />
   <meta property="og:image" content="https://chanjarster.github.io/img/avatar.jpg" />
@@ -43,7 +40,7 @@
 
 
 
-<meta name="generator" content="Hugo 0.49.2" />
+<meta name="generator" content="Hugo 0.68.1" />
 
 
 <link rel="canonical" href="https://chanjarster.github.io/post/jenkins-cluster/" />
@@ -252,100 +249,69 @@
       <p class="post-meta">@颇忒脱 · Nov 23, 2018 · 1 min read</p>
     </header>
     <article class="post-content"><p>搭建Jenkins集群的流水账。</p>
-
-<p></p>
-
 <h2 id="硬件要求">硬件要求</h2>
-
 <p>不论是master还是slave，都要安装：</p>
-
 <ul>
 <li>操作系统：Ubuntu 16.04 Server LTS</li>
 <li>Docker-CE</li>
 </ul>
-
 <p>Docker安装方法：</p>
-
 <ul>
-<li>根据文档：<a href="https://yq.aliyun.com/articles/110806">https://yq.aliyun.com/articles/110806</a>  安装docker-ce</li>
+<li>根据文档：https://yq.aliyun.com/articles/110806  安装docker-ce</li>
 <li><code>curl -fsSL https://get.docker.com | bash -s docker --mirror Aliyun</code></li>
 <li><code>sudo usermod -aG docker $USER</code></li>
 </ul>
-
 <p>我在安装的时候碰到Jenkins无法从Update center下载metadata的问题，经发现是docker的mtu比服务器网卡mtu大的问题，解决办法如下：</p>
-
 <ul>
 <li>新建或者修改文件：<code>/etc/docker/daemon.json</code>，添加mtu的设置比如：</li>
 </ul>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-json" data-lang="json">{
   <span style="color:#f92672">&#34;mtu&#34;</span>: <span style="color:#960050;background-color:#1e0010">&lt;服务器网卡的mtu&gt;</span>,
   <span style="color:#960050;background-color:#1e0010">...</span>
-}</code></pre></div>
-<ul>
+}
+</code></pre></div><ul>
 <li>你可以配置docker registry mirror，同样修改<code>/etc/docker/daemon.json</code>：</li>
 </ul>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-json" data-lang="json">{
   <span style="color:#f92672">&#34;registry-mirrors&#34;</span>: [<span style="color:#e6db74">&#34;...&#34;</span>],
   <span style="color:#960050;background-color:#1e0010">...</span>
-}</code></pre></div>
-<p>然后重启docker：<code>sudo systemctl restart docker</code></p>
-
+}
+</code></pre></div><p>然后重启docker：<code>sudo systemctl restart docker</code></p>
 <h2 id="部署master">部署master</h2>
-
 <p>创建目录：<code>mkdir $HOME/jenkins-home</code></p>
-
 <p>启动Jenkins：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">sudo docker run <span style="color:#ae81ff">\
 </span><span style="color:#ae81ff"></span>  -u root <span style="color:#ae81ff">\
 </span><span style="color:#ae81ff"></span>  -d <span style="color:#ae81ff">\
-</span><span style="color:#ae81ff"></span>  -p <span style="color:#ae81ff">8080</span>:8080 <span style="color:#ae81ff">\
-</span><span style="color:#ae81ff"></span>  -p <span style="color:#ae81ff">50000</span>:50000 <span style="color:#ae81ff">\
+</span><span style="color:#ae81ff"></span>  -p 8080:8080 <span style="color:#ae81ff">\
+</span><span style="color:#ae81ff"></span>  -p 50000:50000 <span style="color:#ae81ff">\
 </span><span style="color:#ae81ff"></span>  -v $HOME/jenkins-home:/var/jenkins_home <span style="color:#ae81ff">\
 </span><span style="color:#ae81ff"></span>  -v /var/run/docker.sock:/var/run/docker.sock <span style="color:#ae81ff">\
 </span><span style="color:#ae81ff"></span>  --name jenkins <span style="color:#ae81ff">\
-</span><span style="color:#ae81ff"></span>  jenkinsci/blueocean</code></pre></div>
-<p>创建ssh密钥对：<code>ssh-keygen</code></p>
-
+</span><span style="color:#ae81ff"></span>  jenkinsci/blueocean
+</code></pre></div><p>创建ssh密钥对：<code>ssh-keygen</code></p>
 <h2 id="初始配置jenkins">初始配置Jenkins</h2>
-
 <ul>
 <li>浏览器访问Jenkins：<code>http://&lt;jenkins-master-ip&gt;:8080/</code></li>
 <li>选择安装社区推荐插件</li>
 <li>设置管理员用户</li>
 </ul>
-
 <h2 id="安全配置">安全配置</h2>
-
 <h3 id="配置ldap">配置LDAP</h3>
-
 <p>如果要配置LDAP，那么一定要记住，配置完之后不要注销。</p>
-
 <p>系统管理 -&gt; 全局安全设置，访问控制，选择LDAP，然后根据情况配置即可。</p>
-
 <p>注意配置完之后一定要Test。</p>
-
 <h3 id="配置授权策略">配置授权策略</h3>
-
 <p>系统管理 -&gt; 全局安全设置，授权策略，项目矩阵授权策略。</p>
-
 <p>打开浏览器隐私窗口，用一个账号登录，这个账号将替代当前使用的管理员账号。</p>
-
 <p>下面为了方便理解，下面吧当前浏览器称为A窗口，隐私窗口浏览器称为B窗口。</p>
-
 <p>回到A窗口，添加刚才登录的用户，如果正常添加，用户名上不会有删除线。然后在全部这一栏勾选Administer，点击应用。</p>
-
 <p>此时A窗口的管理员账号应该就不能做任何操作了，而且再也不能登录了。</p>
-
 <p>到B窗口，刷新一下，继续后面的管理员动作。</p>
-
 <p>下图是推荐的配置方法：</p>
-
-<p><img src="global-security-settings.png" alt="global-security-settings" /></p>
-
+<p><img src="global-security-settings.png" alt="global-security-settings"></p>
 <h2 id="添加slave节点">添加Slave节点</h2>
-
 <p>前期准备</p>
-
 <ul>
 <li>准备Slave的机器</li>
 <li>安装Docker-CE</li>
@@ -353,9 +319,7 @@
 <li>新建工作目录：<code>mkdir $HOME/jenkins-workdir</code></li>
 <li>把master的pub key添加到slave上：把master的<code>$HOME/.ssh/id_rsa.pub</code>内容添加到slave的<code>$HOME/.ssh/authorized_keys</code>里。</li>
 </ul>
-
 <p>到 系统管理 &gt; 节点管理，新建节点</p>
-
 <ul>
 <li>名字：slave-1</li>
 <li>并发构建数：2（cpu核数）</li>
@@ -364,7 +328,6 @@
 <li>启动方式：Launch agent agents via SSH</li>
 <li>Host：<code>&lt;slave的ip&gt;</code></li>
 <li>Credentials：这个时候要创建一个平局，方法如下：
-
 <ul>
 <li>Domain，全局凭据</li>
 <li>类型：SSH username with private key</li>
@@ -373,16 +336,14 @@
 <li>Passphrase: <code>&lt;blank&gt;</code></li>
 <li>ID: <code>&lt;blank&gt;</code></li>
 <li>描述：For slave connection</li>
-</ul></li>
+</ul>
+</li>
 <li>Host Key Verification Strategy：Non verifying Verification Strategy</li>
 <li>保存</li>
 <li>修改master节点，执行者数量设置为0，这样就能避免Job分配到master上。</li>
 </ul>
-
 <h2 id="安装其他插件">安装其他插件</h2>
-
 <p>系统管理 -&gt; 插件管理，安装下列插件：</p>
-
 <ul>
 <li>Config File Provider</li>
 <li>Pipeline Maven</li>
@@ -391,29 +352,20 @@
 <li>TestNG Results</li>
 <li>SonarQube Scanner</li>
 </ul>
-
 <h2 id="配置工具">配置工具</h2>
-
 <p>系统管理 -&gt; 全局工具配置，都选择自动安装，下面列出的是工具的名字</p>
-
 <ul>
 <li>JDK：JDK6、JDK7、JDK8，要输入oracle网站账号密码</li>
 <li>Maven：Maven3</li>
 <li>Docker：Docker</li>
 </ul>
-
 <h2 id="配置时区">配置时区</h2>
-
 <p>用Docker启动Jenkins时区是GMT+0</p>
-
-<p>见wiki：<a href="https://wiki.jenkins.io/display/JENKINS/Change+time+zone">https://wiki.jenkins.io/display/JENKINS/Change+time+zone</a></p>
-
+<p>见wiki：https://wiki.jenkins.io/display/JENKINS/Change+time+zone</p>
 <p>系统管理 -&gt; 脚本命令行</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java">System<span style="color:#f92672">.</span><span style="color:#a6e22e">setProperty</span><span style="color:#f92672">(</span><span style="color:#960050;background-color:#1e0010">&#39;</span>org<span style="color:#f92672">.</span><span style="color:#a6e22e">apache</span><span style="color:#f92672">.</span><span style="color:#a6e22e">commons</span><span style="color:#f92672">.</span><span style="color:#a6e22e">jelly</span><span style="color:#f92672">.</span><span style="color:#a6e22e">tags</span><span style="color:#f92672">.</span><span style="color:#a6e22e">fmt</span><span style="color:#f92672">.</span><span style="color:#a6e22e">timeZone</span><span style="color:#960050;background-color:#1e0010">&#39;</span><span style="color:#f92672">,</span> <span style="color:#960050;background-color:#1e0010">&#39;</span>Asia<span style="color:#f92672">/</span>Shanghai<span style="color:#960050;background-color:#1e0010">&#39;</span><span style="color:#f92672">)</span></code></pre></div>
-<h2 id="清理重装方法">清理重装方法</h2>
-
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java">System<span style="color:#f92672">.</span><span style="color:#a6e22e">setProperty</span><span style="color:#f92672">(</span><span style="color:#960050;background-color:#1e0010">&#39;</span>org<span style="color:#f92672">.</span><span style="color:#a6e22e">apache</span><span style="color:#f92672">.</span><span style="color:#a6e22e">commons</span><span style="color:#f92672">.</span><span style="color:#a6e22e">jelly</span><span style="color:#f92672">.</span><span style="color:#a6e22e">tags</span><span style="color:#f92672">.</span><span style="color:#a6e22e">fmt</span><span style="color:#f92672">.</span><span style="color:#a6e22e">timeZone</span><span style="color:#960050;background-color:#1e0010">&#39;</span><span style="color:#f92672">,</span> <span style="color:#960050;background-color:#1e0010">&#39;</span>Asia<span style="color:#f92672">/</span>Shanghai<span style="color:#960050;background-color:#1e0010">&#39;</span><span style="color:#f92672">)</span>
+</code></pre></div><h2 id="清理重装方法">清理重装方法</h2>
 <p>如果你配置错误搞砸了，想从头开始，那么这么做，只需要这么几步：</p>
-
 <ul>
 <li>ssh到master上：</li>
 <li><code>sudo docker stop jenkins</code></li>
@@ -430,7 +382,7 @@
       </ul>
       
       <p class="post-copyright">
-        This post was published <strong>481</strong> days ago, content in the post may be inaccurate, even wrong now, please take risk yourself.
+        This post was published <strong>489</strong> days ago, content in the post may be inaccurate, even wrong now, please take risk yourself.
       </p>
     </footer>
     

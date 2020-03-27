@@ -17,7 +17,6 @@
   
   <meta name="author" content="颇忒脱" />
   <meta name="description" content="大多数Spring Cloud项目都会使用Spring Cloud Config来管理应用启动时的配置文件，同时开发人员面临着多样化的程序启动方式：操作系统进程启动、docker启动、k8s启动。那么如何规划这些配置文件以适应多种启动方式呢？本文尝试给出一些建议
-
 " />
 
   
@@ -26,7 +25,6 @@
     <meta name="twitter:site" content="@gohugoio" />
     <meta name="twitter:title" content="Spring Cloud Config配置文件最佳实践" />
     <meta name="twitter:description" content="大多数Spring Cloud项目都会使用Spring Cloud Config来管理应用启动时的配置文件，同时开发人员面临着多样化的程序启动方式：操作系统进程启动、docker启动、k8s启动。那么如何规划这些配置文件以适应多种启动方式呢？本文尝试给出一些建议
-
 " />
     <meta name="twitter:image" content="https://chanjarster.github.io/img/avatar.jpg" />
   
@@ -35,7 +33,6 @@
   <meta property="og:type" content="article" />
   <meta property="og:title" content="Spring Cloud Config配置文件最佳实践" />
   <meta property="og:description" content="大多数Spring Cloud项目都会使用Spring Cloud Config来管理应用启动时的配置文件，同时开发人员面临着多样化的程序启动方式：操作系统进程启动、docker启动、k8s启动。那么如何规划这些配置文件以适应多种启动方式呢？本文尝试给出一些建议
-
 " />
   <meta property="og:url" content="https://chanjarster.github.io/post/spring-cloud-config-best-practice/" />
   <meta property="og:image" content="https://chanjarster.github.io/img/avatar.jpg" />
@@ -43,7 +40,7 @@
 
 
 
-<meta name="generator" content="Hugo 0.49.2" />
+<meta name="generator" content="Hugo 0.68.1" />
 
 
 <link rel="canonical" href="https://chanjarster.github.io/post/spring-cloud-config-best-practice/" />
@@ -252,11 +249,7 @@
       <p class="post-meta">@颇忒脱 · Sep 10, 2018 · 1 min read</p>
     </header>
     <article class="post-content"><p>大多数Spring Cloud项目都会使用Spring Cloud Config来管理应用启动时的配置文件，同时开发人员面临着多样化的程序启动方式：操作系统进程启动、docker启动、k8s启动。那么如何规划这些配置文件以适应多种启动方式呢？本文尝试给出一些建议</p>
-
-<p></p>
-
 <h2 id="先讲几个规则">先讲几个规则</h2>
-
 <ol>
 <li>程序打包时，要将<code>bootstrap.properties</code>和<code>application.properties</code>（或者它们的yaml变种）打到包里。</li>
 <li><code>bootstrap.properties</code>里，要针对可变配置项做环境变量化。</li>
@@ -264,92 +257,65 @@
 <li>Spring Cloud应用关于Config Server的配置要放在<code>bootstrap.properties</code>里，并且要做环境变量化。</li>
 <li>Config Server所提供的<code>application-*.properties</code>里不得有环境变量。因为既然直接提供配置了，那么就不应该再使用环境变量。</li>
 </ol>
-
 <h3 id="要针对可变配置项做环境变量化">要针对可变配置项做环境变量化</h3>
-
 <p>这句话对应<a href="https://12factor.net/config">The 12-factor App的Config章节</a>。具体做法是在配置文件里使用<a href="https://docs.spring.io/spring-boot/docs/current/reference/htmlsingle/#boot-features-external-config-placeholders-in-properties">placeholder</a>。下面是两种方式：</p>
-
 <pre><code>app.name=${APP_NAME}
 app.description=${APP_DESC:Default description}
-</code></pre>
-
-<p>第一种方式Spring Boot/Cloud应用在启动时，会根据<a href="https://docs.spring.io/spring-boot/docs/current/reference/htmlsingle/#boot-features-external-config">这个顺序</a>找<code>APP_NAME</code>的值，如果找不到程序启动会报错。</p>
-
+</code></pre><p>第一种方式Spring Boot/Cloud应用在启动时，会根据<a href="https://docs.spring.io/spring-boot/docs/current/reference/htmlsingle/#boot-features-external-config">这个顺序</a>找<code>APP_NAME</code>的值，如果找不到程序启动会报错。</p>
 <p>第二种方式和第一种方式的不同在于如果找不到，则使用<code>application.properties</code>里定义的默认值。</p>
-
 <p>而程序在启动时应该通过环境变量的方式将这些值传递进去。</p>
-
 <p>在真实应用中应该尽量多的使用第二种方式，只有少数的配置才是程序启动时必须提供的，一般来说都是一些数据库连接字符串、用户名密码等信息。</p>
-
-<h3 id="spring-cloud应用关于config-server的配置要放在-bootstrap-properties-里-并且要做环境变量化">Spring Cloud应用关于Config Server的配置要放在<code>bootstrap.properties</code>里，并且要做环境变量化</h3>
-
+<h3 id="spring-cloud应用关于config-server的配置要放在bootstrapproperties里并且要做环境变量化">Spring Cloud应用关于Config Server的配置要放在<code>bootstrap.properties</code>里，并且要做环境变量化</h3>
 <p>比如这样：</p>
-
 <pre><code>spring.cloud.config.enabled=${CONFIG_ENABLED:true}
 spring.cloud.config.profile=${CONFIG_PROFILE:production}
 spring.cloud.config.label=${CONFIG_LABEL:master}
 spring.cloud.config.uri=${CONFIG_SERVER_URL:http://config-server:8080/}
-</code></pre>
-
-<p>上面这个配置可以控制是否连接config server，因为在开发环境下我们可能并不需要config server。也提供了可以config server启动程序的可能。
+</code></pre><p>上面这个配置可以控制是否连接config server，因为在开发环境下我们可能并不需要config server。也提供了可以config server启动程序的可能。
 同时也控制了如果连接config server，应该使用哪个<code>application.properties</code>。</p>
-
 <p>需要注意的是，如果我们选择程序启动的时候连接config server，那么在程序启动时提供的环境变量就只能是和config server相关的环境变量（在这个例子里就是上面的<code>CONFIG_*</code>），这些配置用来控制如何获得<code>application.properties</code>。</p>
-
 <p>因为此时程序所使用的配置都来自于config server，如果config server提供一些，环境变量又提供一些则会造成运维上的混乱。</p>
-
 <h2 id="各种启动方式">各种启动方式</h2>
-
 <p>下面讲讲各种启动方式如何传递环境变量。</p>
-
 <h3 id="以操作系统进程启动">以操作系统进程启动</h3>
-
 <p>直接以操作系统进程启动的方法是类似于这样的：</p>
-
 <pre><code>APP_NAME=my-app APP_DESC=&quot;My App Desc&quot; java -jar spring-cloud-app.jar
-</code></pre>
-
-<h3 id="用docker启动">用Docker启动</h3>
-
+</code></pre><h3 id="用docker启动">用Docker启动</h3>
 <p>用docker启动则是这样的，参见<a href="https://docs.docker.com/engine/reference/run/#env-environment-variables">Docker ENV (environment variables)</a>：</p>
-
 <pre><code>docker run --name my-app -e APP_NAME=my-app -e APP_DESC=&quot;My App Desc&quot; spring-cloud-app:latest
-</code></pre>
-
-<h3 id="在k8s里启动">在K8S里启动</h3>
-
-<p>定义ConfigMap或Secret（用在密码类配置上），然后在Deployment spec里使用<code>configMapRef</code>或者<code>secretRef</code>或者<code>configMapKeyRef</code>或者<code>secretKeyRef</code>，比如下面的例子：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-yaml" data-lang="yaml">apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: my-app
-  namespace: &lt;namespace<span style="color:#e6db74">&gt;
-</span><span style="color:#e6db74">spec:
-</span><span style="color:#e6db74">  ...
-</span><span style="color:#e6db74">  template:
-</span><span style="color:#e6db74">    ...
-</span><span style="color:#e6db74">    spec:
-</span><span style="color:#e6db74">      containers:
-</span><span style="color:#e6db74">      - name: my-app
-</span><span style="color:#e6db74">        image: &lt;image repository&gt;
-</span><span style="color:#e6db74">        ...
-</span><span style="color:#e6db74">        envFrom:
-</span><span style="color:#e6db74">        - configMapRef:
-</span><span style="color:#e6db74">            name: my-app-config
-</span><span style="color:#e6db74">        - secretRef:
-</span><span style="color:#e6db74">            name: my-app-secret
-</span><span style="color:#e6db74">        env:
-</span><span style="color:#e6db74">        - name: APP_NAME
-</span><span style="color:#e6db74">          valueFrom:
-</span><span style="color:#e6db74">            configMapKeyRef:
-</span><span style="color:#e6db74">              name: my-app-config
-</span><span style="color:#e6db74">              key: APP_NAME
-</span><span style="color:#e6db74">        - name: APP_DESC
-</span><span style="color:#e6db74">          valueFrom:
-</span><span style="color:#e6db74">            secretKeyRef:
-</span><span style="color:#e6db74">              name: my-app-secret
-</span><span style="color:#e6db74">              key: APP_DESC</span></code></pre></div>
-<p>详见<a href="https://kubernetes.io/docs/tasks/configure-pod-container/configure-pod-configmap/">Configure a Pod to Use a ConfigMap</a>、<a href="https://kubernetes.io/docs/concepts/configuration/secret/#using-secrets-as-files-from-a-pod">Secrets</a>和<a href="https://dchua.com/2017/04/21/load-env-variables-from-configmaps-and-secrets-upon-pod-boot/">Load env variables from ConfigMaps and Secrets upon Pod boot</a>。</p></article>
+</code></pre><h3 id="在k8s里启动">在K8S里启动</h3>
+<p>定义ConfigMap或Secret（用在密码类配置上），然后在Deployment spec里使用<code>configMapRef</code>或者<code>secretRef</code>或者<code>configMapKeyRef </code>或者<code>secretKeyRef</code>，比如下面的例子：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-yaml" data-lang="yaml"><span style="color:#66d9ef">apiVersion</span>: apps/v1
+<span style="color:#66d9ef">kind</span>: Deployment
+<span style="color:#66d9ef">metadata</span>:
+  <span style="color:#66d9ef">name</span>: my-app
+  <span style="color:#66d9ef">namespace</span>: &lt;namespace&gt;
+<span style="color:#66d9ef">spec</span>:
+  ...
+  <span style="color:#66d9ef">template</span>:
+    ...
+    <span style="color:#66d9ef">spec</span>:
+      <span style="color:#66d9ef">containers</span>:
+      - <span style="color:#66d9ef">name</span>: my-app
+        <span style="color:#66d9ef">image</span>: &lt;image repository<span style="color:#e6db74">&gt;
+</span><span style="color:#e6db74">        ...</span>
+        <span style="color:#66d9ef">envFrom</span>:
+        - <span style="color:#66d9ef">configMapRef</span>:
+            <span style="color:#66d9ef">name</span>: my-app-config
+        - <span style="color:#66d9ef">secretRef</span>:
+            <span style="color:#66d9ef">name</span>: my-app-secret
+        <span style="color:#66d9ef">env</span>:
+        - <span style="color:#66d9ef">name</span>: APP_NAME
+          <span style="color:#66d9ef">valueFrom</span>:
+            <span style="color:#66d9ef">configMapKeyRef</span>:
+              <span style="color:#66d9ef">name</span>: my-app-config
+              <span style="color:#66d9ef">key</span>: APP_NAME
+        - <span style="color:#66d9ef">name</span>: APP_DESC
+          <span style="color:#66d9ef">valueFrom</span>:
+            <span style="color:#66d9ef">secretKeyRef</span>:
+              <span style="color:#66d9ef">name</span>: my-app-secret
+              <span style="color:#66d9ef">key</span>: APP_DESC
+</code></pre></div><p>详见<a href="https://kubernetes.io/docs/tasks/configure-pod-container/configure-pod-configmap/">Configure a Pod to Use a ConfigMap</a>、<a href="https://kubernetes.io/docs/concepts/configuration/secret/#using-secrets-as-files-from-a-pod">Secrets</a>和<a href="https://dchua.com/2017/04/21/load-env-variables-from-configmaps-and-secrets-upon-pod-boot/">Load env variables from ConfigMaps and Secrets upon Pod boot</a>。</p></article>
     <footer class="post-footer">
       
       <ul class="post-tags">
@@ -363,7 +329,7 @@ metadata:
       </ul>
       
       <p class="post-copyright">
-        This post was published <strong>554</strong> days ago, content in the post may be inaccurate, even wrong now, please take risk yourself.
+        This post was published <strong>563</strong> days ago, content in the post may be inaccurate, even wrong now, please take risk yourself.
       </p>
     </footer>
     

@@ -16,31 +16,28 @@
 
   
   <meta name="author" content="颇忒脱" />
-  <meta name="description" content="
-" />
+  <meta name="description" content="" />
 
   
   
     <meta name="twitter:card" content="summary" />
     <meta name="twitter:site" content="@gohugoio" />
     <meta name="twitter:title" content="事务 - 2PC" />
-    <meta name="twitter:description" content="
-" />
+    <meta name="twitter:description" content="" />
     <meta name="twitter:image" content="https://chanjarster.github.io/img/avatar.jpg" />
   
 
   
   <meta property="og:type" content="article" />
   <meta property="og:title" content="事务 - 2PC" />
-  <meta property="og:description" content="
-" />
+  <meta property="og:description" content="" />
   <meta property="og:url" content="https://chanjarster.github.io/post/d-transactions/2pc/" />
   <meta property="og:image" content="https://chanjarster.github.io/img/avatar.jpg" />
 
 
 
 
-<meta name="generator" content="Hugo 0.49.2" />
+<meta name="generator" content="Hugo 0.68.1" />
 
 
 <link rel="canonical" href="https://chanjarster.github.io/post/d-transactions/2pc/" />
@@ -248,60 +245,40 @@
       <h1 class="post-title">事务 - 2PC</h1>
       <p class="post-meta">@颇忒脱 · Mar 18, 2019 · 1 min read</p>
     </header>
-    <article class="post-content"><p></p>
-
-<p><a href="https://github.com/chanjarster/transactions">github</a></p>
-
+    <article class="post-content"><p><a href="https://github.com/chanjarster/transactions">github</a></p>
 <p>在<a href="https://segmentfault.com/a/1190000013771861">上一篇文章</a>中我们介绍了本地事务，随着软件复杂度的上升，我们会需要一种可以在多个数据库之间完成事务（<a href="https://en.wikipedia.org/wiki/Distributed_transaction">分布式事务</a>）的方法，而这个方法也必须能够保证ACID。于是就出现了<a href="https://en.wikipedia.org/wiki/Two-phase_commit_protocol">2PC - Two phase commit protocol</a>。事实上2PC不仅仅适用于多数据库事务场景下使用，也适用于所有支持2PC的参与方（Participants)。</p>
-
 <h2 id="算法介绍">算法介绍</h2>
-
 <p>2PC的参与方有：</p>
-
 <ol>
 <li>一个作为Coordinator的节点</li>
 <li>多个作为Cohort的网络节点</li>
 </ol>
-
 <p>2PC假设：</p>
-
 <ol>
 <li>所有节点都有一个稳定存储用以保存WAL（<a href="https://en.wikipedia.org/wiki/Write_ahead_logging">write-ahead log</a>）</li>
 <li>没有一个节点会永远崩溃（即会最终恢复）</li>
 <li>write-ahead log中存储的数据永远不会丢失，不会因崩溃而损坏</li>
 <li>任意两个节点都能够互相通信</li>
 </ol>
-
 <p>第四个假设太过严格，实际上有不是所有的2PC实现都满足。第一、二个假设则大多数2PC实现都能满足。</p>
-
 <p>PS. 如果某个节点完全损坏（比如服务器物理损毁），那么数据就直接丢失了。</p>
-
 <p>2PC的执行步骤：</p>
-
 <ol>
-<li>Commit request phase /Voting phase。这个阶段做：
-
-<ol>
+<li>Commit request phase /Voting phase。这个阶段做：</li>
 <li>Coordinator发送一个查询是否同意commit的请求到所有Cohort，并且等待所有Cohort给出应答。</li>
 <li>Cohort收到请求，开始执行事务，执行到就差commit为止（不commit）。</li>
 <li>每个Cohort根据操作结果返回Yes或No</li>
-</ol></li>
-<li>Commit phase / Completion phase。这个阶段分两种情况：
-
-<ol>
-<li>成功。所有Cohort应答Yes</li>
-<li>Coordinator发送commit指令到所有Cohort</li>
-<li>每个Cohort执行commit，并发送ack到Coordinator</li>
-<li>当Coordinator收到每个Cohort的ack之后则事务完成</li>
-<li>失败。任意Cohort应答No，或者在commit request阶段超时</li>
-<li>Coordinator发送rollback指令到所有Cohort</li>
-<li>每个Cohort执行rollback，并发送ack到Coordinator</li>
-<li>当Coordinator收到每个Cohort的ack之后则事务撤销</li>
-</ol></li>
+<li>Commit phase / Completion phase。这个阶段分两种情况：</li>
+<li>成功。所有Cohort应答Yes
+1. Coordinator发送commit指令到所有Cohort
+2. 每个Cohort执行commit，并发送ack到Coordinator
+3. 当Coordinator收到每个Cohort的ack之后则事务完成</li>
+<li>失败。任意Cohort应答No，或者在commit request阶段超时
+1. Coordinator发送rollback指令到所有Cohort
+2. 每个Cohort执行rollback，并发送ack到Coordinator
+3. 当Coordinator收到每个Cohort的ack之后则事务撤销</li>
 </ol>
-
 <p>消息流（摘自wiki）：</p>
-
 <pre><code>Coordinator                                         Cohort
                               QUERY TO COMMIT
                 --------------------------------&gt;
@@ -312,19 +289,13 @@ commit*/abort*                COMMIT/ROLLBACK
                               ACKNOWLEDGMENT        commit*/abort*
                 &lt;--------------------------------  
 end
-</code></pre>
-
-<p>2PC的通信次数是：</p>
-
+</code></pre><p>2PC的通信次数是：</p>
 <ol>
 <li>如果实现没有要求任意两个Cohort可以通信，那么是2n（n=Cohort数量）</li>
 <li>如果实现要求任意两个Cohort可以通信，那么是n^2</li>
 </ol>
-
 <h2 id="异常处理">异常处理</h2>
-
 <p>我们把上面的流程简化以便说明异常处理：</p>
-
 <ol>
 <li>Coordinator发送query to commit</li>
 <li>Cohort执行prepare</li>
@@ -333,18 +304,14 @@ end
 <li>Cohort执行commit/rollback</li>
 <li>Cohort返回ack</li>
 </ol>
-
 <p>从Coordinate角度来看出现异常要怎么处理：</p>
-
 <ol>
 <li>step 1发生异常，Coordinator需要执行rollback</li>
 <li>step 2、3发生异常，意味着Coordinator没有收到Cohort的响应，这个时候因认定为失败，执行rollback</li>
 <li>step 4发生异常，Coordinator重试commit/rollback</li>
 <li>step 5、6发生异常，意味着Coordinator没有收到Cohort的响应，这个时候因认定为失败，重试commit/rollback</li>
 </ol>
-
 <p>从Cohort角度来看看看出现异常怎么处理：</p>
-
 <ol>
 <li>step 1，意味着Cohort没有收到请求，什么都不需要做</li>
 <li>step 2，意味着Cohort没有执行成功，什么都不需要做</li>
@@ -353,46 +320,31 @@ end
 <li>step 5，等待Coordinator重试即可</li>
 <li>step 6，意味着Coordinator没有收到结果，什么都不需要做，等待Coordinator重试即可，Cohort要保证commit/rollback是幂等的。</li>
 </ol>
-
 <p>观察一下你就会发现依然存在漏洞——会出现违反一致性的情况：</p>
-
 <ol>
 <li>若Coordinator/Cohort因崩溃遗失了信息，有的Cohort已commit，有的Cohort则恢复到commit之前的状态。</li>
 <li>若Coordinator在step 4发送commit，而Cohort在rollback（因timeout导致的rollback）。</li>
 </ol>
-
 <p>出现上面的情况就需要人工介入了。</p>
-
 <p>更多2PC的异常处理推理详见这篇<a href="http://www.inf.fu-berlin.de/lehre/SS10/DBS-TA/folien/07-10-TA-2PC-2-1.pdf">slides</a>。</p>
-
 <h2 id="缺点">缺点</h2>
-
 <p>根据上面的算法介绍可以看出2PC是一个阻塞协议：</p>
-
 <ul>
 <li>如果两个事务针对同一个数据，那么后面的要等待前面完成，这是由于Cohort采用的是本地事务所决定的</li>
 <li>Cohort在commit request phase之后会阻塞，直到进入Coordinator告之Cohort进入commit phase</li>
 </ul>
-
 <h2 id="对于acid的保证">对于ACID的保证</h2>
-
 <p>2PC所保证的ACID和本地事务所提到的ACID不太一样——事实上对于所有分布式事务来说都不太一样：</p>
-
 <ul>
 <li>A，正常情况下保证</li>
 <li>C，在某个时间点，会出现A库和B库的数据违反一致性要求的情况</li>
 <li>I，在某个时间点，A事务能够读到B事务部分提交的结果</li>
 <li>D，和本地事务一样，只要commit则数据被持久</li>
 </ul>
-
 <h2 id="xa">XA</h2>
-
 <p><a href="https://en.wikipedia.org/wiki/X/Open_XA">XA</a>是一个针对<a href="https://en.wikipedia.org/wiki/Distributed_transaction">分布式事务</a>的spec，它实现了2PC协议。在XA中定义了两种参与方：Transaction Manager（TM）和Resource Manager（RM），其中TM=2PC中的Coordinator，RM=2PC中的Cohort。</p>
-
 <p>Java规范中的JTA（Java Transaction API）定义了XA的Java接口，JTA的实现有Bitronix、Atomikos等等。</p>
-
 <h2 id="参考资料">参考资料</h2>
-
 <ul>
 <li><a href="https://en.wikipedia.org/wiki/Two-phase_commit_protocol">wiki - 2PC</a></li>
 <li><a href="https://en.wikipedia.org/wiki/X/Open_XA">wiki - XA</a></li>
@@ -410,7 +362,7 @@ end
       </ul>
       
       <p class="post-copyright">
-        This post was published <strong>366</strong> days ago, content in the post may be inaccurate, even wrong now, please take risk yourself.
+        This post was published <strong>375</strong> days ago, content in the post may be inaccurate, even wrong now, please take risk yourself.
       </p>
     </footer>
     

@@ -17,7 +17,6 @@
   
   <meta name="author" content="颇忒脱" />
   <meta name="description" content="在前一篇文章中提到了如何使用Prometheus&#43;Grafana来监控JVM。本文介绍如何使用Prometheus&#43;Alertmanager来对JVM的某些情况作出告警。
-
 " />
 
   
@@ -26,7 +25,6 @@
     <meta name="twitter:site" content="@gohugoio" />
     <meta name="twitter:title" content="使用Prometheus&#43;Alertmanager告警JVM异常情况" />
     <meta name="twitter:description" content="在前一篇文章中提到了如何使用Prometheus&#43;Grafana来监控JVM。本文介绍如何使用Prometheus&#43;Alertmanager来对JVM的某些情况作出告警。
-
 " />
     <meta name="twitter:image" content="https://chanjarster.github.io/img/avatar.jpg" />
   
@@ -35,7 +33,6 @@
   <meta property="og:type" content="article" />
   <meta property="og:title" content="使用Prometheus&#43;Alertmanager告警JVM异常情况" />
   <meta property="og:description" content="在前一篇文章中提到了如何使用Prometheus&#43;Grafana来监控JVM。本文介绍如何使用Prometheus&#43;Alertmanager来对JVM的某些情况作出告警。
-
 " />
   <meta property="og:url" content="https://chanjarster.github.io/post/prom-alert-jvm/" />
   <meta property="og:image" content="https://chanjarster.github.io/img/avatar.jpg" />
@@ -43,7 +40,7 @@
 
 
 
-<meta name="generator" content="Hugo 0.49.2" />
+<meta name="generator" content="Hugo 0.68.1" />
 
 
 <link rel="canonical" href="https://chanjarster.github.io/post/prom-alert-jvm/" />
@@ -252,15 +249,9 @@
       <p class="post-meta">@颇忒脱 · Oct 26, 2018 · 5 min read</p>
     </header>
     <article class="post-content"><p>在<a href="../prom-grafana-jvm">前一篇文章</a>中提到了如何使用Prometheus+Grafana来监控JVM。本文介绍如何使用Prometheus+Alertmanager来对JVM的某些情况作出告警。</p>
-
-<p></p>
-
 <p>本文所提到的脚本可以在<a href="https://github.com/chanjarster/prometheus-learn/tree/master/jvm-alerting">这里</a>下载。</p>
-
 <h2 id="摘要">摘要</h2>
-
 <p>用到的工具：</p>
-
 <ul>
 <li>Docker，本文大量使用了Docker来启动各个应用。</li>
 <li><a href="https://prometheus.io/">Prometheus</a>，负责抓取/存储指标信息，并提供查询功能，<strong>本文重点使用它的告警功能</strong>。</li>
@@ -269,285 +260,294 @@
 <li><a href="https://github.com/prometheus/jmx_exporter">JMX exporter</a>，提供JMX中和JVM相关的metrics。</li>
 <li>Tomcat，用来模拟一个Java应用。</li>
 </ul>
-
 <p>先讲一下大致步骤：</p>
-
 <ol>
 <li>利用<a href="https://github.com/prometheus/jmx_exporter">JMX exporter</a>，在Java进程内启动一个小型的Http server</li>
 <li>配置<a href="https://prometheus.io/">Prometheus</a>抓取那个Http server提供的metrics。</li>
 <li><strong>配置<a href="https://prometheus.io/">Prometheus</a>的告警触发规则</strong>
-
 <ul>
 <li>heap使用超过最大上限的50%、80%、90%</li>
 <li>instance down机时间超过30秒、1分钟、5分钟</li>
 <li>old gc时间在最近5分钟里超过50%、80%</li>
-</ul></li>
+</ul>
+</li>
 <li>配置<a href="https://grafana.com">Grafana</a>连接<a href="https://prometheus.io/">Prometheus</a>，配置Dashboard。</li>
 <li><strong>配置<a href="https://prometheus.io/docs/alerting/alertmanager/">Alertmanager</a>的告警通知规则</strong></li>
 </ol>
-
 <p>告警的大致过程如下：</p>
-
 <ol>
 <li><a href="https://prometheus.io/">Prometheus</a>根据告警触发规则查看是否触发告警，如果是，就将告警信息发送给<a href="https://prometheus.io/docs/alerting/alertmanager/">Alertmanager</a>。</li>
 <li><a href="https://prometheus.io/docs/alerting/alertmanager/">Alertmanager</a>收到告警信息后，决定是否发送通知，如果是，则决定发送给谁。</li>
 </ol>
-
-<h2 id="第一步-启动几个java应用">第一步：启动几个Java应用</h2>
-
-<p>1) 新建一个目录，名字叫做<code>prom-jvm-demo</code>。</p>
-
-<p>2) <a href="https://repo1.maven.org/maven2/io/prometheus/jmx/jmx_prometheus_javaagent/0.3.1/jmx_prometheus_javaagent-0.3.1.jar">下载JMX exporter</a>到这个目录。</p>
-
-<p>3) 新建一个文件<code>simple-config.yml</code>内容如下：</p>
+<h2 id="第一步启动几个java应用">第一步：启动几个Java应用</h2>
+<ol>
+<li>
+<p>新建一个目录，名字叫做<code>prom-jvm-demo</code>。</p>
+</li>
+<li>
+<p><a href="https://repo1.maven.org/maven2/io/prometheus/jmx/jmx_prometheus_javaagent/0.3.1/jmx_prometheus_javaagent-0.3.1.jar">下载JMX exporter</a>到这个目录。</p>
+</li>
+<li>
+<p>新建一个文件<code>simple-config.yml</code>内容如下：</p>
+</li>
+</ol>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-yaml" data-lang="yaml">---
-lowercaseOutputLabelNames: <span style="color:#66d9ef">true</span>
-lowercaseOutputName: <span style="color:#66d9ef">true</span>
-whitelistObjectNames: [<span style="color:#e6db74">&#34;java.lang:type=OperatingSystem&#34;</span>]
-rules:
- - pattern: <span style="color:#e6db74">&#39;java.lang&lt;type=OperatingSystem&gt;&lt;&gt;((?!process_cpu_time)\w+):&#39;</span>
-   name: os_$<span style="color:#ae81ff">1</span>
-   type: GAUGE
-   attrNameSnakeCase: <span style="color:#66d9ef">true</span></code></pre></div>
-<p>4) 运行以下命令启动3个Tomcat，记得把<code>&lt;path-to-prom-jvm-demo&gt;</code>替换成正确的路径（这里故意把<code>-Xmx</code>和<code>-Xms</code>设置的很小，以触发告警条件）：</p>
+<span style="color:#66d9ef">lowercaseOutputLabelNames</span>: <span style="color:#66d9ef">true</span>
+<span style="color:#66d9ef">lowercaseOutputName</span>: <span style="color:#66d9ef">true</span>
+<span style="color:#66d9ef">whitelistObjectNames</span>: [<span style="color:#e6db74">&#34;java.lang:type=OperatingSystem&#34;</span>]
+<span style="color:#66d9ef">rules</span>:
+ - <span style="color:#66d9ef">pattern</span>: <span style="color:#e6db74">&#39;java.lang&lt;type=OperatingSystem&gt;&lt;&gt;((?!process_cpu_time)\w+):&#39;</span>
+   <span style="color:#66d9ef">name</span>: os_$<span style="color:#ae81ff">1</span>
+   <span style="color:#66d9ef">type</span>: GAUGE
+   <span style="color:#66d9ef">attrNameSnakeCase</span>: <span style="color:#66d9ef">true</span>
+</code></pre></div><ol start="4">
+<li>运行以下命令启动3个Tomcat，记得把<code>&lt;path-to-prom-jvm-demo&gt;</code>替换成正确的路径（这里故意把<code>-Xmx</code>和<code>-Xms</code>设置的很小，以触发告警条件）：</li>
+</ol>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">docker run -d <span style="color:#ae81ff">\
 </span><span style="color:#ae81ff"></span>  --name tomcat-1 <span style="color:#ae81ff">\
 </span><span style="color:#ae81ff"></span>  -v &lt;path-to-prom-jvm-demo&gt;:/jmx-exporter <span style="color:#ae81ff">\
 </span><span style="color:#ae81ff"></span>  -e CATALINA_OPTS<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;-Xms32m -Xmx32m -javaagent:/jmx-exporter/jmx_prometheus_javaagent-0.3.1.jar=6060:/jmx-exporter/simple-config.yml&#34;</span> <span style="color:#ae81ff">\
-</span><span style="color:#ae81ff"></span>  -p <span style="color:#ae81ff">6060</span>:6060 <span style="color:#ae81ff">\
-</span><span style="color:#ae81ff"></span>  -p <span style="color:#ae81ff">8080</span>:8080 <span style="color:#ae81ff">\
+</span><span style="color:#ae81ff"></span>  -p 6060:6060 <span style="color:#ae81ff">\
+</span><span style="color:#ae81ff"></span>  -p 8080:8080 <span style="color:#ae81ff">\
 </span><span style="color:#ae81ff"></span>  tomcat:8.5-alpine
 
 docker run -d <span style="color:#ae81ff">\
 </span><span style="color:#ae81ff"></span>  --name tomcat-2 <span style="color:#ae81ff">\
 </span><span style="color:#ae81ff"></span>  -v &lt;path-to-prom-jvm-demo&gt;:/jmx-exporter <span style="color:#ae81ff">\
 </span><span style="color:#ae81ff"></span>  -e CATALINA_OPTS<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;-Xms32m -Xmx32m -javaagent:/jmx-exporter/jmx_prometheus_javaagent-0.3.1.jar=6060:/jmx-exporter/simple-config.yml&#34;</span> <span style="color:#ae81ff">\
-</span><span style="color:#ae81ff"></span>  -p <span style="color:#ae81ff">6061</span>:6060 <span style="color:#ae81ff">\
-</span><span style="color:#ae81ff"></span>  -p <span style="color:#ae81ff">8081</span>:8080 <span style="color:#ae81ff">\
+</span><span style="color:#ae81ff"></span>  -p 6061:6060 <span style="color:#ae81ff">\
+</span><span style="color:#ae81ff"></span>  -p 8081:8080 <span style="color:#ae81ff">\
 </span><span style="color:#ae81ff"></span>  tomcat:8.5-alpine
 
 docker run -d <span style="color:#ae81ff">\
 </span><span style="color:#ae81ff"></span>  --name tomcat-3 <span style="color:#ae81ff">\
 </span><span style="color:#ae81ff"></span>  -v &lt;path-to-prom-jvm-demo&gt;:/jmx-exporter <span style="color:#ae81ff">\
 </span><span style="color:#ae81ff"></span>  -e CATALINA_OPTS<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;-Xms32m -Xmx32m -javaagent:/jmx-exporter/jmx_prometheus_javaagent-0.3.1.jar=6060:/jmx-exporter/simple-config.yml&#34;</span> <span style="color:#ae81ff">\
-</span><span style="color:#ae81ff"></span>  -p <span style="color:#ae81ff">6062</span>:6060 <span style="color:#ae81ff">\
-</span><span style="color:#ae81ff"></span>  -p <span style="color:#ae81ff">8082</span>:8080 <span style="color:#ae81ff">\
-</span><span style="color:#ae81ff"></span>  tomcat:8.5-alpine</code></pre></div>
-<p>5) 访问<code>http://localhost:8080|8081|8082</code>看看Tomcat是否启动成功。</p>
-
-<p>6) 访问对应的<code>http://localhost:6060|6061|6062</code>看看JMX exporter提供的metrics。</p>
-
+</span><span style="color:#ae81ff"></span>  -p 6062:6060 <span style="color:#ae81ff">\
+</span><span style="color:#ae81ff"></span>  -p 8082:8080 <span style="color:#ae81ff">\
+</span><span style="color:#ae81ff"></span>  tomcat:8.5-alpine
+</code></pre></div><ol start="5">
+<li>
+<p>访问<code>http://localhost:8080|8081|8082</code>看看Tomcat是否启动成功。</p>
+</li>
+<li>
+<p>访问对应的<code>http://localhost:6060|6061|6062</code>看看JMX exporter提供的metrics。</p>
+</li>
+</ol>
 <p>备注：这里提供的<code>simple-config.yml</code>仅仅提供了JVM的信息，更复杂的配置请参考<a href="https://github.com/prometheus/jmx_exporter">JMX exporter文档</a>。</p>
-
-<h2 id="第二步-启动prometheus">第二步：启动Prometheus</h2>
-
-<p>1) 在之前新建目录<code>prom-jvm-demo</code>，新建一个文件<code>prom-jmx.yml</code>，内容如下：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-yaml" data-lang="yaml">scrape_configs:
-  - job_name: <span style="color:#e6db74">&#39;java&#39;</span>
-    scrape_interval: 30s
-    static_configs:
-    - targets:
+<h2 id="第二步启动prometheus">第二步：启动Prometheus</h2>
+<ol>
+<li>在之前新建目录<code>prom-jvm-demo</code>，新建一个文件<code>prom-jmx.yml</code>，内容如下：</li>
+</ol>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-yaml" data-lang="yaml"><span style="color:#66d9ef">scrape_configs</span>:
+  - <span style="color:#66d9ef">job_name</span>: <span style="color:#e6db74">&#39;java&#39;</span>
+    <span style="color:#66d9ef">scrape_interval</span>: 30s
+    <span style="color:#66d9ef">static_configs</span>:
+    - <span style="color:#66d9ef">targets</span>:
       - <span style="color:#e6db74">&#39;&lt;host-ip&gt;:6060&#39;</span>
       - <span style="color:#e6db74">&#39;&lt;host-ip&gt;:6061&#39;</span>
       - <span style="color:#e6db74">&#39;&lt;host-ip&gt;:6062&#39;</span>
 
 <span style="color:#75715e"># alertmanager的地址</span>
-alerting:
-  alertmanagers:
-  - static_configs:
-    - targets:
+<span style="color:#66d9ef">alerting</span>:
+  <span style="color:#66d9ef">alertmanagers</span>:
+  - <span style="color:#66d9ef">static_configs</span>:
+    - <span style="color:#66d9ef">targets</span>:
       - <span style="color:#e6db74">&#39;&lt;host-ip&gt;:9093&#39;</span>
 
 <span style="color:#75715e"># 读取告警触发条件规则</span>
-rule_files:
-  - <span style="color:#e6db74">&#39;/prometheus-config/prom-alert-rules.yml&#39;</span></code></pre></div>
-<p>2) 新建文件<code>prom-alert-rules.yml</code>，该文件是告警触发规则：</p>
+<span style="color:#66d9ef">rule_files</span>:
+  - <span style="color:#e6db74">&#39;/prometheus-config/prom-alert-rules.yml&#39;</span>
+</code></pre></div><ol start="2">
+<li>新建文件<code>prom-alert-rules.yml</code>，该文件是告警触发规则：</li>
+</ol>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-yaml" data-lang="yaml"><span style="color:#75715e"># severity按严重程度由高到低：red、orange、yello、blue</span>
-groups:
-  - name: jvm-alerting
-    rules:
+<span style="color:#66d9ef">groups</span>:
+  - <span style="color:#66d9ef">name</span>: jvm-alerting
+    <span style="color:#66d9ef">rules</span>:
 
     <span style="color:#75715e"># down了超过30秒</span>
-    - alert: instance-down
-      expr: up == <span style="color:#ae81ff">0</span>
-      for: 30s
-      labels:
-        severity: yellow
-      annotations:
-        summary: <span style="color:#e6db74">&#34;Instance {{ $labels.instance }} down&#34;</span>
-        description: <span style="color:#e6db74">&#34;{{ $labels.instance }} of job {{ $labels.job }} has been down for more than 30 seconds.&#34;</span>
+    - <span style="color:#66d9ef">alert</span>: instance-down
+      <span style="color:#66d9ef">expr</span>: up == <span style="color:#ae81ff">0</span>
+      <span style="color:#66d9ef">for</span>: 30s
+      <span style="color:#66d9ef">labels</span>:
+        <span style="color:#66d9ef">severity</span>: yellow
+      <span style="color:#66d9ef">annotations</span>:
+        <span style="color:#66d9ef">summary</span>: <span style="color:#e6db74">&#34;Instance {{ $labels.instance }} down&#34;</span>
+        <span style="color:#66d9ef">description</span>: <span style="color:#e6db74">&#34;{{ $labels.instance }} of job {{ $labels.job }} has been down for more than 30 seconds.&#34;</span>
 
     <span style="color:#75715e"># down了超过1分钟</span>
-    - alert: instance-down
-      expr: up == <span style="color:#ae81ff">0</span>
-      for: 1m
-      labels:
-        severity: orange
-      annotations:
-        summary: <span style="color:#e6db74">&#34;Instance {{ $labels.instance }} down&#34;</span>
-        description: <span style="color:#e6db74">&#34;{{ $labels.instance }} of job {{ $labels.job }} has been down for more than 1 minutes.&#34;</span>
+    - <span style="color:#66d9ef">alert</span>: instance-down
+      <span style="color:#66d9ef">expr</span>: up == <span style="color:#ae81ff">0</span>
+      <span style="color:#66d9ef">for</span>: 1m
+      <span style="color:#66d9ef">labels</span>:
+        <span style="color:#66d9ef">severity</span>: orange
+      <span style="color:#66d9ef">annotations</span>:
+        <span style="color:#66d9ef">summary</span>: <span style="color:#e6db74">&#34;Instance {{ $labels.instance }} down&#34;</span>
+        <span style="color:#66d9ef">description</span>: <span style="color:#e6db74">&#34;{{ $labels.instance }} of job {{ $labels.job }} has been down for more than 1 minutes.&#34;</span>
 
     <span style="color:#75715e"># down了超过5分钟</span>
-    - alert: instance-down
-      expr: up == <span style="color:#ae81ff">0</span>
-      for: 5m
-      labels:
-        severity: red
-      annotations:
-        summary: <span style="color:#e6db74">&#34;Instance {{ $labels.instance }} down&#34;</span>
-        description: <span style="color:#e6db74">&#34;{{ $labels.instance }} of job {{ $labels.job }} has been down for more than 5 minutes.&#34;</span>
+    - <span style="color:#66d9ef">alert</span>: instance-down
+      <span style="color:#66d9ef">expr</span>: up == <span style="color:#ae81ff">0</span>
+      <span style="color:#66d9ef">for</span>: 5m
+      <span style="color:#66d9ef">labels</span>:
+        <span style="color:#66d9ef">severity</span>: red
+      <span style="color:#66d9ef">annotations</span>:
+        <span style="color:#66d9ef">summary</span>: <span style="color:#e6db74">&#34;Instance {{ $labels.instance }} down&#34;</span>
+        <span style="color:#66d9ef">description</span>: <span style="color:#e6db74">&#34;{{ $labels.instance }} of job {{ $labels.job }} has been down for more than 5 minutes.&#34;</span>
 
     <span style="color:#75715e"># 堆空间使用超过50%</span>
-    - alert: heap-usage-too-much
-      expr: jvm_memory_bytes_used{job=<span style="color:#e6db74">&#34;java&#34;</span>, area=<span style="color:#e6db74">&#34;heap&#34;</span>} / jvm_memory_bytes_max * <span style="color:#ae81ff">100</span> <span style="color:#e6db74">&gt; 50
-</span><span style="color:#e6db74">      for: 1m
-</span><span style="color:#e6db74">      labels:
-</span><span style="color:#e6db74">        severity: yellow
-</span><span style="color:#e6db74">      annotations:
-</span><span style="color:#e6db74">        summary: &#34;JVM Instance {{ $labels.instance }} memory usage &gt; 50%&#34;
-</span><span style="color:#e6db74">        description: &#34;{{ $labels.instance }} of job {{ $labels.job }} has been in status [heap usage &gt; 50%] for more than 1 minutes. current usage ({{ $value }}%)&#34;
-</span><span style="color:#e6db74">
-</span><span style="color:#e6db74">    # 堆空间使用超过80%
-</span><span style="color:#e6db74">    - alert: heap-usage-too-much
-</span><span style="color:#e6db74">      expr: jvm_memory_bytes_used{job=&#34;java&#34;, area=&#34;heap&#34;} / jvm_memory_bytes_max * 100 &gt; 80
-</span><span style="color:#e6db74">      for: 1m
-</span><span style="color:#e6db74">      labels:
-</span><span style="color:#e6db74">        severity: orange
-</span><span style="color:#e6db74">      annotations:
-</span><span style="color:#e6db74">        summary: &#34;JVM Instance {{ $labels.instance }} memory usage &gt; 80%&#34;
-</span><span style="color:#e6db74">        description: &#34;{{ $labels.instance }} of job {{ $labels.job }} has been in status [heap usage &gt; 80%] for more than 1 minutes. current usage ({{ $value }}%)&#34;
-</span><span style="color:#e6db74">    
-</span><span style="color:#e6db74">    # 堆空间使用超过90%
-</span><span style="color:#e6db74">    - alert: heap-usage-too-much
-</span><span style="color:#e6db74">      expr: jvm_memory_bytes_used{job=&#34;java&#34;, area=&#34;heap&#34;} / jvm_memory_bytes_max * 100 &gt; 90
-</span><span style="color:#e6db74">      for: 1m
-</span><span style="color:#e6db74">      labels:
-</span><span style="color:#e6db74">        severity: red
-</span><span style="color:#e6db74">      annotations:
-</span><span style="color:#e6db74">        summary: &#34;JVM Instance {{ $labels.instance }} memory usage &gt; 90%&#34;
-</span><span style="color:#e6db74">        description: &#34;{{ $labels.instance }} of job {{ $labels.job }} has been in status [heap usage &gt; 90%] for more than 1 minutes. current usage ({{ $value }}%)&#34;
-</span><span style="color:#e6db74">
-</span><span style="color:#e6db74">    # 在5分钟里，Old GC花费时间超过30%
-</span><span style="color:#e6db74">    - alert: old-gc-time-too-much
-</span><span style="color:#e6db74">      expr: increase(jvm_gc_collection_seconds_sum{gc=&#34;PS MarkSweep&#34;}[5m]) &gt; 5 * 60 * 0.3
-</span><span style="color:#e6db74">      for: 5m
-</span><span style="color:#e6db74">      labels:
-</span><span style="color:#e6db74">        severity: yellow
-</span><span style="color:#e6db74">      annotations:
-</span><span style="color:#e6db74">        summary: &#34;JVM Instance {{ $labels.instance }} Old GC time &gt; 30% running time&#34;
-</span><span style="color:#e6db74">        description: &#34;{{ $labels.instance }} of job {{ $labels.job }} has been in status [Old GC time &gt; 30% running time] for more than 5 minutes. current seconds ({{ $value }}%)&#34;
-</span><span style="color:#e6db74">
-</span><span style="color:#e6db74">    # 在5分钟里，Old GC花费时间超过50%        
-</span><span style="color:#e6db74">    - alert: old-gc-time-too-much
-</span><span style="color:#e6db74">      expr: increase(jvm_gc_collection_seconds_sum{gc=&#34;PS MarkSweep&#34;}[5m]) &gt; 5 * 60 * 0.5
-</span><span style="color:#e6db74">      for: 5m
-</span><span style="color:#e6db74">      labels:
-</span><span style="color:#e6db74">        severity: orange
-</span><span style="color:#e6db74">      annotations:
-</span><span style="color:#e6db74">        summary: &#34;JVM Instance {{ $labels.instance }} Old GC time &gt; 50% running time&#34;
-</span><span style="color:#e6db74">        description: &#34;{{ $labels.instance }} of job {{ $labels.job }} has been in status [Old GC time &gt; 50% running time] for more than 5 minutes. current seconds ({{ $value }}%)&#34;
-</span><span style="color:#e6db74">
-</span><span style="color:#e6db74">    # 在5分钟里，Old GC花费时间超过80%
-</span><span style="color:#e6db74">    - alert: old-gc-time-too-much
-</span><span style="color:#e6db74">      expr: increase(jvm_gc_collection_seconds_sum{gc=&#34;PS MarkSweep&#34;}[5m]) &gt; 5 * 60 * 0.8
-</span><span style="color:#e6db74">      for: 5m
-</span><span style="color:#e6db74">      labels:
-</span><span style="color:#e6db74">        severity: red
-</span><span style="color:#e6db74">      annotations:
-</span><span style="color:#e6db74">        summary: &#34;JVM Instance {{ $labels.instance }} Old GC time &gt; 80% running time&#34;
-</span><span style="color:#e6db74">        description: &#34;{{ $labels.instance }} of job {{ $labels.job }} has been in status [Old GC time &gt; 80% running time] for more than 5 minutes. current seconds ({{ $value }}%)&#34;</span></code></pre></div>
-<p>3) 启动Prometheus：</p>
+    - <span style="color:#66d9ef">alert</span>: heap-usage-too-much
+      <span style="color:#66d9ef">expr</span>: jvm_memory_bytes_used{job=<span style="color:#e6db74">&#34;java&#34;</span>, area=<span style="color:#e6db74">&#34;heap&#34;</span>} / jvm_memory_bytes_max * <span style="color:#ae81ff">100</span> &gt; <span style="color:#ae81ff">50</span>
+      <span style="color:#66d9ef">for</span>: 1m
+      <span style="color:#66d9ef">labels</span>:
+        <span style="color:#66d9ef">severity</span>: yellow
+      <span style="color:#66d9ef">annotations</span>:
+        <span style="color:#66d9ef">summary</span>: <span style="color:#e6db74">&#34;JVM Instance {{ $labels.instance }} memory usage &gt; 50%&#34;</span>
+        <span style="color:#66d9ef">description</span>: <span style="color:#e6db74">&#34;{{ $labels.instance }} of job {{ $labels.job }} has been in status [heap usage &gt; 50%] for more than 1 minutes. current usage ({{ $value }}%)&#34;</span>
+
+    <span style="color:#75715e"># 堆空间使用超过80%</span>
+    - <span style="color:#66d9ef">alert</span>: heap-usage-too-much
+      <span style="color:#66d9ef">expr</span>: jvm_memory_bytes_used{job=<span style="color:#e6db74">&#34;java&#34;</span>, area=<span style="color:#e6db74">&#34;heap&#34;</span>} / jvm_memory_bytes_max * <span style="color:#ae81ff">100</span> &gt; <span style="color:#ae81ff">80</span>
+      <span style="color:#66d9ef">for</span>: 1m
+      <span style="color:#66d9ef">labels</span>:
+        <span style="color:#66d9ef">severity</span>: orange
+      <span style="color:#66d9ef">annotations</span>:
+        <span style="color:#66d9ef">summary</span>: <span style="color:#e6db74">&#34;JVM Instance {{ $labels.instance }} memory usage &gt; 80%&#34;</span>
+        <span style="color:#66d9ef">description</span>: <span style="color:#e6db74">&#34;{{ $labels.instance }} of job {{ $labels.job }} has been in status [heap usage &gt; 80%] for more than 1 minutes. current usage ({{ $value }}%)&#34;</span>
+    
+    <span style="color:#75715e"># 堆空间使用超过90%</span>
+    - <span style="color:#66d9ef">alert</span>: heap-usage-too-much
+      <span style="color:#66d9ef">expr</span>: jvm_memory_bytes_used{job=<span style="color:#e6db74">&#34;java&#34;</span>, area=<span style="color:#e6db74">&#34;heap&#34;</span>} / jvm_memory_bytes_max * <span style="color:#ae81ff">100</span> &gt; <span style="color:#ae81ff">90</span>
+      <span style="color:#66d9ef">for</span>: 1m
+      <span style="color:#66d9ef">labels</span>:
+        <span style="color:#66d9ef">severity</span>: red
+      <span style="color:#66d9ef">annotations</span>:
+        <span style="color:#66d9ef">summary</span>: <span style="color:#e6db74">&#34;JVM Instance {{ $labels.instance }} memory usage &gt; 90%&#34;</span>
+        <span style="color:#66d9ef">description</span>: <span style="color:#e6db74">&#34;{{ $labels.instance }} of job {{ $labels.job }} has been in status [heap usage &gt; 90%] for more than 1 minutes. current usage ({{ $value }}%)&#34;</span>
+
+    <span style="color:#75715e"># 在5分钟里，Old GC花费时间超过30%</span>
+    - <span style="color:#66d9ef">alert</span>: old-gc-time-too-much
+      <span style="color:#66d9ef">expr</span>: increase(jvm_gc_collection_seconds_sum{gc=<span style="color:#e6db74">&#34;PS MarkSweep&#34;</span>}[5m]) &gt; <span style="color:#ae81ff">5</span> * <span style="color:#ae81ff">60</span> * <span style="color:#ae81ff">0.3</span>
+      <span style="color:#66d9ef">for</span>: 5m
+      <span style="color:#66d9ef">labels</span>:
+        <span style="color:#66d9ef">severity</span>: yellow
+      <span style="color:#66d9ef">annotations</span>:
+        <span style="color:#66d9ef">summary</span>: <span style="color:#e6db74">&#34;JVM Instance {{ $labels.instance }} Old GC time &gt; 30% running time&#34;</span>
+        <span style="color:#66d9ef">description</span>: <span style="color:#e6db74">&#34;{{ $labels.instance }} of job {{ $labels.job }} has been in status [Old GC time &gt; 30% running time] for more than 5 minutes. current seconds ({{ $value }}%)&#34;</span>
+
+    <span style="color:#75715e"># 在5分钟里，Old GC花费时间超过50%        </span>
+    - <span style="color:#66d9ef">alert</span>: old-gc-time-too-much
+      <span style="color:#66d9ef">expr</span>: increase(jvm_gc_collection_seconds_sum{gc=<span style="color:#e6db74">&#34;PS MarkSweep&#34;</span>}[5m]) &gt; <span style="color:#ae81ff">5</span> * <span style="color:#ae81ff">60</span> * <span style="color:#ae81ff">0.5</span>
+      <span style="color:#66d9ef">for</span>: 5m
+      <span style="color:#66d9ef">labels</span>:
+        <span style="color:#66d9ef">severity</span>: orange
+      <span style="color:#66d9ef">annotations</span>:
+        <span style="color:#66d9ef">summary</span>: <span style="color:#e6db74">&#34;JVM Instance {{ $labels.instance }} Old GC time &gt; 50% running time&#34;</span>
+        <span style="color:#66d9ef">description</span>: <span style="color:#e6db74">&#34;{{ $labels.instance }} of job {{ $labels.job }} has been in status [Old GC time &gt; 50% running time] for more than 5 minutes. current seconds ({{ $value }}%)&#34;</span>
+
+    <span style="color:#75715e"># 在5分钟里，Old GC花费时间超过80%</span>
+    - <span style="color:#66d9ef">alert</span>: old-gc-time-too-much
+      <span style="color:#66d9ef">expr</span>: increase(jvm_gc_collection_seconds_sum{gc=<span style="color:#e6db74">&#34;PS MarkSweep&#34;</span>}[5m]) &gt; <span style="color:#ae81ff">5</span> * <span style="color:#ae81ff">60</span> * <span style="color:#ae81ff">0.8</span>
+      <span style="color:#66d9ef">for</span>: 5m
+      <span style="color:#66d9ef">labels</span>:
+        <span style="color:#66d9ef">severity</span>: red
+      <span style="color:#66d9ef">annotations</span>:
+        <span style="color:#66d9ef">summary</span>: <span style="color:#e6db74">&#34;JVM Instance {{ $labels.instance }} Old GC time &gt; 80% running time&#34;</span>
+        <span style="color:#66d9ef">description</span>: <span style="color:#e6db74">&#34;{{ $labels.instance }} of job {{ $labels.job }} has been in status [Old GC time &gt; 80% running time] for more than 5 minutes. current seconds ({{ $value }}%)&#34;</span>
+</code></pre></div><ol start="3">
+<li>启动Prometheus：</li>
+</ol>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">docker run -d <span style="color:#ae81ff">\
 </span><span style="color:#ae81ff"></span>  --name<span style="color:#f92672">=</span>prometheus <span style="color:#ae81ff">\
-</span><span style="color:#ae81ff"></span>  -p <span style="color:#ae81ff">9090</span>:9090 <span style="color:#ae81ff">\
+</span><span style="color:#ae81ff"></span>  -p 9090:9090 <span style="color:#ae81ff">\
 </span><span style="color:#ae81ff"></span>  -v &lt;path-to-prom-jvm-demo&gt;:/prometheus-config <span style="color:#ae81ff">\
-</span><span style="color:#ae81ff"></span>  prom/prometheus --config.file<span style="color:#f92672">=</span>/prometheus-config/prom-jmx.yml</code></pre></div>
-<p>4) 访问<a href="http://localhost:9090/alerts">http://localhost:9090/alerts</a>应该能看到之前配置的告警规则：</p>
-
-<p><img src="prom-alerts.png" alt="prom-alerts" /></p>
-
+</span><span style="color:#ae81ff"></span>  prom/prometheus --config.file<span style="color:#f92672">=</span>/prometheus-config/prom-jmx.yml
+</code></pre></div><ol start="4">
+<li>访问<a href="http://localhost:9090/alerts">http://localhost:9090/alerts</a>应该能看到之前配置的告警规则：</li>
+</ol>
+<p><img src="prom-alerts.png" alt="prom-alerts"></p>
 <p>如果没有看到三个instance，那么等一会儿再试。</p>
-
-<h2 id="第三步-配置grafana">第三步：配置Grafana</h2>
-
+<h2 id="第三步配置grafana">第三步：配置Grafana</h2>
 <p>参考<a href="../prom-grafana-jvm">使用Prometheus+Grafana监控JVM</a></p>
-
-<h2 id="第四步-启动alertmanager">第四步：启动Alertmanager</h2>
-
-<p>1) 新建一个文件<code>alertmanager-config.yml</code>：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-yaml" data-lang="yaml">global:
-  smtp_smarthost: <span style="color:#e6db74">&#39;&lt;smtp.host:ip&gt;&#39;</span>
-  smtp_from: <span style="color:#e6db74">&#39;&lt;from&gt;&#39;</span>
-  smtp_auth_username: <span style="color:#e6db74">&#39;&lt;username&gt;&#39;</span>
-  smtp_auth_password: <span style="color:#e6db74">&#39;&lt;password&gt;&#39;</span>
+<h2 id="第四步启动alertmanager">第四步：启动Alertmanager</h2>
+<ol>
+<li>新建一个文件<code>alertmanager-config.yml</code>：</li>
+</ol>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-yaml" data-lang="yaml"><span style="color:#66d9ef">global</span>:
+  <span style="color:#66d9ef">smtp_smarthost</span>: <span style="color:#e6db74">&#39;&lt;smtp.host:ip&gt;&#39;</span>
+  <span style="color:#66d9ef">smtp_from</span>: <span style="color:#e6db74">&#39;&lt;from&gt;&#39;</span>
+  <span style="color:#66d9ef">smtp_auth_username</span>: <span style="color:#e6db74">&#39;&lt;username&gt;&#39;</span>
+  <span style="color:#66d9ef">smtp_auth_password</span>: <span style="color:#e6db74">&#39;&lt;password&gt;&#39;</span>
 
 <span style="color:#75715e"># The directory from which notification templates are read.</span>
-templates: 
+<span style="color:#66d9ef">templates</span>: 
 - <span style="color:#e6db74">&#39;/alertmanager-config/*.tmpl&#39;</span>
 
 <span style="color:#75715e"># The root route on which each incoming alert enters.</span>
-route:
+<span style="color:#66d9ef">route</span>:
   <span style="color:#75715e"># The labels by which incoming alerts are grouped together. For example,</span>
   <span style="color:#75715e"># multiple alerts coming in for cluster=A and alertname=LatencyHigh would</span>
   <span style="color:#75715e"># be batched into a single group.</span>
-  group_by: [<span style="color:#e6db74">&#39;alertname&#39;</span>, <span style="color:#e6db74">&#39;instance&#39;</span>]
+  <span style="color:#66d9ef">group_by</span>: [<span style="color:#e6db74">&#39;alertname&#39;</span>, <span style="color:#e6db74">&#39;instance&#39;</span>]
 
   <span style="color:#75715e"># When a new group of alerts is created by an incoming alert, wait at</span>
   <span style="color:#75715e"># least &#39;group_wait&#39; to send the initial notification.</span>
   <span style="color:#75715e"># This way ensures that you get multiple alerts for the same group that start</span>
   <span style="color:#75715e"># firing shortly after another are batched together on the first </span>
   <span style="color:#75715e"># notification.</span>
-  group_wait: 30s
+  <span style="color:#66d9ef">group_wait</span>: 30s
 
   <span style="color:#75715e"># When the first notification was sent, wait &#39;group_interval&#39; to send a batch</span>
   <span style="color:#75715e"># of new alerts that started firing for that group.</span>
-  group_interval: 5m
+  <span style="color:#66d9ef">group_interval</span>: 5m
 
   <span style="color:#75715e"># If an alert has successfully been sent, wait &#39;repeat_interval&#39; to</span>
   <span style="color:#75715e"># resend them.</span>
-  repeat_interval: 3h 
+  <span style="color:#66d9ef">repeat_interval</span>: 3h 
 
   <span style="color:#75715e"># A default receiver</span>
-  receiver: <span style="color:#e6db74">&#34;user-a&#34;</span>
+  <span style="color:#66d9ef">receiver</span>: <span style="color:#e6db74">&#34;user-a&#34;</span>
 
 <span style="color:#75715e"># Inhibition rules allow to mute a set of alerts given that another alert is</span>
 <span style="color:#75715e"># firing.</span>
 <span style="color:#75715e"># We use this to mute any warning-level notifications if the same alert is </span>
 <span style="color:#75715e"># already critical.</span>
-inhibit_rules:
-- source_match:
-    severity: <span style="color:#e6db74">&#39;red&#39;</span>
-  target_match_re:
-    severity: ^(blue|yellow|orange)$
+<span style="color:#66d9ef">inhibit_rules</span>:
+- <span style="color:#66d9ef">source_match</span>:
+    <span style="color:#66d9ef">severity</span>: <span style="color:#e6db74">&#39;red&#39;</span>
+  <span style="color:#66d9ef">target_match_re</span>:
+    <span style="color:#66d9ef">severity</span>: ^(blue|yellow|orange)$
   <span style="color:#75715e"># Apply inhibition if the alertname and instance is the same.</span>
-  equal: [<span style="color:#e6db74">&#39;alertname&#39;</span>, <span style="color:#e6db74">&#39;instance&#39;</span>]
-- source_match:
-    severity: <span style="color:#e6db74">&#39;orange&#39;</span>
-  target_match_re:
-    severity: ^(blue|yellow)$
+  <span style="color:#66d9ef">equal</span>: [<span style="color:#e6db74">&#39;alertname&#39;</span>, <span style="color:#e6db74">&#39;instance&#39;</span>]
+- <span style="color:#66d9ef">source_match</span>:
+    <span style="color:#66d9ef">severity</span>: <span style="color:#e6db74">&#39;orange&#39;</span>
+  <span style="color:#66d9ef">target_match_re</span>:
+    <span style="color:#66d9ef">severity</span>: ^(blue|yellow)$
   <span style="color:#75715e"># Apply inhibition if the alertname and instance is the same.</span>
-  equal: [<span style="color:#e6db74">&#39;alertname&#39;</span>, <span style="color:#e6db74">&#39;instance&#39;</span>]
-- source_match:
-    severity: <span style="color:#e6db74">&#39;yellow&#39;</span>
-  target_match_re:
-    severity: ^(blue)$
+  <span style="color:#66d9ef">equal</span>: [<span style="color:#e6db74">&#39;alertname&#39;</span>, <span style="color:#e6db74">&#39;instance&#39;</span>]
+- <span style="color:#66d9ef">source_match</span>:
+    <span style="color:#66d9ef">severity</span>: <span style="color:#e6db74">&#39;yellow&#39;</span>
+  <span style="color:#66d9ef">target_match_re</span>:
+    <span style="color:#66d9ef">severity</span>: ^(blue)$
   <span style="color:#75715e"># Apply inhibition if the alertname and instance is the same.</span>
-  equal: [<span style="color:#e6db74">&#39;alertname&#39;</span>, <span style="color:#e6db74">&#39;instance&#39;</span>]
+  <span style="color:#66d9ef">equal</span>: [<span style="color:#e6db74">&#39;alertname&#39;</span>, <span style="color:#e6db74">&#39;instance&#39;</span>]
 
-receivers:
-- name: <span style="color:#e6db74">&#39;user-a&#39;</span>
-  email_configs:
-  - to: <span style="color:#e6db74">&#39;&lt;user-a@domain.com&gt;&#39;</span></code></pre></div>
-<p>修改里面关于<code>smtp_*</code>的部分和最下面<code>user-a</code>的邮箱地址。</p>
-
-<p><del><strong>备注：因为国内邮箱几乎都不支持TLS，而Alertmanager目前又不支持SSL，因此请使用Gmail或其他支持TLS的邮箱来发送告警邮件，见这个<a href="https://github.com/prometheus/alertmanager/issues/980#issuecomment-328088587">issue</a></strong></del>，这个问题已经修复，下面是阿里云企业邮箱的配置例子：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-yaml" data-lang="yaml">smtp_smarthost: <span style="color:#e6db74">&#39;smtp.qiye.aliyun.com:465&#39;</span>
-smtp_hello: <span style="color:#e6db74">&#39;company.com&#39;</span>
-smtp_from: <span style="color:#e6db74">&#39;username@company.com&#39;</span>
-smtp_auth_username: <span style="color:#e6db74">&#39;username@company.com&#39;</span>
-smtp_auth_password: password
-smtp_require_tls: <span style="color:#66d9ef">false</span></code></pre></div>
-<p>2) 新建文件<code>alert-template.tmpl</code>，这个是邮件内容模板：</p>
+<span style="color:#66d9ef">receivers</span>:
+- <span style="color:#66d9ef">name</span>: <span style="color:#e6db74">&#39;user-a&#39;</span>
+  <span style="color:#66d9ef">email_configs</span>:
+  - <span style="color:#66d9ef">to</span>: <span style="color:#e6db74">&#39;&lt;user-a@domain.com&gt;&#39;</span>
+</code></pre></div><p>修改里面关于<code>smtp_*</code>的部分和最下面<code>user-a</code>的邮箱地址。</p>
+<p><!-- raw HTML omitted -->**备注：因为国内邮箱几乎都不支持TLS，而Alertmanager目前又不支持SSL，因此请使用Gmail或其他支持TLS的邮箱来发送告警邮件，见这个<a href="https://github.com/prometheus/alertmanager/issues/980#issuecomment-328088587">issue</a>**<!-- raw HTML omitted -->，这个问题已经修复，下面是阿里云企业邮箱的配置例子：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-yaml" data-lang="yaml"><span style="color:#66d9ef">smtp_smarthost</span>: <span style="color:#e6db74">&#39;smtp.qiye.aliyun.com:465&#39;</span>
+<span style="color:#66d9ef">smtp_hello</span>: <span style="color:#e6db74">&#39;company.com&#39;</span>
+<span style="color:#66d9ef">smtp_from</span>: <span style="color:#e6db74">&#39;username@company.com&#39;</span>
+<span style="color:#66d9ef">smtp_auth_username</span>: <span style="color:#e6db74">&#39;username@company.com&#39;</span>
+<span style="color:#66d9ef">smtp_auth_password</span>: password
+<span style="color:#66d9ef">smtp_require_tls</span>: <span style="color:#66d9ef">false</span>
+</code></pre></div><ol start="2">
+<li>新建文件<code>alert-template.tmpl</code>，这个是邮件内容模板：</li>
+</ol>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-html" data-lang="html">{{ define &#34;email.default.html&#34; }}
 &lt;<span style="color:#f92672">h2</span>&gt;Summary&lt;/<span style="color:#f92672">h2</span>&gt;
   
@@ -556,19 +556,18 @@ smtp_require_tls: <span style="color:#66d9ef">false</span></code></pre></div>
 &lt;<span style="color:#f92672">h2</span>&gt;Description&lt;/<span style="color:#f92672">h2</span>&gt;
 
 &lt;<span style="color:#f92672">p</span>&gt;{{ .CommonAnnotations.description }}&lt;/<span style="color:#f92672">p</span>&gt;
-{{ end}}</code></pre></div>
-<p>3） 运行下列命令启动：</p>
+{{ end}}
+</code></pre></div><p>3） 运行下列命令启动：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">docker run -d <span style="color:#ae81ff">\
 </span><span style="color:#ae81ff"></span>  --name<span style="color:#f92672">=</span>alertmanager <span style="color:#ae81ff">\
 </span><span style="color:#ae81ff"></span>  -v &lt;path-to-prom-jvm-demo&gt;:/alertmanager-config <span style="color:#ae81ff">\
-</span><span style="color:#ae81ff"></span>  -p <span style="color:#ae81ff">9093</span>:9093 <span style="color:#ae81ff">\
-</span><span style="color:#ae81ff"></span>  prom/alertmanager:master --config.file<span style="color:#f92672">=</span>/alertmanager-config/alertmanager-config.yml</code></pre></div>
-<p>4) 访问<a href="http://localhost:9093">http://localhost:9093</a>，看看有没有收到Prometheus发送过来的告警(如果没有看到稍等一下)：</p>
-
-<p><img src="alertmanager.png" alt="alertmanager" /></p>
-
-<h2 id="第五步-等待邮件">第五步：等待邮件</h2>
-
+</span><span style="color:#ae81ff"></span>  -p 9093:9093 <span style="color:#ae81ff">\
+</span><span style="color:#ae81ff"></span>  prom/alertmanager:master --config.file<span style="color:#f92672">=</span>/alertmanager-config/alertmanager-config.yml
+</code></pre></div><ol start="4">
+<li>访问<a href="http://localhost:9093">http://localhost:9093</a>，看看有没有收到Prometheus发送过来的告警(如果没有看到稍等一下)：</li>
+</ol>
+<p><img src="alertmanager.png" alt="alertmanager"></p>
+<h2 id="第五步等待邮件">第五步：等待邮件</h2>
 <p>等待一会儿（最多5分钟）看看是否收到邮件。如果没有收到，检查配置是否正确，或者<code>docker logs alertmanager</code>看看alertmanager的日志，一般来说都是邮箱配置错误导致。</p></article>
     <footer class="post-footer">
       
@@ -587,7 +586,7 @@ smtp_require_tls: <span style="color:#66d9ef">false</span></code></pre></div>
       </ul>
       
       <p class="post-copyright">
-        This post was published <strong>508</strong> days ago, content in the post may be inaccurate, even wrong now, please take risk yourself.
+        This post was published <strong>517</strong> days ago, content in the post may be inaccurate, even wrong now, please take risk yourself.
       </p>
     </footer>
     

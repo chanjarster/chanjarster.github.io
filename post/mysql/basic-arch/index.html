@@ -16,31 +16,28 @@
 
   
   <meta name="author" content="颇忒脱" />
-  <meta name="description" content="
-" />
+  <meta name="description" content="" />
 
   
   
     <meta name="twitter:card" content="summary" />
     <meta name="twitter:site" content="@gohugoio" />
     <meta name="twitter:title" content="MySQL - 基础架构" />
-    <meta name="twitter:description" content="
-" />
+    <meta name="twitter:description" content="" />
     <meta name="twitter:image" content="https://chanjarster.github.io/img/avatar.jpg" />
   
 
   
   <meta property="og:type" content="article" />
   <meta property="og:title" content="MySQL - 基础架构" />
-  <meta property="og:description" content="
-" />
+  <meta property="og:description" content="" />
   <meta property="og:url" content="https://chanjarster.github.io/post/mysql/basic-arch/" />
   <meta property="og:image" content="https://chanjarster.github.io/img/avatar.jpg" />
 
 
 
 
-<meta name="generator" content="Hugo 0.49.2" />
+<meta name="generator" content="Hugo 0.68.1" />
 
 
 <link rel="canonical" href="https://chanjarster.github.io/post/mysql/basic-arch/" />
@@ -248,12 +245,8 @@
       <h1 class="post-title">MySQL - 基础架构</h1>
       <p class="post-meta">@颇忒脱 · Dec 18, 2019 · 1 min read</p>
     </header>
-    <article class="post-content"><p></p>
-
-<p>当你执行一条SQL语句的时候，经过的MySQL组件有（未必是先后顺序）：客户端（你）、连接器、查询缓存、分析器、优化器、执行器、存储引擎。它们的职责是：</p>
-
+    <article class="post-content"><p>当你执行一条SQL语句的时候，经过的MySQL组件有（未必是先后顺序）：客户端（你）、连接器、查询缓存、分析器、优化器、执行器、存储引擎。它们的职责是：</p>
 <p>Server层：</p>
-
 <ul>
 <li>连接器：管理连接，权限验证。</li>
 <li>查询缓存：故名思义，如果命中则直接返回结果</li>
@@ -261,49 +254,33 @@
 <li>优化器：生成执行计划，索引选择</li>
 <li>执行器：操作引擎，返回结果</li>
 </ul>
-
 <p>存储引擎层：</p>
-
 <ul>
 <li>存储引擎：存储数据，提供读写接口。存储引擎有多种选择，比如InnoDB（默认）、MyISAM（旧）、Memory。各有各的特性。</li>
 </ul>
-
-<p><img src="basic-arch.png" style="zoom:50%;" /></p>
-
+<p><!-- raw HTML omitted --></p>
 <h2 id="连接器">连接器</h2>
-
 <ul>
 <li>管理连接：<code>show processlist</code>可以看到当前连接的情况。如果连接长时间没有动静则会断开，默认8小时，由<code>wait_timeout</code>参数控制。</li>
 <li>权限验证：客户端连接时先做认证（用户名密码对不对），然后查询出你所拥有的权限，之后这个连接的权限判断逻辑依赖于此时获得的数据。即连接创建之后的权限变更不会影响之前创建的连接。</li>
 </ul>
-
 <p>连接占用内存，MySQL执行过程中临时占用的内存绑定在连接上，只有当连接断开才会释放。解决办法：</p>
-
 <ul>
 <li>定时断开连接。</li>
 <li>执行完占用大内存的查询后断开连接。</li>
 <li>执行完占用大内存的查询后，执行<a href="https://dev.mysql.com/doc/refman/5.7/en/mysql-reset-connection.html">mysql_reset_connection</a>来初始化连接资源（不会断开）。</li>
 </ul>
-
 <h2 id="查询缓存">查询缓存</h2>
-
 <p>在8.0里去掉了这个，因为这个查询缓存基本上没什么用处，理由：</p>
-
 <ul>
 <li>缓存失效太平凡，只要对表有更新，就会失效</li>
 <li>同时导致缓存命中率太低</li>
 </ul>
-
 <h2 id="分析器">分析器</h2>
-
 <p>识别你的SQL语句，判断是否符合MySQL语法。做词法分析。也可判断表名、列名是否合法。</p>
-
 <h2 id="优化器">优化器</h2>
-
 <p>决定用哪个索引，在Join的时候决定表的连接顺序，最终确定执行方案。</p>
-
 <h2 id="执行器">执行器</h2>
-
 <p>判断你对表T的操作权限。根据表定义的存储引擎调用引擎的接口。</p></article>
     <footer class="post-footer">
       

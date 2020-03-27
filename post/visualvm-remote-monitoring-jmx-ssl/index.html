@@ -17,7 +17,6 @@
   
   <meta name="author" content="颇忒脱" />
   <meta name="description" content="在前一篇文章里提到在生产环境下应该使用SSL来创建JMX连接，本文就来讲一下具体怎么做。
-
 " />
 
   
@@ -26,7 +25,6 @@
     <meta name="twitter:site" content="@gohugoio" />
     <meta name="twitter:title" content="VisualVm利用SSL连接JMX的方法" />
     <meta name="twitter:description" content="在前一篇文章里提到在生产环境下应该使用SSL来创建JMX连接，本文就来讲一下具体怎么做。
-
 " />
     <meta name="twitter:image" content="https://chanjarster.github.io/img/avatar.jpg" />
   
@@ -35,7 +33,6 @@
   <meta property="og:type" content="article" />
   <meta property="og:title" content="VisualVm利用SSL连接JMX的方法" />
   <meta property="og:description" content="在前一篇文章里提到在生产环境下应该使用SSL来创建JMX连接，本文就来讲一下具体怎么做。
-
 " />
   <meta property="og:url" content="https://chanjarster.github.io/post/visualvm-remote-monitoring-jmx-ssl/" />
   <meta property="og:image" content="https://chanjarster.github.io/img/avatar.jpg" />
@@ -43,7 +40,7 @@
 
 
 
-<meta name="generator" content="Hugo 0.49.2" />
+<meta name="generator" content="Hugo 0.68.1" />
 
 
 <link rel="canonical" href="https://chanjarster.github.io/post/visualvm-remote-monitoring-jmx-ssl/" />
@@ -252,40 +249,27 @@
       <p class="post-meta">@颇忒脱 · Oct 10, 2018 · 2 min read</p>
     </header>
     <article class="post-content"><p>在<a href="../visualvm-remote-monitoring-jmx/">前一篇文章</a>里提到在生产环境下应该使用SSL来创建JMX连接，本文就来讲一下具体怎么做。</p>
-
-<p></p>
-
 <h2 id="前导知识">前导知识</h2>
-
 <p>先了解一下Java客户端程序在创建SSL连接的一些相关的事情：</p>
-
 <ol>
 <li>Java client程序在做SSL连接的时候，会拉取server的证书，利用truststore去验证这个证书，如果不存在 or 证书过期 or 不是由可信CA签发，就意味着服务端不被信任，就不能连接。</li>
 <li>如果在程序启动时没有特别指定使用哪个truststore（通过System Property <code>javax.net.ssl.trustStore</code> 指定），那么就会使用<code>$JAVA_HOME/jre/lib/security/cacerts</code>。如果指定了，就会使用指定的truststore + cacerts来验证。</li>
 <li>cacerts存放了JDK信任的CA证书（含有public key），它里面预先已经存放了已知的权威CA证书。你可以通过<code>keytool -list -keystore $JAVA_HOME/jre/lib/security/cacerts</code>看到（让你输密码的时候直接回车就行了）</li>
 </ol>
-
 <p>以上过程被称为server authentication，也就是说client验证server是否可信，server authentication是最常见的，https就是这种模式。</p>
-
 <p>不过在用SSL连接JMX的时候，还要做client authentication，即server验证client是否可信。原理和上面提到的一样，只不过变成server用自己的truststore里验证client的证书是否可信。</p>
-
-<h2 id="第一步-制作keystore和truststore">第一步：制作keystore和truststore</h2>
-
+<h2 id="第一步制作keystore和truststore">第一步：制作keystore和truststore</h2>
 <p>上面提到的证书主要保存了一个public key，SSL是一个非对称加密协议，因此还有一个对应的private key，在java里private key和private key存放在keystore里。</p>
-
 <p>下面我们来制作visualvm（client）和java app（server）的keystore和truststore。</p>
-
 <p>先讲大致流程，然后再给出命令：</p>
-
 <ol>
 <li>生成visualvm的keystore，导出cert，把cert导入到java-app的truststore里</li>
 <li>生成java-app的keystore，导出cert，把cert导入到visualvm的truststore里</li>
 </ol>
-
 <p>具体命令：</p>
-
 <ol>
-<li><p>生成visualvm的keystore</p>
+<li>
+<p>生成visualvm的keystore</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash"> keytool -genkeypair <span style="color:#ae81ff">\
 </span><span style="color:#ae81ff"></span>   -alias visualvm <span style="color:#ae81ff">\
 </span><span style="color:#ae81ff"></span>   -keyalg RSA <span style="color:#ae81ff">\
@@ -294,25 +278,28 @@
 </span><span style="color:#ae81ff"></span>   -keystore visualvm.keystore <span style="color:#ae81ff">\
 </span><span style="color:#ae81ff"></span>   -storepass &lt;visualvm keystore的密码&gt; <span style="color:#ae81ff">\
 </span><span style="color:#ae81ff"></span>   -keypass &lt;同visualvm keystore的密码&gt; <span style="color:#ae81ff">\
-</span><span style="color:#ae81ff"></span>   -dname <span style="color:#e6db74">&#34;CN=&lt;姓名&gt;, OU=&lt;组织下属单位&gt;, O=&lt;组织名称&gt;, L=&lt;城市&gt;, S=&lt;省份&gt;, C=&lt;国家2字母&gt;&#34;</span></code></pre></div></li>
-
-<li><p>导出visualvm的cert</p>
+</span><span style="color:#ae81ff"></span>   -dname <span style="color:#e6db74">&#34;CN=&lt;姓名&gt;, OU=&lt;组织下属单位&gt;, O=&lt;组织名称&gt;, L=&lt;城市&gt;, S=&lt;省份&gt;, C=&lt;国家2字母&gt;&#34;</span>
+</code></pre></div></li>
+<li>
+<p>导出visualvm的cert</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">keytool -exportcert <span style="color:#ae81ff">\
 </span><span style="color:#ae81ff"></span>  -alias visualvm <span style="color:#ae81ff">\
 </span><span style="color:#ae81ff"></span>  -storetype pkcs12 <span style="color:#ae81ff">\
 </span><span style="color:#ae81ff"></span>  -keystore visualvm.keystore <span style="color:#ae81ff">\
 </span><span style="color:#ae81ff"></span>  -file visualvm.cer <span style="color:#ae81ff">\
-</span><span style="color:#ae81ff"></span>  -storepass &lt;visualvm keystore的密码&gt;</code></pre></div></li>
-
-<li><p>把visualvm的cert导入到java-app的truststore里，实际上就是生成了一个truststore</p>
+</span><span style="color:#ae81ff"></span>  -storepass &lt;visualvm keystore的密码&gt;
+</code></pre></div></li>
+<li>
+<p>把visualvm的cert导入到java-app的truststore里，实际上就是生成了一个truststore</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">keytool -importcert <span style="color:#ae81ff">\
 </span><span style="color:#ae81ff"></span>  -alias visualvm <span style="color:#ae81ff">\
 </span><span style="color:#ae81ff"></span>  -file visualvm.cer <span style="color:#ae81ff">\
 </span><span style="color:#ae81ff"></span>  -keystore java-app.truststore <span style="color:#ae81ff">\
 </span><span style="color:#ae81ff"></span>  -storepass &lt;java-app truststore的密码&gt; <span style="color:#ae81ff">\
-</span><span style="color:#ae81ff"></span>  -noprompt</code></pre></div></li>
-
-<li><p>生成java-app的keystore</p>
+</span><span style="color:#ae81ff"></span>  -noprompt
+</code></pre></div></li>
+<li>
+<p>生成java-app的keystore</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash"> keytool -genkeypair <span style="color:#ae81ff">\
 </span><span style="color:#ae81ff"></span>   -alias java-app <span style="color:#ae81ff">\
 </span><span style="color:#ae81ff"></span>   -keyalg RSA <span style="color:#ae81ff">\
@@ -321,65 +308,59 @@
 </span><span style="color:#ae81ff"></span>   -keystore java-app.keystore <span style="color:#ae81ff">\
 </span><span style="color:#ae81ff"></span>   -storepass &lt;java-app keystore的密码&gt; <span style="color:#ae81ff">\
 </span><span style="color:#ae81ff"></span>   -keypass &lt;同java-app keystore的密码&gt; <span style="color:#ae81ff">\
-</span><span style="color:#ae81ff"></span>   -dname <span style="color:#e6db74">&#34;CN=&lt;姓名&gt;, OU=&lt;组织下属单位&gt;, O=&lt;组织名称&gt;, L=&lt;城市&gt;, S=&lt;省份&gt;, C=&lt;国家2字母&gt;&#34;</span></code></pre></div></li>
-
-<li><p>导出java-app的cert</p>
+</span><span style="color:#ae81ff"></span>   -dname <span style="color:#e6db74">&#34;CN=&lt;姓名&gt;, OU=&lt;组织下属单位&gt;, O=&lt;组织名称&gt;, L=&lt;城市&gt;, S=&lt;省份&gt;, C=&lt;国家2字母&gt;&#34;</span>
+</code></pre></div></li>
+<li>
+<p>导出java-app的cert</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">keytool -exportcert <span style="color:#ae81ff">\
 </span><span style="color:#ae81ff"></span>  -alias java-app <span style="color:#ae81ff">\
 </span><span style="color:#ae81ff"></span>  -storetype pkcs12 <span style="color:#ae81ff">\
 </span><span style="color:#ae81ff"></span>  -keystore java-app.keystore <span style="color:#ae81ff">\
 </span><span style="color:#ae81ff"></span>  -file java-app.cer <span style="color:#ae81ff">\
-</span><span style="color:#ae81ff"></span>  -storepass &lt;java-app keystore的密码&gt;</code></pre></div></li>
-
-<li><p>把java-app的cert导入到visualvm的truststore里</p>
+</span><span style="color:#ae81ff"></span>  -storepass &lt;java-app keystore的密码&gt;
+</code></pre></div></li>
+<li>
+<p>把java-app的cert导入到visualvm的truststore里</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">keytool -importcert 
   -alias java-app <span style="color:#ae81ff">\
 </span><span style="color:#ae81ff"></span>  -file java-app.cer <span style="color:#ae81ff">\
 </span><span style="color:#ae81ff"></span>  -keystore visualvm.truststore <span style="color:#ae81ff">\
 </span><span style="color:#ae81ff"></span>  -storepass &lt;visualvm truststore的密码&gt; <span style="color:#ae81ff">\
-</span><span style="color:#ae81ff"></span>  -noprompt</code></pre></div></li>
+</span><span style="color:#ae81ff"></span>  -noprompt
+</code></pre></div></li>
 </ol>
-
 <p>所以最终得到的文件是这么几个：</p>
-
 <ol>
 <li>visualvm.keystore，包含visualvm的public key和private key</li>
 <li>visualvm.truststore，包含java-app cert</li>
 <li>java-app.keystore，包含java-app的public key和private key</li>
 <li>java-app.truststore，包含visualvm cert</li>
 </ol>
-
-<h2 id="第二步-启动tomcat">第二步：启动Tomcat</h2>
-
+<h2 id="第二步启动tomcat">第二步：启动Tomcat</h2>
 <p>我们还是用Tomcat做实验，给<code>CATALINA_OPTS</code>添加几个参数像下面这样，因为参数比较多，所以我们在<code>$TOMCAT/bin</code>下添加一个<code>setenv.sh</code>的文件（记得加上可执行权限）：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">CATALINA_OPTS<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;-Dcom.sun.management.jmxremote&#34;</span>
 CATALINA_OPTS<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;</span>$CATALINA_OPTS<span style="color:#e6db74"> -Dcom.sun.management.jmxremote.port=1100&#34;</span>
 CATALINA_OPTS<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;</span>$CATALINA_OPTS<span style="color:#e6db74"> -Dcom.sun.management.jmxremote.rmi.port=1100&#34;</span>
 CATALINA_OPTS<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;</span>$CATALINA_OPTS<span style="color:#e6db74"> -Djava.rmi.server.hostname=&lt;host or ip&gt;&#34;</span>
 CATALINA_OPTS<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;</span>$CATALINA_OPTS<span style="color:#e6db74"> -Dcom.sun.management.jmxremote.authenticate=false&#34;</span>
-<span style="color:#75715e"># 以下和启用SSL有关
-</span><span style="color:#75715e"></span>CATALINA_OPTS<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;</span>$CATALINA_OPTS<span style="color:#e6db74"> -Dcom.sun.management.jmxremote.ssl=true&#34;</span>
+<span style="color:#75715e"># 以下和启用SSL有关</span>
+CATALINA_OPTS<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;</span>$CATALINA_OPTS<span style="color:#e6db74"> -Dcom.sun.management.jmxremote.ssl=true&#34;</span>
 CATALINA_OPTS<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;</span>$CATALINA_OPTS<span style="color:#e6db74"> -Dcom.sun.management.jmxremote.registry.ssl=true&#34;</span>
 CATALINA_OPTS<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;</span>$CATALINA_OPTS<span style="color:#e6db74"> -Dcom.sun.management.jmxremote.ssl.need.client.auth=true&#34;</span>
 CATALINA_OPTS<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;</span>$CATALINA_OPTS<span style="color:#e6db74"> -Djavax.net.ssl.keyStore=&lt;path to java-app.keystore&gt;&#34;</span>
 CATALINA_OPTS<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;</span>$CATALINA_OPTS<span style="color:#e6db74"> -Djavax.net.ssl.keyStorePassword=&lt;java-app.keystore的密码&gt;&#34;</span>
 CATALINA_OPTS<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;</span>$CATALINA_OPTS<span style="color:#e6db74"> -Djavax.net.ssl.trustStore=&lt;path to java-app.truststore&gt;&#34;</span>
-CATALINA_OPTS<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;</span>$CATALINA_OPTS<span style="color:#e6db74"> -Djavax.net.ssl.trustStorePassword=&lt;java-app.truststore的密码&gt;&#34;</span></code></pre></div>
-<p>然后<code>$TOMCAT/bin/startup.sh</code></p>
-
-<h2 id="第三步-启动visualvm">第三步：启动visualvm</h2>
+CATALINA_OPTS<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;</span>$CATALINA_OPTS<span style="color:#e6db74"> -Djavax.net.ssl.trustStorePassword=&lt;java-app.truststore的密码&gt;&#34;</span>
+</code></pre></div><p>然后<code>$TOMCAT/bin/startup.sh</code></p>
+<h2 id="第三步启动visualvm">第三步：启动visualvm</h2>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">jvisualvm -J-Djavax.net.ssl.keyStore<span style="color:#f92672">=</span>&lt;path to visualvm.keystore&gt; <span style="color:#ae81ff">\
 </span><span style="color:#ae81ff"></span>  -J-Djavax.net.ssl.keyStorePassword<span style="color:#f92672">=</span>&lt;visualvm.keystore的密码&gt; <span style="color:#ae81ff">\
 </span><span style="color:#ae81ff"></span>  -J-Djavax.net.ssl.trustStore<span style="color:#f92672">=</span>&lt;path to visualvm.truststore&gt; <span style="color:#ae81ff">\
-</span><span style="color:#ae81ff"></span>  -J-Djavax.net.ssl.trustStorePassword<span style="color:#f92672">=</span>&lt;visualvm.truststore的密码&gt;</code></pre></div>
-<p>你可以不加参数启动jvisualvm，看看下一步创建JMX连接是否成功，如果配置正确应该是不会成功的。</p>
-
-<h2 id="第四步-创建jmx连接">第四步：创建JMX连接</h2>
-
+</span><span style="color:#ae81ff"></span>  -J-Djavax.net.ssl.trustStorePassword<span style="color:#f92672">=</span>&lt;visualvm.truststore的密码&gt;
+</code></pre></div><p>你可以不加参数启动jvisualvm，看看下一步创建JMX连接是否成功，如果配置正确应该是不会成功的。</p>
+<h2 id="第四步创建jmx连接">第四步：创建JMX连接</h2>
 <p>加了上述参数启动jvisualvm后，和<a href="../visualvm-remote-monitoring-jmx/">利用VisualVm和JMX远程监控Java进程</a>里提到的步骤一样创建JMX连接，只不过在创建JMX连接的时候<strong>不要勾选【不要求SSL连接】</strong>（不过经实测，勾不勾选都能连接成功的）。</p>
-
 <h2 id="参考资料">参考资料</h2>
-
 <ul>
 <li><a href="https://docs.oracle.com/javase/8/docs/technotes/guides/management/agent.html#gdeoz">Monitoring and Management Using JMX Technology - Using SSL</a></li>
 <li><a href="https://docs.oracle.com/javase/8/docs/technotes/guides/security/jsse/JSSERefGuide.html#CustomizingStores">Customizing the Default Keystores and Truststores, Store Types, and Store Passwords</a></li>
@@ -404,7 +385,7 @@ CATALINA_OPTS<span style="color:#f92672">=</span><span style="color:#e6db74">&#3
       </ul>
       
       <p class="post-copyright">
-        This post was published <strong>524</strong> days ago, content in the post may be inaccurate, even wrong now, please take risk yourself.
+        This post was published <strong>533</strong> days ago, content in the post may be inaccurate, even wrong now, please take risk yourself.
       </p>
     </footer>
     

@@ -16,31 +16,28 @@
 
   
   <meta name="author" content="颇忒脱" />
-  <meta name="description" content="
-" />
+  <meta name="description" content="" />
 
   
   
     <meta name="twitter:card" content="summary" />
     <meta name="twitter:site" content="@gohugoio" />
     <meta name="twitter:title" content="虚函数表（vtable/virtual table/virtual method table）" />
-    <meta name="twitter:description" content="
-" />
+    <meta name="twitter:description" content="" />
     <meta name="twitter:image" content="https://chanjarster.github.io/img/avatar.jpg" />
   
 
   
   <meta property="og:type" content="article" />
   <meta property="og:title" content="虚函数表（vtable/virtual table/virtual method table）" />
-  <meta property="og:description" content="
-" />
+  <meta property="og:description" content="" />
   <meta property="og:url" content="https://chanjarster.github.io/post/vtable/" />
   <meta property="og:image" content="https://chanjarster.github.io/img/avatar.jpg" />
 
 
 
 
-<meta name="generator" content="Hugo 0.49.2" />
+<meta name="generator" content="Hugo 0.68.1" />
 
 
 <link rel="canonical" href="https://chanjarster.github.io/post/vtable/" />
@@ -248,12 +245,8 @@
       <h1 class="post-title">虚函数表（vtable/virtual table/virtual method table）</h1>
       <p class="post-meta">@颇忒脱 · Feb 25, 2019 · 1 min read</p>
     </header>
-    <article class="post-content"><p></p>
-
-<p><strong>本文只是拿Java代码做说明的例子，不代表Java的vtable是这样实现的</strong></p>
-
+    <article class="post-content"><p><strong>本文只是拿Java代码做说明的例子，不代表Java的vtable是这样实现的</strong></p>
 <p>虚函数表，又称 virtual method table (VMT), virtual function table, virtual call table, dispatch table, vtable, or vftable。是一种用于支持<a href="https://en.wikipedia.org/wiki/Dynamic_dispatch">dynamic dispatch</a>（或称为run-time method binding）的机制。而<strong>动态转发</strong>则是实现多态中重要一环——方法重写——的重要机制。</p>
-
 <p>考虑下面代码：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">Super</span> <span style="color:#f92672">{</span>
   <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">test</span><span style="color:#f92672">()</span> <span style="color:#f92672">{}</span>
@@ -264,13 +257,10 @@
 <span style="color:#f92672">}</span>
 
 Super s <span style="color:#f92672">=</span> <span style="color:#f92672">...;</span>
-s<span style="color:#f92672">.</span><span style="color:#a6e22e">test</span><span style="color:#f92672">();</span></code></pre></div>
-<p><code>s.test()</code>所调用的是<code>Super#test()</code>还是<code>Derived#test()</code>在编译期是无法知道，因为<code>s</code>指向的真正类型可能是Super也可能是Derived，那么<code>s.test()</code>到底调用那个类的test方法只能在运行时知道，那么是如何知道的呢？答案是依靠vtable。</p>
-
+s<span style="color:#f92672">.</span><span style="color:#a6e22e">test</span><span style="color:#f92672">();</span>
+</code></pre></div><p><code>s.test()</code>所调用的是<code>Super#test()</code>还是<code>Derived#test()</code>在编译期是无法知道，因为<code>s</code>指向的真正类型可能是Super也可能是Derived，那么<code>s.test()</code>到底调用那个类的test方法只能在运行时知道，那么是如何知道的呢？答案是依靠vtable。</p>
 <p>每个类都有一张vtable，vtable里记录了每个虚方法（PS. 在Java中除static、<code>&lt;init&gt;</code>、<code>&lt;clinit&gt;</code>、final method之外的都是虚方法）的偏移量及内存地址。父类的vtable的内容会在子类vtable中复制一份，并且保持相同的偏移量，方法的内存地址则要看子类是否覆盖了父类方法而定。下面是vtable布局大致概念：</p>
-
 <p>Object vtable</p>
-
 <table>
 <thead>
 <tr>
@@ -279,14 +269,12 @@ s<span style="color:#f92672">.</span><span style="color:#a6e22e">test</span><spa
 <th align="center">addr</th>
 </tr>
 </thead>
-
 <tbody>
 <tr>
 <td align="center">0</td>
 <td align="center">toString()</td>
 <td align="center">addr-1</td>
 </tr>
-
 <tr>
 <td align="center">1</td>
 <td align="center">hashcode()</td>
@@ -294,9 +282,7 @@ s<span style="color:#f92672">.</span><span style="color:#a6e22e">test</span><spa
 </tr>
 </tbody>
 </table>
-
 <p>Super vtable</p>
-
 <table>
 <thead>
 <tr>
@@ -305,20 +291,17 @@ s<span style="color:#f92672">.</span><span style="color:#a6e22e">test</span><spa
 <th align="center">addr</th>
 </tr>
 </thead>
-
 <tbody>
 <tr>
 <td align="center">0</td>
 <td align="center">toString()</td>
 <td align="center">addr-1</td>
 </tr>
-
 <tr>
 <td align="center">1</td>
 <td align="center">hashcode()</td>
 <td align="center">addr-2</td>
 </tr>
-
 <tr>
 <td align="center">2</td>
 <td align="center">test()</td>
@@ -326,9 +309,7 @@ s<span style="color:#f92672">.</span><span style="color:#a6e22e">test</span><spa
 </tr>
 </tbody>
 </table>
-
 <p>Derived vtable</p>
-
 <table>
 <thead>
 <tr>
@@ -337,20 +318,17 @@ s<span style="color:#f92672">.</span><span style="color:#a6e22e">test</span><spa
 <th align="center">addr</th>
 </tr>
 </thead>
-
 <tbody>
 <tr>
 <td align="center">0</td>
 <td align="center">toString()</td>
 <td align="center">addr-1</td>
 </tr>
-
 <tr>
 <td align="center">1</td>
 <td align="center">hashcode()</td>
 <td align="center">addr-2</td>
 </tr>
-
 <tr>
 <td align="center">2</td>
 <td align="center">test()</td>
@@ -358,29 +336,21 @@ s<span style="color:#f92672">.</span><span style="color:#a6e22e">test</span><spa
 </tr>
 </tbody>
 </table>
-
 <p>可以看到Super虽然没有覆盖Object类的<code>toString()</code>、<code>hashcode()</code>，但是其vtable中依然有这两个函数，且偏移量和地址与Object vtable一样。Derived的<code>test()</code>方法偏移量与Super的<code>test()</code>方法偏移量一样，但是地址不同，因为Derived覆盖了<code>test()</code>方法。</p>
-
 <p>当<code>s.test()</code>时做了这么几件事情：</p>
-
 <ol>
 <li>获得<code>s</code>所指向的类的vtable</li>
 <li>在vtable中找到<code>test()</code>方法条目里所记载的地址</li>
 <li>调用该地址的函数</li>
 </ol>
-
 <p>所以虚方法的调用要比直接调用多了几个步骤，对于性能是有损失的。</p>
-
 <p>那么能够想到的优化方法是记录<code>Derived#test()</code>方法的偏移量，那么当下一次调用的时候就变成了：</p>
-
 <ol>
 <li>获得<code>s</code>所指向的类的vtable</li>
 <li>发现本次是找<code>Derived#test()</code>，上次记录了该方法在vtable中的偏移量是2</li>
 <li>调用偏移量2的条目的内存地址上的函数</li>
 </ol>
-
 <h2 id="参考资料">参考资料</h2>
-
 <ul>
 <li><a href="https://en.wikipedia.org/wiki/Virtual_method_table">Virtual method table</a></li>
 <li><a href="https://www.learncpp.com/cpp-tutorial/125-the-virtual-table/">12.5 — The virtual table</a></li>
@@ -398,7 +368,7 @@ s<span style="color:#f92672">.</span><span style="color:#a6e22e">test</span><spa
       </ul>
       
       <p class="post-copyright">
-        This post was published <strong>386</strong> days ago, content in the post may be inaccurate, even wrong now, please take risk yourself.
+        This post was published <strong>395</strong> days ago, content in the post may be inaccurate, even wrong now, please take risk yourself.
       </p>
     </footer>
     

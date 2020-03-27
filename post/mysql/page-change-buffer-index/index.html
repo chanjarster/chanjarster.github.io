@@ -16,31 +16,28 @@
 
   
   <meta name="author" content="颇忒脱" />
-  <meta name="description" content="
-" />
+  <meta name="description" content="" />
 
   
   
     <meta name="twitter:card" content="summary" />
     <meta name="twitter:site" content="@gohugoio" />
     <meta name="twitter:title" content="MySQL - 数据页、change buffer和索引" />
-    <meta name="twitter:description" content="
-" />
+    <meta name="twitter:description" content="" />
     <meta name="twitter:image" content="https://chanjarster.github.io/img/avatar.jpg" />
   
 
   
   <meta property="og:type" content="article" />
   <meta property="og:title" content="MySQL - 数据页、change buffer和索引" />
-  <meta property="og:description" content="
-" />
+  <meta property="og:description" content="" />
   <meta property="og:url" content="https://chanjarster.github.io/post/mysql/page-change-buffer-index/" />
   <meta property="og:image" content="https://chanjarster.github.io/img/avatar.jpg" />
 
 
 
 
-<meta name="generator" content="Hugo 0.49.2" />
+<meta name="generator" content="Hugo 0.68.1" />
 
 
 <link rel="canonical" href="https://chanjarster.github.io/post/mysql/page-change-buffer-index/" />
@@ -248,124 +245,78 @@
       <h1 class="post-title">MySQL - 数据页、change buffer和索引</h1>
       <p class="post-meta">@颇忒脱 · Jan 7, 2020 · 1 min read</p>
     </header>
-    <article class="post-content"><p></p>
-
-<h2 id="数据页">数据页</h2>
-
+    <article class="post-content"><h2 id="数据页">数据页</h2>
 <p>在<a href="../redo-log-binlog">redo log和binlog —— 日志的2PC</a>里提到过：</p>
-
 <blockquote>
 <p>如果该行所在数据页已经在内存中，则直接返回，如果不在则从磁盘中加载数据页，然后返回。这里很重要的信息是，更新操作首先是在内存中进行的，之后才会同步到磁盘。</p>
 </blockquote>
-
 <p>这里提到了两个很重要的信息：</p>
-
 <ul>
 <li>更新操作操作的是数据页</li>
 <li>如果数据页不在内存中，那么要从磁盘中加载到内存中。</li>
 </ul>
-
 <p>InnoDB的数据页默认大小是16K（由<code>innodb_page_size</code>控制），InnoDB不会只加载你想要的row，而是把附近的连带加载进来（有点像CPU的cache line）。下图中的第二行就是一个一个数据页：</p>
-
-<p><img src="page.png" style="zoom:50%;" /></p>
-
+<p><!-- raw HTML omitted --></p>
 <p>那么问题来了，如果你每次更新的row所在的数据页不在内存中，那么每次都要从磁盘加载是极其低效的，因此change buffer来救你了。</p>
-
 <h2 id="change-buffer">change buffer</h2>
-
 <p>change buffer顾名思义是更新操作的缓冲，它是buffer pool的一部分（由<code>innodb_change_buffer_max_size</code>控制占用百分比）。当你要更新的row所在的数据页不在内存中时，InnoDB把更新操作保存在change buffer中。PS. change buffer是持久化的。</p>
-
 <p><strong>change buffer不是万能的</strong>，如果你的更新操作能够利用change buffer（比如下面讲到的普通索引），但是每次更新之后都有查询，即加载数据页，那么change buffer带来的效益就没有了，反而增加了开销。</p>
-
 <p>change buffer对于那些写多读少的表特别有用，比如订单表、日志表。</p>
-
 <h2 id="索引">索引</h2>
-
 <p>分别对普通索引和唯一索引的两种操作对比性能。</p>
-
 <h3 id="查询操作">查询操作</h3>
-
 <ul>
 <li>对于普通索引来说，查找到满足条件的第一个记录 (5,500) 后，需要查找下一个记录，直到碰到第一个不满足 k=5 条件的记录。</li>
 <li>对于唯一索引来说，由于索引定义了唯一性，查找到第一个满足条件的记录后，就会停止继续检索。</li>
 </ul>
-
 <p>两者性能差别微乎其微。</p>
-
 <h3 id="更新操作和change-buffer">更新操作和change buffer</h3>
-
 <ul>
 <li>给普通索引insert记录时，可以直接将更新缓存在change buffer中。</li>
 <li>给唯一索引insert记录时，必须判断插入值是否重复，那么就要加载数据页，然后判断，然后直接在数据页中更新。</li>
 </ul>
-
 <p>所以，唯一索引的insert操作必须要求数据页已经在内存中，如果没有则要加载，它用不了change buffer，因此代价是很高的。</p>
-
 <h3 id="如何选择索引">如何选择索引</h3>
-
 <p>可以看到普通索引可以利用change buffer能够得到性能好处，你会倾向于使用普通索引，但是如果业务一定要求唯一索引，那你还是得用唯一索引。</p>
-
 <p>另一个场景是，如果你要把线上表做一个归档，你会建一个和线上表结构一样的归档表，然后把线上表的数据copy到归档表中，此时你可以<strong>把归档表中的唯一索引改成普通索引</strong>，这样能够极大的提高归档效率（因为可以利用change buffer）。</p>
-
 <h2 id="change-buffer和redo-log">change buffer和redo log</h2>
-
 <h3 id="更新过程">更新过程</h3>
-
 <p>现在，我们要在表上执行这个插入语句：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql">mysql<span style="color:#f92672">&gt;</span> <span style="color:#66d9ef">insert</span> <span style="color:#66d9ef">into</span> t(id,k) <span style="color:#66d9ef">values</span>(id1,k1),(id2,k2);</code></pre></div>
-<p>我们假设当前 k 索引树的状态，查找到位置后，k1 所在的数据页在内存 (InnoDB buffer pool) 中，k2 所在的数据页不在内存中。下图 所示是带 change buffer 的更新状态图。</p>
-
-<p><img src="change-buffer-update.png" style="zoom:50%;" /></p>
-
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql">mysql<span style="color:#f92672">&gt;</span> <span style="color:#66d9ef">insert</span> <span style="color:#66d9ef">into</span> t(id,k) <span style="color:#66d9ef">values</span>(id1,k1),(id2,k2);
+</code></pre></div><p>我们假设当前 k 索引树的状态，查找到位置后，k1 所在的数据页在内存 (InnoDB buffer pool) 中，k2 所在的数据页不在内存中。下图 所示是带 change buffer 的更新状态图。</p>
+<p><!-- raw HTML omitted --></p>
 <p>这条更新语句涉及了四个部分：内存、redo log（ib_log_fileX）、 数据表空间（t.ibd）、系统表空间（ibdata1）。</p>
-
 <p>这条更新语句做了如下的操作（按照图中的数字顺序）：</p>
-
 <ol>
 <li>Page 1 在内存中，直接更新内存；</li>
 <li>Page 2 没有在内存中，就在内存的 change buffer 区域，记录下“我要往 Page 2 插入一行”这个信息</li>
 <li>将上述两个动作记入 redo log 中（图中 3 和 4）。</li>
 </ol>
-
 <p>同时，图中的两个虚线箭头，是后台操作，不影响更新的响应时间。</p>
-
 <h3 id="读过程">读过程</h3>
-
 <p>我们现在要执行 <code>select * from t where k in (k1, k2)</code>流程如下：</p>
-
-<p><img src="change-buffer-read.png" style="zoom:50%;" /></p>
-
+<p><!-- raw HTML omitted --></p>
 <ol>
 <li>读 Page 1 的时候，直接从内存返回。</li>
 <li>要读 Page 2 的时候，需要把 Page 2 从磁盘读入内存中，然后应用 change buffer 里面的操作日志，生成一个正确的版本并返回结果。这个动作称为merge。</li>
 </ol>
-
 <p>可以看到，直到需要读 Page 2 的时候，这个数据页才会被读入内存。</p>
-
 <p>将change buffer应用到数据页，该操作称为merge，它的时机：</p>
-
 <ul>
 <li>当下次数据页从磁盘加载到内存中时，会执行merge</li>
 <li>系统后台定时触发merge</li>
 <li>数据库shutdown时（正常关闭）会执行merge</li>
 </ul>
-
 <p>merge 的执行流程是这样的：</p>
-
 <ol>
 <li>从磁盘读入数据页到内存（老版本的数据页）；</li>
 <li>从 change buffer 里找出这个数据页的 change buffer 记录 (可能有多个），依次应用，得到新版数据页；</li>
 <li>写 redo log。这个 redo log 包含了数据的变更和 change buffer 的变更。</li>
 </ol>
-
 <p><strong>redo log 主要节省的是随机写磁盘的 IO 消耗（转成顺序写），而 change buffer 主要节省的则是随机读磁盘的 IO 消耗。</strong></p>
-
 <h2 id="思考题">思考题</h2>
-
 <p>change buffer写入后断电了，数据会不会丢失。</p>
-
 <p>按照前面merge的执行流程，它的最后一步是写redo log，而按照redo log的约定，只有commit的redo log才选真正写入。因此只要redo log写了，且commit了，断电后数据会丢失的。如果没有写redo log，或者redo log没有commit，这个时候断电，数据会丢失的。</p>
-
 <p>不过好像具体情况更复杂，上面只是一个大概的意思。</p></article>
     <footer class="post-footer">
       

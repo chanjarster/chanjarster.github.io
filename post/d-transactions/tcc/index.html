@@ -16,31 +16,28 @@
 
   
   <meta name="author" content="颇忒脱" />
-  <meta name="description" content="
-" />
+  <meta name="description" content="" />
 
   
   
     <meta name="twitter:card" content="summary" />
     <meta name="twitter:site" content="@gohugoio" />
     <meta name="twitter:title" content="事务 - TCC" />
-    <meta name="twitter:description" content="
-" />
+    <meta name="twitter:description" content="" />
     <meta name="twitter:image" content="https://chanjarster.github.io/img/avatar.jpg" />
   
 
   
   <meta property="og:type" content="article" />
   <meta property="og:title" content="事务 - TCC" />
-  <meta property="og:description" content="
-" />
+  <meta property="og:description" content="" />
   <meta property="og:url" content="https://chanjarster.github.io/post/d-transactions/tcc/" />
   <meta property="og:image" content="https://chanjarster.github.io/img/avatar.jpg" />
 
 
 
 
-<meta name="generator" content="Hugo 0.49.2" />
+<meta name="generator" content="Hugo 0.68.1" />
 
 
 <link rel="canonical" href="https://chanjarster.github.io/post/d-transactions/tcc/" />
@@ -248,12 +245,8 @@
       <h1 class="post-title">事务 - TCC</h1>
       <p class="post-meta">@颇忒脱 · Mar 20, 2018 · 1 min read</p>
     </header>
-    <article class="post-content"><p></p>
-
-<p><a href="https://github.com/chanjarster/transactions">github</a></p>
-
+    <article class="post-content"><p><a href="https://github.com/chanjarster/transactions">github</a></p>
 <p>在前一篇文章中讲到了<a href="https://segmentfault.com/a/1190000013775137">BASE模式</a>，这种模式可以应用在单库or跨库事务的场景下。事实上BASE模式不仅仅局限于数据库层面，还可以应用于分布式系统，这类分布式系统最典型的例子就是电商平台，它们有以下几个特征：</p>
-
 <ol>
 <li>SOA化/微服务化：单体应用拆分成多个服务。</li>
 <li>数据库的各种拆分技术的运用：分表、分库、分区。</li>
@@ -261,57 +254,39 @@
 <li>应用之间的通信手段并非直接读数据库：RESTful、RPC、消息中间件等。</li>
 <li>大量跨应用事务的出现。</li>
 </ol>
-
 <p>在这种场景下，<a href="https://segmentfault.com/a/1190000013772027">2PC</a>（及XA）已经无法满足需求，因为它：</p>
-
 <ol>
 <li>性能低下，2PC协议是阻塞式的。当协调的数据库越来越多时，性能无法接受。</li>
 <li>无法水平扩展以提升性能，只能靠垂直扩展（提升硬件）——更快的CPU、更快更大的硬盘、更大更快的内存——但是这样很贵，并且很容易遇到极限。</li>
 <li>染指其他数据库。</li>
 <li>依赖于数据库是否支持2PC（XA）。</li>
 </ol>
-
 <p>而BASE只解决最后提交的问题，不能解决诸如在<a href="https://segmentfault.com/a/1190000013775137">上一篇文章</a>中最后提到的如何保证刷卡消费不透支的问题.于是就有人提出了<a href="https://www.infoq.com/presentations/Transactions-HTTP-REST">TCC模式</a>（Try、Confirm、Cancel），这一模式在国内因阿里巴巴的推广而广为人知。</p>
-
 <h2 id="协议介绍">协议介绍</h2>
-
 <p>在TCC协议里，参与的主体分为两种：</p>
-
 <ul>
 <li>发起方：发起事务的应用。</li>
 <li>参与方：执行事务请求，手上握有资源的服务。</li>
 </ul>
-
 <p>并且有三种动作：Try、Confirm、Cancel。</p>
-
 <p>TCC是Try、Confirm、Cancel的简称，它们分别的职责是：</p>
-
 <ul>
 <li>Try：负责预留资源（比如新建一条状态=PENDING的订单），同时也做业务检查（比如看看余额是否足够），简单来说就是不能预留已经被占用的资源。</li>
 <li>Confirm：负责落地所预留的资源（比如扣费、把订单状态变成COMPLETED）</li>
 <li>Cancel：负责撤销所预留的资源（比如把订单状态变成CANCELED）</li>
 </ul>
-
 <p>关于预留资源要多说两句，资源都是有限的，因此预留资源都是有时效的，如果当预留资源迟迟得不到Confirm——我们将这种情况称为timeout——参与方会自行将其Cancel（这里有坑，下面会讲）。也就是说参与方对于资源具有自我管理能力，这样可以避免因发起方的问题导致资源被长期占用。</p>
-
 <p>TCC于BASE相比，增加了业务检查和撤销事务的功能。</p>
-
 <p>同时，TCC将2PC数据库层面的动作提升到了服务层面，不同的是TCC的所有动作都是一个本地事务，每个本地事务都在动作完成后commit到数据库：</p>
-
 <ul>
 <li>Try相当于2PC的Commit request phase，外加了业务检查逻辑</li>
 <li>Confirm相当于2PC的Commit phase的commit动作</li>
 <li>Cancel相当于2PC的Commit phase的rollback动作</li>
 </ul>
-
 <h2 id="流程">流程</h2>
-
 <p>以下是TCC的状态图：</p>
-
-<p><img src="https://chanjarster.github.io/img/bV564S" alt="TCC的状态" /></p>
-
+<p><img src="https://chanjarster.github.io/img/bV564S" alt="TCC的状态"></p>
 <p>下面是流程步骤（你会发现和2PC很像）：</p>
-
 <ol>
 <li>【发起方】发送Try到所有参与方</li>
 <li>每个【参与方】执行Try，预留资源</li>
@@ -320,20 +295,15 @@
 <li>每个【参与方】执行Confirm/Cancel</li>
 <li>【发起方】收到所有【参与方】的Confirm/Cancel结果</li>
 </ol>
-
 <h2 id="异常处理">异常处理</h2>
-
 <p>从【发起方】的角度来看出现异常要怎么处理：</p>
-
 <ol>
 <li>step 1发生异常，【发起方】可以什么都不做等待【参与方】自行Cancel，也可以直接发起Cancel请求</li>
 <li>step 2、3发生异常，意味着【发起方】没有收到【参与方】的响应，这个时候因认定为失败，执行Cancel</li>
 <li>step 4发生异常，【发起方】重试Confirm/Cancel</li>
 <li>step 5、6发生异常，意味着【发起方】没有收到【参与方】的响应，这个时候因认定为失败，重试Confirm/Cancel</li>
 </ol>
-
 <p>从【参与方】角度来看看看出现异常怎么处理：</p>
-
 <ol>
 <li>step 1，意味着【参与方】没有收到请求，什么都不需要做</li>
 <li>step 2，意味着【参与方】没有执行成功，什么都不需要做</li>
@@ -342,31 +312,22 @@
 <li>step 5，等待【发起方】重试即可</li>
 <li>step 6，意味着【发起方】没有收到结果，什么都不需要做，等待【发起方】重试即可，【参与方】要保证Confirm/Cancel是幂等的。</li>
 </ol>
-
 <p>观察一下你就会发现TCC和2PC存在一样的问题：</p>
-
 <ol>
 <li>若【发起方】/【参与方】因崩溃遗失了信息，则会造成有的【参与方】已Confirm，有的【参与方】则被Cancel了，甚至于依然保持在预留状态。</li>
 <li>若【发起方】在step 4发送Confirm，而【参与方】在Cancel（因timeout导致）。</li>
 </ol>
-
 <p>不过TCC在处理这种情况相比2PC具有一些优势，因为TCC是在服务层面的，当出现这种问题的时候可以很容易通过日志、业务数据排查出来，然后人工介入，而2PC完全是数据库底层的。</p>
-
 <h2 id="对于acid的保证">对于ACID的保证</h2>
-
 <p>TCC对于ACID的保证：</p>
-
 <ul>
 <li>A，正常情况下保证</li>
 <li>C，在某个时间点，会出现A库和B库的数据违反一致性要求的情况，但是最终是一致的</li>
 <li>I，在某个时间点，A事务能够读到B事务部分提交的结果</li>
 <li>D，和本地事务一样，只要commit则数据被持久</li>
 </ul>
-
 <h2 id="实现tcc时的注意事项">实现TCC时的注意事项</h2>
-
 <p>实现TCC需要关注以下几个方面：</p>
-
 <ul>
 <li>TCC模式在于服务层面而非数据库层面</li>
 <li>TCC模式依赖于各服务正确实现Try、Confirm、Cancel和timeout处理机制</li>
@@ -374,9 +335,7 @@
 <li>不是所有业务模型都适合使用TCC，比如发邮件业务根本就不需要预留资源</li>
 <li>需要良好地设计服务的日志、人工处理流程/机制，便于异常情况的处理</li>
 </ul>
-
 <h2 id="参考资料">参考资料</h2>
-
 <ul>
 <li><a href="http://design.inf.usi.ch/sites/default/files/biblio/rest-tcc.pdf">Paper - Rest TCC</a></li>
 <li><a href="https://www.infoq.com/presentations/Transactions-HTTP-REST">Presentation - Transactions for the REST of Us</a></li>
@@ -396,7 +355,7 @@
       </ul>
       
       <p class="post-copyright">
-        This post was published <strong>729</strong> days ago, content in the post may be inaccurate, even wrong now, please take risk yourself.
+        This post was published <strong>738</strong> days ago, content in the post may be inaccurate, even wrong now, please take risk yourself.
       </p>
     </footer>
     

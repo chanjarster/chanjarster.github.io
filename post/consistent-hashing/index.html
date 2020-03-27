@@ -16,31 +16,28 @@
 
   
   <meta name="author" content="颇忒脱" />
-  <meta name="description" content="
-" />
+  <meta name="description" content="" />
 
   
   
     <meta name="twitter:card" content="summary" />
     <meta name="twitter:site" content="@gohugoio" />
     <meta name="twitter:title" content="一致性Hash笔记" />
-    <meta name="twitter:description" content="
-" />
+    <meta name="twitter:description" content="" />
     <meta name="twitter:image" content="https://chanjarster.github.io/img/avatar.jpg" />
   
 
   
   <meta property="og:type" content="article" />
   <meta property="og:title" content="一致性Hash笔记" />
-  <meta property="og:description" content="
-" />
+  <meta property="og:description" content="" />
   <meta property="og:url" content="https://chanjarster.github.io/post/consistent-hashing/" />
   <meta property="og:image" content="https://chanjarster.github.io/img/avatar.jpg" />
 
 
 
 
-<meta name="generator" content="Hugo 0.49.2" />
+<meta name="generator" content="Hugo 0.68.1" />
 
 
 <link rel="canonical" href="https://chanjarster.github.io/post/consistent-hashing/" />
@@ -248,58 +245,33 @@
       <h1 class="post-title">一致性Hash笔记</h1>
       <p class="post-meta">@颇忒脱 · Dec 4, 2019 · 1 min read</p>
     </header>
-    <article class="post-content"><p></p>
-
-<p>场景概述：假设你有个N个服务器，你想要把你的数据均匀的分配到这N个服务器中，并且每次取数据的时候到对应的服务器去取。</p>
-
-<h2 id="方案一-轮询-字典表">方案一：轮询+字典表</h2>
-
+    <article class="post-content"><p>场景概述：假设你有个N个服务器，你想要把你的数据均匀的分配到这N个服务器中，并且每次取数据的时候到对应的服务器去取。</p>
+<h2 id="方案一轮询字典表">方案一：轮询+字典表</h2>
 <p>给数据生成一个key，轮询的方式把数据存到这N个服务器中，并且保存一个key-&gt;服务器的字典。</p>
-
 <p>增加服务器时：老服务器总是会比新服务器存更多数据</p>
-
 <p>删除服务器时：需要更新字典，因为某些key对应的服务器已经不存在了</p>
-
 <p>优点：很均匀</p>
-
 <p>缺点：需要维护字典，这个有额外开销。同时这个字典会变成瓶颈。</p>
-
-<h2 id="方案二-hash取模分配">方案二：hash取模分配</h2>
-
+<h2 id="方案二hash取模分配">方案二：hash取模分配</h2>
 <p>给数据生成一个key，取数据和存数据的时候都用<code>serverIndex = hash(key) mod N</code>得到服务器编号。关于hash函数，得使用结果均匀的算法，Java的<code>hashCode</code>不均匀，有以下选择：</p>
-
 <ul>
 <li><a href="https://en.wikipedia.org/wiki/SHA-1">SHA-1</a> 和 <a href="https://en.wikipedia.org/wiki/MD5">MD5</a> 均匀，但他们是密码学算法，比较耗CPU</li>
 <li><a href="https://en.wikipedia.org/wiki/MurmurHash">MurmurHash</a>，开销低一点</li>
 <li>还有非密码学算法：<a href="https://github.com/cespare/xxhash">xxHash</a>，<a href="https://github.com/dgryski/go-metro">MetroHash</a>，<a href="https://github.com/dgryski/go-metro">MetroHash</a></li>
 </ul>
-
 <p>增加服务器时：所有的key都得重新取模</p>
-
 <p>删除服务器时：所有的key都得重新取模</p>
-
 <p>优点：没有保存字典的开销</p>
-
 <p>缺点：增加和删除服务器的时候需要移动所有key</p>
-
-<h2 id="方案三-一致性hash">方案三：一致性hash</h2>
-
+<h2 id="方案三一致性hash">方案三：一致性hash</h2>
 <p>一致性hash为了解决前一种方案的缺点，提出了一种可以在增加or删除服务器的时候只移动1/N个key的办法。</p>
-
-<p>想象有一个环，上面有2<sup>32</sup>个点，每个服务器在这个环上都有一个点，给定一个key怎么找对应的服务器？先<code>hash(key)</code>得到它所在的点，然后顺时针找到第一个服务器：</p>
-
-<p><img src="https://kkc.github.io/img/2016-08/consistent_hashing_3.png" alt="" /></p>
-
+<p>想象有一个环，上面有2<!-- raw HTML omitted -->32<!-- raw HTML omitted -->个点，每个服务器在这个环上都有一个点，给定一个key怎么找对应的服务器？先<code>hash(key)</code>得到它所在的点，然后顺时针找到第一个服务器：</p>
+<p><img src="https://kkc.github.io/img/2016-08/consistent_hashing_3.png" alt=""></p>
 <p>当增加or删除服务器的时候，key沿着顺时针找到下一个服务器就行，如果服务器在环上的分布均匀（即间隔均匀），那么也就只有1/N的会产生移动。</p>
-
 <p>但是随着服务器的增加or删除，总是会不均匀，因此我们可以给服务器增加分身（即虚拟节点）：</p>
-
-<p><img src="https://kkc.github.io/img/2016-08/virtual.jpg" alt="" /></p>
-
+<p><img src="https://kkc.github.io/img/2016-08/virtual.jpg" alt=""></p>
 <p>可以看到A、B、C三个服务器在环上的位置不止一个，这样就能解决key分布不均匀的问题。</p>
-
 <h3 id="参考代码">参考代码</h3>
-
 <p>感谢<a href="http://www.tom-e-white.com/2007/11/consistent-hashing.html">Tom White - Consistent Hashing</a>，他给出了一种Java的参考实现：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#66d9ef">public</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">ConsistentHash</span><span style="color:#f92672">&lt;</span>T<span style="color:#f92672">&gt;</span> <span style="color:#f92672">{</span>
 
@@ -352,23 +324,16 @@
     <span style="color:#66d9ef">return</span> circle<span style="color:#f92672">.</span><span style="color:#a6e22e">get</span><span style="color:#f92672">(</span>hash<span style="color:#f92672">);</span>
   <span style="color:#f92672">}</span> 
 
-<span style="color:#f92672">}</span></code></pre></div>
-<h3 id="代价">代价</h3>
-
+<span style="color:#f92672">}</span>
+</code></pre></div><h3 id="代价">代价</h3>
 <p>那么每个服务器多少个虚拟节点才能使得分布均匀呢？</p>
-
 <p><a href="https://medium.com/@dgryski/consistent-hashing-algorithmic-tradeoffs-ef6b8e2fcae8">Consistent Hashing: Algorithmic Tradeoffs</a>提到：</p>
-
 <blockquote>
 <p>每个服务器100个虚拟节点，负载的标准差为10%，1000个虚拟节点时负载的标准差为~3.2%。这就意味着具有较大的内存开销</p>
 </blockquote>
-
 <p>不过我认为你有100台服务器，每个1,000个虚拟节点，Map中放100,000个entry占用的空间也不大。</p>
-
 <p>这篇文章里也提到了更多其他的算法，各有利弊。</p>
-
 <h2 id="参考资料">参考资料</h2>
-
 <ul>
 <li><a href="http://www.tom-e-white.com/2007/11/consistent-hashing.html">Tom White - Consistent Hashing</a>，介绍了基本概念</li>
 <li><a href="https://medium.com/@dgryski/consistent-hashing-algorithmic-tradeoffs-ef6b8e2fcae8">Consistent Hashing: Algorithmic Tradeoffs</a>，提到了更多算法实现及利弊</li>
@@ -386,7 +351,7 @@
       </ul>
       
       <p class="post-copyright">
-        This post was published <strong>105</strong> days ago, content in the post may be inaccurate, even wrong now, please take risk yourself.
+        This post was published <strong>114</strong> days ago, content in the post may be inaccurate, even wrong now, please take risk yourself.
       </p>
     </footer>
     

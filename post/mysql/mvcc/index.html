@@ -16,31 +16,28 @@
 
   
   <meta name="author" content="颇忒脱" />
-  <meta name="description" content="
-" />
+  <meta name="description" content="" />
 
   
   
     <meta name="twitter:card" content="summary" />
     <meta name="twitter:site" content="@gohugoio" />
     <meta name="twitter:title" content="MySQL - MVCC和事务隔离" />
-    <meta name="twitter:description" content="
-" />
+    <meta name="twitter:description" content="" />
     <meta name="twitter:image" content="https://chanjarster.github.io/img/avatar.jpg" />
   
 
   
   <meta property="og:type" content="article" />
   <meta property="og:title" content="MySQL - MVCC和事务隔离" />
-  <meta property="og:description" content="
-" />
+  <meta property="og:description" content="" />
   <meta property="og:url" content="https://chanjarster.github.io/post/mysql/mvcc/" />
   <meta property="og:image" content="https://chanjarster.github.io/img/avatar.jpg" />
 
 
 
 
-<meta name="generator" content="Hugo 0.49.2" />
+<meta name="generator" content="Hugo 0.68.1" />
 
 
 <link rel="canonical" href="https://chanjarster.github.io/post/mysql/mvcc/" />
@@ -248,23 +245,17 @@
       <h1 class="post-title">MySQL - MVCC和事务隔离</h1>
       <p class="post-meta">@颇忒脱 · Dec 30, 2019 · 2 min read</p>
     </header>
-    <article class="post-content"><p></p>
-
-<p>前面提到过MySQL通过MVCC来实现事务隔离（准确的说是InnoDB引擎实现了MVCC）。那么接下来详细讲讲这个MVCC。</p>
-
+    <article class="post-content"><p>前面提到过MySQL通过MVCC来实现事务隔离（准确的说是InnoDB引擎实现了MVCC）。那么接下来详细讲讲这个MVCC。</p>
 <h2 id="先思考一下">先思考一下</h2>
-
 <p>下面是一个例子，这个例子中的数据库事务隔离级别是RR（Repeatable Read），并且auto commit=1。</p>
-
 <p>有一张表，且有(1,1)和(2,2)两条数据：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#66d9ef">CREATE</span> <span style="color:#66d9ef">TABLE</span> <span style="color:#f92672">`</span>t<span style="color:#f92672">`</span> (
   <span style="color:#f92672">`</span>id<span style="color:#f92672">`</span> int(<span style="color:#ae81ff">11</span>) <span style="color:#66d9ef">NOT</span> <span style="color:#66d9ef">NULL</span>,
   <span style="color:#f92672">`</span>k<span style="color:#f92672">`</span> int(<span style="color:#ae81ff">11</span>) <span style="color:#66d9ef">DEFAULT</span> <span style="color:#66d9ef">NULL</span>,
   <span style="color:#66d9ef">PRIMARY</span> <span style="color:#66d9ef">KEY</span> (<span style="color:#f92672">`</span>id<span style="color:#f92672">`</span>)
 ) ENGINE<span style="color:#f92672">=</span>InnoDB;
-<span style="color:#66d9ef">insert</span> <span style="color:#66d9ef">into</span> t(id, k) <span style="color:#66d9ef">values</span>(<span style="color:#ae81ff">1</span>,<span style="color:#ae81ff">1</span>),(<span style="color:#ae81ff">2</span>,<span style="color:#ae81ff">2</span>);</code></pre></div>
-<p>下面是三个事务的执行语句的情况，自上而下代表时间的先后。</p>
-
+<span style="color:#66d9ef">insert</span> <span style="color:#66d9ef">into</span> t(id, k) <span style="color:#66d9ef">values</span>(<span style="color:#ae81ff">1</span>,<span style="color:#ae81ff">1</span>),(<span style="color:#ae81ff">2</span>,<span style="color:#ae81ff">2</span>);
+</code></pre></div><p>下面是三个事务的执行语句的情况，自上而下代表时间的先后。</p>
 <table>
 <thead>
 <tr>
@@ -273,50 +264,42 @@
 <th align="center">事务C</th>
 </tr>
 </thead>
-
 <tbody>
 <tr>
 <td align="center">start transaction with consistent snapshot</td>
 <td align="center"></td>
 <td align="center"></td>
 </tr>
-
 <tr>
 <td align="center"></td>
 <td align="center">start transaction with consistent snapshot</td>
 <td align="center"></td>
 </tr>
-
 <tr>
 <td align="center"></td>
 <td align="center"></td>
 <td align="center">update t set k=k+1 where id=1</td>
 </tr>
-
 <tr>
 <td align="center"></td>
 <td align="center">update t set k=k+1 where id=1</td>
 <td align="center"></td>
 </tr>
-
 <tr>
 <td align="center"></td>
 <td align="center">select k from t where id=1</td>
 <td align="center"></td>
 </tr>
-
 <tr>
 <td align="center">select k from t where id=1</td>
 <td align="center"></td>
 <td align="center"></td>
 </tr>
-
 <tr>
 <td align="center">commit;</td>
 <td align="center"></td>
 <td align="center"></td>
 </tr>
-
 <tr>
 <td align="center"></td>
 <td align="center">commit;</td>
@@ -324,116 +307,77 @@
 </tr>
 </tbody>
 </table>
-
 <p><code>start transaction with consistent snapshot</code>代表了在开启一个事务的时候同时开启一个一致性视图，事务C因为开启了auto commit的关系，所以虽然只有一条语句但是也自成一个事务。</p>
-
 <p>现在问事务A的select得到的值是什么？事务B的select得到的又是什么？</p>
-
 <p>解答这个问题就要回答所谓的“一致性视图”到底是怎么实现的。</p>
-
 <h2 id="一致性视图">一致性视图</h2>
-
 <p>一致性视图就相当于给数据库拍了一个快照，当然这个快照是逻辑的不是物理的。在<a href="../isolation">MySQL - 事务隔离</a>里我们提到了可以通过undo log来得到read view，那么关键问题就变成了：如何能够得到所有表属于这个快照的read view。那先讲三点：</p>
-
 <ol>
 <li>开启事务的时候，会得到一个全局唯一且单调递增的transaction id</li>
 <li>每次更新行的时候，都会把这个transaciton id一并保存，并且将其记为row trx_id</li>
 <li>每行都有多个read view，可以理解为多个版本，read view里记录了row trx_id</li>
 </ol>
-
 <p>那么，如果你现在的transaction id是100，那么你在读一张表的时候就能够规定，只取row trx_id &lt;= 100的read view，这样不就是相当于给数据库打了快照了吗？</p>
-
 <p>下面这张图就是一行有4个版本（read view）V1、V2、V3、V4，通过undo log U1、U2、U3能够得到它们，还有事务id。</p>
-
-<p><img src="row-trx-id.png" style="zoom:50%;" /></p>
-
+<p><!-- raw HTML omitted --></p>
 <h3 id="innodb的实现">InnoDB的实现</h3>
-
 <p>在实现上InnoDB 为每个事务构造了一个数组，用来保存这个事务启动瞬间，当前正在“活跃”的所有事务 ID。“活跃”指的就是，启动了但还没提交。</p>
-
 <p>数组里面事务 ID 的最小值记为低水位，当前系统里面已经创建过的事务 ID 的最大值加 1 记为高水位。这个视图数组和高水位，就组成了当前事务的一致性视图（read-view）。</p>
-
 <p>而数据版本的可见性规则，就是基于数据的 row trx_id 和这个一致性视图的对比结果得到的。</p>
-
-<p><img src="hi-lo.png" style="zoom:50%;" /></p>
-
+<p><!-- raw HTML omitted --></p>
 <p>这样，对于当前事务的启动瞬间来说，一个数据版本的 row trx_id，有以下几种可能：</p>
-
 <ol>
 <li>如果落在绿色部分，表示这个版本是已提交的事务或者是当前事务自己生成的，这个数据是可见的；</li>
 <li>如果落在红色部分，表示这个版本是由将来启动的事务生成的，是肯定不可见的；</li>
 <li>如果落在黄色部分，那就包括两种情况
-
 <ol>
 <li>若 row trx_id 在数组中，表示这个版本是由还没提交的事务生成的，不可见；</li>
 <li>若 row trx_id 不在数组中，表示这个版本是已经提交了的事务生成的，可见。</li>
-</ol></li>
 </ol>
-
+</li>
+</ol>
 <h2 id="回过头来看例子">回过头来看例子</h2>
-
 <p>现在问事务A的select得到的值是什么？事务B的select得到的又是什么？</p>
-
 <p>假设：</p>
-
 <ol>
 <li>事务 A 开始前，系统里面只有一个活跃事务 ID 是 99；</li>
 <li>事务 A、B、C 的版本号分别是 100、101、102，且当前系统里只有这四个事务；</li>
 <li>三个事务开始前，(1,1）这一行数据的 row trx_id 是 90。</li>
 </ol>
-
 <p>那么，事务 A 的视图数组就是 [99,100], 事务 B 的视图数组是 [99,100,101], 事务 C 的视图数组是 [99,100,101,102]</p>
-
 <p>下面是时间线：</p>
-
-<p><img src="tx-timeline.png" style="zoom:50%;" /></p>
-
+<p><!-- raw HTML omitted --></p>
 <h3 id="查询逻辑">查询逻辑</h3>
-
 <p>可以看到事务A得到的结果是1，也就是row trx_id=90的那个版本，因为它处于低水位之下。</p>
-
 <h3 id="更新逻辑">更新逻辑</h3>
-
 <p>可以看到事务B把结果从2变成了3，按照道理说事务C[102]处于高水位之外，应该看不到才对啊。这是因为<strong>更新数据都是先读后写的，而这个读，只能读当前的值，称为“当前读”（current read）</strong>。因为如果不这么做事务C的更新就会被冲掉。</p>
-
 <p>从而，事务B后面的select得到的是3。</p>
-
 <h2 id="开启事务的两种方式">开启事务的两种方式</h2>
-
 <p>前面已经看到了，可以使用<code>start transaction with consistent snapshot</code>来开启事务，同时它还会创建一个一致性视图。但是这个语句只有当事务隔离级别是RR的时候才有用，否则它和下面的<code>begin/start transaction</code>效果是一样的。</p>
-
 <p><code>begin/start transaction</code>也可以开启一个事务，但是它不会创建一个一致性视图，只有当后面执行第一条操作InnoDB表的语句才会创建一致性视图。</p>
-
 <p>下面是RC（Read Commit）级别下的时间线：</p>
-
-<p><img src="tx-timeline.png" style="zoom:50%;" /></p>
-
+<p><!-- raw HTML omitted --></p>
 <p>考虑到执行第一条快照读语句时才会创建一致性视图（也就是那个数组），那么可得出：</p>
-
 <ul>
 <li>A能够读到C提交的结果，2</li>
 <li>B因为更新的时候当前读，所以得到结果3</li>
 </ul>
-
 <h2 id="小节">小节</h2>
-
 <p>InnoDB 的行数据有多个版本，每个数据版本有自己的 row trx_id，每个事务或者语句有自己的一致性视图。普通查询语句是一致性读，一致性读会根据 row trx_id 和一致性视图确定数据版本的可见性。</p>
-
 <ul>
 <li>对于可重复读（RR），查询只承认在事务启动前就已经提交完成的数据；</li>
 <li>对于读提交（RC），查询只承认在语句启动前就已经提交完成的数据；而当前读，总是读取已经提交完成的最新版本。</li>
 </ul>
-
 <h2 id="思考题">思考题</h2>
-
 <p>下面描述了一个场景：数据明明没有变，为何却无法更新。</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql">mysql<span style="color:#f92672">&gt;</span> <span style="color:#66d9ef">CREATE</span> <span style="color:#66d9ef">TABLE</span> <span style="color:#f92672">`</span>t<span style="color:#f92672">`</span> (
   <span style="color:#f92672">`</span>id<span style="color:#f92672">`</span> int(<span style="color:#ae81ff">11</span>) <span style="color:#66d9ef">NOT</span> <span style="color:#66d9ef">NULL</span>,
   <span style="color:#f92672">`</span><span style="color:#66d9ef">c</span><span style="color:#f92672">`</span> int(<span style="color:#ae81ff">11</span>) <span style="color:#66d9ef">DEFAULT</span> <span style="color:#66d9ef">NULL</span>,
   <span style="color:#66d9ef">PRIMARY</span> <span style="color:#66d9ef">KEY</span> (<span style="color:#f92672">`</span>id<span style="color:#f92672">`</span>)
 ) ENGINE<span style="color:#f92672">=</span>InnoDB;
-<span style="color:#66d9ef">insert</span> <span style="color:#66d9ef">into</span> t(id, <span style="color:#66d9ef">c</span>) <span style="color:#66d9ef">values</span>(<span style="color:#ae81ff">1</span>,<span style="color:#ae81ff">1</span>),(<span style="color:#ae81ff">2</span>,<span style="color:#ae81ff">2</span>),(<span style="color:#ae81ff">3</span>,<span style="color:#ae81ff">3</span>),(<span style="color:#ae81ff">4</span>,<span style="color:#ae81ff">4</span>);</code></pre></div><div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">mysql&gt; begin;
-Query OK, <span style="color:#ae81ff">0</span> rows affected <span style="color:#f92672">(</span><span style="color:#ae81ff">0</span>.00 sec<span style="color:#f92672">)</span>
+<span style="color:#66d9ef">insert</span> <span style="color:#66d9ef">into</span> t(id, <span style="color:#66d9ef">c</span>) <span style="color:#66d9ef">values</span>(<span style="color:#ae81ff">1</span>,<span style="color:#ae81ff">1</span>),(<span style="color:#ae81ff">2</span>,<span style="color:#ae81ff">2</span>),(<span style="color:#ae81ff">3</span>,<span style="color:#ae81ff">3</span>),(<span style="color:#ae81ff">4</span>,<span style="color:#ae81ff">4</span>);
+</code></pre></div><div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">mysql&gt; begin;
+Query OK, <span style="color:#ae81ff">0</span> rows affected <span style="color:#f92672">(</span>0.00 sec<span style="color:#f92672">)</span>
 
 mysql&gt; <span style="color:#66d9ef">select</span> * from t;
 +----+------+
@@ -444,10 +388,10 @@ mysql&gt; <span style="color:#66d9ef">select</span> * from t;
 | <span style="color:#ae81ff">3</span>  | <span style="color:#ae81ff">3</span>    |
 | <span style="color:#ae81ff">4</span>  | <span style="color:#ae81ff">4</span>    |
 +----+------+
-<span style="color:#ae81ff">4</span> rows in set <span style="color:#f92672">(</span><span style="color:#ae81ff">0</span>.00 sec<span style="color:#f92672">)</span>
+<span style="color:#ae81ff">4</span> rows in set <span style="color:#f92672">(</span>0.00 sec<span style="color:#f92672">)</span>
 
 mysql&gt; update t set c<span style="color:#f92672">=</span><span style="color:#ae81ff">0</span> where id<span style="color:#f92672">=</span>c;
-Query OK, <span style="color:#ae81ff">0</span> rows affected <span style="color:#f92672">(</span><span style="color:#ae81ff">0</span>.00 sec<span style="color:#f92672">)</span>
+Query OK, <span style="color:#ae81ff">0</span> rows affected <span style="color:#f92672">(</span>0.00 sec<span style="color:#f92672">)</span>
 Rows matched: <span style="color:#ae81ff">0</span> Changed: <span style="color:#ae81ff">0</span> Warnings: <span style="color:#ae81ff">0</span>
 
 mysql&gt; <span style="color:#66d9ef">select</span> * from t;
@@ -459,18 +403,14 @@ mysql&gt; <span style="color:#66d9ef">select</span> * from t;
 | <span style="color:#ae81ff">3</span>  | <span style="color:#ae81ff">3</span>    |
 | <span style="color:#ae81ff">4</span>  | <span style="color:#ae81ff">4</span>    |
 +----+------+
-<span style="color:#ae81ff">4</span> rows in set <span style="color:#f92672">(</span><span style="color:#ae81ff">0</span>.00 sec<span style="color:#f92672">)</span></code></pre></div>
-<p>要怎样做才能产生这种情况呢？回顾这张图：</p>
-
-<p><img src="hi-lo.png" style="zoom:50%;" /></p>
-
+<span style="color:#ae81ff">4</span> rows in set <span style="color:#f92672">(</span>0.00 sec<span style="color:#f92672">)</span>
+</code></pre></div><p>要怎样做才能产生这种情况呢？回顾这张图：</p>
+<p><!-- raw HTML omitted --></p>
 <ul>
 <li>当row tx_id 在 红色区域里，对当前事务不可见</li>
 <li>当row tx_id 在 黄色区域里，且在数组中时，对当前事务不可见</li>
 </ul>
-
 <p>那么就有两种做法能够产生这个效果，第一种：</p>
-
 <table>
 <thead>
 <tr>
@@ -478,44 +418,36 @@ mysql&gt; <span style="color:#66d9ef">select</span> * from t;
 <th align="center">事务B</th>
 </tr>
 </thead>
-
 <tbody>
 <tr>
 <td align="center">begin</td>
 <td align="center"></td>
 </tr>
-
 <tr>
 <td align="center">select * from t</td>
 <td align="center"></td>
 </tr>
-
 <tr>
 <td align="center"></td>
 <td align="center">update t set c=c+1</td>
 </tr>
-
 <tr>
 <td align="center">update t set c=0 where id=c</td>
 <td align="center"></td>
 </tr>
-
 <tr>
 <td align="center">select * from t</td>
 <td align="center"></td>
 </tr>
 </tbody>
 </table>
-
 <ul>
 <li>事务A的select产生transaction id 100</li>
 <li>事务B在事务A之后开始，transaction id 101，更新行，row trx_id=101</li>
 <li>事务A的update是当前读，所以没有行被更新</li>
 <li>事务A的select看row tx_id（101）是在红色区域，那么对当前事务不可见，所以得到的结果还是没变的</li>
 </ul>
-
 <p>第二种：</p>
-
 <table>
 <thead>
 <tr>
@@ -523,40 +455,33 @@ mysql&gt; <span style="color:#66d9ef">select</span> * from t;
 <th align="center">事务B</th>
 </tr>
 </thead>
-
 <tbody>
 <tr>
 <td align="center"></td>
 <td align="center">begin</td>
 </tr>
-
 <tr>
 <td align="center">begin</td>
 <td align="center">update t set c=c+1</td>
 </tr>
-
 <tr>
 <td align="center">select * from t</td>
 <td align="center"></td>
 </tr>
-
 <tr>
 <td align="center"></td>
 <td align="center">commit</td>
 </tr>
-
 <tr>
 <td align="center">update t set c=0 where id=c</td>
 <td align="center"></td>
 </tr>
-
 <tr>
 <td align="center">select * from t</td>
 <td align="center"></td>
 </tr>
 </tbody>
 </table>
-
 <ul>
 <li>事务B产生transaction id 100</li>
 <li>事务B update，row tx_id=100</li>

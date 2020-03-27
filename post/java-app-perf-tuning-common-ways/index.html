@@ -16,31 +16,28 @@
 
   
   <meta name="author" content="颇忒脱" />
-  <meta name="description" content="
-" />
+  <meta name="description" content="" />
 
   
   
     <meta name="twitter:card" content="summary" />
     <meta name="twitter:site" content="@gohugoio" />
     <meta name="twitter:title" content="Java应用性能调优套路" />
-    <meta name="twitter:description" content="
-" />
+    <meta name="twitter:description" content="" />
     <meta name="twitter:image" content="https://chanjarster.github.io/img/avatar.jpg" />
   
 
   
   <meta property="og:type" content="article" />
   <meta property="og:title" content="Java应用性能调优套路" />
-  <meta property="og:description" content="
-" />
+  <meta property="og:description" content="" />
   <meta property="og:url" content="https://chanjarster.github.io/post/java-app-perf-tuning-common-ways/" />
   <meta property="og:image" content="https://chanjarster.github.io/img/avatar.jpg" />
 
 
 
 
-<meta name="generator" content="Hugo 0.49.2" />
+<meta name="generator" content="Hugo 0.68.1" />
 
 
 <link rel="canonical" href="https://chanjarster.github.io/post/java-app-perf-tuning-common-ways/" />
@@ -248,113 +245,65 @@
       <h1 class="post-title">Java应用性能调优套路</h1>
       <p class="post-meta">@颇忒脱 · Mar 5, 2020 · 1 min read</p>
     </header>
-    <article class="post-content"><p></p>
-
-<ul>
+    <article class="post-content"><ul>
 <li><strong>一切优化要基于确切的报告，而不是靠猜。</strong></li>
 <li><strong>我们只有通过压力测试才能知道程序性能几何。</strong></li>
 </ul>
-
 <h2 id="压测前准备">压测前准备</h2>
-
 <p>我们应对<strong>单台应用服务器</strong>做压力测试，你只有知道了单台能够承受多少才能知道集群能承受多少。</p>
-
 <p>然后要确定单台应用服务器性能目标：</p>
-
 <ul>
 <li>吞吐量，每秒处理多少请求</li>
 <li>延迟，平均、P50、P90、P99的请求在多少时间内完成</li>
 </ul>
-
 <p>如果客户要求吞吐量为2000rps，能提供2台服务器，那么每台的吞吐量则为1000rps。</p>
-
 <p>如果客户要求延迟P99 &lt;= 2秒，那么和服务器就没有关系了，你需要优化程序算法。</p>
-
 <h2 id="压测时的观察和调优">压测时的观察和调优</h2>
-
 <p>下面我们对单台应用服务器开始压力测试。</p>
-
 <h3 id="保证cpu用满">保证CPU用满</h3>
-
 <p>压测期间我们首先要保证的是CPU利用率接近N * 100%（N为CPU核心数），如果CPU利用率不满那么压测报告就没有意义，因为机器并未全力运转。</p>
-
 <p>发现CPU没有用满，那么有这么几种可能</p>
-
 <ul>
 <li>压力太小，可以调整压测工具来做到</li>
 <li>线程阻塞，后面会讲</li>
 </ul>
-
 <h3 id="保证cpu花在非gc上">保证CPU花在非GC上</h3>
-
 <p>好了现在CPU用满了，那么我们要通过<code>jstat -gcutil</code>来观察JVM是否把CPU花在了GC上，你也可以添加<code>-XX:+PrintGC -XX:+PrintGCTimeStamps -XX:+PrintGCDetails -Xloggc:/path/to/gc.log -XX:+UseGCLogFileRotation -XX:NumberOfGCLogFiles=1 -XX:GCLogFileSize=20M</code> JVM参数得到更详细的GC日志。</p>
-
 <p>重点关注Full GC的次数和占用时间，如果发现Full GC很频繁，有三个解决思路：</p>
-
 <ul>
 <li>增加内存</li>
 <li>优化算法，降低内存利用率，可以通过jmap导出内存dump，再使用MAT分析</li>
 <li>降低压力，可以是降低压测工具侧的压力，也可以是调小程序自身线程池</li>
 </ul>
-
 <h3 id="解决阻塞">解决阻塞</h3>
-
 <p>用jstack导出thread dump来分析。</p>
-
 <p>线程阻塞是常见的CPU利用率不满的元凶，因为阻塞时不占用CPU，你可以在压测期间用jstack收集几次堆栈数据，然后观察里面的BLOCKED、WAITING、TIMED_WAITING状态的线程的堆栈，找到线索。</p>
-
 <p>如果发现阻塞不可避免，那么可以通过增加线程数的方式来利用CPU。</p>
-
 <p>如果阻塞发生在连接池相关，那么调整连接池大小。如果阻塞发生在执行SQL有关，那么优化SQL语句。如果阻塞发生在其他地方，那么做针对性优化。</p>
-
 <h3 id="观察慢sql">观察慢SQL</h3>
-
 <p>慢SQL是常见阻塞原因，找出这些慢SQL，对它进行优化，或者对数据库表做优化，提升程序响应速度，提高CPU利用率。</p>
-
 <h3 id="观察执行次数异常的sql">观察执行次数异常的SQL</h3>
-
 <p>执行次数异常的SQL也是很重要的一点，抓住这些SQL，对代码进行优化。</p>
-
 <h3 id="数据库连接池">数据库连接池</h3>
-
 <p>连接池不够也是常见的阻塞元凶，线程在等待连接池导致CPU利用率上不去，不过还是那句话，<strong>不要盲目调整</strong>，你应该在jstack里看到大量获取jdbc connection的阻塞线程之后才去调整它。</p>
-
 <h3 id="线程池">线程池</h3>
-
 <p>按照理论上来说，如果线程不阻塞，那么只需要N个线程就能把CPU占满（N是CPU核心数）。线程阻塞占用比例越大，就需要越多线程来占用空闲CPU时间。</p>
-
 <p>如果你优化之后把阻塞比例降低了，那么你也需要相应调小线程池尺寸。</p>
-
 <p>过多的线程池不会带来更多好处，白白占用内存而已。</p>
-
 <h3 id="服务器异常日志">服务器异常日志</h3>
-
 <p>有时候服务器异常日志也会提供给你很好的线索，记得观察。特别是如果异常特别多的话，会直接影响性能的。</p>
-
-<h3 id="观察-优化-验证的循环">观察、优化、验证的循环</h3>
-
+<h3 id="观察优化验证的循环">观察、优化、验证的循环</h3>
 <p>当你做了一个优化点后，你再压一遍，看看是否有改善，同时需要调整其他相关参数，比如前面提到的调小线程池。</p>
-
 <p>同时，有些时候做了一个优化点之后，会发现新的问题，这个问题可能在之前被那个占大部分因素的性能瓶颈遮蔽掉了，现在大问题解决了，那这个小问题就显现出来了。此时，你需要针对这个新问题再收集报告，然后再优化。举个例子，原来是SQL慢，优化好之后会发现程序算法也有问题。</p>
-
 <h2 id="一些工具">一些工具</h2>
-
 <h3 id="gc分析">GC分析</h3>
-
 <p><a href="https://gceasy.io">https://gceasy.io</a> 是一个在线分析GC日志的工具。把得到的gc.log日志。</p>
-
 <h3 id="heap-dump分析">heap dump分析</h3>
-
 <p>利用下面命令得到heap dump，然后放到MAT中分析</p>
-
 <p><code>jmap -dump:live,format=b,file=heap.bin &lt;pid&gt;</code></p>
-
 <p>有些时候你需要把垃圾一起dump下来，比如GC很频繁，那么去掉live参数：</p>
-
 <p><code>jmap -dump:format=b,file=heap.bin &lt;pid&gt;</code></p>
-
 <h3 id="thread-dump分析">thread dump分析</h3>
-
 <p>利用jstack得到thread dump，然后放到 <a href="https://fastthread.io/">https://fastthread.io/</a> 分析</p></article>
     <footer class="post-footer">
       

@@ -16,31 +16,28 @@
 
   
   <meta name="author" content="颇忒脱" />
-  <meta name="description" content="
-" />
+  <meta name="description" content="" />
 
   
   
     <meta name="twitter:card" content="summary" />
     <meta name="twitter:site" content="@gohugoio" />
     <meta name="twitter:title" content="MySQL - 数据库选错索引怎么办" />
-    <meta name="twitter:description" content="
-" />
+    <meta name="twitter:description" content="" />
     <meta name="twitter:image" content="https://chanjarster.github.io/img/avatar.jpg" />
   
 
   
   <meta property="og:type" content="article" />
   <meta property="og:title" content="MySQL - 数据库选错索引怎么办" />
-  <meta property="og:description" content="
-" />
+  <meta property="og:description" content="" />
   <meta property="og:url" content="https://chanjarster.github.io/post/mysql/force-index/" />
   <meta property="og:image" content="https://chanjarster.github.io/img/avatar.jpg" />
 
 
 
 
-<meta name="generator" content="Hugo 0.49.2" />
+<meta name="generator" content="Hugo 0.68.1" />
 
 
 <link rel="canonical" href="https://chanjarster.github.io/post/mysql/force-index/" />
@@ -248,12 +245,8 @@
       <h1 class="post-title">MySQL - 数据库选错索引怎么办</h1>
       <p class="post-meta">@颇忒脱 · Jan 12, 2020 · 1 min read</p>
     </header>
-    <article class="post-content"><p></p>
-
-<p>在<a href="../basic-arch">基础架构</a>里提到在执行查询时优化器负责选择使用哪个索引。</p>
-
+    <article class="post-content"><p>在<a href="../basic-arch">基础架构</a>里提到在执行查询时优化器负责选择使用哪个索引。</p>
 <h2 id="实验1">实验1</h2>
-
 <p>建表：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#66d9ef">CREATE</span> <span style="color:#66d9ef">TABLE</span> <span style="color:#f92672">`</span>t<span style="color:#f92672">`</span> (
   <span style="color:#f92672">`</span>id<span style="color:#f92672">`</span> int(<span style="color:#ae81ff">11</span>) <span style="color:#66d9ef">NOT</span> <span style="color:#66d9ef">NULL</span>,
@@ -262,8 +255,8 @@
   <span style="color:#66d9ef">PRIMARY</span> <span style="color:#66d9ef">KEY</span> (<span style="color:#f92672">`</span>id<span style="color:#f92672">`</span>),
   <span style="color:#66d9ef">KEY</span> <span style="color:#f92672">`</span>a<span style="color:#f92672">`</span> (<span style="color:#f92672">`</span>a<span style="color:#f92672">`</span>),
   <span style="color:#66d9ef">KEY</span> <span style="color:#f92672">`</span>b<span style="color:#f92672">`</span> (<span style="color:#f92672">`</span>b<span style="color:#f92672">`</span>)
-) ENGINE<span style="color:#f92672">=</span>InnoDB<span style="color:#960050;background-color:#1e0010">；</span></code></pre></div>
-<p>插入数据：</p>
+) ENGINE<span style="color:#f92672">=</span>InnoDB<span style="color:#960050;background-color:#1e0010">；</span>
+</code></pre></div><p>插入数据：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#66d9ef">delimiter</span> ;;
 <span style="color:#66d9ef">create</span> <span style="color:#66d9ef">procedure</span> idata()
 <span style="color:#66d9ef">begin</span>
@@ -275,36 +268,28 @@
   <span style="color:#66d9ef">end</span> while;
 <span style="color:#66d9ef">end</span>;;
 <span style="color:#66d9ef">delimiter</span> ;
-<span style="color:#66d9ef">call</span> idata();</code></pre></div>
-<p>用explain`来观察MySQL会选择哪个索引：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql">mysql<span style="color:#f92672">&gt;</span> <span style="color:#66d9ef">explain</span> <span style="color:#66d9ef">select</span> <span style="color:#f92672">*</span> <span style="color:#66d9ef">from</span> t <span style="color:#66d9ef">where</span> a <span style="color:#66d9ef">between</span> <span style="color:#ae81ff">10000</span> <span style="color:#66d9ef">and</span> <span style="color:#ae81ff">20000</span>;</code></pre></div>
-<p><img src="explain-1.png" /></p>
-
+<span style="color:#66d9ef">call</span> idata();
+</code></pre></div><p>用explain`来观察MySQL会选择哪个索引：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql">mysql<span style="color:#f92672">&gt;</span> <span style="color:#66d9ef">explain</span> <span style="color:#66d9ef">select</span> <span style="color:#f92672">*</span> <span style="color:#66d9ef">from</span> t <span style="color:#66d9ef">where</span> a <span style="color:#66d9ef">between</span> <span style="color:#ae81ff">10000</span> <span style="color:#66d9ef">and</span> <span style="color:#ae81ff">20000</span>;
+</code></pre></div><p><!-- raw HTML omitted --></p>
 <p>结果表明MySQL会选择索引<strong>a</strong>，并且预计扫描10001行，为什么是10001行而不是10000行？这是因为在扫描的时候要扫描到第一个不满足条件的数据为止，因此会多扫一行。</p>
-
 <h2 id="选错索引的逻辑">选错索引的逻辑</h2>
-
 <p>优化器选择索引考虑的因素：</p>
-
 <ul>
 <li>cardinality（基数），基数代表区分度，基数越大区分度则越大，不同值越多则区分度越大，区分度大的索引被选择的概率大</li>
 </ul>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql">mysql<span style="color:#f92672">&gt;</span> <span style="color:#66d9ef">show</span> <span style="color:#66d9ef">index</span> <span style="color:#66d9ef">from</span> t;</code></pre></div>
-<p><img src="cardinality.png" /></p>
-
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql">mysql<span style="color:#f92672">&gt;</span> <span style="color:#66d9ef">show</span> <span style="color:#66d9ef">index</span> <span style="color:#66d9ef">from</span> t;
+</code></pre></div><p><!-- raw HTML omitted --></p>
 <p>基数的值并非精确值而是一个估算值，InnoDB选取N个数据页统计不同值，计算基数平均值。当更新的行超过1/M时，重新计算基数。可以用<code>innodb_stats_persistent</code>来控制这个统计信息存在哪里。</p>
-
 <ul>
 <li>预估执行该语句本身会扫描多少行，同时会预估回表的代价</li>
 </ul>
-
 <h2 id="纠正办法">纠正办法</h2>
-
 <p>重新统计索引信息：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#66d9ef">ANALYZE</span> <span style="color:#66d9ef">TABLE</span> t;</code></pre></div>
-<p>强制告诉使用哪个索引，<code>force index</code>：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#66d9ef">select</span> <span style="color:#f92672">*</span> <span style="color:#66d9ef">from</span> t <span style="color:#66d9ef">force</span> <span style="color:#66d9ef">index</span>(a) <span style="color:#66d9ef">where</span> ...</code></pre></div>
-<p>其他tricky的方法，这里不做介绍了。</p></article>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#66d9ef">ANALYZE</span> <span style="color:#66d9ef">TABLE</span> t;
+</code></pre></div><p>强制告诉使用哪个索引，<code>force index</code>：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#66d9ef">select</span> <span style="color:#f92672">*</span> <span style="color:#66d9ef">from</span> t <span style="color:#66d9ef">force</span> <span style="color:#66d9ef">index</span>(a) <span style="color:#66d9ef">where</span> ...
+</code></pre></div><p>其他tricky的方法，这里不做介绍了。</p></article>
     <footer class="post-footer">
       
       <ul class="post-tags">

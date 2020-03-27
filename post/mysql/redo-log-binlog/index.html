@@ -16,31 +16,28 @@
 
   
   <meta name="author" content="颇忒脱" />
-  <meta name="description" content="
-" />
+  <meta name="description" content="" />
 
   
   
     <meta name="twitter:card" content="summary" />
     <meta name="twitter:site" content="@gohugoio" />
     <meta name="twitter:title" content="MySQL - redo log和binlog" />
-    <meta name="twitter:description" content="
-" />
+    <meta name="twitter:description" content="" />
     <meta name="twitter:image" content="https://chanjarster.github.io/img/avatar.jpg" />
   
 
   
   <meta property="og:type" content="article" />
   <meta property="og:title" content="MySQL - redo log和binlog" />
-  <meta property="og:description" content="
-" />
+  <meta property="og:description" content="" />
   <meta property="og:url" content="https://chanjarster.github.io/post/mysql/redo-log-binlog/" />
   <meta property="og:image" content="https://chanjarster.github.io/img/avatar.jpg" />
 
 
 
 
-<meta name="generator" content="Hugo 0.49.2" />
+<meta name="generator" content="Hugo 0.68.1" />
 
 
 <link rel="canonical" href="https://chanjarster.github.io/post/mysql/redo-log-binlog/" />
@@ -248,43 +245,27 @@
       <h1 class="post-title">MySQL - redo log和binlog</h1>
       <p class="post-meta">@颇忒脱 · Dec 18, 2019 · 1 min read</p>
     </header>
-    <article class="post-content"><p></p>
-
-<p>MySQL有两个日志模块，redo log和binlog。</p>
-
+    <article class="post-content"><p>MySQL有两个日志模块，redo log和binlog。</p>
 <h2 id="redo-log">redo log</h2>
-
 <p>redo log属于InnoDB存储引擎。实际上就是WAL（Write-Ahead Log），在写磁盘前（数据页）先写日志。</p>
-
 <p>并且写好日志之后先更新内存，直到一下两种情况时才同步到磁盘：</p>
-
 <ul>
 <li>系统闲的时候</li>
 <li>redo log写满的时候</li>
 </ul>
-
 <p>InnoDB的redo log大小是固定的，4个文件每个文件1G。逻辑上可以认为是一个环。write pos是当前写到的位置，checkpoint则是已经同步到数据库的位置，在write pos和checkpoint之间的空白的可写日志区域，checkpoint之后的则是还未同步到磁盘的内容，每次同步一点内容，checkpoint都会往后移动。</p>
-
-<p><img src="redo-log.png" style="zoom:50%;" /></p>
-
+<p><!-- raw HTML omitted --></p>
 <h2 id="binlog">binlog</h2>
-
 <p>属于Server层（见<a href="../basic-arch">MySQL - 基础架构</a>），在InnoDB出现之前，MySQL一直依赖于binlog。</p>
-
 <p>binlog的作用是用来归档。存储引擎可以使用binlog。</p>
-
 <h2 id="两者区别">两者区别</h2>
-
 <ul>
 <li>redo log是InnoDB引擎特有的，binlog则是属于Server的。</li>
 <li>redo log记录的是物理操作，即怎么写“在某个数据页上做了什么修改“，很符合存储引擎的特点。binlog记录的是逻辑操作，比如某行数据的某个字段变成了什么值。</li>
 <li>redo log记录的内容有限，前面说了4G内容。binlog则是无限的。</li>
 </ul>
-
 <h2 id="日志的2pc">日志的2PC</h2>
-
 <p>举例说明redo log和binlog在<code>update T set c=c+1 where ID=2;</code>时是怎么工作的。</p>
-
 <ol>
 <li>【执行器】问【存储引擎】要ID=2的行，如果该行所在数据页已经在内存中，则直接返回，如果不在则从磁盘中加载数据页，然后返回。这里很重要的信息是，更新操作首先是在内存中进行的，之后才会同步到磁盘。</li>
 <li>【执行器】更新字段的值，调用【存储引擎】写入新值</li>
@@ -293,23 +274,16 @@
 <li>【执行器】调用事务提交接口，把之前prepare日志改成commit状态。</li>
 <li>结束</li>
 </ol>
-
 <p>这个都是为了保证【服务层】和【存储引擎】的数据一致性。</p>
-
 <h2 id="为何还要binlog">为何还要binlog？</h2>
-
 <p>binlog看似多余落后，为何redo log没有取代呢？</p>
-
 <ul>
 <li>redo log存储空间有限，binlog则无限。</li>
 <li>redo log只有InnoDB可用，其他引擎不能用</li>
 <li>历史原因，很多机制比如Master-Slave的数据复制使用的是binlog</li>
 </ul>
-
 <h2 id="数据库备份周期">数据库备份周期？</h2>
-
 <p>是一天一备还是一周一备？根据什么来选择？</p>
-
 <p>根据你能承受的系统挂机时间来选择，备份的时间越近就能越快的恢复，反之则时间越长。这个很好理解，距离上次备份到现在所产生的binlog的大小决定了所要恢复的时间。</p></article>
     <footer class="post-footer">
       

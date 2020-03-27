@@ -17,7 +17,6 @@
   
   <meta name="author" content="颇忒脱" />
   <meta name="description" content="在前一篇文章里我们发现通过jstatd &#43; VisualVm的方式，不能获得Java进程的CPU、线程、MBean信息，这时JMX就要登场了。
-
 " />
 
   
@@ -26,7 +25,6 @@
     <meta name="twitter:site" content="@gohugoio" />
     <meta name="twitter:title" content="利用VisualVm和JMX远程监控Java进程" />
     <meta name="twitter:description" content="在前一篇文章里我们发现通过jstatd &#43; VisualVm的方式，不能获得Java进程的CPU、线程、MBean信息，这时JMX就要登场了。
-
 " />
     <meta name="twitter:image" content="https://chanjarster.github.io/img/avatar.jpg" />
   
@@ -35,7 +33,6 @@
   <meta property="og:type" content="article" />
   <meta property="og:title" content="利用VisualVm和JMX远程监控Java进程" />
   <meta property="og:description" content="在前一篇文章里我们发现通过jstatd &#43; VisualVm的方式，不能获得Java进程的CPU、线程、MBean信息，这时JMX就要登场了。
-
 " />
   <meta property="og:url" content="https://chanjarster.github.io/post/visualvm-remote-monitoring-jmx/" />
   <meta property="og:image" content="https://chanjarster.github.io/img/avatar.jpg" />
@@ -43,7 +40,7 @@
 
 
 
-<meta name="generator" content="Hugo 0.49.2" />
+<meta name="generator" content="Hugo 0.68.1" />
 
 
 <link rel="canonical" href="https://chanjarster.github.io/post/visualvm-remote-monitoring-jmx/" />
@@ -252,72 +249,41 @@
       <p class="post-meta">@颇忒脱 · Oct 10, 2018 · 1 min read</p>
     </header>
     <article class="post-content"><p>在<a href="../visualvm-remote-monitoring/">前一篇文章</a>里我们发现通过jstatd + VisualVm的方式，不能获得Java进程的CPU、线程、MBean信息，这时JMX就要登场了。</p>
-
-<p></p>
-
 <p>自Java 6开始，Java程序启动时都会在JVM内部启动一个JMX agent，JMX agent会启动一个MBean server组件，把MBeans（Java平台标准的MBean + 你自己创建的MBean）注册到它里面，然后暴露给JMX client管理。简单来说就是每个Java程序都可以通过JMX来被JMX client管理，而且这一切都是自动发生的。而VisualVm就是一个JMX Client。</p>
-
 <p>VisualVm能够自动发现本机的Java进程，如果要监控远程主机上的Java进程则需要<strong>显式地配置JMX连接</strong>，下面讲配置方法：</p>
-
-<h2 id="第一步-与启动相关的system-properties">第一步：与启动相关的System Properties</h2>
-
+<h2 id="第一步与启动相关的system-properties">第一步：与启动相关的System Properties</h2>
 <p>要给远程主机上的监控的Java进程在启动时必须带上几个JMX相关的System Properties（常用的几个）：</p>
-
 <ul>
 <li><code>com.sun.management.jmxremote.port</code>, 指定暴露的JMX端口。</li>
 <li><code>com.sun.management.jmxremote.rmi.port</code>, 指定RMI connector端口，可以和<code>com.sun.management.jmxremote.port</code>保持一致。</li>
 <li><code>com.sun.management.jmxremote.ssl</code>, 指定是否使用SSL，在开发环境下可以是false，但是在生产环境下<strong>强烈建议</strong>为true。</li>
 <li><code>com.sun.management.jmxremote.authenticate</code>, 指定是否需要密码才能够创建JMX连接。</li>
 </ul>
-
 <p>为了演示目的，我们用Tomcat来测试，不开启ssl和authenticate，把JMX端口设置为<code>1100</code>，执行下列命令启动Tomcat：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">CATALINA_OPTS<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;-Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false -Dcom.sun.management.jmxremote.port=1100 -Dcom.sun.management.jmxremote.rmi.port=1100 -Djava.rmi.server.hostname=k8s-oracle&#39;</span> bin/startup.sh</code></pre></div>
-<p>注意上面有一个<code>-Djava.rmi.server.hostname=k8s-oracle</code>参数，JMX agent本质上也是一个RMI server，因此需要指定这个参数，否则就会像<a href="../visualvm-remote-monitoring/">利用VisualVm远程监控Java进程</a>里提到的一样，VisualVm无法连接到该Java进程。</p>
-
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">CATALINA_OPTS<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;-Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false -Dcom.sun.management.jmxremote.port=1100 -Dcom.sun.management.jmxremote.rmi.port=1100 -Djava.rmi.server.hostname=k8s-oracle&#39;</span> bin/startup.sh
+</code></pre></div><p>注意上面有一个<code>-Djava.rmi.server.hostname=k8s-oracle</code>参数，JMX agent本质上也是一个RMI server，因此需要指定这个参数，否则就会像<a href="../visualvm-remote-monitoring/">利用VisualVm远程监控Java进程</a>里提到的一样，VisualVm无法连接到该Java进程。</p>
 <p>PS. 使用SSL方式保护JMX连接的方法会另写文章说明。</p>
-
-<h2 id="第二步-创建jmx连接">第二步：创建JMX连接</h2>
-
+<h2 id="第二步创建jmx连接">第二步：创建JMX连接</h2>
 <p>在远程主机上右键，选择添加JMX连接（在下图里出现了之前启动的Tomcat进程）：</p>
-
-<p><img src="visualvm-01.png" alt="Step 1" /></p>
-
+<p><img src="visualvm-01.png" alt="Step 1"></p>
 <p>根据Java进程启动时设置的JMX System Properties配置JMX连接：</p>
-
-<p><img src="visualvm-02.png" alt="Step 2" /></p>
-
+<p><img src="visualvm-02.png" alt="Step 2"></p>
 <p>成功后你会发现多了一个进程，小图标上有JMX字样：</p>
-
-<p><img src="visualvm-03.png" alt="Step 3" /></p>
-
+<p><img src="visualvm-03.png" alt="Step 3"></p>
 <p>双击这个进程，你就能看到CPU、线程、还有MBeans了。</p>
-
 <h2 id="但是visual-gc没有内容">但是Visual GC没有内容</h2>
-
 <p>使用上面的步骤建立完JMX连接之后，你会发现Visual GC没有内容：</p>
-
-<p><img src="no-visual-gc.png" alt="Step 1" /></p>
-
+<p><img src="no-visual-gc.png" alt="Step 1"></p>
 <p>解决办法要启动jstatd。</p>
-
 <p>按照<a href="../visualvm-remote-monitoring/">利用VisualVm远程监控Java进程</a>的方法先建立远程主机。</p>
-
 <p>给这个远程主机添加JMX连接：</p>
-
-<p><img src="visualvm-04.png" alt="Step 1" /></p>
-
-<p><img src="visualvm-05.png" alt="Step 2" /></p>
-
+<p><img src="visualvm-04.png" alt="Step 1"></p>
+<p><img src="visualvm-05.png" alt="Step 2"></p>
 <p>然后你会发现多了一个JMX图标的Java进程：</p>
-
-<p><img src="visualvm-06.png" alt="Step 3" /></p>
-
+<p><img src="visualvm-06.png" alt="Step 3"></p>
 <p>在这个进程里就能看到Visual GC了。</p>
-
-<p><img src="visual-gc.png" alt="Step 4" /></p>
-
+<p><img src="visual-gc.png" alt="Step 4"></p>
 <h2 id="参考资料">参考资料</h2>
-
 <ul>
 <li><a href="https://htmlpreview.github.io/?https://raw.githubusercontent.com/visualvm/visualvm.java.net.backup/master/www/jmx_connections.html">VisualVm - Connecting to JMX Agents Explicitly</a></li>
 <li><a href="https://stackoverflow.com/a/21552812/1287790">Why Java opens 3 ports when JMX is configured?</a></li>
@@ -338,7 +304,7 @@
       </ul>
       
       <p class="post-copyright">
-        This post was published <strong>524</strong> days ago, content in the post may be inaccurate, even wrong now, please take risk yourself.
+        This post was published <strong>533</strong> days ago, content in the post may be inaccurate, even wrong now, please take risk yourself.
       </p>
     </footer>
     

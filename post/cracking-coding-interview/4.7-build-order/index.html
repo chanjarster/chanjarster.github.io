@@ -16,31 +16,28 @@
 
   
   <meta name="author" content="颇忒脱" />
-  <meta name="description" content="
-" />
+  <meta name="description" content="" />
 
   
   
     <meta name="twitter:card" content="summary" />
     <meta name="twitter:site" content="@gohugoio" />
     <meta name="twitter:title" content="Cracking Coding Interview - 4.7 Build Order" />
-    <meta name="twitter:description" content="
-" />
+    <meta name="twitter:description" content="" />
     <meta name="twitter:image" content="https://chanjarster.github.io/img/avatar.jpg" />
   
 
   
   <meta property="og:type" content="article" />
   <meta property="og:title" content="Cracking Coding Interview - 4.7 Build Order" />
-  <meta property="og:description" content="
-" />
+  <meta property="og:description" content="" />
   <meta property="og:url" content="https://chanjarster.github.io/post/cracking-coding-interview/4.7-build-order/" />
   <meta property="og:image" content="https://chanjarster.github.io/img/avatar.jpg" />
 
 
 
 
-<meta name="generator" content="Hugo 0.49.2" />
+<meta name="generator" content="Hugo 0.68.1" />
 
 
 <link rel="canonical" href="https://chanjarster.github.io/post/cracking-coding-interview/4.7-build-order/" />
@@ -248,32 +245,22 @@
       <h1 class="post-title">Cracking Coding Interview - 4.7 Build Order</h1>
       <p class="post-meta">@颇忒脱 · Aug 15, 2019 · 4 min read</p>
     </header>
-    <article class="post-content"><p></p>
-
-<p><strong>Build Order</strong>: You are given a list of projects and a list of dependencies (which is a list of pairs of projects, where the second project is dependent on the first project). All of a project&rsquo;s dependencies must be built before the project is. Find a build order that will allow the projects to be built. If there is no valid build order, return an error.</p>
-
+    <article class="post-content"><p><strong>Build Order</strong>: You are given a list of projects and a list of dependencies (which is a list of pairs of projects, where the second project is dependent on the first project). All of a project&rsquo;s dependencies must be built before the project is. Find a build order that will allow the projects to be built. If there is no valid build order, return an error.</p>
 <p>EXAMPLE</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-txt" data-lang="txt">Input:
 projects:      a, b, c, d, e, f
 dependencies: (a, d), (f, b), (b, d), (f, a), (d, c) 
-Output:        f, e, a, b, d, c</code></pre></div>
-<p>Hints: #26, #47, #60, #85, #125, #133</p>
-
-<h2 id="解法1-有bug">解法1（有bug）</h2>
-
+Output:        f, e, a, b, d, c
+</code></pre></div><p>Hints: #26, #47, #60, #85, #125, #133</p>
+<h2 id="解法1有bug">解法1（有bug）</h2>
 <p>这个题目可以认为是一张有向不循环的图，我们可以利用dependencies信息构建一个图，然后利用BFS（广度优先）的方法遍历这张图。</p>
-
 <p>这张图的合法性其实在于是否出现循环，我们可以在遍历的时候判断是否某个节点出现两次来判断。</p>
-
 <p>构建图的难点：</p>
-
 <ol>
 <li>如何确定root节点</li>
 <li>如何添加边</li>
 </ol>
-
 <p>顺带一提，root节点不只1个，例子中f和e都是root节点</p>
-
 <p>确定root节点的方式比较简单，如果这个节点没有指向它的边，那么它就是root</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#66d9ef">public</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">Node</span> <span style="color:#f92672">{</span>
   <span style="color:#66d9ef">private</span> <span style="color:#66d9ef">char</span> project<span style="color:#f92672">;</span>
@@ -349,21 +336,18 @@ Output:        f, e, a, b, d, c</code></pre></div>
     current <span style="color:#f92672">=</span> next<span style="color:#f92672">;</span>
   <span style="color:#f92672">}</span>
   <span style="color:#66d9ef">return</span> res<span style="color:#f92672">;</span>
-<span style="color:#f92672">}</span></code></pre></div>
-<p>如果遇到下面这种情况（都是从上往下的箭头），解法1存在bug：</p>
+<span style="color:#f92672">}</span>
+</code></pre></div><p>如果遇到下面这种情况（都是从上往下的箭头），解法1存在bug：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-txt" data-lang="txt">      f
      /|\
     c | d
      \|/|
       a |
       |/
-      e</code></pre></div>
-<p>正确的顺序应该是f、c、d、a、e，但是解法1采用广度优先，因此会变成f、c、a、d、e。造成这个错误的原因是没有判断某个节点的所有父节点是否都构建过了</p>
-
+      e
+</code></pre></div><p>正确的顺序应该是f、c、d、a、e，但是解法1采用广度优先，因此会变成f、c、a、d、e。造成这个错误的原因是没有判断某个节点的所有父节点是否都构建过了</p>
 <h2 id="解法2">解法2</h2>
-
 <p>A -&gt; B 的意思是 B 依赖 A</p>
-
 <ol>
 <li>找不依赖别人的节点，先构建它们</li>
 <li>删掉它们到下级节点对它们的依赖（因为已经构建过了，那么这个依赖可以不需要了）</li>
@@ -451,24 +435,18 @@ Output:        f, e, a, b, d, c</code></pre></div>
     <span style="color:#f92672">}</span>
   <span style="color:#f92672">}</span>
   <span style="color:#66d9ef">return</span> end<span style="color:#f92672">;</span>
-<span style="color:#f92672">}</span></code></pre></div>
-<p>时间复杂度：O(P+D)，P是项目数，D是依赖数（在构建依赖的时候所用的循环）。</p>
-
+<span style="color:#f92672">}</span>
+</code></pre></div><p>时间复杂度：O(P+D)，P是项目数，D是依赖数（在构建依赖的时候所用的循环）。</p>
 <h2 id="解法3">解法3</h2>
-
 <p>解法2只能发现有循环依赖，无法告诉循环到底是什么。</p>
-
 <p>采用深度优先的方法（DFS）来做。</p>
-
 <ol>
 <li>构建链条的是这样的：parent parent -&gt; parent -&gt; leaf（叶子节点，不被别人依赖的项目）</li>
 <li>每次构建的时候都是把parent插入到child之前。</li>
 <li>在处理这个节点前做一个标记，表示正在处理，当处理一个节点的时候发现它正在处理，那么就说明它处于一个循环中。</li>
 <li>当发现这个节点已经处理过了，那么就跳过。</li>
 </ol>
-
 <p>可以从任意节点开始处理，因为第4点保证了不会重复处理，第2点则保证了parent肯定在child之前。</p>
-
 <p>看这个例子（所有箭头都是从上往下）：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-txt" data-lang="txt">      f         d
      /|\        |
@@ -476,8 +454,8 @@ Output:        f, e, a, b, d, c</code></pre></div>
      \|/|\
       a | h
       |/
-      e</code></pre></div>
-<p>比如我们先处理b：</p>
+      e
+</code></pre></div><p>比如我们先处理b：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-txt" data-lang="txt">DFS(b)
   DFS(h)
     build order = ..., h
@@ -485,8 +463,8 @@ Output:        f, e, a, b, d, c</code></pre></div>
     DFS(e)
       build order = ..., e, h
     build order = ..., a, e, h
-  build order = ..., b, a, e, h</code></pre></div>
-<p>然后我们处理f：</p>
+  build order = ..., b, a, e, h
+</code></pre></div><p>然后我们处理f：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-txt" data-lang="txt">build order = ..., b, a, e, h
 DFS(f)
   DFS(c)
@@ -494,8 +472,8 @@ DFS(f)
     build order = ..., c, b, a, e, h
   DFS(a) skip
   DFS(B) skip
-  build order = ..., f, c, b, a, e, h</code></pre></div>
-<p>代码：</p>
+  build order = ..., f, c, b, a, e, h
+</code></pre></div><p>代码：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#66d9ef">public</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">Project</span> <span style="color:#f92672">{</span>
   String name<span style="color:#f92672">;</span>
   List<span style="color:#f92672">&lt;</span>Project<span style="color:#f92672">&gt;</span> adjacents <span style="color:#f92672">=</span> <span style="color:#66d9ef">new</span> ArrayList<span style="color:#f92672">&lt;&gt;();</span>
@@ -526,7 +504,8 @@ DFS(f)
   <span style="color:#f92672">}</span>
   order<span style="color:#f92672">.</span><span style="color:#a6e22e">insertFirst</span><span style="color:#f92672">(</span>project<span style="color:#f92672">);</span>
   project<span style="color:#f92672">.</span><span style="color:#a6e22e">isFinished</span> <span style="color:#f92672">=</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">;</span>
-<span style="color:#f92672">}</span></code></pre></div></article>
+<span style="color:#f92672">}</span>
+</code></pre></div></article>
     <footer class="post-footer">
       
       <ul class="post-tags">
@@ -538,7 +517,7 @@ DFS(f)
       </ul>
       
       <p class="post-copyright">
-        This post was published <strong>215</strong> days ago, content in the post may be inaccurate, even wrong now, please take risk yourself.
+        This post was published <strong>224</strong> days ago, content in the post may be inaccurate, even wrong now, please take risk yourself.
       </p>
     </footer>
     
