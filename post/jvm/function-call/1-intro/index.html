@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+<head>
+
+  <meta charset="utf-8" />
+
+  
+  <title>JVM执行方法调用（一）- 重载与重写</title>
+
+  
+  
+
+
+
+
+
+  
+  <meta name="author" content="颇忒脱" />
+  <meta name="description" content="回顾Java语言中的重载与重写，并且看看JVM是怎么处理它们的。
+
+" />
+
+  
+  
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:site" content="@gohugoio" />
+    <meta name="twitter:title" content="JVM执行方法调用（一）- 重载与重写" />
+    <meta name="twitter:description" content="回顾Java语言中的重载与重写，并且看看JVM是怎么处理它们的。
+
+" />
+    <meta name="twitter:image" content="https://chanjarster.github.io/img/avatar.jpg" />
+  
+
+  
+  <meta property="og:type" content="article" />
+  <meta property="og:title" content="JVM执行方法调用（一）- 重载与重写" />
+  <meta property="og:description" content="回顾Java语言中的重载与重写，并且看看JVM是怎么处理它们的。
+
+" />
+  <meta property="og:url" content="https://chanjarster.github.io/post/jvm/function-call/1-intro/" />
+  <meta property="og:image" content="https://chanjarster.github.io/img/avatar.jpg" />
+
+
+
+
+<meta name="generator" content="Hugo 0.49.2" />
+
+
+<link rel="canonical" href="https://chanjarster.github.io/post/jvm/function-call/1-intro/" />
+
+<meta name="renderer" content="webkit" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<meta name="format-detection" content="telephone=no,email=no,adress=no" />
+<meta http-equiv="Cache-Control" content="no-transform" />
+
+
+<meta name="robots" content="index,follow" />
+<meta name="referrer" content="origin-when-cross-origin" />
+
+
+
+
+
+
+
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="颇忒脱的技术博客" />
+<meta name="msapplication-tooltip" content="颇忒脱的技术博客" />
+<meta name='msapplication-navbutton-color' content="#5fbf5e" />
+<meta name="msapplication-TileColor" content="#5fbf5e" />
+<meta name="msapplication-TileImage" content="/img/tile-image-windows.png" />
+<link rel="icon" href="https://chanjarster.github.io/img/favicon.ico" />
+<link rel="icon" type="image/png" sizes="16x16" href="https://chanjarster.github.io/img/favicon-16x16.png" />
+<link rel="icon" type="image/png" sizes="32x32" href="https://chanjarster.github.io/img/favicon-32x32.png" />
+<link rel="icon" sizes="192x192" href="https://chanjarster.github.io/img/touch-icon-android.png" />
+<link rel="apple-touch-icon" href="https://chanjarster.github.io/img/touch-icon-apple.png" />
+<link rel="mask-icon" href="https://chanjarster.github.io/img/safari-pinned-tab.svg" color="#5fbf5e" />
+
+
+
+<link rel="stylesheet" href="//cdn.bootcss.com/video.js/6.2.8/alt/video-js-cdn.min.css" />
+
+<link rel="stylesheet" href="https://chanjarster.github.io/css/bundle.8e3aef2bc5.css" />
+
+
+  
+  <!--[if lt IE 9]>
+    <script src="//cdn.bootcss.com/html5shiv/3.7.3/html5shiv.min.js"></script>
+    <script src="//cdn.bootcss.com/respond.js/1.4.2/respond.min.js"></script>
+    <script src="//cdn.bootcss.com/video.js/6.2.8/ie8/videojs-ie8.min.js"></script>
+  <![endif]-->
+
+<!--[if lte IE 11]>
+    <script src="//cdn.bootcss.com/classlist/1.1.20170427/classList.min.js"></script>
+  <![endif]-->
+
+
+<script src="//cdn.bootcss.com/object-fit-images/3.2.3/ofi.min.js"></script>
+
+
+<script src="//cdn.bootcss.com/smooth-scroll/12.1.4/js/smooth-scroll.polyfills.min.js"></script>
+
+
+</head>
+  <body>
+    
+    <div class="suspension">
+      <a title="Go to top" class="to-top is-hide"><span class="icon icon-up"></span></a>
+      
+        
+      
+    </div>
+    
+    
+  <header class="site-header">
+  <img class="avatar" src="https://chanjarster.github.io/img/avatar2.jpg" alt="Avatar">
+  
+  <h2 class="title">颇忒脱的技术博客</h2>
+  
+  <p class="subtitle"></p>
+  <button class="menu-toggle" type="button">
+    <span class="icon icon-menu"></span>
+  </button>
+  <nav class="site-menu collapsed">
+    <h2 class="offscreen">Main Menu</h2>
+    <ul class="menu-list">
+      
+      
+      
+      
+        <li class="menu-item
+            
+            
+            
+              is-active
+            ">
+            <a href="https://chanjarster.github.io/">Home</a>
+          </li>
+      
+        <li class="menu-item
+            
+            
+            ">
+            <a href="https://chanjarster.github.io/tags/%E6%94%B6%E8%97%8F%E5%A4%B9/">Bookmarks</a>
+          </li>
+      
+        <li class="menu-item
+            
+            
+            ">
+            <a href="https://github.com/chanjarster">Works</a>
+          </li>
+      
+        <li class="menu-item
+            
+            
+            ">
+            <a href="https://chanjarster.github.io/tags/">Tags</a>
+          </li>
+      
+        <li class="menu-item
+            
+            
+            ">
+            <a href="https://chanjarster.github.io/links/">Links</a>
+          </li>
+      
+    </ul>
+  </nav>
+  <nav class="social-menu collapsed">
+    <h2 class="offscreen">Social Networks</h2>
+    <ul class="social-list">
+
+      
+
+      
+      <li class="social-item">
+        <a href="//github.com/chanjarster" title="GitHub"><span class="icon icon-github"></span></a>
+      </li>
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      <li class="social-item">
+        <a rel="alternate" type="application/rss+xml" href="https://chanjarster.github.io/index.xml"><span class="icon icon-rss" title="RSS"></span></a>
+      </li>
+
+    </ul>
+  </nav>
+</header>
+
+  <section class="main post-detail">
+    <header class="post-header">
+      <h1 class="post-title">JVM执行方法调用（一）- 重载与重写</h1>
+      <p class="post-meta">@颇忒脱 · Feb 8, 2019 · 2 min read</p>
+    </header>
+    <article class="post-content"><p>回顾Java语言中的重载与重写，并且看看JVM是怎么处理它们的。</p>
+
+<p></p>
+
+<h2 id="重载overload">重载Overload</h2>
+
+<p>定义：</p>
+
+<ul>
+<li>在同一个类中有多个方法，它们的名字相同，但是参数类型不同。</li>
+<li>或者，父子类中，子类有一个方法与父类非私有方法名字相同，但是参数类型不同。那么子类的这个方法对父类方法构成重载。</li>
+</ul>
+
+<p>JVM是怎么处理重载的？其实是编译阶段编译器就已经决定好调用哪一个重载方法。看下面代码：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">Overload</span> <span style="color:#f92672">{</span>
+  <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">invoke</span><span style="color:#f92672">(</span>Object obj<span style="color:#f92672">,</span> Object<span style="color:#f92672">...</span> args<span style="color:#f92672">)</span> <span style="color:#f92672">{</span> <span style="color:#f92672">}</span>
+  <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">invoke</span><span style="color:#f92672">(</span>String s<span style="color:#f92672">,</span> Object obj<span style="color:#f92672">,</span> Object<span style="color:#f92672">...</span> args<span style="color:#f92672">)</span> <span style="color:#f92672">{</span> <span style="color:#f92672">}</span>
+
+  <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">test1</span><span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
+    <span style="color:#75715e">// 调用第二个 invoke 方法
+</span><span style="color:#75715e"></span>    invoke<span style="color:#f92672">(</span><span style="color:#66d9ef">null</span><span style="color:#f92672">,</span> 1<span style="color:#f92672">);</span>    
+  <span style="color:#f92672">}</span>
+  <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">test2</span><span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
+    <span style="color:#75715e">// 调用第二个 invoke 方法
+</span><span style="color:#75715e"></span>    invoke<span style="color:#f92672">(</span><span style="color:#66d9ef">null</span><span style="color:#f92672">,</span> 1<span style="color:#f92672">,</span> 2<span style="color:#f92672">);</span> 
+  <span style="color:#f92672">}</span>
+  <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">test3</span><span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
+    <span style="color:#75715e">// 只有手动绕开可变长参数的语法糖，才能调用第一个invoke方法
+</span><span style="color:#75715e"></span>    invoke<span style="color:#f92672">(</span><span style="color:#66d9ef">null</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">new</span> Object<span style="color:#f92672">[]{</span>1<span style="color:#f92672">});</span> 
+  <span style="color:#f92672">}</span>
+<span style="color:#f92672">}</span></code></pre></div>
+<p>上面的注释告诉了我们结果，那么怎么才能证明上面的注释呢？我们利用<code>javap</code>观察字节码可以知道。</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ javac Overload.java
+$ javap -c Overload.java
+
+Compiled from <span style="color:#e6db74">&#34;Overload.java&#34;</span>
+class Overload <span style="color:#f92672">{</span>
+  ...
+  void invoke<span style="color:#f92672">(</span>java.lang.Object, java.lang.Object...<span style="color:#f92672">)</span>;
+    Code:
+       <span style="color:#ae81ff">0</span>: <span style="color:#66d9ef">return</span>
+  void invoke<span style="color:#f92672">(</span>java.lang.String, java.lang.Object, java.lang.Object...<span style="color:#f92672">)</span>;
+    Code:
+       <span style="color:#ae81ff">0</span>: <span style="color:#66d9ef">return</span>
+  void test1<span style="color:#f92672">()</span>;
+    Code:
+      ...
+      <span style="color:#ae81ff">10</span>: invokevirtual <span style="color:#75715e">#4  // Method invoke:(Ljava/lang/String;Ljava/lang/Object;[Ljava/lang/Object;)V
+</span><span style="color:#75715e"></span>      <span style="color:#ae81ff">13</span>: <span style="color:#66d9ef">return</span>
+  void test2<span style="color:#f92672">()</span>;
+    Code:
+      ...
+      <span style="color:#ae81ff">17</span>: invokevirtual <span style="color:#75715e">#4  // Method invoke:(Ljava/lang/String;Ljava/lang/Object;[Ljava/lang/Object;)V
+</span><span style="color:#75715e"></span>      <span style="color:#ae81ff">20</span>: <span style="color:#66d9ef">return</span>
+  void test3<span style="color:#f92672">()</span>;
+    Code:
+      ...
+      <span style="color:#ae81ff">13</span>: invokevirtual <span style="color:#75715e">#5  // Method invoke:(Ljava/lang/Object;[Ljava/lang/Object;)V
+</span><span style="color:#75715e"></span>      <span style="color:#ae81ff">16</span>: <span style="color:#66d9ef">return</span>
+<span style="color:#f92672">}</span></code></pre></div>
+<p>这里面有很多JVM指令，你暂且不用关心，我们看<code>test1</code>、<code>test2</code>、<code>test3</code>方法调用的是哪个方法：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-txt" data-lang="txt">  void test1();
+    Code:
+      ...
+      10: invokevirtual #4  // Method invoke:(Ljava/lang/String;Ljava/lang/Object;[Ljava/lang/Object;)V
+      13: return</code></pre></div>
+<p><code>invoke</code>是方法名，<code>(Ljava/lang/String;Ljava/lang/Object;[Ljava/lang/Object;)V</code>则是方法描述符。这里翻译过来就是<code>void invoke(String, Object, Object[])</code>，Java的可变长参数实际上就是数组，所以等同于<code>void invoke(String, Object, Object...)</code>。同理，<code>test2</code>调用的是<code>void invoke(String, Object, Object...)</code>，<code>test3</code>调用的是<code>void invoke(Object, Object...)</code>。关于方法描述符的详参<a href="https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-4.html#jvms-4.3.2">JVM Spec - 4.3.2. Field Descriptors</a>和<a href="https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-4.html#jvms-4.3.3">JVM Spec - 4.3.3. Method Descriptors</a>。</p>
+
+<p>所以重载方法的选择是在编译过程中就已经决定的，下面是编译器的匹配步骤：</p>
+
+<ol>
+<li>不允许自动拆装箱，不允许可变长参数，尝试匹配</li>
+<li>如果没有匹配到，则允许自动拆装箱，不允许可变长参数，尝试匹配</li>
+<li>如果没有匹配到，则允许自动拆装箱，允许可变长参数，尝试匹配</li>
+</ol>
+
+<p><strong>注意：编译器是根据实参类型来匹配，实参类型和实际类型不是一个概念</strong></p>
+
+<p>如果在一个步骤里匹配到了多个方法，则根据形参类型来找最贴切的。在上面的例子中第一个<code>invoke</code>的参数是<code>Object, Object...</code>，第二个<code>invoke</code>的参数是<code>String, Object, Object...</code>，两个方法的第一个参数<code>String</code>是<code>Object</code>的子类，因此更为贴切，所以<code>invoke(null, 1, 2)</code>会匹配到第二个<code>invoke</code>方法上。</p>
+
+<h2 id="重写override">重写Override</h2>
+
+<p>Java语言中的定义：</p>
+
+<ul>
+<li>子类方法有一个方法与父类方法的名字相同且参数类型相同。</li>
+<li>父类方法的返回值可以替换掉子类方法的返回值。也就是说父类方法的返回值类型：
+
+<ul>
+<li>要么和子类方法返回值类型一样。</li>
+<li>要么是子类方法返回值类型的父类。</li>
+</ul></li>
+<li>两者都是非私有、非静态方法。</li>
+</ul>
+
+<p>（更多详细信息可参考<a href="https://docs.oracle.com/javase/specs/jls/se8/html/jls-8.html#jls-8.4.8">Java Language Spec - 8.4.8. Inheritance, Overriding, and Hiding</a>，这里除了有更精确详细的重写的定义，同时包含了范型方法的重写定义。）</p>
+
+<p>但是JVM中对于重写的定义则有点不同：</p>
+
+<ul>
+<li>子类方法的名字与<strong>方法描述符</strong>与父类方法相同。</li>
+<li>两者都是非私有、非静态方法。</li>
+</ul>
+
+<p>（更多详细信息可参考<a href="https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-5.html#jvms-5.4.5">JVM Spec - 5.4.5. Overriding</a>）</p>
+
+<p>注意上面提到的方法描述符，前面讲过方法描述符包含了参数类型及返回值，JVM要求这两个必须完全相同才可以，但是Java语言说的是参数类型相同但是返回值类型可以不同。Java编译器通过创建Bridge Method来解决这个问题，看下面代码：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">A</span> <span style="color:#f92672">{</span>
+  Object <span style="color:#a6e22e">f</span><span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
+    <span style="color:#66d9ef">return</span> <span style="color:#66d9ef">null</span><span style="color:#f92672">;</span>
+  <span style="color:#f92672">}</span>
+<span style="color:#f92672">}</span>
+<span style="color:#66d9ef">class</span> <span style="color:#a6e22e">C</span> <span style="color:#66d9ef">extends</span> A <span style="color:#f92672">{</span>
+  Integer <span style="color:#a6e22e">f</span><span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
+    <span style="color:#66d9ef">return</span> <span style="color:#66d9ef">null</span><span style="color:#f92672">;</span>
+  <span style="color:#f92672">}</span>
+<span style="color:#f92672">}</span></code></pre></div>
+<p>然后用<code>javap</code>查看编译结果：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ javac Override.java
+$ javap -v C.class
+class C extends A
+...
+<span style="color:#f92672">{</span>
+  java.lang.Integer f<span style="color:#f92672">()</span>;
+    descriptor: <span style="color:#f92672">()</span>Ljava/lang/Integer;
+    flags:
+    Code:
+      stack<span style="color:#f92672">=</span><span style="color:#ae81ff">1</span>, locals<span style="color:#f92672">=</span><span style="color:#ae81ff">1</span>, args_size<span style="color:#f92672">=</span><span style="color:#ae81ff">1</span>
+         <span style="color:#ae81ff">0</span>: aconst_null
+         <span style="color:#ae81ff">1</span>: areturn
+  ...
+  java.lang.Object f<span style="color:#f92672">()</span>;
+    descriptor: <span style="color:#f92672">()</span>Ljava/lang/Object;
+    flags: ACC_BRIDGE, ACC_SYNTHETIC
+    Code:
+      stack<span style="color:#f92672">=</span><span style="color:#ae81ff">1</span>, locals<span style="color:#f92672">=</span><span style="color:#ae81ff">1</span>, args_size<span style="color:#f92672">=</span><span style="color:#ae81ff">1</span>
+         <span style="color:#ae81ff">0</span>: aload_0
+         <span style="color:#ae81ff">1</span>: invokevirtual <span style="color:#75715e">#2                  // Method f:()Ljava/lang/Integer;
+</span><span style="color:#75715e"></span>         <span style="color:#ae81ff">4</span>: areturn
+      LineNumberTable:
+        line <span style="color:#ae81ff">7</span>: <span style="color:#ae81ff">0</span>
+<span style="color:#f92672">}</span></code></pre></div>
+<p>可以看到编译器替我们创建了一个<code>Object f()</code>的Bridge Method，它调用的是<code>Integer f()</code>，这样就构成了JVM所定义的重写。</p>
+
+<h2 id="思维导图">思维导图</h2>
+
+<p><img src="../overload-override.png" alt="" /></p>
+
+<h2 id="参考文档">参考文档</h2>
+
+<ul>
+<li><a href="https://time.geekbang.org/column/article/11539">极客时间 - 深入拆解 Java 虚拟机 - 04 | JVM是如何执行方法调用的？（上）</a></li>
+<li><a href="https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-4.html#jvms-4.3.2">JVM Spec - 4.3.2. Field Descriptors</a></li>
+<li><a href="https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-4.html#jvms-4.3.3">JVM Spec - 4.3.3. Method Descriptors</a></li>
+<li><a href="https://docs.oracle.com/javase/specs/jls/se8/html/jls-8.html#jls-8.4.8">Java Language Spec - 8.4.8. Inheritance, Overriding, and Hiding</a></li>
+<li><a href="https://docs.oracle.com/javase/specs/jls/se8/html/jls-8.html#jls-8.4.9">Java Language Spec - 8.4.9. Overloading</a></li>
+<li><a href="https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-5.html#jvms-5.4.5">JVM Spec - 5.4.5. Overriding</a></li>
+<li><a href="https://docs.oracle.com/javase/tutorial/java/generics/bridgeMethods.html">Effects of Type Erasure and Bridge Methods</a></li>
+</ul></article>
+    <footer class="post-footer">
+      
+      <ul class="post-tags">
+        
+          <li><a href="https://chanjarster.github.io/tags/jvm"><span class="tag">JVM</span></a></li>
+        
+          <li><a href="https://chanjarster.github.io/tags/arts"><span class="tag">ARTS</span></a></li>
+        
+          <li><a href="https://chanjarster.github.io/tags/arts-t"><span class="tag">ARTS-T</span></a></li>
+        
+      </ul>
+      
+      <p class="post-copyright">
+        
+      </p>
+    </footer>
+    
+      
+    
+  </section>
+  <footer class="site-footer">
+  <p>© 2017-2019 颇忒脱的技术博客</p>
+  <p>Powered by <a href="https://gohugo.io/" target="_blank">Hugo</a> with theme <a href="https://github.com/laozhu/hugo-nuo" target="_blank">Nuo</a>.</p>
+  
+</footer>
+
+
+
+<script async src="//cdn.bootcss.com/video.js/6.2.8/alt/video.novtt.min.js"></script>
+<script async src="//cdn.bootcss.com/mathjax/2.7.2/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    tex2jax: {
+      inlineMath: [['$','$'], ['\\(','\\)']],
+      displayMath: [['$$','$$'], ['\\[','\\]']],
+      processEscapes: true,
+      processEnvironments: true,
+      skipTags: ['script', 'noscript', 'style', 'textarea', 'pre'],
+      TeX: { equationNumbers: { autoNumber: "AMS" },
+      extensions: ["AMSmath.js", "AMSsymbols.js"] }
+    }
+  });
+</script>
+<script type="text/x-mathjax-config">
+  // Fix <code> tags after MathJax finishes running. This is a
+  // hack to overcome a shortcoming of Markdown. Discussion at
+  // https://github.com/mojombo/jekyll/issues/199
+  MathJax.Hub.Queue(() => {
+    MathJax.Hub.getAllJax().map(v => v.SourceElement().parentNode.className += ' has-jax');
+  });
+</script>
+
+<script src="https://chanjarster.github.io/js/bundle.273f9ac6f0.js"></script>
+
+
+
+
+  </body>
+</html>
