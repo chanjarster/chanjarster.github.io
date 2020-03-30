@@ -2,7 +2,6 @@
 
 <html lang="zh-cn">
     <head>
-	<meta name="generator" content="Hugo 0.68.1" />
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -29,8 +28,6 @@
     
     
  
-    
-    <link rel="alternate" type="application/rss+xml" href="https://chanjarster.github.io/index.xml" title="颇忒脱的技术博客" />
     
     
 </head>
@@ -133,161 +130,74 @@
 </nav>
         <div id="content" class="content-container">
         
-<div class = "article-content">
-        
-        <div class="description">
-            <p>颇忒脱的技术博客</p>
-        </div>
-        
-        
-        
-        
-        <article>
-            <h2>
-                <a href="https://chanjarster.github.io/post/extract-public-service/">
-                    如何抽取公共服务并成功迁移
-                </a>
-            </h2>
-            <div><p><p>本文探讨了如何创建并落地一个公共服务的方法。</p></p></div>
-            <div class="post-footer">
-            <time>August 23, 2018</time>
-
-            
-            
-                
-                    <a class="tag" href="https://chanjarster.github.io/tags/%E5%BE%AE%E6%9C%8D%E5%8A%A1">#微服务</a>
-                
-                    <a class="tag" href="https://chanjarster.github.io/tags/%E5%88%86%E5%B8%83%E5%BC%8F%E6%9E%B6%E6%9E%84">#分布式架构</a>
-                
-            
-            </div> 
-           
-        </article>
-        
-        <article>
-            <h2>
-                <a href="https://chanjarster.github.io/post/compare-authc-authz-models/">
-                    多种认证、授权模型的比较
-                </a>
-            </h2>
-            <div><p><p>本文比较了OAuth2.0的几种模式以及基于Session和JWT的认证模式。</p></p></div>
-            <div class="post-footer">
-            <time>August 22, 2018</time>
-
-            
-            
-                
-                    <a class="tag" href="https://chanjarster.github.io/tags/oauth">#oauth</a>
-                
-                    <a class="tag" href="https://chanjarster.github.io/tags/jwt">#jwt</a>
-                
-            
-            </div> 
-           
-        </article>
-        
-        <article>
-            <h2>
-                <a href="https://chanjarster.github.io/post/d-transactions/saga/">
-                    事务 - Saga
-                </a>
-            </h2>
-            <div><p></p></div>
-            <div class="post-footer">
-            <time>March 21, 2018</time>
-
-            
-            
-                
-                    <a class="tag" href="https://chanjarster.github.io/tags/%E5%88%86%E5%B8%83%E5%BC%8F%E4%BA%8B%E5%8A%A1">#分布式事务</a>
-                
-            
-            </div> 
-           
-        </article>
-        
-        <article>
-            <h2>
-                <a href="https://chanjarster.github.io/post/d-transactions/tcc/">
-                    事务 - TCC
-                </a>
-            </h2>
-            <div><p></p></div>
-            <div class="post-footer">
-            <time>March 20, 2018</time>
-
-            
-            
-                
-                    <a class="tag" href="https://chanjarster.github.io/tags/%E5%88%86%E5%B8%83%E5%BC%8F%E4%BA%8B%E5%8A%A1">#分布式事务</a>
-                
-            
-            </div> 
-           
-        </article>
-        
-        <article>
-            <h2>
-                <a href="https://chanjarster.github.io/post/d-transactions/base/">
-                    事务 - BASE
-                </a>
-            </h2>
-            <div><p></p></div>
-            <div class="post-footer">
-            <time>March 19, 2018</time>
-
-            
-            
-                
-                    <a class="tag" href="https://chanjarster.github.io/tags/%E5%88%86%E5%B8%83%E5%BC%8F%E4%BA%8B%E5%8A%A1">#分布式事务</a>
-                
-            
-            </div> 
-           
-        </article>
-        
-        <article>
-            <h2>
-                <a href="https://chanjarster.github.io/post/d-transactions/local-transaction/">
-                    事务 - 本地事务
-                </a>
-            </h2>
-            <div><p></p></div>
-            <div class="post-footer">
-            <time>March 16, 2018</time>
-
-            
-            
-                
-                    <a class="tag" href="https://chanjarster.github.io/tags/%E5%88%86%E5%B8%83%E5%BC%8F%E4%BA%8B%E5%8A%A1">#分布式事务</a>
-                
-            
-            </div> 
-           
-        </article>
-        
+<h1 class="post-title">Scheduling In Go : Part I - OS Scheduler 阅读笔记</h1>
+    
+    <time>March 30, 2020</time>
+    
+    <div>
+        <p>
+        <p>原文：<a href="https://www.ardanlabs.com/blog/2018/08/scheduling-in-go-part1.html">Scheduling In Go : Part I - OS Scheduler</a></p>
+<h2 id="操作系统线程调度器">操作系统线程调度器</h2>
+<p>你的程序实际上就是一系列需要执行的指令，而这些指令是跑线程里的。</p>
+<p>线程可以<strong>并发</strong>运行：每个线程轮流占用一个core；也可以<strong>并行</strong>运行：每个线程跑在不同core上。</p>
+<p>操作系统线程调度器负责保证充分利用core来执行线程。</p>
+<h2 id="程序指令是如何执行的">程序指令是如何执行的</h2>
+<p>程序计数器（program counter，PC），有时也称为指令指针（instruction pointer，IP），用来告诉线程<strong>下一个</strong>要执行的指令（注意不是当前正在执行的指令）的位置。它是一种寄存器（register）。</p>
+<p>每次执行指令的时候都会更新PC，因此程序才能够顺序执行。</p>
+<h2 id="线程状态">线程状态</h2>
+<ul>
+<li>Waiting：等待中。原因：等待硬件（比如磁盘、网络）、正在系统调用（syscall）、阻塞在同步上（atomic、mutex）</li>
+<li>Runnable：可以运行，正在等待调度。越多线程等待调度，大家就等的越久，且分配到的时间就越少。</li>
+<li>Executing：正在某个core上运行。</li>
+</ul>
+<h2 id="任务类型">任务类型</h2>
+<ul>
+<li>CPU绑定：这种任务永远不会让线程进入Waiting状态，比如计算Pi。</li>
+<li>IO绑定：这种任务会让线程进入Waiting状态。</li>
+</ul>
+<h2 id="上下文切换">上下文切换</h2>
+<p>Linux、Mac和Windows使用的是抢占式调度器，所以：</p>
+<ul>
+<li>你无法预测调度器什么时候会运行哪个线程。线程优先级混合事件（比如接收网络数据），也使得预测调度器行为变得不可能。</li>
+<li>如果你要有确定的行为，那么就应该对线程做同步和编排（synchronization and orchestration）。否则你观察到现在是这个样子的，无法保证下次还是这个样子的。</li>
+</ul>
+<p>在一个core上切换线程的物理行为称为上下文切换（context switching）。调度器把一个线程从core上换下来，然后把另一个线程换上去。换上去的线程状态从Runnable-&gt;Executing，换下来的线程的状态从Executing-&gt;Runnable（如果依然可以运行），或者Executing-&gt;Waiting（因为等待所以被换下来）。</p>
+<p>上下文切换的代价比较高，大概在<strong>~1000到~1500 nanosecond</strong>之间，考虑到core大致每纳秒可以执行12条指令，那么就相当于浪费了<strong>~12k到~18k的指令</strong>。</p>
+<p>如果是IO绑定任务，那么上下文切换能够有效利用CPU，因为A线程进入Waiting那么B线程就可以顶上使用CPU。</p>
+<p>如果是CPU绑定任务，那么上下文切换会造成性能损失，因为把CPU能力白白浪费在上下文切换上了（浪费了~12k到~18k的指令）。</p>
+<h2 id="少即是多">少即是多</h2>
+<p>越少的线程带来越少的调度开销，每个线程能分配到的时间就越多，那么就能完成越多的工作。</p>
+<h2 id="cache-line">Cache line</h2>
+<p>访问主内存（main memory）的数据的延迟大概在<strong>~100到~300 clock cycles</strong>。</p>
+<p>访问cache的数据延迟大概在 ~3到~40 clock cycles（根据不同的cache类型）。</p>
+<p><img src="https://www.ardanlabs.com/images/goinggo/92_figure2.png" alt=""></p>
+<p>CPU会把数据从主内存中copy到cache中，以cache line为单位，每条cache line为64 bytes。所以多线程修改内存会造成性能损失。</p>
+<p>多个并行运行的线程访问同一个数据或者相邻的数据，那么它们可能就会访问同一条cache line。任何线程跑在任何core上都有一份自己的cache line copy。所以就有了False Sharing问题：</p>
+<p><img src="https://www.ardanlabs.com/images/goinggo/92_figure3.png" alt=""></p>
+<p>只要一个线程操作了自己core上的某个cache line，那么这个cache line在其他core就会变脏（cache coherency），当一个线程访问一个脏cache line的时候，就要访问一下main memory（<strong>~100到~300 clock cycles</strong>）。当单处理器core变多的时候，以及当有多个处理器（处理器间通信）的时候，这个开销就变得很大了。</p>
+        </p>
     </div>
+    
+
+    <div class="page-footer">
         
-        <div class="paginator">
+        <hr class="footer-divider">
         
+            <a class="tag" href="https://chanjarster.github.io/tags/go">#go</a>
         
-        <p>Page 27 of 27</p>
-        <div class="paginator-group">
-            
-            <a class="color-link" href="https://chanjarster.github.io/page/26/">
-                    <svg width="13px" height="9px" viewBox="0 0 13 9" version="1.1" xmlns="https://www.w3.org/2000/svg" xmlns:xlink="https://www.w3.org/1999/xlink">
-                        <g class="color-arrow" fill="#63BDA2" fill-rule="nonzero">
-                            <polygon id="Path" points="1.75929935 4.50000282 5.3292523 7.62371165 4.6707477 8.37628835 0.240700645 4.49999718 4.67081049 0.623709205 5.32930951 1.37629079"></polygon>
-                            <polygon id="Path" points="13 4 13 5 1 5 1 4"></polygon>
-                        </g>
-                </svg>  
-                Newer          
-            </a>
-            
-            
-        </div>
+            <a class="tag" href="https://chanjarster.github.io/tags/kernel">#kernel</a>
         
+            <a class="tag" href="https://chanjarster.github.io/tags/thread">#thread</a>
+        
+            <a class="tag" href="https://chanjarster.github.io/tags/scheduling">#scheduling</a>
+        
+            <a class="tag" href="https://chanjarster.github.io/tags/arts">#arts</a>
+        
+            <a class="tag" href="https://chanjarster.github.io/tags/arts-r">#arts-r</a>
+        
+      
     </div>
+
 
         
         </div>
