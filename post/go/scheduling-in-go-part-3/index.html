@@ -2,7 +2,6 @@
 
 <html lang="zh-cn">
     <head>
-	<meta name="generator" content="Hugo 0.68.1" />
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -29,8 +28,6 @@
     
     
  
-    
-    <link rel="alternate" type="application/rss+xml" href="https://chanjarster.github.io/index.xml" title="颇忒脱的技术博客" />
     
     
 </head>
@@ -133,209 +130,87 @@
 </nav>
         <div id="content" class="content-container">
         
-<div class = "article-content">
-        
-        <div class="description">
-            <p>颇忒脱的技术博客</p>
-        </div>
-        
-        
-        
-        
-        <article>
-            <h2>
-                <a href="https://chanjarster.github.io/post/mysql-timezone/">
-                    数据库时区那些事儿 - MySQL的时区处理
-                </a>
-            </h2>
-            <div><p><p>当JVM时区和数据库时区不一致的时候，会发生什么？这个问题也许你从来没有注意过，但是当把Java程序容器化的时候，问题就浮现出来了，因为目前几乎所有的Docker Image的时区都是UTC。本文探究了MySQL及其JDBC驱动对于时区的处理方式，并尝试给出最佳实践。</p></p></div>
-            <div class="post-footer">
-            <time>September 17, 2018</time>
+<h1 class="post-title">Scheduling In Go : Part III - Concurrency 阅读笔记</h1>
+    
+    <time>March 31, 2020</time>
+    
+    <div>
+        <p>
+        <p>原文：<a href="https://www.ardanlabs.com/blog/2018/12/scheduling-in-go-part3.html">Scheduling In Go : Part III - Go Scheduling</a></p>
+<h2 id="几个数字">几个数字</h2>
+<table>
+<thead>
+<tr>
+<th>operation</th>
+<th>cost</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1纳秒</td>
+<td>可以执行12条指令</td>
+</tr>
+<tr>
+<td>OS上下文切换</td>
+<td>~1000到~1500 nanosecond，相当于~12k到~18k条指令。</td>
+</tr>
+<tr>
+<td>Go程上下文切换</td>
+<td>~200 nanoseconds，相当于~2.4k instructions条指令。</td>
+</tr>
+<tr>
+<td>访问主内存</td>
+<td>~100到~300 clock cycles</td>
+</tr>
+<tr>
+<td>访问CPU cache</td>
+<td>~3到~40 clock cycles（根据不同的cache类型）</td>
+</tr>
+</tbody>
+</table>
+<h2 id="不是所有问题都可以concurrency">不是所有问题都可以concurrency</h2>
+<p>不论你遇到什么种类的问题，你应该先求出一个正确的sequential解，然后再看这个问题是否有可能作出concurrency解。</p>
+<h2 id="什么是concurrency">什么是concurrency</h2>
+<p>Concurrency意味着乱序执行，拿一组原本顺序执行的指令，把它们乱序执行依然能够得到相同的结果。对于你来说就要去权衡concurrency之后得到的性能好处和其带来的复杂度。而且有些问题乱序执行压根就没道理，只能顺序执行。</p>
+<p>并行和并发的区别在于，并行是指在不同的OS线程上，OS线程在不同的core上同时执行不相干的指令。</p>
+<figure>
+    <img src="96_figure1.png" width="100%"/> 
+</figure>
 
-            
-            
-                
-                    <a class="tag" href="https://chanjarster.github.io/tags/jdbc">#JDBC</a>
-                
-                    <a class="tag" href="https://chanjarster.github.io/tags/mysql">#MySQL</a>
-                
-                    <a class="tag" href="https://chanjarster.github.io/tags/%E6%95%B0%E6%8D%AE%E5%BA%93%E6%97%B6%E5%8C%BA%E9%82%A3%E4%BA%9B%E4%BA%8B%E5%84%BF">#数据库时区那些事儿</a>
-                
-            
-            </div> 
-           
-        </article>
-        
-        <article>
-            <h2>
-                <a href="https://chanjarster.github.io/post/spring-cloud-config-best-practice/">
-                    Spring Cloud Config配置文件最佳实践
-                </a>
-            </h2>
-            <div><p><p>大多数Spring Cloud项目都会使用Spring Cloud Config来管理应用启动时的配置文件，同时开发人员面临着多样化的程序启动方式：操作系统进程启动、docker启动、k8s启动。那么如何规划这些配置文件以适应多种启动方式呢？本文尝试给出一些建议</p></p></div>
-            <div class="post-footer">
-            <time>September 10, 2018</time>
-
-            
-            
-                
-                    <a class="tag" href="https://chanjarster.github.io/tags/%E5%BE%AE%E6%9C%8D%E5%8A%A1">#微服务</a>
-                
-                    <a class="tag" href="https://chanjarster.github.io/tags/spring-cloud">#Spring Cloud</a>
-                
-                    <a class="tag" href="https://chanjarster.github.io/tags/k8s">#k8s</a>
-                
-            
-            </div> 
-           
-        </article>
-        
-        <article>
-            <h2>
-                <a href="https://chanjarster.github.io/post/extract-public-service/">
-                    如何抽取公共服务并成功迁移
-                </a>
-            </h2>
-            <div><p><p>本文探讨了如何创建并落地一个公共服务的方法。</p></p></div>
-            <div class="post-footer">
-            <time>August 23, 2018</time>
-
-            
-            
-                
-                    <a class="tag" href="https://chanjarster.github.io/tags/%E5%BE%AE%E6%9C%8D%E5%8A%A1">#微服务</a>
-                
-                    <a class="tag" href="https://chanjarster.github.io/tags/%E5%88%86%E5%B8%83%E5%BC%8F%E6%9E%B6%E6%9E%84">#分布式架构</a>
-                
-            
-            </div> 
-           
-        </article>
-        
-        <article>
-            <h2>
-                <a href="https://chanjarster.github.io/post/compare-authc-authz-models/">
-                    多种认证、授权模型的比较
-                </a>
-            </h2>
-            <div><p><p>本文比较了OAuth2.0的几种模式以及基于Session和JWT的认证模式。</p></p></div>
-            <div class="post-footer">
-            <time>August 22, 2018</time>
-
-            
-            
-                
-                    <a class="tag" href="https://chanjarster.github.io/tags/oauth">#oauth</a>
-                
-                    <a class="tag" href="https://chanjarster.github.io/tags/jwt">#jwt</a>
-                
-            
-            </div> 
-           
-        </article>
-        
-        <article>
-            <h2>
-                <a href="https://chanjarster.github.io/post/d-transactions/saga/">
-                    事务 - Saga
-                </a>
-            </h2>
-            <div><p></p></div>
-            <div class="post-footer">
-            <time>March 21, 2018</time>
-
-            
-            
-                
-                    <a class="tag" href="https://chanjarster.github.io/tags/%E5%88%86%E5%B8%83%E5%BC%8F%E4%BA%8B%E5%8A%A1">#分布式事务</a>
-                
-            
-            </div> 
-           
-        </article>
-        
-        <article>
-            <h2>
-                <a href="https://chanjarster.github.io/post/d-transactions/tcc/">
-                    事务 - TCC
-                </a>
-            </h2>
-            <div><p></p></div>
-            <div class="post-footer">
-            <time>March 20, 2018</time>
-
-            
-            
-                
-                    <a class="tag" href="https://chanjarster.github.io/tags/%E5%88%86%E5%B8%83%E5%BC%8F%E4%BA%8B%E5%8A%A1">#分布式事务</a>
-                
-            
-            </div> 
-           
-        </article>
-        
-        <article>
-            <h2>
-                <a href="https://chanjarster.github.io/post/d-transactions/base/">
-                    事务 - BASE
-                </a>
-            </h2>
-            <div><p></p></div>
-            <div class="post-footer">
-            <time>March 19, 2018</time>
-
-            
-            
-                
-                    <a class="tag" href="https://chanjarster.github.io/tags/%E5%88%86%E5%B8%83%E5%BC%8F%E4%BA%8B%E5%8A%A1">#分布式事务</a>
-                
-            
-            </div> 
-           
-        </article>
-        
-        <article>
-            <h2>
-                <a href="https://chanjarster.github.io/post/d-transactions/local-transaction/">
-                    事务 - 本地事务
-                </a>
-            </h2>
-            <div><p></p></div>
-            <div class="post-footer">
-            <time>March 16, 2018</time>
-
-            
-            
-                
-                    <a class="tag" href="https://chanjarster.github.io/tags/%E5%88%86%E5%B8%83%E5%BC%8F%E4%BA%8B%E5%8A%A1">#分布式事务</a>
-                
-            
-            </div> 
-           
-        </article>
-        
+<p>上图中，P1和P2有自己的OS线程，OS线程在不同的core上，因此G1和G2是并行的。</p>
+<p>但是在P1和P2自己看来，它有3个G要执行，而这三个G共享同一个OS线程/core，而且执行顺序是不定的，它们是并发执行的。</p>
+<h2 id="工作负载">工作负载</h2>
+<p>前面讲过，有两种类型的工作负载：</p>
+<ol>
+<li>CPU-Bound：永远不会使得Go程处于waiting状态，永远处于runnable/executing状态的纯计算型任务。</li>
+<li>IO-Bound：天然的会使得Go程进入waiting状态。比如访问网络资源、syscall、访问文件。同时也把同步事件归到此类（atomic、mutex）</li>
+</ol>
+<p>对于CPU-Bound任务来说，你需要利用并行。如果Go程数量多于OS线程/core数量，那么就会使得Go程被上下文切换，从而带来性能损失。</p>
+<p>对于IO-Bound任务来说，你可以不需要利用并行，一个OS线程/core可以很轻松的处理这种天然就会进出waiting状态的任务。Go程数量大于OS线程/core数量可以大大提高OS线程/core的利用率，提高任务的处理速度。Go程的上下文切换不会造成性能损失，因为你的任务自己就会停止。</p>
+<p>那么使用多个Go程能带来多大好处，以及多少个Go程能带来最大效果，那么就需要benchmark才能知道。</p>
+        </p>
     </div>
+    
+
+    <div class="page-footer">
         
-        <div class="paginator">
+        <hr class="footer-divider">
         
+            <a class="tag" href="https://chanjarster.github.io/tags/go">#go</a>
         
-        <p>Page 27 of 27</p>
-        <div class="paginator-group">
-            
-            <a class="color-link" href="https://chanjarster.github.io/page/26/">
-                    <svg width="13px" height="9px" viewBox="0 0 13 9" version="1.1" xmlns="https://www.w3.org/2000/svg" xmlns:xlink="https://www.w3.org/1999/xlink">
-                        <g class="color-arrow" fill="#63BDA2" fill-rule="nonzero">
-                            <polygon id="Path" points="1.75929935 4.50000282 5.3292523 7.62371165 4.6707477 8.37628835 0.240700645 4.49999718 4.67081049 0.623709205 5.32930951 1.37629079"></polygon>
-                            <polygon id="Path" points="13 4 13 5 1 5 1 4"></polygon>
-                        </g>
-                </svg>  
-                Newer          
-            </a>
-            
-            
-        </div>
+            <a class="tag" href="https://chanjarster.github.io/tags/kernel">#kernel</a>
         
+            <a class="tag" href="https://chanjarster.github.io/tags/thread">#thread</a>
+        
+            <a class="tag" href="https://chanjarster.github.io/tags/scheduling">#scheduling</a>
+        
+            <a class="tag" href="https://chanjarster.github.io/tags/arts">#arts</a>
+        
+            <a class="tag" href="https://chanjarster.github.io/tags/arts-r">#arts-r</a>
+        
+      
     </div>
+
 
         
         </div>
