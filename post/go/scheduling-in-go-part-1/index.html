@@ -45,11 +45,11 @@
   
     <a class="color-link nav-link" href="https://chanjarster.github.io/tags/%E6%94%B6%E8%97%8F%E5%A4%B9/">Bookmarks</a>
   
-    <a class="color-link nav-link" href="https://chanjarster.github.io/post/jvm/index-page">JVM</a>
-  
     <a class="color-link nav-link" href="https://chanjarster.github.io/post/concurrent-programming/index-page">并发编程</a>
   
-    <a class="color-link nav-link" href="https://chanjarster.github.io/post/mysql/index-page">MySQL</a>
+    <a class="color-link nav-link" href="">MySQL</a>
+  
+    <a class="color-link nav-link" href="https://chanjarster.github.io/tags/go/">Go</a>
   
     <a class="color-link nav-link" href="https://github.com/chanjarster">Works</a>
   
@@ -137,6 +137,37 @@
     <div>
         <p>
         <p>原文：<a href="https://www.ardanlabs.com/blog/2018/08/scheduling-in-go-part1.html">Scheduling In Go : Part I - OS Scheduler</a></p>
+<h2 id="几个数字">几个数字</h2>
+<table>
+<thead>
+<tr>
+<th>operation</th>
+<th>cost</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1纳秒</td>
+<td>可以执行12条指令</td>
+</tr>
+<tr>
+<td>OS上下文切换</td>
+<td>~1000到~1500 nanosecond，相当于~12k到~18k条指令。</td>
+</tr>
+<tr>
+<td>Go程上下文切换</td>
+<td>~200 nanoseconds，相当于~2.4k instructions条指令。</td>
+</tr>
+<tr>
+<td>访问主内存</td>
+<td>~100到~300 clock cycles</td>
+</tr>
+<tr>
+<td>访问CPU cache</td>
+<td>~3到~40 clock cycles（根据不同的cache类型）</td>
+</tr>
+</tbody>
+</table>
 <h2 id="操作系统线程调度器">操作系统线程调度器</h2>
 <p>你的程序实际上就是一系列需要执行的指令，而这些指令是跑线程里的。</p>
 <p>线程可以<strong>并发</strong>运行：每个线程轮流占用一个core；也可以<strong>并行</strong>运行：每个线程跑在不同core上。</p>
@@ -144,6 +175,10 @@
 <h2 id="程序指令是如何执行的">程序指令是如何执行的</h2>
 <p>程序计数器（program counter，PC），有时也称为指令指针（instruction pointer，IP），用来告诉线程<strong>下一个</strong>要执行的指令（注意不是当前正在执行的指令）的位置。它是一种寄存器（register）。</p>
 <p>每次执行指令的时候都会更新PC，因此程序才能够顺序执行。</p>
+<figure>
+    <img src="92_figure1.jpeg" width="100%"/> 
+</figure>
+
 <h2 id="线程状态">线程状态</h2>
 <ul>
 <li>Waiting：等待中。原因：等待硬件（比如磁盘、网络）、正在系统调用（syscall）、阻塞在同步上（atomic、mutex）</li>
@@ -170,10 +205,16 @@
 <h2 id="cache-line">Cache line</h2>
 <p>访问主内存（main memory）的数据的延迟大概在<strong>~100到~300 clock cycles</strong>。</p>
 <p>访问cache的数据延迟大概在 ~3到~40 clock cycles（根据不同的cache类型）。</p>
-<p><img src="https://www.ardanlabs.com/images/goinggo/92_figure2.png" alt=""></p>
+<figure>
+    <img src="92_figure2.png" width="100%"/> 
+</figure>
+
 <p>CPU会把数据从主内存中copy到cache中，以cache line为单位，每条cache line为64 bytes。所以多线程修改内存会造成性能损失。</p>
 <p>多个并行运行的线程访问同一个数据或者相邻的数据，那么它们可能就会访问同一条cache line。任何线程跑在任何core上都有一份自己的cache line copy。所以就有了False Sharing问题：</p>
-<p><img src="https://www.ardanlabs.com/images/goinggo/92_figure3.png" alt=""></p>
+<figure>
+    <img src="92_figure3.png" width="100%"/> 
+</figure>
+
 <p>只要一个线程操作了自己core上的某个cache line，那么这个cache line在其他core就会变脏（cache coherency），当一个线程访问一个脏cache line的时候，就要访问一下main memory（<strong>~100到~300 clock cycles</strong>）。当单处理器core变多的时候，以及当有多个处理器（处理器间通信）的时候，这个开销就变得很大了。</p>
         </p>
     </div>
