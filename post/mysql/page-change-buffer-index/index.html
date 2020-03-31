@@ -47,7 +47,7 @@
   
     <a class="color-link nav-link" href="https://chanjarster.github.io/post/concurrent-programming/index-page">并发编程</a>
   
-    <a class="color-link nav-link" href="">MySQL</a>
+    <a class="color-link nav-link" href="https://chanjarster.github.io/post/mysql/index-page">MySQL</a>
   
     <a class="color-link nav-link" href="https://chanjarster.github.io/tags/go/">Go</a>
   
@@ -147,7 +147,10 @@
 <li>如果数据页不在内存中，那么要从磁盘中加载到内存中。</li>
 </ul>
 <p>InnoDB的数据页默认大小是16K（由<code>innodb_page_size</code>控制），InnoDB不会只加载你想要的row，而是把附近的连带加载进来（有点像CPU的cache line）。下图中的第二行就是一个一个数据页：</p>
-<p><!-- raw HTML omitted --></p>
+<figure>
+    <img src="page.png" width="100%"/> 
+</figure>
+
 <p>那么问题来了，如果你每次更新的row所在的数据页不在内存中，那么每次都要从磁盘加载是极其低效的，因此change buffer来救你了。</p>
 <h2 id="change-buffer">change buffer</h2>
 <p>change buffer顾名思义是更新操作的缓冲，它是buffer pool的一部分（由<code>innodb_change_buffer_max_size</code>控制占用百分比）。当你要更新的row所在的数据页不在内存中时，InnoDB把更新操作保存在change buffer中。PS. change buffer是持久化的。</p>
@@ -175,7 +178,10 @@
 <p>现在，我们要在表上执行这个插入语句：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql">mysql<span style="color:#f92672">&gt;</span> <span style="color:#66d9ef">insert</span> <span style="color:#66d9ef">into</span> t(id,k) <span style="color:#66d9ef">values</span>(id1,k1),(id2,k2);
 </code></pre></div><p>我们假设当前 k 索引树的状态，查找到位置后，k1 所在的数据页在内存 (InnoDB buffer pool) 中，k2 所在的数据页不在内存中。下图 所示是带 change buffer 的更新状态图。</p>
-<p><!-- raw HTML omitted --></p>
+<figure>
+    <img src="change-buffer-update.png" width="100%"/> 
+</figure>
+
 <p>这条更新语句涉及了四个部分：内存、redo log（ib_log_fileX）、 数据表空间（t.ibd）、系统表空间（ibdata1）。</p>
 <p>这条更新语句做了如下的操作（按照图中的数字顺序）：</p>
 <ol>
@@ -186,7 +192,10 @@
 <p>同时，图中的两个虚线箭头，是后台操作，不影响更新的响应时间。</p>
 <h3 id="读过程">读过程</h3>
 <p>我们现在要执行 <code>select * from t where k in (k1, k2)</code>流程如下：</p>
-<p><!-- raw HTML omitted --></p>
+<figure>
+    <img src="change-buffer-read.png" width="100%"/> 
+</figure>
+
 <ol>
 <li>读 Page 1 的时候，直接从内存返回。</li>
 <li>要读 Page 2 的时候，需要把 Page 2 从磁盘读入内存中，然后应用 change buffer 里面的操作日志，生成一个正确的版本并返回结果。这个动作称为merge。</li>

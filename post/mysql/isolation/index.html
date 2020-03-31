@@ -47,7 +47,7 @@
   
     <a class="color-link nav-link" href="https://chanjarster.github.io/post/concurrent-programming/index-page">并发编程</a>
   
-    <a class="color-link nav-link" href="">MySQL</a>
+    <a class="color-link nav-link" href="https://chanjarster.github.io/post/mysql/index-page">MySQL</a>
   
     <a class="color-link nav-link" href="https://chanjarster.github.io/tags/go/">Go</a>
   
@@ -194,7 +194,10 @@
 <h2 id="事务隔离的实现">事务隔离的实现</h2>
 <p>在 MySQL 中，实际上每条记录在更新的时候都会同时记录一条回滚操作。记录上的最新值，通过回滚操作，都可以得到前一个状态的值。</p>
 <p>假设一个值从 1 被按顺序改成了 2、3、4，在回滚日志里面就会有类似下面的记录。</p>
-<p><!-- raw HTML omitted --></p>
+<figure>
+    <img src="rollback-segment.png" width="100%"/> 
+</figure>
+
 <p>从“read-view A、B、C”看到的值分别是1、2、4。<strong>MySQL通过MVCC（多版本并发控制）来实现的</strong>。read-view A得到的1实际上是从read-view C（当前值）一路回退得到的。</p>
 <p>回滚日志什么时候删除？当没有比它更早的read-view的时候，比如只要上面的read-view A存在，那么上面3个回滚日志都必须存在。</p>
 <p><strong>长事务会导致大量回滚日志</strong>，因为只要事务没提交，MySQL就要保留可能会被这个事务用到的所有回滚日志，从而占用大量空间，回滚日志是保存在文件中的。</p>

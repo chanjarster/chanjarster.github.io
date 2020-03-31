@@ -47,7 +47,7 @@
   
     <a class="color-link nav-link" href="https://chanjarster.github.io/post/concurrent-programming/index-page">并发编程</a>
   
-    <a class="color-link nav-link" href="">MySQL</a>
+    <a class="color-link nav-link" href="https://chanjarster.github.io/post/mysql/index-page">MySQL</a>
   
     <a class="color-link nav-link" href="https://chanjarster.github.io/tags/go/">Go</a>
   
@@ -210,12 +210,18 @@
 </ol>
 <p>那么，如果你现在的transaction id是100，那么你在读一张表的时候就能够规定，只取row trx_id &lt;= 100的read view，这样不就是相当于给数据库打了快照了吗？</p>
 <p>下面这张图就是一行有4个版本（read view）V1、V2、V3、V4，通过undo log U1、U2、U3能够得到它们，还有事务id。</p>
-<p><!-- raw HTML omitted --></p>
+<figure>
+    <img src="row-trx-id.png" width="100%"/> 
+</figure>
+
 <h3 id="innodb的实现">InnoDB的实现</h3>
 <p>在实现上InnoDB 为每个事务构造了一个数组，用来保存这个事务启动瞬间，当前正在“活跃”的所有事务 ID。“活跃”指的就是，启动了但还没提交。</p>
 <p>数组里面事务 ID 的最小值记为低水位，当前系统里面已经创建过的事务 ID 的最大值加 1 记为高水位。这个视图数组和高水位，就组成了当前事务的一致性视图（read-view）。</p>
 <p>而数据版本的可见性规则，就是基于数据的 row trx_id 和这个一致性视图的对比结果得到的。</p>
-<p><!-- raw HTML omitted --></p>
+<figure>
+    <img src="hi-lo.png" width="100%"/> 
+</figure>
+
 <p>这样，对于当前事务的启动瞬间来说，一个数据版本的 row trx_id，有以下几种可能：</p>
 <ol>
 <li>如果落在绿色部分，表示这个版本是已提交的事务或者是当前事务自己生成的，这个数据是可见的；</li>
@@ -237,7 +243,10 @@
 </ol>
 <p>那么，事务 A 的视图数组就是 [99,100], 事务 B 的视图数组是 [99,100,101], 事务 C 的视图数组是 [99,100,101,102]</p>
 <p>下面是时间线：</p>
-<p><!-- raw HTML omitted --></p>
+<figure>
+    <img src="tx-timeline.png" width="100%"/> 
+</figure>
+
 <h3 id="查询逻辑">查询逻辑</h3>
 <p>可以看到事务A得到的结果是1，也就是row trx_id=90的那个版本，因为它处于低水位之下。</p>
 <h3 id="更新逻辑">更新逻辑</h3>
@@ -247,7 +256,10 @@
 <p>前面已经看到了，可以使用<code>start transaction with consistent snapshot</code>来开启事务，同时它还会创建一个一致性视图。但是这个语句只有当事务隔离级别是RR的时候才有用，否则它和下面的<code>begin/start transaction</code>效果是一样的。</p>
 <p><code>begin/start transaction</code>也可以开启一个事务，但是它不会创建一个一致性视图，只有当后面执行第一条操作InnoDB表的语句才会创建一致性视图。</p>
 <p>下面是RC（Read Commit）级别下的时间线：</p>
-<p><!-- raw HTML omitted --></p>
+<figure>
+    <img src="tx-timeline.png" width="100%"/> 
+</figure>
+
 <p>考虑到执行第一条快照读语句时才会创建一致性视图（也就是那个数组），那么可得出：</p>
 <ul>
 <li>A能够读到C提交的结果，2</li>
@@ -296,7 +308,10 @@ mysql&gt; <span style="color:#66d9ef">select</span> * from t;
 +----+------+
 <span style="color:#ae81ff">4</span> rows in set <span style="color:#f92672">(</span>0.00 sec<span style="color:#f92672">)</span>
 </code></pre></div><p>要怎样做才能产生这种情况呢？回顾这张图：</p>
-<p><!-- raw HTML omitted --></p>
+<figure>
+    <img src="hi-lo.png" width="100%"/> 
+</figure>
+
 <ul>
 <li>当row tx_id 在 红色区域里，对当前事务不可见</li>
 <li>当row tx_id 在 黄色区域里，且在数组中时，对当前事务不可见</li>
