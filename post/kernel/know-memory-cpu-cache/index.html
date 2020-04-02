@@ -253,7 +253,7 @@ CPU cache尺寸不大。</p>
 </ul>
 <p><img src="https://static.lwn.net/images/cpumemory/cpumemory.23.png" alt=""></p>
 <p><strong>Figure 3.11: Sequential Read for Several Sizes</strong></p>
-<p>观察working set size &lt;= L2，看（2<!-- raw HTML omitted -->10<!-- raw HTML omitted -->～2<!-- raw HTML omitted -->19<!-- raw HTML omitted -->区段）：</p>
+<p>观察working set size &lt;= L2，看（2<sup>10</sup>～2<sup>19</sup>区段）：</p>
 <ul>
 <li>当working set size &lt;= L1d的时候，时钟周期和NPAD=0持平。</li>
 <li>当working set size &gt; L1d &lt;= L2的时候，时钟周期和L2本身的周期吻合，在28左右</li>
@@ -274,7 +274,7 @@ CPU cache尺寸不大。</p>
 </ul>
 <p><img src="https://static.lwn.net/images/cpumemory/cpumemory.23.png" alt=""></p>
 <p><strong>Figure 3.11: Sequential Read for Several Sizes</strong></p>
-<p>观察working set size &gt; L2，看（2<!-- raw HTML omitted -->19<!-- raw HTML omitted -->之后的区段）：</p>
+<p>观察working set size &gt; L2，看（2<sup>19</sup>之后的区段）：</p>
 <ul>
 <li>NPAD=7（element size=64），依然有prefetching的迹象</li>
 <li>NPAD=15（element size=128）、NPAD=31（element size=256）则没有prefetching的迹象</li>
@@ -291,7 +291,7 @@ CPU cache尺寸不大。</p>
 <p><img src="https://static.lwn.net/images/cpumemory/cpumemory.59.png" alt=""></p>
 <p><strong>Figure 3.12: TLB Influence for Sequential Read</strong></p>
 <ul>
-<li>蓝色曲线看到，当数据量超过2<!-- raw HTML omitted -->12<!-- raw HTML omitted --> bytes（4K），曲线开始飙升。因此可以推测TLB的大小为4K。</li>
+<li>蓝色曲线看到，当数据量超过2<sup>12</sup> bytes（4K），曲线开始飙升。因此可以推测TLB的大小为4K。</li>
 <li>因为每个元素大小为64 bytes，因此可以推测TLB的entry数目为64.</li>
 <li>从虚拟内存地址计算物理内存地址，并将结果放到TLB cache中是很耗时的。</li>
 <li>main memory读取或从L2读取数据到cache line之前，必须先计算物理内存地址。</li>
@@ -314,7 +314,7 @@ CPU cache尺寸不大。</p>
 </ul>
 <p>下面这段没看懂，也许这不重要。</p>
 <blockquote>
-<p>The “Addnext0” test runs out of L2 faster than the “Inc” test, though. It needs more data loaded from main memory. This is why the “Addnext0” test reaches the 28 cycles level for a working set size of 2<!-- raw HTML omitted -->21<!-- raw HTML omitted --> bytes. The 28 cycles level is twice as high as the 14 cycles level the “Follow” test reaches. This is easy to explain, too. Since the other two tests modify memory an L2 cache eviction to make room for new cache lines cannot simply discard the data. Instead it has to be written to memory. This means the available bandwidth on the FSB is cut in half, hence doubling the time it takes to transfer the data from main memory to L2.</p>
+<p>The “Addnext0” test runs out of L2 faster than the “Inc” test, though. It needs more data loaded from main memory. This is why the “Addnext0” test reaches the 28 cycles level for a working set size of 2<sup>21</sup> bytes. The 28 cycles level is twice as high as the 14 cycles level the “Follow” test reaches. This is easy to explain, too. Since the other two tests modify memory an L2 cache eviction to make room for new cache lines cannot simply discard the data. Instead it has to be written to memory. This means the available bandwidth on the FSB is cut in half, hence doubling the time it takes to transfer the data from main memory to L2.</p>
 </blockquote>
 <h5 id="case-4-sequential-read-on-larger-l2l3">case 4: Sequential Read on larger L2/L3</h5>
 <p>测试NPAD=15，element size=128 bytes。</p>
@@ -322,7 +322,7 @@ CPU cache尺寸不大。</p>
 <p><strong>Figure 3.14: Advantage of Larger L2/L3 Caches</strong></p>
 <ul>
 <li>最后一级cache越大，则曲线逗留于L2访问开销对应的低等级的时间越长</li>
-<li>第二个处理器在2<!-- raw HTML omitted -->20<!-- raw HTML omitted -->时比第一个处理快一倍，是因为它的L3</li>
+<li>第二个处理器在2<sup>20</sup>时比第一个处理快一倍，是因为它的L3</li>
 <li>第三个处理器表现的更好则是因为它的4M L2</li>
 </ul>
 <p>所以缓存越大越能得到性能上的提升。</p>
@@ -527,21 +527,21 @@ CPU cache尺寸不大。</p>
 <p>Hyper-Threads(有时候也被称为Symmetric Multi-Threading, SMT)，是CPU实现的一项技术，同时也是一个特殊情况，因为各个线程并不能够真正的同时运行。超线程共享了CPU的所有资源除了register。各个core和CPU依然是并行运行的，但是hyper-threads不是。CPU负责hyper-threads的分时复用（time-multiplexing），当当前运行的hyper-thread发生延迟的时候，就调度令一个hyper-thread运行，而发生延迟的原因大部分都是因内存访问导致的。</p>
 <p>当程序的运行2线程在一个hyper-thread核的时候，只有在以下情况才会比单线程更有效率：2个线程的<em>运行时间之和</em>低于单线程版本的运行时间。这是因为当一个线程在等待内存的时候可以安排另一个线程工作，而原本这个是串形的。</p>
 <p>一个程序的运行时间大致可以用下面这个简单模型+单级cache来计算：</p>
-<p>T<!-- raw HTML omitted -->exe<!-- raw HTML omitted --> = N[(1-F<!-- raw HTML omitted -->mem<!-- raw HTML omitted -->)T<!-- raw HTML omitted -->proc<!-- raw HTML omitted --> + F<!-- raw HTML omitted -->mem<!-- raw HTML omitted -->(G<!-- raw HTML omitted -->hit<!-- raw HTML omitted -->T<!-- raw HTML omitted -->cache<!-- raw HTML omitted --> + (1-G<!-- raw HTML omitted -->hit<!-- raw HTML omitted -->)T<!-- raw HTML omitted -->miss<!-- raw HTML omitted -->)]</p>
+<p>T<sub>exe</sub> = N[(1-F<sub>mem</sub>)T<sub>proc</sub> + F<sub>mem</sub>(G<sub>hit</sub>T<sub>cache</sub> + (1-G<sub>hit</sub>)T<sub>miss</sub>)]</p>
 <ul>
 <li>N      = Number of instructions. 指令数</li>
-<li>F<!-- raw HTML omitted -->mem<!-- raw HTML omitted -->   = Fraction of N that access memory. N的几分之几访问内存</li>
-<li>G<!-- raw HTML omitted -->hit<!-- raw HTML omitted -->   = Fraction of loads that hit the cache. 加载次数的几分之几命中cache</li>
-<li>T<!-- raw HTML omitted -->proc<!-- raw HTML omitted -->  = Number of cycles per instruction. 每条指令的周期数</li>
-<li>T<!-- raw HTML omitted -->cache<!-- raw HTML omitted --> = Number of cycles for cache hit. 命中cache的周期数</li>
-<li>T<!-- raw HTML omitted -->miss<!-- raw HTML omitted -->  = Number of cycles for cache miss. 没命中cache的周期数</li>
-<li>T<!-- raw HTML omitted -->exe<!-- raw HTML omitted -->   = Execution time for program. 程序的执行时间</li>
+<li>F<sub>mem</sub>   = Fraction of N that access memory. N的几分之几访问内存</li>
+<li>G<sub>hit</sub>   = Fraction of loads that hit the cache. 加载次数的几分之几命中cache</li>
+<li>T<sub>proc</sub>  = Number of cycles per instruction. 每条指令的周期数</li>
+<li>T<sub>cache</sub> = Number of cycles for cache hit. 命中cache的周期数</li>
+<li>T<sub>miss</sub>  = Number of cycles for cache miss. 没命中cache的周期数</li>
+<li>T<sub>exe</sub>   = Execution time for program. 程序的执行时间</li>
 </ul>
 <p>为了使用两个线程有​​意义，两个线程中每个线程的执行时间必须至多是单线程代码的一半。如果把单线程和双线程放到等式的两遍，那么唯一的变量就是cache命中率。不使线程执行速度降低50%或更多（降低超过50%就比单线程慢了），然后计算所需的最小cache命中率，得到下面这张图：</p>
 <p><img src="https://static.lwn.net/images/cpumemory/cpumemory.14.png" alt=""></p>
 <p><strong>Figure 3.23: Minimum Cache Hit Rate For Speed-Up</strong></p>
-<p>X轴代表了单线程代码的G<!-- raw HTML omitted -->hit<!-- raw HTML omitted -->，Y代表了双线程代码所需的G<!-- raw HTML omitted -->hit<!-- raw HTML omitted -->，双线程的值永远不能比单线程高，否则的话就意味着单线程可以用同样的方法改进代码了。单线程G<!-- raw HTML omitted -->hit<!-- raw HTML omitted --> &lt; 55%的时候，程序总是能够从多线程得到好处。</p>
-<p>绿色代表的是目标区域，如果一个线程的降速低于50%且每个线程的工作量减半，那么运行时间是有可能低于单线程的运行时间的。看上图，单线程G<!-- raw HTML omitted -->hit<!-- raw HTML omitted -->=60%时，如果要得到好处，双线程程序必须在10%以上。如果单线程G<!-- raw HTML omitted -->hit<!-- raw HTML omitted -->=95%，多线程则必须在80%以上，这就难了。特别地，这个问题是关于hyper-threads本身的，实际上给每个hyper-thread的cache尺寸是减半的（L1d、L2、L3都是）。两个hyper-thread使用相同的cache来加载数据。如果两个线程的工作集不重叠，那么原95%也可能减半，那么就远低于要求的80%。</p>
+<p>X轴代表了单线程代码的G<sub>hit</sub>，Y代表了双线程代码所需的G<sub>hit</sub>，双线程的值永远不能比单线程高，否则的话就意味着单线程可以用同样的方法改进代码了。单线程G<sub>hit</sub> &lt; 55%的时候，程序总是能够从多线程得到好处。</p>
+<p>绿色代表的是目标区域，如果一个线程的降速低于50%且每个线程的工作量减半，那么运行时间是有可能低于单线程的运行时间的。看上图，单线程G<sub>hit</sub>=60%时，如果要得到好处，双线程程序必须在10%以上。如果单线程G<sub>hit</sub>=95%，多线程则必须在80%以上，这就难了。特别地，这个问题是关于hyper-threads本身的，实际上给每个hyper-thread的cache尺寸是减半的（L1d、L2、L3都是）。两个hyper-thread使用相同的cache来加载数据。如果两个线程的工作集不重叠，那么原95%也可能减半，那么就远低于要求的80%。</p>
 <p>所以Hyper-threads只在有限范围的场景下有用。单线程下的cache命中率必须足够低，而且就算减半cache大小新的cache命中率在等式中依然能够达到目标。也只有这样使用Hyper-thread才有意义。在实践中是否能够更快取决于处理器是否能够充分交叠一个线程的等待和另一个线程的执行。而代码为了并行处理所引入的其他开销也是要考虑进去的。</p>
 <p>所以很明白的就是，如果两个hyper-threads运行的是两个完全不同的代码，那么肯定不会带来什么好处的，除非cache足够大到能够抵消因cache减半导致的cache miss率的提高。除非操作系统的工作负载由一堆在设计上真正能够从hyper-thread获益的进程组成，可能还是在BIOS里关掉hyper-thread比较好。</p>
 <h3 id="335-other-details">3.3.5 Other Details</h3>
@@ -585,7 +585,7 @@ CPU cache尺寸不大。</p>
 <ul>
 <li>当working set size在L1d以内的时候，16 bytes/cycle</li>
 <li>当L1d不够用的时候，性能下降很快，6 bytes/cycle</li>
-<li>到2<!-- raw HTML omitted -->18<!-- raw HTML omitted -->的时候又下降了一小段是因为DTLB耗尽了，意思是对每个新page需要额外工作。</li>
+<li>到2<sup>18</sup>的时候又下降了一小段是因为DTLB耗尽了，意思是对每个新page需要额外工作。</li>
 <li>这个测试是顺序读的，很利于prefetching，而在任何working set size下都能够达到5.3/cycle，记住这些数字，它们是上限，因为真实程序永远无法达到这个值。</li>
 </ul>
 <p>在看写和copy的测试：</p>
@@ -601,7 +601,7 @@ CPU cache尺寸不大。</p>
 <p>下图是Intel Core2处理器的测试结果（对比Figure 3.24）：</p>
 <p><img src="https://static.lwn.net/images/cpumemory/cpumemory.62.png" alt=""></p>
 <p><strong>Figure 3.26: Core 2 Bandwidth</strong></p>
-<p>Core 2 L2是P4 L2的四倍。这延迟了write和copy测试的性能下跌。read测试在所有的working set size里都维持在16 bytes/cycle左右，在2<!-- raw HTML omitted -->20<!-- raw HTML omitted -->处下跌了一点点是因为DTLB放不下working set。能够有这么好的性能表现不仅意味着处理器能够及时地prefetching和传输数据，也意味着数据是被prefetch到L1d的。</p>
+<p>Core 2 L2是P4 L2的四倍。这延迟了write和copy测试的性能下跌。read测试在所有的working set size里都维持在16 bytes/cycle左右，在2<sup>20</sup>处下跌了一点点是因为DTLB放不下working set。能够有这么好的性能表现不仅意味着处理器能够及时地prefetching和传输数据，也意味着数据是被prefetch到L1d的。</p>
 <p>看write和copy的表现，Core 2处理器的L1d cache没有采用Write-through策略，只有当必要的时候L1d才会evict，所以能够获得和read接近的表现。当L1d不够用的时候，性能开始下降。当L2不够用的时候再下跌很多。</p>
 <p>下图是Intel Core2处理器双线程跑在两个核心上：</p>
 <p><img src="https://static.lwn.net/images/cpumemory/cpumemory.63.png" alt=""></p>

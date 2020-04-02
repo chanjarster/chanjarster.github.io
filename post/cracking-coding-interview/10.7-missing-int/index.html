@@ -149,11 +149,11 @@ Gb   Mb   Kb
 b: billion
 m: million
 t: thousand
-</code></pre></div><p>注意4 billion = 4 * 1 billion = 4 * 2<!-- raw HTML omitted -->30<!-- raw HTML omitted --> = 2<!-- raw HTML omitted -->32<!-- raw HTML omitted -->，而Integer的非负数最多只有2<!-- raw HTML omitted -->31<!-- raw HTML omitted -->个，那也就意味着这个文件里<strong>肯定存在重复的数字</strong>。</p>
-<p>如果我们用每个bit对应一个数字，那么需要2<!-- raw HTML omitted -->31<!-- raw HTML omitted -->个bit，也就是2<!-- raw HTML omitted -->28<!-- raw HTML omitted --> bytes = 250Mb，我们现在有1GB内存，所以Hold的住。</p>
+</code></pre></div><p>注意4 billion = 4 * 1 billion = 4 * 2<sup>30</sup> = 2<sup>32</sup>，而Integer的非负数最多只有2<sup>31</sup>个，那也就意味着这个文件里<strong>肯定存在重复的数字</strong>。</p>
+<p>如果我们用每个bit对应一个数字，那么需要2<sup>31</sup>个bit，也就是2<sup>28</sup> bytes = 250Mb，我们现在有1GB内存，所以Hold的住。</p>
 <p>那么算法是：</p>
 <ol>
-<li>构建一个bit vector，里面包含2<!-- raw HTML omitted -->31<!-- raw HTML omitted --> + 1个bit</li>
+<li>构建一个bit vector，里面包含2<sup>31</sup> + 1个bit</li>
 <li>遍历文件，每读到一个数字在对应的bit上设置1</li>
 <li>遍历bit vector，找到第一个是0的bit</li>
 <li>把它变成数字</li>
@@ -181,8 +181,8 @@ t: thousand
 <p>如果有前面bit vector的方法，我们需要250MB内存，但我们现在只有10MB，所以方法1不适合。</p>
 <p>因为告诉你了数字不重复，那么你就可以对分段进行计数，比如分为<code>[0, 999]</code>、<code>1000, 1999]</code>，如果一个数字在某个分段范围内，那么就把这个分段的计数+1。然后当某个分段计数不等于1000的时候，就知道它里面缺少某个数字。</p>
 <p>那么分段范围怎么确定？</p>
-<p>每个分段都用一个Integer计数，一个Integer占用4个字节，现在有10MB内存，那么可以分为 (10 * 2<!-- raw HTML omitted -->20<!-- raw HTML omitted -->) / 4 = 10 * 2<!-- raw HTML omitted -->18<!-- raw HTML omitted --> 个段。</p>
-<p>然后最多有有2<!-- raw HTML omitted -->31<!-- raw HTML omitted -->个非负Integer，那么每段的大小是 2<!-- raw HTML omitted -->31<!-- raw HTML omitted --> / (10 * 2<!-- raw HTML omitted -->18<!-- raw HTML omitted -->) = 2<!-- raw HTML omitted -->13<!-- raw HTML omitted --> / 10 = 8192 / 10 ~= 820。为了方便起见我们可以把分段大小变大一点，比如1024，这样会占用 &lt; 10MB的内存。</p>
+<p>每个分段都用一个Integer计数，一个Integer占用4个字节，现在有10MB内存，那么可以分为 (10 * 2<sup>20</sup>) / 4 = 10 * 2<sup>18</sup> 个段。</p>
+<p>然后最多有有2<sup>31</sup>个非负Integer，那么每段的大小是 2<sup>31</sup> / (10 * 2<sup>18</sup>) = 2<sup>13</sup> / 10 = 8192 / 10 ~= 820。为了方便起见我们可以把分段大小变大一点，比如1024，这样会占用 &lt; 10MB的内存。</p>
 <p>因为知道某个段里缺少数字，那么我们就可以像前面那样用bit vector找出缺少的数字，不过这个时候的bit vector需要饱含的bit数只需要1024个就行了。</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#66d9ef">private</span> <span style="color:#66d9ef">final</span> <span style="color:#66d9ef">int</span> SEG_SIZE <span style="color:#f92672">=</span> 1024<span style="color:#f92672">;</span>
 

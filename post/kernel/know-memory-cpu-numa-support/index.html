@@ -146,7 +146,7 @@
 <p>对于商业机器来说，所有处理器共享访问相同的内存，即所有处理器共享同一个北桥，导致所有流量都从北桥走，导致北桥成为瓶颈。虽然可以用定制化硬件代替北桥，但是内存芯片必须得支持多port才行，但是Multiport RAM很复杂很贵，所以几乎没有人会使用。</p>
 <p><img src="https://static.lwn.net/images/cpumemory/cpumemory.20.png" alt=""></p>
 <p><strong>Figure 5.1: Hypercubes</strong></p>
-<p>一个高效的节点（处理器）拓扑是超立方体，它限定了节点数量为2<!-- raw HTML omitted -->C<!-- raw HTML omitted -->，C为每个节点的interconnect接口数量。超立方体拥有2<!-- raw HTML omitted -->n<!-- raw HTML omitted -->处理器系统的最小直径（两节点之间的最大距离）。看Figure 5.1，每个处理器的直径为C，这个是最小值。</p>
+<p>一个高效的节点（处理器）拓扑是超立方体，它限定了节点数量为2<sup>C</sup>，C为每个节点的interconnect接口数量。超立方体拥有2<sup>n</sup>处理器系统的最小直径（两节点之间的最大距离）。看Figure 5.1，每个处理器的直径为C，这个是最小值。</p>
 <p><em>后面是已知的几种NUMA的硬件实现，这里就不写了。</em></p>
 <h2 id="52-os-support-for-numa">5.2 OS Support for NUMA</h2>
 <p>操作系统在分配内存的时候必须将NUMA考虑进去。比如一个进程运行在一个处理器上，那么为其所分配的内存应该来自于本地内存，否则所有的code和data都必须访问远程内存才可以。有一些特殊情况只有在NUMA下才需要考虑。text segment of DSOs通常情况下在物理内存中只存有一份，但如果DSOs被所有CPU的线程或进程所使用（比如<code>libc</code>），这就意味着少数处理器之外的所有处理器都要发生远程访问。理想情况下，操作系统会将DSO在每个处理器的本地物理RAM里做<code>mirror</code>，这是一种优化策略，不是一个要求，通常也很难实现。</p>
