@@ -45,11 +45,19 @@
   
     <a class="color-link nav-link" href="https://chanjarster.github.io/tags/%E6%94%B6%E8%97%8F%E5%A4%B9/">Bookmarks</a>
   
+    <a class="color-link nav-link" href="https://chanjarster.github.io/post/jvm/index-page">JVM</a>
+  
     <a class="color-link nav-link" href="https://chanjarster.github.io/post/concurrent-programming/index-page">并发编程</a>
   
     <a class="color-link nav-link" href="https://chanjarster.github.io/post/mysql/index-page">MySQL</a>
   
     <a class="color-link nav-link" href="https://chanjarster.github.io/tags/go/">Go</a>
+  
+    <a class="color-link nav-link" href="https://chanjarster.github.io/tags/gc/">GC</a>
+  
+    <a class="color-link nav-link" href="https://chanjarster.github.io/tags/kernel/">Kernel</a>
+  
+    <a class="color-link nav-link" href="https://chanjarster.github.io/tags/cheatsheet/">Cheat sheet</a>
   
     <a class="color-link nav-link" href="https://github.com/chanjarster">Works</a>
   
@@ -140,7 +148,7 @@
 <p>用动画解释了4种GC算法</p>
 <h2 id="cleanup-at-the-end-no-gc">Cleanup at the end: No GC</h2>
 <p>就是没有GC，程序在执行完一个任务后自己去释放内存。</p>
-<p><img src="https://github.com/kenfox/gc-viz/raw/master/docs/NO_GC.gif" alt=""></p>
+<p><img src="NO_GC.gif" alt=""></p>
 <p>动画黑色代表没有被使用的内存，闪烁的绿色和黄色代表内存被读或写，颜色变暗代表内存没有被使用（垃圾）。这个算法适合不需要考虑垃圾的程序。</p>
 <h2 id="reference-counting-collector">Reference Counting Collector</h2>
 <p>对对象的被使用次数进行计数，如果计数变成0，那么就是垃圾，然后释放内存。</p>
@@ -151,12 +159,12 @@
 <li>就算内存使用没有增加，也要做计数</li>
 <li>计数值要频繁从内存加载到CPU Cache，无法有效缓存，效率低</li>
 </ul>
-<p><img src="https://github.com/kenfox/gc-viz/raw/master/docs/REF_COUNT_GC.gif" alt=""></p>
+<p><img src="REF_COUNT_GC.gif" alt=""></p>
 <p>动画中的红色闪烁代表更新计数。有时候你会发现红色闪烁之后马上就变成黑色，引用计数算法可以立马发现垃圾然后清理掉。</p>
 <p>引用计数是一种分摊成本的算法，所以并不能保证pause time。虽然在程序运行过程中分摊下来pause time比较少，但是不排除某个task会出现pause time很长的情况。</p>
 <h2 id="mark-sweep-collector">Mark-Sweep Collector</h2>
 <p>标记清理算法就是标记Live对象，然后把死掉的对象清理掉。</p>
-<p><img src="https://github.com/kenfox/gc-viz/raw/master/docs/MARK_SWEEP_GC.gif" alt=""></p>
+<p><img src="MARK_SWEEP_GC.gif" alt=""></p>
 <p>它放弃了立即清理垃圾，而是等到后面处理，所以动画中有一段时间没有红色闪烁（标记），然后突然一堆红色闪烁，然后一次性清理了垃圾。</p>
 <p>优点：</p>
 <ol>
@@ -168,8 +176,8 @@
 <li>清理之后产生内存碎片</li>
 </ol>
 <h2 id="mark-compact-collector">Mark-Compact Collector</h2>
-<p>标记压紧算法，和标记清理算法差不多，只是清理之后把内存压紧了一下，去掉了内存碎片。Oracle JVM的Old区采用的是这个算法。</p>
-<p><img src="https://spin.atomicobject.com/wp-content/uploads/MARK_COMPACT_GC.gif" alt=""></p>
+<p>标记整理算法，和标记清理算法差不多，只是清理之后把内存压紧了一下，去掉了内存碎片。Oracle JVM的Old区采用的是这个算法。</p>
+<p><img src="MARK_COMPACT_GC.gif" alt=""></p>
 <p>优点：</p>
 <ol>
 <li>清理之后没有内存碎片</li>
@@ -183,7 +191,7 @@
 <h2 id="copying-collector">Copying Collector</h2>
 <p>Copy算法同样也能消除内存碎片，但不是通过移动，而是copy。</p>
 <p>通过对两个内存区域的来回Copy实现无碎片垃圾清理。实践中会有多个“代区”，比如JVM的Young区里的S0和S1，已经对象从Young区promote到Old区用的就是这个算法。</p>
-<p><img src="https://github.com/kenfox/gc-viz/raw/master/docs/COPY_GC.gif" alt=""></p>
+<p><img src="COPY_GC.gif" alt=""></p>
 <p>优点：</p>
 <ol>
 <li>非常高效，无需标记，直接收集。在对Live对象的遍历过程中连带的对象就顺带被Copy了。</li>
@@ -191,6 +199,7 @@
 <p>问题：</p>
 <ol>
 <li>如果每次Copy没有垃圾可清理，那么这个回收就得不偿失了。所以你就需要tuning gc，使得每次GC的时候能够清理掉大部分对象。</li>
+<li>一定要有空闲空间可供腾挪，否则就没法GC了。这也就意味着有一定的内存浪费，因此有算法尽量减少浪费。</li>
 </ol>
         </p>
     </div>
