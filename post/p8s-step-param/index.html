@@ -155,7 +155,7 @@
 <li><code>timeout=&lt;duration&gt;</code>: 执行超时。这个参数是可选的。</li>
 </ul>
 <p>在Prometheus expression browser里看到的是这样的：</p>
-<p><img src="expression-browser-overview.png" alt="Expression Browser"></p>
+<p><img src="expression-browser-overview.png" alt="Expression Browser" style="zoom:50%" /></p>
 <p>注意到上图中的Res框里没有给值，没有给的话Prometheus会自动给一个值，这个值在图示右上角可以看到。</p>
 <h2 id="step对于查询结果的影响">step对于查询结果的影响</h2>
 <p>Prometheues在对PromQL表达式求值的逻辑是这样的（详见这个<a href="https://github.com/prometheus/docs/issues/699#issuecomment-449703646">issue</a>里的回答）：</p>
@@ -193,7 +193,7 @@
 <h3 id="grafana中的step参数">Grafana中的step参数</h3>
 <p>在Grafana中并没有直接提供<code>step</code>参数，而是这两个参数：<code>min step</code>和<code>resolution</code>（<a href="http://docs.grafana.org/features/datasources/prometheus/#query-editor">文档在这里</a>)。<code>min step</code>故名思义设定的是<code>step</code>的最小值，那么<code>resolution</code>是什么呢？</p>
 <p>大家都知道Grafana都是用来画图的，比如下面这张图Y轴是值，X轴则是时间线，因此在X轴方向的每个像素都代表了一个timestamp。</p>
-<p><img src="grafana-graph.png" alt=""></p>
+<p><img src="grafana-graph.png" style="zoom:50%" /></p>
 <p><code>resolution</code>就是用来根据像素来计算<code>step</code>的一个参数。下面用6个像素以及它们的timestamp来说明：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-txt" data-lang="txt">x=1,ts=0; x=2,ts=5; x=3,ts=10; x=4,ts=15; x=5,ts=20; x=6,ts=25
 </code></pre></div><ul>
@@ -208,7 +208,7 @@
 <li>Graph的宽度（单位：像素）</li>
 </ol>
 <p>所以在Grafana发起的查询中<code>step</code>参数是动态的。其实这也是很合理的，因为只有这样才能够在Graph宽度小的时候绘图更粗糙（即<code>step</code>更大），Graph宽度大的时候绘图更精细（即<code>step</code>更小，但是不能小于<code>min step</code>）。实际发起的请求的<code>step</code>参数你可以在Graph的Query Inspector里看到：</p>
-<p><img src="grafana-query-inspector.png" alt=""></p>
+<p><img src="grafana-query-inspector.png" style="zoom:50%" /></p>
 <p>但是我们之前不说过了<code>rate()</code>的<code>range duration</code>不能小于<code>step</code>吗？那么把<code>range duration</code>给固定值的化就不太好了，怎么办呢？你可以使用Grafana提供的内置变量<code>$__interval</code>，它代表的Grafana就是计算出来的<code>step</code>的值。比如这样就能够将<code>range duration</code>和<code>step</code>保持一致了（更多内置变量可以见<a href="http://docs.grafana.org/features/datasources/prometheus/#using-interval-and-range-variables">这里</a>）：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-txt" data-lang="txt">rate(x[$__interval])
 </code></pre></div><h2 id="所以你想自己实验一把">所以，你想自己实验一把</h2>
