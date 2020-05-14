@@ -138,62 +138,83 @@
 </nav>
         <div id="content" class="content-container">
         
-<h1 class="post-title">JVM - 目录</h1>
+<h1 class="post-title">JVM - G1垃圾收集器</h1>
     
-    <time>September 5, 2019</time>
+    <time>May 14, 2020</time>
     
     <div>
         <p>
-        <h2 id="内存区域">内存区域</h2>
+        <h2 id="特点">特点</h2>
+<p>G1是一个：</p>
 <ul>
-<li><a href="../run-time-data-areas/">JVM - 运行时数据区</a></li>
-<li><a href="../string-interning/">JVM - String interning</a></li>
-<li><a href="../out-of-memory-errors/">JVM - OutOfMemoryError异常分析</a></li>
+<li>并行算法</li>
+<li>增量式垃圾收集器</li>
+<li>具有可预测停顿时间的优势</li>
+<li>具备内存整理功能</li>
 </ul>
-<h2 id="gc">GC</h2>
+<h2 id="region">Region</h2>
+<p>G1把整个heap分为～2048个Region，尺寸在1M-32M之间（得是2的指数）。</p>
+<p>Region分为：Eden，Survior，H（巨大对象），Old区。Eden和Survivor组合成Young Region。H是Old区的一种。一个对象尺寸超过Region的1/2，就是巨大对象，巨大对象直接分配在Old区，并被标记为H。</p>
+<p><img src="https://res.infoq.com/articles/G1-One-Garbage-Collector-To-Rule-Them-All/en/resources/fig2largeB.jpg" alt=""></p>
+<h2 id="垃圾收集过程">垃圾收集过程</h2>
+<h3 id="young-gc">Young GC</h3>
+<p>YGC，采用复制算法，并行的。</p>
+<p>YGC逻辑上和其他GC算法一样的，也是Eden和S-From -&gt; S-To和Old。</p>
+<h3 id="并发标记">并发标记</h3>
+<p>Heap使用超过一定比例会触发对Old Region并发标记（注意只标记，不回收），-XX:InitiatingHeapOccupancyPercent，默认45，</p>
+<p>并发标记的阶段：</p>
+<ol>
+<li>初始标记（STW）</li>
+<li>并发扫描GC Root</li>
+<li>并发标记</li>
+<li>再标记（STW）</li>
+<li>清理（STW），如果某个Region全是垃圾，那么就直接回收掉了。如果不是，那么这个Region会记录到Collection Set里。</li>
+</ol>
+<h4 id="关于三色标记法">关于三色标记法</h4>
+<p>在标记过程中每个对象会被标记成三种颜色：</p>
 <ul>
-<li><a href="https://spin.atomicobject.com/2014/09/03/visualizing-garbage-collection-algorithms/">Visualizing Garbage Collection Algorithms</a>，现代垃圾收集算法（语言无关）</li>
-<li><a href="../is-object-dead/">JVM - 对象已经死了吗？</a></li>
-<li><a href="../gc-algos/">JVM - GC算法</a></li>
-<li><a href="../gc-collectors/">JVM - 垃圾收集器</a></li>
-<li><a href="../memory-alloc-and-reclaim/">JVM - 内存分配与回收策略</a></li>
-<li><a href="../g1">JVM - G1垃圾收集器</a></li>
+<li>白色：没有被标记到。</li>
+<li>灰色：标记到了，但是字段还没被标记完。</li>
+<li>黑色：标记完了。</li>
 </ul>
-<h2 id="classloader">ClassLoader</h2>
+<p>所有标记完成后，会把白色的作为垃圾回收掉（因为不可达）。</p>
+<h3 id="mixed-gc">Mixed GC</h3>
+<p>把Collection Set里的待回收的Old Region混合到YGC里慢慢消化掉。</p>
+<h3 id="full-gc">Full GC</h3>
+<p>如果Mixed GC来不及回收掉空间，那么就会触发Full GC。会停止整个JVM。</p>
+<h3 id="old-gc逻辑上的阶段">Old GC（逻辑上）的阶段</h3>
+<p>Old GC是分层次进行的：</p>
+<ol>
+<li>并发标记结束后，对于全垃圾的Region，在清理阶段会直接清理掉</li>
+<li>对于部分垃圾的Region，则放到YGC中慢慢消化掉（比如每次YGC清理几个Old Region），这个成为Mixed GC</li>
+<li>如果还是不行，才会对整个堆进行回收Full GC</li>
+</ol>
+<h3 id="h对象的回收">H对象的回收</h3>
+<p>尺寸超过1/2 Region的对象被称为，H对象，直接分配在Old区里，这个区被标记为H。它要么在并发标记的清理阶段回收，要么在Full GC的时候回收。</p>
+<p>G1假设大对象不是短命对象，因此把他们放到H区里可以避免被YGC反复复制，提高性能。</p>
+<p>单如果你的大对象的确是短命的，那如果把他们放到H区里反而会增加Old GC的压力，还有可能导致Full GC。因此你可以通过调整<code>-XX:G1HeapRegionSize=16M</code>来调整Region的大小，从而使得你的大对象不被G1认定为H对象。</p>
+<h2 id="几个数据结构">几个数据结构</h2>
+<h3 id="remeber-set">Remeber Set</h3>
+<p>每个Region都有，记录了外部引用的信息（其他Region到自己Region的引用信息）。Card Table是一个特定类型的Remeber Set。</p>
+<p>在YGC时，需要扫描Old Region里到Young Region里的引用，RSet可以提高扫描效率，而不需要遍历所有Old Region。</p>
+<p>同时，因为YGC采用的复制算法，而且是并行的，那么某一时刻某个对象同时出现在两块Region里（比如，Eden和S），为了YGC之后修复引用（正确的应该是引用到S里），那么就需要Remember Set？？这段论述在Monica的文章里似乎没有。</p>
+<p>Remeber Set 三种粒度（下面讲的不是很明白）：</p>
+<ol>
+<li>Sparse，稀疏矩阵，一个card索引的hash table</li>
+<li>细粒度，一个开放hash table，bitmap，每个bit代表一个card</li>
+<li>粗粒度，bitmap，每个bit代表一个外部Region</li>
+</ol>
+<p>三种粒度的关系是：当某种粒度的空间满了，就切换到下一种，从而节省空间。但是节省空间的结果就是增加了扫描的时间，因为记录的信息也粗了。</p>
+<h4 id="card-table">Card Table</h4>
+<p>Card Table是一种特殊的Remember Set形式，它是一个bitmap，每个bit对应了Region中的一片区域，而这篇区域里有对象引用了我这个Region里的对象。</p>
+<h3 id="collection-set">Collection Set</h3>
+<p>记录了需要收集的Region列表，这个在并发标记之后。对于YGC来说只有Young Region，对于Mixed GC来说，有Y也有Old。</p>
+<h2 id="参考资料">参考资料</h2>
 <ul>
-<li><a href="../class-loading-chance">JVM - 类加载时机</a></li>
-<li><a href="../class-loading-steps">JVM - 类加载过程</a></li>
-<li><a href="../class-loading-classloader">JVM - 类加载器</a></li>
-<li><a href="../classloader-tomcat">JVM - Tomcat类加载器</a></li>
-<li><a href="../classloader-osgi">JVM - OSGi类加载器</a></li>
-<li><a href="../classloader-byte-gen-dynamic-proxy">JVM - 字节码生成及动态代理</a></li>
-</ul>
-<p>以下是阅读JVM Spec时所整理的笔记，比较细：</p>
-<ul>
-<li><a href="../classloader/1-intro/">ClassLoader（一）- 介绍</a></li>
-<li><a href="../classloader/2-steps/">ClassLoader（二）- 加载过程</a></li>
-<li><a href="../classloader/references/">ClassLoader - 总结及参考</a></li>
-</ul>
-<h2 id="字节码指令">字节码指令</h2>
-<ul>
-<li><a href="../method-call/1-overload-override/">JVM执行方法调用（一）- 重载与重写</a></li>
-<li><a href="../method-call/2-instrucions/">JVM执行方法调用（二）- 指令</a></li>
-</ul>
-<h2 id="内存模型与线程">内存模型与线程</h2>
-<ul>
-<li><a href="../memory-model">JVM - 内存模型</a></li>
-<li><a href="../thread">JVM - 线程</a></li>
-<li><a href="../thread-safe">JVM - 线程安全</a></li>
-<li><a href="../lock-optimization">JVM - 锁优化</a></li>
-</ul>
-<h2 id="其他">其他</h2>
-<ul>
-<li><a href="../object-layout">JVM - 对象的内存布局</a></li>
-<li><a href="../oop-compress">JVM - 指针压缩原理</a></li>
-</ul>
-<h2 id="实战">实战</h2>
-<ul>
-<li><a href="../jvm-perf-tuning-common-ways">Java应用性能调优套路</a></li>
+<li><a href="https://time.geekbang.org/column/article/10651">Java核心技术面试精讲 - 第28讲 | 谈谈你的GC调优思路?</a></li>
+<li><a href="https://www.infoq.com/articles/G1-One-Garbage-Collector-To-Rule-Them-All/">G1: One Garbage Collector To Rule Them All</a></li>
+<li><a href="https://www.infoq.com/articles/tuning-tips-G1-GC/">Tips for Tuning the Garbage First Garbage Collector</a></li>
+<li><a href="https://segmentfault.com/a/1190000004682407">jvm的card table数据结构</a></li>
 </ul>
         </p>
     </div>
@@ -202,6 +223,10 @@
     <div class="page-footer">
         
         <hr class="footer-divider">
+        
+            <a class="tag" href="https://chanjarster.github.io/tags/arts">#ARTS</a>
+        
+            <a class="tag" href="https://chanjarster.github.io/tags/arts-t">#ARTS-T</a>
         
             <a class="tag" href="https://chanjarster.github.io/tags/jvm">#jvm</a>
         
