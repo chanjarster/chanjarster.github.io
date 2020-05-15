@@ -138,64 +138,44 @@
 </nav>
         <div id="content" class="content-container">
         
-<h1 class="post-title">JVM - 目录</h1>
+<h1 class="post-title">JVM - 并发标记之三色标记法和Pre-Write Barriers</h1>
     
-    <time>September 5, 2019</time>
+    <time>May 15, 2020</time>
     
     <div>
         <p>
-        <h2 id="内存区域">内存区域</h2>
+        <h2 id="概要">概要</h2>
+<p>三色标记法是运用在GC并发标记过程中的算法，被扫描的对象们被分到三种集合里：</p>
 <ul>
-<li><a href="../run-time-data-areas/">JVM - 运行时数据区</a></li>
-<li><a href="../string-interning/">JVM - String interning</a></li>
-<li><a href="../out-of-memory-errors/">JVM - OutOfMemoryError异常分析</a></li>
+<li>白色集合：还没被标记 or 没有被标记到（这个就可以认为是垃圾了）</li>
+<li>灰色：标记到了，但是字段还没被标记完。</li>
+<li>黑色：标记完了。</li>
 </ul>
-<h2 id="gc">GC</h2>
+<p>所有标记完成后，会把白色的作为垃圾回收掉（因为不可达）。</p>
+<h2 id="步骤">步骤</h2>
+<ol>
+<li>创建：白、灰、黑 三个集合。</li>
+<li>将所有对象放入白色集合中。</li>
+<li>从GC Root开始遍历所有对象，把遍历到的对象从白色集合放入灰色集合(备注：这里放入灰色集合的都是GC Root的对象)。</li>
+<li>遍历灰色集合，将灰色对象引用的对象（其实就是灰色对象的字段）从白色集合放入灰色集合，然后将分析过的灰色对象（所有字段都处理完毕的）放入黑色集合。</li>
+<li>直到灰色中无任何对象。</li>
+<li>通过写屏障（Pre-Write Barrier）检测对象有变化，重复以上操作(备注：因为 mark 和用户程序是并行的，所以在上一步执行的时候可能会有新的对象分配，写屏障是为了解决这个问题引入的)。</li>
+<li>回收掉所有白色对象（垃圾）</li>
+</ol>
+<p><strong>关于Pre-Write Barrier</strong>：</p>
+<p>可以看到三色标记法有很多步骤，而这些步骤是和用户线程并发运行的，也就是说在标记过程中，用户还在创建新对象，或者抛弃老对象。</p>
+<p>先讲创建新对象的情况：</p>
+<ol>
+<li>A对象已经被标记为黑色</li>
+<li>用户线程：A.field = new X()</li>
+</ol>
+<p>这种情况下，X是白色的，而且按照三色标记法的规则，黑色的A是不会再次被标记的。如果不能把X变成灰色，那么它就会被垃圾回收掉，这个是是存在问题的。</p>
+<p>因此，在标记开始之后，需要在对象引用更新的地方添加一个Pre-Write Barrier，用来将X直接标记为灰色。</p>
+<p><strong>注意</strong>：Pre-Write Barrier和<a href="../card-table">Post-Write Barrier</a>作用的对象不同，前者是针对三色标记算法的缺陷，后者是针对Card Table。</p>
+<h2 id="参考资料">参考资料</h2>
 <ul>
-<li><a href="https://spin.atomicobject.com/2014/09/03/visualizing-garbage-collection-algorithms/">Visualizing Garbage Collection Algorithms</a>，现代垃圾收集算法（语言无关）</li>
-<li><a href="../is-object-dead/">JVM - 对象已经死了吗？</a></li>
-<li><a href="../gc-algos/">JVM - GC算法</a></li>
-<li><a href="../gc-collectors/">JVM - 垃圾收集器</a></li>
-<li><a href="../memory-alloc-and-reclaim/">JVM - 内存分配与回收策略</a></li>
-<li><a href="../g1">JVM - G1垃圾收集器</a></li>
-<li><a href="../card-table">JVM - Card Table和Post-Write Barriers</a></li>
-<li><a href="../tri-color">JVM - 并发标记之三色标记法和Pre-Write Barriers</a></li>
-</ul>
-<h2 id="classloader">ClassLoader</h2>
-<ul>
-<li><a href="../class-loading-chance">JVM - 类加载时机</a></li>
-<li><a href="../class-loading-steps">JVM - 类加载过程</a></li>
-<li><a href="../class-loading-classloader">JVM - 类加载器</a></li>
-<li><a href="../classloader-tomcat">JVM - Tomcat类加载器</a></li>
-<li><a href="../classloader-osgi">JVM - OSGi类加载器</a></li>
-<li><a href="../classloader-byte-gen-dynamic-proxy">JVM - 字节码生成及动态代理</a></li>
-</ul>
-<p>以下是阅读JVM Spec时所整理的笔记，比较细：</p>
-<ul>
-<li><a href="../classloader/1-intro/">ClassLoader（一）- 介绍</a></li>
-<li><a href="../classloader/2-steps/">ClassLoader（二）- 加载过程</a></li>
-<li><a href="../classloader/references/">ClassLoader - 总结及参考</a></li>
-</ul>
-<h2 id="字节码指令">字节码指令</h2>
-<ul>
-<li><a href="../method-call/1-overload-override/">JVM执行方法调用（一）- 重载与重写</a></li>
-<li><a href="../method-call/2-instrucions/">JVM执行方法调用（二）- 指令</a></li>
-</ul>
-<h2 id="内存模型与线程">内存模型与线程</h2>
-<ul>
-<li><a href="../memory-model">JVM - 内存模型</a></li>
-<li><a href="../thread">JVM - 线程</a></li>
-<li><a href="../thread-safe">JVM - 线程安全</a></li>
-<li><a href="../lock-optimization">JVM - 锁优化</a></li>
-</ul>
-<h2 id="其他">其他</h2>
-<ul>
-<li><a href="../object-layout">JVM - 对象的内存布局</a></li>
-<li><a href="../oop-compress">JVM - 指针压缩原理</a></li>
-</ul>
-<h2 id="实战">实战</h2>
-<ul>
-<li><a href="../jvm-perf-tuning-common-ways">Java应用性能调优套路</a></li>
+<li><a href="https://www.jianshu.com/p/4ca9d583d242">Go垃圾回收之三色标记算法</a></li>
+<li><a href="https://tech.meituan.com/2016/09/23/g1.html">Java Hotspot G1 GC的一些关键技术</a></li>
 </ul>
         </p>
     </div>
@@ -204,6 +184,10 @@
     <div class="page-footer">
         
         <hr class="footer-divider">
+        
+            <a class="tag" href="https://chanjarster.github.io/tags/arts">#ARTS</a>
+        
+            <a class="tag" href="https://chanjarster.github.io/tags/arts-t">#ARTS-T</a>
         
             <a class="tag" href="https://chanjarster.github.io/tags/jvm">#jvm</a>
         

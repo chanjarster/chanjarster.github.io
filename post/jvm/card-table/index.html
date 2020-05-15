@@ -138,7 +138,7 @@
 </nav>
         <div id="content" class="content-container">
         
-<h1 class="post-title">JVM - Card Table和Write Barriers</h1>
+<h1 class="post-title">JVM - Card Table和Post-Write Barriers</h1>
     
     <time>May 15, 2020</time>
     
@@ -157,14 +157,10 @@
 <h2 id="g1中的card-table">G1中的Card Table</h2>
 <p>G1中的每个Region都有一个Remember Set，Remeber Set存在3种粒度形式，其中某一种就是Card Table。当然其他两种粒度形式存在的目的和Card Table一样，为了能够降低扫描耗时。</p>
 <h2 id="card-table结构">Card Table结构</h2>
-<p>实际上Card Table是一个bitmap，每个bit代表着一块区域，那么这块区域到底多大呢？这个似乎也不重要，网上有说是512 byte的，有说是4K的。下面是一张图，图中的Gen1可以看作是老年代（因为是从.Net中抄的图）：</p>
+<p>实际上Card Table是一个bitmap，每个bit代表着一个Card，一个Card代表了一块内存区域，那么Card到底多大呢？这个不重要，网上有说是512 byte的，有说是4K的。下面是一张图，图中的Gen1可以看作是老年代（因为是从.Net中抄的图）：</p>
 <p><img src="https://msdnshared.blob.core.windows.net/media/TNBlogsFS/BlogFileStorage/blogs_msdn/abhinaba/WindowsLiveWriter/BackToBasicsGenerationalGarbageCollectio_115F4/image_18.png" alt=""></p>
-<h2 id="什么是write-barrier">什么是Write Barrier</h2>
-<p>Writer Barrier就是编译器在你更新引用的地方插入的一小段代码：</p>
-<ul>
-<li>Pre Write Barrier，个人理解和并发标记算法有关，用来解决在并发标记的同时new出来的非垃圾对象不被误认为垃圾的问题。</li>
-<li>Post Write Barrier，用来更新Card Table的，更新old -&gt; old 和 old -&gt; young的信息</li>
-</ul>
+<h2 id="post-write-barrier">Post-Write Barrier</h2>
+<p>Post-Writer Barrier就是编译器在你更新引用的地方插入的一小段代码，用来更新Card Table的，更新old -&gt; old 和 old -&gt; young的信息。</p>
 <h2 id="参考资料">参考资料</h2>
 <ul>
 <li><a href="https://docs.microsoft.com/en-us/archive/blogs/abhinaba/back-to-basics-generational-garbage-collection">Back To Basics: Generational Garbage Collection</a>，虽然是.Net的但是思路一样</li>

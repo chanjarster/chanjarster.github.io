@@ -159,25 +159,43 @@
 <h2 id="垃圾收集过程">垃圾收集过程</h2>
 <h3 id="young-gc">Young GC</h3>
 <p>YGC，采用复制算法，并行的。</p>
-<p>YGC逻辑上和其他GC算法一样的，也是Eden和S-From -&gt; S-To和Old。</p>
+<p>YGC逻辑上和其他GC算法一样的，也是</p>
+<p>并行阶段：</p>
+<ol>
+<li>外部根扫描</li>
+<li>更新Remembered Set（RSet）</li>
+<li>处理Update Buffers</li>
+<li>扫描RSet</li>
+<li>对象复制，Eden和S-From -&gt; S-To或Old</li>
+<li>终止</li>
+<li>其他工作</li>
+</ol>
+<p>串行阶段：</p>
+<ol>
+<li>选择Collection Set</li>
+<li>引用处理，比如soft、weak、final、phantom引用</li>
+<li>Reference En-queuing</li>
+<li>释放CSet，同时也会释放RSet</li>
+</ol>
 <h3 id="并发标记">并发标记</h3>
 <p>当Old Region使用空间超过整个Heap的某个比例会触发对Old Region并发标记（注意只标记，不回收），-XX:InitiatingHeapOccupancyPercent，默认45，</p>
 <p>并发标记的阶段：</p>
 <ol>
-<li>初始标记（STW）</li>
-<li>并发扫描GC Root</li>
-<li>并发标记</li>
-<li>再标记（STW）</li>
+<li>初始标记（STW），在一个普通的YGC（STW）时同时完成的。</li>
+<li>根Region扫描阶段，扫描前一个阶段幸存的Region，找到那些对Old Region的引用，标记被引用的对象。</li>
+<li>并发标记，</li>
+<li>再标记（STW），处理SATB buffer，跟踪在前面阶段里新生成的对象，同时处理引用关系。</li>
 <li>清理（STW），如果某个Region全是垃圾，那么就直接回收掉了。如果不是，那么这个Region会记录到Collection Set里。</li>
 </ol>
 <h4 id="关于三色标记法">关于三色标记法</h4>
-<p>在标记过程中每个对象会被标记成三种颜色：</p>
+<p>在标记过程中每个对象会被标记成<a href="../tri-color">三种颜色</a>：</p>
 <ul>
 <li>白色：没有被标记到。</li>
 <li>灰色：标记到了，但是字段还没被标记完。</li>
 <li>黑色：标记完了。</li>
 </ul>
 <p>所有标记完成后，会把白色的作为垃圾回收掉（因为不可达）。</p>
+<p>和三色标记法相关的一个概念是Pre-Write Barrier。</p>
 <h3 id="mixed-gc">Mixed GC</h3>
 <p>把Collection Set里的待回收的Old Region混合到YGC里慢慢消化掉。</p>
 <h3 id="full-gc">Full GC</h3>
@@ -217,14 +235,18 @@
 <p>三种粒度的关系是：当某种粒度的空间满了，就切换到下一种，从而节省空间。但是节省空间的结果就是增加了扫描的时间，因为记录的信息也粗了。</p>
 <h4 id="card-table">Card Table</h4>
 <p>Card Table是一种特殊的Remember Set形式，它是一个bitmap，每个bit对应了Region中的一片区域，而这片区域里有对象引用了我这个Region里的对象。更多介绍看<a href="../card-table">Card Table和Write Barriers</a>。</p>
+<h4 id="post-write-barriers">Post-Write Barriers</h4>
+<p>编译器插在更新引用语句后面的代码，用来更新RSet。</p>
+<h4 id="concurrent-refinement-threads">Concurrent refinement threads</h4>
+<p>并发更新RSet的线程。</p>
 <h3 id="collection-set">Collection Set</h3>
 <p>记录了需要收集的Region列表，这个在并发标记之后。对于YGC来说只有Young Region，对于Mixed GC来说，有Young也有Old。</p>
 <h2 id="参考资料">参考资料</h2>
 <ul>
 <li><a href="https://time.geekbang.org/column/article/10651">Java核心技术面试精讲 - 第28讲 | 谈谈你的GC调优思路?</a></li>
-<li><a href="https://www.infoq.com/articles/G1-One-Garbage-Collector-To-Rule-Them-All/">G1: One Garbage Collector To Rule Them All</a></li>
-<li><a href="https://www.infoq.com/articles/tuning-tips-G1-GC/">Tips for Tuning the Garbage First Garbage Collector</a></li>
-<li><a href="https://www.jfokus.se/jfokus17/preso/Write-Barriers-in-Garbage-First-Garbage-Collector.pdf">Write-Barriers-in-Garbage-First-Garbage-Collector</a></li>
+<li><a href="https://www.infoq.com/articles/G1-One-Garbage-Collector-To-Rule-Them-All/">G1: One Garbage Collector To Rule Them All -  By Monica Beckwith</a></li>
+<li><a href="https://www.infoq.com/articles/tuning-tips-G1-GC/">Tips for Tuning the Garbage First Garbage Collector - By Monica Beckwith</a></li>
+<li><a href="https://www.jfokus.se/jfokus17/preso/Write-Barriers-in-Garbage-First-Garbage-Collector.pdf">Write-Barriers-in-Garbage-First-Garbage-Collector - By Monica Beckwith</a></li>
 <li><a href="https://segmentfault.com/a/1190000004682407">jvm的card table数据结构</a></li>
 <li><a href="https://tech.meituan.com/2016/09/23/g1.html">Java Hotspot G1 GC的一些关键技术</a></li>
 </ul>
