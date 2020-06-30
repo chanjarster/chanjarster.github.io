@@ -29,8 +29,6 @@
     
  
     
-    <link rel="alternate" type="application/rss+xml" href="https://chanjarster.github.io/tags/index.xml" title="颇忒脱的技术博客" />
-    
     
 </head>
     <body>
@@ -140,143 +138,75 @@
 </nav>
         <div id="content" class="content-container">
         
-
-<h1>Tags</h1>
+<h1 class="post-title">JVM - String对象在Java 9中的变化</h1>
+    
+    <time>May 21, 2020</time>
+    
+    <div>
+        <p>
+        <h2 id="概要">概要</h2>
+<p>在Java 9中，String对象底层从原来的<code>char[]</code>变成了<code>byte[]</code>，这一变化带来的直接好处就是更节省内存了，因此也被称为Compact Strings Improvement。为什么呢？因为在Java中<code>char</code>占有2个字节，<code>byte</code>占用1个字节，而一个Unicode字符的表示并不一定需要2个字节，至少ASCII字符只需要1个字节就搞定了。也就是说，如果你的字符串里都是ASCII字符，如果用char的话就会浪费一半的空间。</p>
+<h2 id="简要unicode说明">简要Unicode说明</h2>
+<p>说到这里不得不提一下Unicode编码，以及它的Code Point（码点）和Code Unit。可以把Unicode想象成一张巨大的表格，每个字符都有一个唯一对应的数字。</p>
+<p>一个Code Point代表了一个Unicode字符的在表中的序号：</p>
+<pre><code>&gt; 'A'.codePointAt(0).toString(16)
+'41'
+&gt; 'π'.codePointAt(0).toString(16)
+'3c0'
+&gt; '🙂'.codePointAt(0).toString(16)
+'1f642'
+</code></pre><p>一个或者多个Code Unit代表了一个Code Point，Code Unit是用来存储和传输Unicode字符的，以下是UTF-8编码：</p>
+<table>
+<thead>
+<tr>
+<th>Character</th>
+<th>Code point</th>
+<th>Code units</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>A</td>
+<td>0x0041</td>
+<td>01000001</td>
+</tr>
+<tr>
+<td>π</td>
+<td>0x03C0</td>
+<td>11001111, 10000000</td>
+</tr>
+<tr>
+<td>🙂</td>
+<td>0x1F642</td>
+<td>11110000, 10011111, 10011001, 10000010</td>
+</tr>
+</tbody>
+</table>
+<p>UTF-8的Code Unit占用8位（1字节），UTF-16的Code Unit占用16位（2字节），UTF-32的Code Unit占用32位（4字节），除了UTF-32之外，UTF-8/16都是变长编码，也就是说在对一个Code Point转换成Code Unit的时候，根据情况使用1个或多个Code Unit（上面表格已经说明了）。</p>
+<p>所以，当Java 9 String底层从<code>char[]</code>改成<code>byte[]</code>，除非使用UTF-32编码（定长编码），那么它肯定是变长编码，使得内存占用更紧凑。也因此Java 9 String API中添加了关于Code Point的方法。</p>
+<h2 id="参考文档">参考文档</h2>
 <ul>
-    
-        <li><a href="https://chanjarster.github.io/tags/akka/">Akka</a> 1</li>
-    
-        <li><a href="https://chanjarster.github.io/tags/alertmanager/">alertmanager</a> 1</li>
-    
-        <li><a href="https://chanjarster.github.io/tags/arts/">ARTS</a> 191</li>
-    
-        <li><a href="https://chanjarster.github.io/tags/arts-a/">ARTS-A</a> 125</li>
-    
-        <li><a href="https://chanjarster.github.io/tags/arts-r/">ARTS-R</a> 9</li>
-    
-        <li><a href="https://chanjarster.github.io/tags/arts-t/">ARTS-T</a> 57</li>
-    
-        <li><a href="https://chanjarster.github.io/tags/cheatsheet/">cheatsheet</a> 9</li>
-    
-        <li><a href="https://chanjarster.github.io/tags/ci_cd/">CI_CD</a> 5</li>
-    
-        <li><a href="https://chanjarster.github.io/tags/classloader/">ClassLoader</a> 3</li>
-    
-        <li><a href="https://chanjarster.github.io/tags/debug/">debug</a> 5</li>
-    
-        <li><a href="https://chanjarster.github.io/tags/docker/">docker</a> 15</li>
-    
-        <li><a href="https://chanjarster.github.io/tags/fluentd/">fluentd</a> 1</li>
-    
-        <li><a href="https://chanjarster.github.io/tags/gc/">gc</a> 5</li>
-    
-        <li><a href="https://chanjarster.github.io/tags/go/">go</a> 8</li>
-    
-        <li><a href="https://chanjarster.github.io/tags/grafana/">grafana</a> 1</li>
-    
-        <li><a href="https://chanjarster.github.io/tags/helm/">helm</a> 1</li>
-    
-        <li><a href="https://chanjarster.github.io/tags/hystrix/">hystrix</a> 1</li>
-    
-        <li><a href="https://chanjarster.github.io/tags/ingress/">ingress</a> 2</li>
-    
-        <li><a href="https://chanjarster.github.io/tags/interview/">interview</a> 5</li>
-    
-        <li><a href="https://chanjarster.github.io/tags/io/">io</a> 1</li>
-    
-        <li><a href="https://chanjarster.github.io/tags/java/">java</a> 14</li>
-    
-        <li><a href="https://chanjarster.github.io/tags/jdbc/">JDBC</a> 2</li>
-    
-        <li><a href="https://chanjarster.github.io/tags/jdpa/">jdpa</a> 1</li>
-    
-        <li><a href="https://chanjarster.github.io/tags/jenkins/">Jenkins</a> 3</li>
-    
-        <li><a href="https://chanjarster.github.io/tags/jmx/">jmx</a> 5</li>
-    
-        <li><a href="https://chanjarster.github.io/tags/jvm/">jvm</a> 31</li>
-    
-        <li><a href="https://chanjarster.github.io/tags/jwt/">jwt</a> 1</li>
-    
-        <li><a href="https://chanjarster.github.io/tags/k8s/">k8s</a> 19</li>
-    
-        <li><a href="https://chanjarster.github.io/tags/kafka/">kafka</a> 1</li>
-    
-        <li><a href="https://chanjarster.github.io/tags/kernel/">kernel</a> 12</li>
-    
-        <li><a href="https://chanjarster.github.io/tags/linux/">linux</a> 3</li>
-    
-        <li><a href="https://chanjarster.github.io/tags/mq/">MQ</a> 1</li>
-    
-        <li><a href="https://chanjarster.github.io/tags/mysql/">mysql</a> 13</li>
-    
-        <li><a href="https://chanjarster.github.io/tags/oauth/">oauth</a> 1</li>
-    
-        <li><a href="https://chanjarster.github.io/tags/openssl/">openssl</a> 4</li>
-    
-        <li><a href="https://chanjarster.github.io/tags/oracle/">Oracle</a> 1</li>
-    
-        <li><a href="https://chanjarster.github.io/tags/prometheus/">prometheus</a> 6</li>
-    
-        <li><a href="https://chanjarster.github.io/tags/reactor/">reactor</a> 1</li>
-    
-        <li><a href="https://chanjarster.github.io/tags/redis/">redis</a> 5</li>
-    
-        <li><a href="https://chanjarster.github.io/tags/scheduling/">scheduling</a> 3</li>
-    
-        <li><a href="https://chanjarster.github.io/tags/spring-boot/">spring-boot</a> 1</li>
-    
-        <li><a href="https://chanjarster.github.io/tags/spring-cloud/">Spring Cloud</a> 1</li>
-    
-        <li><a href="https://chanjarster.github.io/tags/ssl/">ssl</a> 1</li>
-    
-        <li><a href="https://chanjarster.github.io/tags/thread/">thread</a> 3</li>
-    
-        <li><a href="https://chanjarster.github.io/tags/tiller/">tiller</a> 1</li>
-    
-        <li><a href="https://chanjarster.github.io/tags/tls/">tls</a> 4</li>
-    
-        <li><a href="https://chanjarster.github.io/tags/troubleshooting/">troubleshooting</a> 5</li>
-    
-        <li><a href="https://chanjarster.github.io/tags/visualvm/">visualvm</a> 4</li>
-    
-        <li><a href="https://chanjarster.github.io/tags/vtable/">vtable</a> 1</li>
-    
-        <li><a href="https://chanjarster.github.io/tags/%E5%88%86%E5%B8%83%E5%BC%8F%E4%BA%8B%E5%8A%A1/">分布式事务</a> 5</li>
-    
-        <li><a href="https://chanjarster.github.io/tags/%E5%88%86%E5%B8%83%E5%BC%8F%E6%9E%B6%E6%9E%84/">分布式架构</a> 3</li>
-    
-        <li><a href="https://chanjarster.github.io/tags/%E5%88%86%E5%B8%83%E5%BC%8F%E7%AE%97%E6%B3%95/">分布式算法</a> 4</li>
-    
-        <li><a href="https://chanjarster.github.io/tags/%E5%B9%B6%E5%8F%91%E7%BC%96%E7%A8%8B/">并发编程&#34;</a> 20</li>
-    
-        <li><a href="https://chanjarster.github.io/tags/%E5%BE%AE%E6%9C%8D%E5%8A%A1/">微服务</a> 10</li>
-    
-        <li><a href="https://chanjarster.github.io/tags/%E6%94%B6%E8%97%8F%E5%A4%B9/">收藏夹</a> 5</li>
-    
-        <li><a href="https://chanjarster.github.io/tags/%E6%95%B0%E6%8D%AE%E5%BA%93%E6%97%B6%E5%8C%BA%E9%82%A3%E4%BA%9B%E4%BA%8B%E5%84%BF/">数据库时区那些事儿</a> 2</li>
-    
-        <li><a href="https://chanjarster.github.io/tags/%E6%95%B0%E7%A0%81/">数码</a> 1</li>
-    
-        <li><a href="https://chanjarster.github.io/tags/%E6%97%A5%E5%BF%97/">日志</a> 3</li>
-    
-        <li><a href="https://chanjarster.github.io/tags/%E6%B6%88%E6%81%AF%E9%98%9F%E5%88%97/">消息队列</a> 1</li>
-    
-        <li><a href="https://chanjarster.github.io/tags/%E7%9B%91%E6%8E%A7/">监控</a> 1</li>
-    
-        <li><a href="https://chanjarster.github.io/tags/%E7%BC%93%E5%AD%98/">缓存</a> 1</li>
-    
-        <li><a href="https://chanjarster.github.io/tags/%E8%B0%83%E7%94%A8%E9%93%BE%E8%BF%BD%E8%B8%AA/">调用链追踪</a> 1</li>
-    
-        <li><a href="https://chanjarster.github.io/tags/%E8%BF%90%E7%BB%B4/">运维</a> 6</li>
-    
-        <li><a href="https://chanjarster.github.io/tags/%E9%99%90%E6%B5%81/">限流</a> 2</li>
-    
-        <li><a href="https://chanjarster.github.io/tags/%E9%AB%98%E5%B9%B6%E5%8F%91/">高并发</a> 3</li>
-    
+<li><a href="https://exploringjs.com/impatient-js/ch_unicode.html">Unicode – a brief introduction</a></li>
+<li><a href="https://howtodoinjava.com/java9/compact-strings/">Java 9 – Compact Strings Improvement [JEP 254]</a></li>
+<li><a href="https://docs.oracle.com/javase/9/docs/api/java/lang/String.html">Java 9 String API</a></li>
 </ul>
+        </p>
+    </div>
+    
 
-<div class="page-footer"></div>
+    <div class="page-footer">
+        
+        <hr class="footer-divider">
+        
+            <a class="tag" href="https://chanjarster.github.io/tags/arts">#ARTS</a>
+        
+            <a class="tag" href="https://chanjarster.github.io/tags/arts-t">#ARTS-T</a>
+        
+            <a class="tag" href="https://chanjarster.github.io/tags/jvm">#jvm</a>
+        
+      
+    </div>
+
 
         
         </div>
