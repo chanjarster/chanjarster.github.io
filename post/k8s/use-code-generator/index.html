@@ -281,7 +281,7 @@ set -o pipefail
 <span style="color:#75715e"># corresponding to go mod init &lt;module&gt;</span>
 MODULE<span style="color:#f92672">=</span>example.com/foo-controller
 <span style="color:#75715e"># api package</span>
-API_PKG<span style="color:#f92672">=</span>api
+APIS_PKG<span style="color:#f92672">=</span>api
 <span style="color:#75715e"># generated output package</span>
 OUTPUT_PKG<span style="color:#f92672">=</span>generated
 <span style="color:#75715e"># group-version such as foo:v1alpha1</span>
@@ -295,7 +295,7 @@ CODEGEN_PKG<span style="color:#f92672">=</span><span style="color:#e6db74">${</s
 <span style="color:#75715e">#                  k8s.io/kubernetes. The output-base is needed for the generators to output into the vendor dir</span>
 <span style="color:#75715e">#                  instead of the $GOPATH directly. For normal projects this can be dropped.</span>
 bash <span style="color:#e6db74">&#34;</span><span style="color:#e6db74">${</span>CODEGEN_PKG<span style="color:#e6db74">}</span><span style="color:#e6db74">&#34;</span>/generate-groups.sh <span style="color:#e6db74">&#34;all&#34;</span> <span style="color:#ae81ff">\
-</span><span style="color:#ae81ff"></span>  <span style="color:#e6db74">${</span>MODULE<span style="color:#e6db74">}</span>/<span style="color:#e6db74">${</span>OUTPUT_PKG<span style="color:#e6db74">}</span> <span style="color:#e6db74">${</span>MODULE<span style="color:#e6db74">}</span>/<span style="color:#e6db74">${</span>API_PKG<span style="color:#e6db74">}</span> <span style="color:#ae81ff">\
+</span><span style="color:#ae81ff"></span>  <span style="color:#e6db74">${</span>MODULE<span style="color:#e6db74">}</span>/<span style="color:#e6db74">${</span>OUTPUT_PKG<span style="color:#e6db74">}</span> <span style="color:#e6db74">${</span>MODULE<span style="color:#e6db74">}</span>/<span style="color:#e6db74">${</span>APIS_PKG<span style="color:#e6db74">}</span> <span style="color:#ae81ff">\
 </span><span style="color:#ae81ff"></span>  <span style="color:#e6db74">${</span>GROUP_VERSION<span style="color:#e6db74">}</span> <span style="color:#ae81ff">\
 </span><span style="color:#ae81ff"></span>  --go-header-file <span style="color:#e6db74">&#34;</span><span style="color:#e6db74">${</span>SCRIPT_ROOT<span style="color:#e6db74">}</span><span style="color:#e6db74">&#34;</span>/hack/boilerplate.go.txt <span style="color:#ae81ff">\
 </span><span style="color:#ae81ff"></span>  --output-base <span style="color:#e6db74">&#34;</span><span style="color:#66d9ef">$(</span>dirname <span style="color:#e6db74">&#34;</span><span style="color:#e6db74">${</span>BASH_SOURCE[0]<span style="color:#e6db74">}</span><span style="color:#e6db74">&#34;</span><span style="color:#66d9ef">)</span><span style="color:#e6db74">/..&#34;</span>
@@ -310,10 +310,13 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
+OUTPUT_PKG<span style="color:#f92672">=</span>generated
+MODULE<span style="color:#f92672">=</span>example.com/foo-controller
+
 SCRIPT_ROOT<span style="color:#f92672">=</span><span style="color:#66d9ef">$(</span>dirname <span style="color:#e6db74">&#34;</span><span style="color:#e6db74">${</span>BASH_SOURCE[0]<span style="color:#e6db74">}</span><span style="color:#e6db74">&#34;</span><span style="color:#66d9ef">)</span>/..
 
-DIFFROOT<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;</span><span style="color:#e6db74">${</span>SCRIPT_ROOT<span style="color:#e6db74">}</span><span style="color:#e6db74">/pkg&#34;</span>
-TMP_DIFFROOT<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;</span><span style="color:#e6db74">${</span>SCRIPT_ROOT<span style="color:#e6db74">}</span><span style="color:#e6db74">/_tmp/pkg&#34;</span>
+DIFFROOT<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;</span><span style="color:#e6db74">${</span>SCRIPT_ROOT<span style="color:#e6db74">}</span><span style="color:#e6db74">/</span><span style="color:#e6db74">${</span>OUTPUT_PKG<span style="color:#e6db74">}</span><span style="color:#e6db74">&#34;</span>
+TMP_DIFFROOT<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;</span><span style="color:#e6db74">${</span>SCRIPT_ROOT<span style="color:#e6db74">}</span><span style="color:#e6db74">/_tmp/</span><span style="color:#e6db74">${</span>OUTPUT_PKG<span style="color:#e6db74">}</span><span style="color:#e6db74">&#34;</span>
 _tmp<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;</span><span style="color:#e6db74">${</span>SCRIPT_ROOT<span style="color:#e6db74">}</span><span style="color:#e6db74">/_tmp&#34;</span>
 
 cleanup<span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
@@ -327,6 +330,9 @@ mkdir -p <span style="color:#e6db74">&#34;</span><span style="color:#e6db74">${<
 cp -a <span style="color:#e6db74">&#34;</span><span style="color:#e6db74">${</span>DIFFROOT<span style="color:#e6db74">}</span><span style="color:#e6db74">&#34;</span>/* <span style="color:#e6db74">&#34;</span><span style="color:#e6db74">${</span>TMP_DIFFROOT<span style="color:#e6db74">}</span><span style="color:#e6db74">&#34;</span>
 
 <span style="color:#e6db74">&#34;</span><span style="color:#e6db74">${</span>SCRIPT_ROOT<span style="color:#e6db74">}</span><span style="color:#e6db74">/hack/update-codegen.sh&#34;</span>
+echo <span style="color:#e6db74">&#34;copying generated </span><span style="color:#e6db74">${</span>SCRIPT_ROOT<span style="color:#e6db74">}</span><span style="color:#e6db74">/</span><span style="color:#e6db74">${</span>MODULE<span style="color:#e6db74">}</span><span style="color:#e6db74">/</span><span style="color:#e6db74">${</span>OUTPUT_PKG<span style="color:#e6db74">}</span><span style="color:#e6db74"> to </span><span style="color:#e6db74">${</span>DIFFROOT<span style="color:#e6db74">}</span><span style="color:#e6db74">&#34;</span>
+cp -r <span style="color:#e6db74">&#34;</span><span style="color:#e6db74">${</span>SCRIPT_ROOT<span style="color:#e6db74">}</span><span style="color:#e6db74">/</span><span style="color:#e6db74">${</span>MODULE<span style="color:#e6db74">}</span><span style="color:#e6db74">/</span><span style="color:#e6db74">${</span>OUTPUT_PKG<span style="color:#e6db74">}</span><span style="color:#e6db74">&#34;</span>/* <span style="color:#e6db74">&#34;</span><span style="color:#e6db74">${</span>DIFFROOT<span style="color:#e6db74">}</span><span style="color:#e6db74">&#34;</span>
+
 echo <span style="color:#e6db74">&#34;diffing </span><span style="color:#e6db74">${</span>DIFFROOT<span style="color:#e6db74">}</span><span style="color:#e6db74"> against freshly generated codegen&#34;</span>
 ret<span style="color:#f92672">=</span><span style="color:#ae81ff">0</span>
 diff -Naupr <span style="color:#e6db74">&#34;</span><span style="color:#e6db74">${</span>DIFFROOT<span style="color:#e6db74">}</span><span style="color:#e6db74">&#34;</span> <span style="color:#e6db74">&#34;</span><span style="color:#e6db74">${</span>TMP_DIFFROOT<span style="color:#e6db74">}</span><span style="color:#e6db74">&#34;</span> <span style="color:#f92672">||</span> ret<span style="color:#f92672">=</span>$?
@@ -373,7 +379,7 @@ go mod vendor
 </ul>
 <h2 id="关于controller">关于Controller</h2>
 <p>controller代码可以看项目的<a href="https://github.com/chanjarster/k8s-code-gen-how-to/blob/master/main.go">main.go</a>。</p>
-<p>本例子里controller读取环境变量<code>KUBECONFIG</code>来启动Clientset以及和K8S通行，这个也符合<a href="https://github.com/kubernetes/client-go/blob/master/examples/out-of-cluster-client-configuration">k8s.io/client-go out-of-cluster example</a>。在实际生产环境中，可以参考<a href="https://github.com/kubernetes/client-go/blob/master/examples/in-cluster-client-configuration">k8s.io/client-go in-cluster example</a>。</p>
+<p>本例子里controller读取环境变量<code>KUBECONFIG</code>来启动Clientset以及和K8S通信，这个也符合<a href="https://github.com/kubernetes/client-go/blob/master/examples/out-of-cluster-client-configuration">k8s.io/client-go out-of-cluster example</a>。在实际生产环境中，可以参考<a href="https://github.com/kubernetes/client-go/blob/master/examples/in-cluster-client-configuration">k8s.io/client-go in-cluster example</a>。</p>
 <p>如果你想要更灵活的做法，比如当提供了<code>--kubeconfig</code>的时候采用out-of-cluster模式，否则则尝试in-cluster模式（看<code>/var/run/secrets/kubernetes.io/serviceaccount</code>），可以参考<a href="https://github.com/coreos/prometheus-operator/blob/v0.40.0/pkg/k8sutil/k8sutil.go#L61-L95">prometheus-operator k8sutil.go</a>的做法</p>
 <h2 id="参考文档">参考文档</h2>
 <ul>
