@@ -138,25 +138,28 @@
 </nav>
         <div id="content" class="content-container">
         
-<h1 class="post-title">使用k8s.io/code-generator编写自定义K8S API</h1>
+<h1 class="post-title">使用code-generator编写CRD</h1>
     
     <time>June 30, 2020</time>
     
     <div>
         <p>
-        <p>本项目代码在 <a href="https://github.com/chanjarster/k8s-code-gen-how-to">https://github.com/chanjarster/k8s-code-gen-how-to</a></p>
+        <p>使用<a href="https://github.com/kubernetes/code-generator">k8s.io/code-generator</a>编写CRD。</p>
+<p>本项目代码在 <a href="https://github.com/chanjarster/k8s-code-gen-how-to">https://github.com/chanjarster/k8s-code-gen-how-to</a></p>
+<h2 id="概览">概览</h2>
+<p><a href="https://github.com/kubernetes/code-generator">k8s.io/code-generator</a>是一个代码生成工具，用于为你的CRD生成<a href="https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md">kubernetes-style API</a>实现，这样你就可以管理K8S上你的自定义CRD资源了。</p>
 <h2 id="第一步初始化项目">第一步：初始化项目</h2>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">MODULE<span style="color:#f92672">=</span>example.com/foo-controller
 go mod init $MODULE
 </code></pre></div><h2 id="第二步定义api">第二步：定义API</h2>
 <p>新建目录<code>api/&lt;group&gt;/&lt;version&gt;</code>，这个目录下得有以下几个文件：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">.
-├── api
+└── api
     └── foo
-        └── v1alpha1
-            ├── doc.go
-            ├── register.go
-            └── types.go
+    └── v1alpha1
+        ├── doc.go
+        ├── register.go
+        └── types.go
 </code></pre></div><p>执行命令：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">GROUP<span style="color:#f92672">=</span>foo
 VERSION<span style="color:#f92672">=</span>v1alpha1
@@ -271,7 +274,13 @@ touch hack/boilerplate.go.txt
 </span><span style="color:#75715e"></span><span style="color:#f92672">package</span> <span style="color:#a6e22e">tools</span>
 
 <span style="color:#f92672">import</span> <span style="color:#a6e22e">_</span> <span style="color:#e6db74">&#34;k8s.io/code-generator&#34;</span>
-</code></pre></div><p>新建<code>hack/update-codegen.sh</code>，注意修改几个变量<code>MODULE</code>、<code>API_PKG</code>、<code>OUTPUT_PKG</code>、<code>GROUP_VERSION</code>。注意<code>GROUP_VERSION</code>参数，它是<code>foo.v1alpha1</code>而不是<code>foo.example.com:v1alpha1</code>，因为code generator会读取我们之前写的<code>api/&lt;group&gt;/&lt;version&gt;</code>下的代码，因此得要对应上这个路径：</p>
+</code></pre></div><p>新建<code>hack/update-codegen.sh</code>，注意修改几个变量：</p>
+<ul>
+<li><code>MODULE</code>和<code>go.mod</code>保持一致</li>
+<li><code>API_PKG=api</code>，和我们的目录保持一致</li>
+<li><code>OUTPUT_PKG</code></li>
+<li><code>GROUP_VERSION=foo.v1alpha1</code>而不是<code>foo.example.com:v1alpha1</code>，因为code generator会读取我们之前写的<code>api/&lt;group&gt;/&lt;version&gt;</code>下的代码，因此得要对应上这个路径：</li>
+</ul>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash"><span style="color:#75715e">#!/usr/bin/env bash
 </span><span style="color:#75715e"></span>
 set -o errexit
@@ -388,6 +397,7 @@ go mod vendor
 <li><a href="https://github.com/kubernetes/sample-controller">Sample Controller</a></li>
 <li><a href="https://github.com/kubernetes/code-generator">code-generator</a></li>
 <li><a href="https://github.com/kubernetes/client-go">client-go</a></li>
+<li><a href="https://github.com/kubernetes/code-generator/tree/master/cmd/client-gen">client-gen tag docs</a></li>
 </ul>
         </p>
     </div>
