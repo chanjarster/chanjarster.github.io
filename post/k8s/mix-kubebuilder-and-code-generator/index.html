@@ -138,137 +138,94 @@
 </nav>
         <div id="content" class="content-container">
         
-<h1 class="post-title">使用code-generator编写CRD</h1>
+<h1 class="post-title">混合kubebuilder与code generator编写CRD</h1>
     
-    <time>June 30, 2020</time>
+    <time>July 1, 2020</time>
     
     <div>
         <p>
-        <p>使用<a href="https://github.com/kubernetes/code-generator">k8s.io/code-generator</a>编写CRD。</p>
-<p>本项目代码在 <a href="https://github.com/chanjarster/k8s-code-gen-how-to">https://github.com/chanjarster/k8s-code-gen-how-to</a></p>
+        <p>使用<a href="https://github.com/kubernetes-sigs/kubebuilder">Kubebuilder</a>+<a href="https://github.com/kubernetes/code-generator">k8s.io/code-generator</a>编写CRD。</p>
+<p>本项目代码在 <a href="https://github.com/chanjarster/kubebuilder-mix-codegen-how-to">这里</a>。</p>
 <h2 id="概览">概览</h2>
-<p><a href="https://github.com/kubernetes/code-generator">k8s.io/code-generator</a>是一个代码生成工具，用于为你的CRD生成<a href="https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md">kubernetes-style API</a>实现，这样你就可以管理K8S上你的自定义CRD资源了。</p>
+<p>和<a href="https://github.com/kubernetes/code-generator">k8s.io/code-generator</a>类似，是一个码生成工具，用于为你的CRD生成<a href="https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md">kubernetes-style API</a>实现。区别在于：</p>
+<ul>
+<li>Kubebuilder不会生成informers、listers、clientsets，而code-generator会。</li>
+<li>Kubebuilder会生成Controller、Admission Webhooks，而code-generator不会。</li>
+<li>Kubebuilder会生成manifests yaml，而code-generator不会。</li>
+<li>Kubebuilder还带有一些其他便利性设施。</li>
+</ul>
+<p>Resource + Controller = Operator，因此你可以利用Kubebuilder编写你自己的Operator。</p>
+<p>如果你不想做Operator，如果你不会直接or间接生成Pod，只是想存取CRD（把K8S当作数据库使用）。那你可以使用Kubebuilder生成CRD和manifests yaml，再使用code-generator生成informers、listers、clientsets。</p>
+<p>本文讲的就是这个方法。</p>
+<h2 id="准备工作安装kubebuilder">准备工作：安装Kubebuilder</h2>
+<p>参考<a href="https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md">这里</a>安装kubebuilder。</p>
 <h2 id="第一步初始化项目">第一步：初始化项目</h2>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">MODULE<span style="color:#f92672">=</span>example.com/foo-controller
 go mod init $MODULE
-</code></pre></div><h2 id="第二步定义api">第二步：定义API</h2>
-<p>新建目录<code>api/&lt;group&gt;/&lt;version&gt;</code>，这个目录下得有以下几个文件：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">.
-└── api
-    └── foo
-    └── v1alpha1
-        ├── doc.go
-        ├── register.go
-        └── types.go
-</code></pre></div><p>执行命令：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">GROUP<span style="color:#f92672">=</span>foo
-VERSION<span style="color:#f92672">=</span>v1alpha1
-mkdir -p api/$GROUP/$VERSION
-</code></pre></div><p>编写文件<code>api/&lt;group&gt;/&lt;version&gt;/doc.go</code>，注意<code>//+groupName=foo.example.com</code>，你需要视情况修改：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#75715e">// +k8s:deepcopy-gen=package
-</span><span style="color:#75715e">// +groupName=foo.example.com
-</span><span style="color:#75715e"></span>
-<span style="color:#75715e">// Package v1alpha1 is the v1alpha1 version of the API.
-</span><span style="color:#75715e"></span><span style="color:#f92672">package</span> <span style="color:#a6e22e">v1alpha1</span>
-</code></pre></div><p>编写文件<code>api/&lt;group&gt;/&lt;version&gt;/types.go</code>，注意视情况修改类名以及相关常量，<code>Status</code>字段并非必须的：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#f92672">package</span> <span style="color:#a6e22e">v1alpha1</span>
-
-<span style="color:#f92672">import</span> (
-	<span style="color:#a6e22e">metav1</span> <span style="color:#e6db74">&#34;k8s.io/apimachinery/pkg/apis/meta/v1&#34;</span>
-)
-
-<span style="color:#75715e">// These const variables are used in our custom controller.
-</span><span style="color:#75715e"></span><span style="color:#66d9ef">const</span> (
-	<span style="color:#a6e22e">GroupName</span> <span style="color:#66d9ef">string</span> = <span style="color:#e6db74">&#34;foo.example.com&#34;</span>
-	<span style="color:#a6e22e">Kind</span>      <span style="color:#66d9ef">string</span> = <span style="color:#e6db74">&#34;Foo&#34;</span>
-	<span style="color:#a6e22e">Version</span>   <span style="color:#66d9ef">string</span> = <span style="color:#e6db74">&#34;v1alpha1&#34;</span>
-	<span style="color:#a6e22e">Plural</span>    <span style="color:#66d9ef">string</span> = <span style="color:#e6db74">&#34;foos&#34;</span>
-	<span style="color:#a6e22e">Singluar</span>  <span style="color:#66d9ef">string</span> = <span style="color:#e6db74">&#34;foo&#34;</span>
-	<span style="color:#a6e22e">ShortName</span> <span style="color:#66d9ef">string</span> = <span style="color:#e6db74">&#34;foo&#34;</span>
-	<span style="color:#a6e22e">Name</span>      <span style="color:#66d9ef">string</span> = <span style="color:#a6e22e">Plural</span> <span style="color:#f92672">+</span> <span style="color:#e6db74">&#34;.&#34;</span> <span style="color:#f92672">+</span> <span style="color:#a6e22e">GroupName</span>
-)
-
-<span style="color:#75715e">// +genclient
-</span><span style="color:#75715e">// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-</span><span style="color:#75715e"></span>
-<span style="color:#75715e">// Foo is a specification for a Foo resource
-</span><span style="color:#75715e"></span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">Foo</span> <span style="color:#66d9ef">struct</span> {
-	<span style="color:#a6e22e">metav1</span>.<span style="color:#a6e22e">TypeMeta</span>   <span style="color:#e6db74">`json:&#34;,inline&#34;`</span>
-	<span style="color:#a6e22e">metav1</span>.<span style="color:#a6e22e">ObjectMeta</span> <span style="color:#e6db74">`json:&#34;metadata,omitempty&#34;`</span>
-
-	<span style="color:#a6e22e">Spec</span>   <span style="color:#a6e22e">FooSpec</span>   <span style="color:#e6db74">`json:&#34;spec&#34;`</span>
-	<span style="color:#a6e22e">Status</span> <span style="color:#a6e22e">FooStatus</span> <span style="color:#e6db74">`json:&#34;status&#34;`</span>
-}
-
-<span style="color:#75715e">// FooSpec is the spec for a Foo resource
-</span><span style="color:#75715e"></span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">FooSpec</span> <span style="color:#66d9ef">struct</span> {
-	<span style="color:#a6e22e">DeploymentName</span> <span style="color:#66d9ef">string</span> <span style="color:#e6db74">`json:&#34;deploymentName&#34;`</span>
-	<span style="color:#a6e22e">Replicas</span>       <span style="color:#f92672">*</span><span style="color:#66d9ef">int32</span> <span style="color:#e6db74">`json:&#34;replicas&#34;`</span>
-}
-
-<span style="color:#75715e">// FooStatus is the status for a Foo resource
-</span><span style="color:#75715e"></span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">FooStatus</span> <span style="color:#66d9ef">struct</span> {
-	<span style="color:#a6e22e">AvailableReplicas</span> <span style="color:#66d9ef">int32</span> <span style="color:#e6db74">`json:&#34;availableReplicas&#34;`</span>
-}
-
-<span style="color:#75715e">// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-</span><span style="color:#75715e"></span>
-<span style="color:#75715e">// FooList is a list of Foo resources
-</span><span style="color:#75715e"></span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">FooList</span> <span style="color:#66d9ef">struct</span> {
-	<span style="color:#a6e22e">metav1</span>.<span style="color:#a6e22e">TypeMeta</span> <span style="color:#e6db74">`json:&#34;,inline&#34;`</span>
-	<span style="color:#a6e22e">metav1</span>.<span style="color:#a6e22e">ListMeta</span> <span style="color:#e6db74">`json:&#34;metadata&#34;`</span>
-
-	<span style="color:#a6e22e">Items</span> []<span style="color:#a6e22e">Foo</span> <span style="color:#e6db74">`json:&#34;items&#34;`</span>
-}
-</code></pre></div><p>编写文件<code>api/&lt;group&gt;/register.go</code></p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#f92672">package</span> <span style="color:#a6e22e">v1alpha1</span>
-
-<span style="color:#f92672">import</span> (
-	<span style="color:#a6e22e">metav1</span> <span style="color:#e6db74">&#34;k8s.io/apimachinery/pkg/apis/meta/v1&#34;</span>
-	<span style="color:#e6db74">&#34;k8s.io/apimachinery/pkg/runtime&#34;</span>
-	<span style="color:#e6db74">&#34;k8s.io/apimachinery/pkg/runtime/schema&#34;</span>
-)
-
-<span style="color:#66d9ef">var</span> (
-	<span style="color:#75715e">// SchemeBuilder initializes a scheme builder
-</span><span style="color:#75715e"></span>	<span style="color:#a6e22e">SchemeBuilder</span> = <span style="color:#a6e22e">runtime</span>.<span style="color:#a6e22e">NewSchemeBuilder</span>(<span style="color:#a6e22e">addKnownTypes</span>)
-	<span style="color:#75715e">// AddToScheme is a global function that registers this API group &amp; version to a scheme
-</span><span style="color:#75715e"></span>	<span style="color:#a6e22e">AddToScheme</span> = <span style="color:#a6e22e">SchemeBuilder</span>.<span style="color:#a6e22e">AddToScheme</span>
-)
-
-<span style="color:#75715e">// SchemeGroupVersion is group version used to register these objects.
-</span><span style="color:#75715e"></span><span style="color:#66d9ef">var</span> <span style="color:#a6e22e">SchemeGroupVersion</span> = <span style="color:#a6e22e">schema</span>.<span style="color:#a6e22e">GroupVersion</span>{
-	<span style="color:#a6e22e">Group</span>:   <span style="color:#a6e22e">GroupName</span>,
-	<span style="color:#a6e22e">Version</span>: <span style="color:#a6e22e">Version</span>,
-}
-
-<span style="color:#66d9ef">func</span> <span style="color:#a6e22e">Resource</span>(<span style="color:#a6e22e">resource</span> <span style="color:#66d9ef">string</span>) <span style="color:#a6e22e">schema</span>.<span style="color:#a6e22e">GroupResource</span> {
-	<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">SchemeGroupVersion</span>.<span style="color:#a6e22e">WithResource</span>(<span style="color:#a6e22e">resource</span>).<span style="color:#a6e22e">GroupResource</span>()
-}
-
-<span style="color:#66d9ef">func</span> <span style="color:#a6e22e">addKnownTypes</span>(<span style="color:#a6e22e">scheme</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">runtime</span>.<span style="color:#a6e22e">Scheme</span>) <span style="color:#66d9ef">error</span> {
-	<span style="color:#a6e22e">scheme</span>.<span style="color:#a6e22e">AddKnownTypes</span>(<span style="color:#a6e22e">SchemeGroupVersion</span>,
-		<span style="color:#f92672">&amp;</span><span style="color:#a6e22e">Foo</span>{},
-		<span style="color:#f92672">&amp;</span><span style="color:#a6e22e">FooList</span>{},
-	)
-	<span style="color:#a6e22e">metav1</span>.<span style="color:#a6e22e">AddToGroupVersion</span>(<span style="color:#a6e22e">scheme</span>, <span style="color:#a6e22e">SchemeGroupVersion</span>)
-	<span style="color:#66d9ef">return</span> <span style="color:#66d9ef">nil</span>
-}
-</code></pre></div><p>然后添加依赖：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">K8S_VERSION<span style="color:#f92672">=</span>v0.18.5
-go get k8s.io/apimachinery@$K8S_VERSION
-</code></pre></div><h2 id="第三步代码生成">第三步：代码生成</h2>
+kubebuilder init --domain example.com
+kubebuilder edit --multigroup<span style="color:#f92672">=</span>true
+</code></pre></div><p>会生成以下文件：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-txt" data-lang="txt">.
+├── Dockerfile
+├── Makefile
+├── PROJECT
+├── bin
+│   └── manager
+├── config
+│   ├── certmanager
+│   ├── default
+│   ├── manager
+│   ├── prometheus
+│   ├── rbac
+│   └── webhook
+├── hack
+│   └── boilerplate.go.txt
+└── main.go
+</code></pre></div><h2 id="第二步生成resource和crd-manifests">第二步：生成Resource和CRD manifests</h2>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">kubebuilder create api --group webapp --version v1 --kind Guestbook
+Create Resource <span style="color:#f92672">[</span>y/n<span style="color:#f92672">]</span>
+y
+Create Controller <span style="color:#f92672">[</span>y/n<span style="color:#f92672">]</span>
+n
+</code></pre></div><p>会生成以下文件go代码和manifests文件：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-txt" data-lang="txt">.
+├── apis
+│   └── webapp
+│       └── v1
+│           ├── groupversion_info.go
+│           ├── guestbook_types.go
+│           └── zz_generated.deepcopy.go
+└── config
+    ├── crd
+    │   ├── kustomization.yaml
+    │   ├── kustomizeconfig.yaml
+    │   └── patches
+    │       ├── cainjection_in_guestbooks.yaml
+    │       └── webhook_in_guestbooks.yaml
+    ├── rbac
+    │   ├── guestbook_editor_role.yaml
+    │   ├── guestbook_viewer_role.yaml
+    └── samples
+        └── webapp_v1_guestbook.yaml
+</code></pre></div><p>然后生成CRD manifests：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">make manifests
+</code></pre></div><p>得到：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-yaml" data-lang="yaml">.
+├── config
+    └── crd
+        └── bases
+            └── webapp.example.com_guestbooks.yaml
+</code></pre></div><p><strong>注意：</strong></p>
+<p>如果你修改了<code>guestbook_types.go</code>的结构，你需要执行以下命令来更新代码和manifests：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">make <span style="color:#f92672">&amp;&amp;</span> make manifests
+</code></pre></div><h2 id="第三步使用code-generator">第三步：使用code-generator</h2>
 <h3 id="1准备脚本">1）准备脚本</h3>
-<p>新建目录hack，我们需要在hack目录下有以下几个文件：</p>
+<p>在hack目录下准备以下文件：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">.
 └── hack
-    ├── boilerplate.go.txt
     ├── tools.go
     ├── update-codegen.sh
     └── verify-codegen.sh
-</code></pre></div><p>执行命令：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">mkdir hack
-touch hack/boilerplate.go.txt
 </code></pre></div><p>新建<code>hack/tools.go</code>文件：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#75715e">// +build tools
 </span><span style="color:#75715e"></span><span style="color:#f92672">package</span> <span style="color:#a6e22e">tools</span>
@@ -277,9 +234,9 @@ touch hack/boilerplate.go.txt
 </code></pre></div><p>新建<code>hack/update-codegen.sh</code>，注意修改几个变量：</p>
 <ul>
 <li><code>MODULE</code>和<code>go.mod</code>保持一致</li>
-<li><code>API_PKG=api</code>，和我们的目录保持一致</li>
-<li><code>OUTPUT_PKG</code></li>
-<li><code>GROUP_VERSION=foo.v1alpha1</code>而不是<code>foo.example.com:v1alpha1</code>，因为code generator会读取我们之前写的<code>api/&lt;group&gt;/&lt;version&gt;</code>下的代码，因此得要对应上这个路径：</li>
+<li><code>API_PKG=apis</code>，和<code>apis</code>目录保持一致</li>
+<li><code>OUTPUT_PKG=generated/webapp</code>，生成Resource时指定的group一样</li>
+<li><code>GROUP_VERSION=webapp:v1</code>和生成Resource时指定的group version对应</li>
 </ul>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash"><span style="color:#75715e">#!/usr/bin/env bash
 </span><span style="color:#75715e"></span>
@@ -290,11 +247,11 @@ set -o pipefail
 <span style="color:#75715e"># corresponding to go mod init &lt;module&gt;</span>
 MODULE<span style="color:#f92672">=</span>example.com/foo-controller
 <span style="color:#75715e"># api package</span>
-APIS_PKG<span style="color:#f92672">=</span>api
+APIS_PKG<span style="color:#f92672">=</span>apis
 <span style="color:#75715e"># generated output package</span>
-OUTPUT_PKG<span style="color:#f92672">=</span>generated
+OUTPUT_PKG<span style="color:#f92672">=</span>generated/webapp
 <span style="color:#75715e"># group-version such as foo:v1alpha1</span>
-GROUP_VERSION<span style="color:#f92672">=</span>foo:v1alpha1
+GROUP_VERSION<span style="color:#f92672">=</span>webapp:v1
 
 SCRIPT_ROOT<span style="color:#f92672">=</span><span style="color:#66d9ef">$(</span>dirname <span style="color:#e6db74">&#34;</span><span style="color:#e6db74">${</span>BASH_SOURCE[0]<span style="color:#e6db74">}</span><span style="color:#e6db74">&#34;</span><span style="color:#66d9ef">)</span>/..
 CODEGEN_PKG<span style="color:#f92672">=</span><span style="color:#e6db74">${</span>CODEGEN_PKG<span style="color:#66d9ef">:-$(</span>cd <span style="color:#e6db74">&#34;</span><span style="color:#e6db74">${</span>SCRIPT_ROOT<span style="color:#e6db74">}</span><span style="color:#e6db74">&#34;</span>; ls -d -1 ./vendor/k8s.io/code-generator 2&gt;/dev/null <span style="color:#f92672">||</span> echo ../code-generator<span style="color:#66d9ef">)</span><span style="color:#e6db74">}</span>
@@ -314,50 +271,68 @@ bash <span style="color:#e6db74">&#34;</span><span style="color:#e6db74">${</spa
 <span style="color:#75715e">#   --go-header-file &#34;${SCRIPT_ROOT}&#34;/hack/custom-boilerplate.go.txt</span>
 </code></pre></div><p>新建<code>hack/verify-codegen.sh</code>（文件内容请看github项目）。</p>
 <h3 id="2下载code-generator">2）下载code-generator</h3>
-<p>先把<a href="https://pkg.go.dev/mod/k8s.io/code-generator?tab=overview">code-generator</a>下载下来，注意这里的K8S版本号，得和前面是一致的：</p>
+<p>先把<a href="https://github.com/kubernetes/code-generator">code-generator</a>下载下来，注意这里的K8S版本号，得和<code>go.mod</code>里的<code>k8s.io/client-go</code>的版本一致：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">K8S_VERSION<span style="color:#f92672">=</span>v0.18.5
 go get k8s.io/code-generator@$K8S_VERSION
 go mod vendor
 </code></pre></div><p>然后给<code>generate-groups.sh</code>添加可执行权限：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">chmod +x vendor/k8s.io/code-generator/generate-groups.sh
-</code></pre></div><h3 id="3生成代码">3）生成代码</h3>
-<p>执行<code>hack/update-codegen.sh</code>：</p>
+</code></pre></div><h3 id="3更新依赖版本">3）更新依赖版本</h3>
+<p>因为code-generator用的是v0.18.5，因此要把其他的k8s库也更新到这个版本：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">K8S_VERSION<span style="color:#f92672">=</span>v0.18.5
+go get k8s.io/client-go@$K8S_VERSION
+go get k8s.io/apimachinery@$K8S_VERSION
+go get sigs.k8s.io/controller-runtime@v0.6.0
+go mod vendor
+</code></pre></div><h3 id="4生成代码">4）生成代码</h3>
+<p>你需要修改<code>guestbook_types.go</code>文件，添加上tag <code>// +genclient</code>：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#75715e">// +genclient
+</span><span style="color:#75715e">// +kubebuilder:object:root=true
+</span><span style="color:#75715e"></span>
+<span style="color:#75715e">// Guestbook is the Schema for the guestbooks API
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">Guestbook</span> <span style="color:#66d9ef">struct</span> {
+</code></pre></div><p>新建<code>apis/webapp/v1/doc.go</code>，注意<code>// +groupName=webapp.example.com</code>：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#75715e">// +groupName=webapp.example.com
+</span><span style="color:#75715e"></span>
+<span style="color:#f92672">package</span> <span style="color:#a6e22e">v1</span>
+</code></pre></div><p>新建<code>apis/webapp/v1/register.go</code>，code generator生成的代码需要用到它：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#f92672">package</span> <span style="color:#a6e22e">v1</span>
+
+<span style="color:#f92672">import</span> (
+	<span style="color:#e6db74">&#34;k8s.io/apimachinery/pkg/runtime/schema&#34;</span>
+)
+
+<span style="color:#75715e">// SchemeGroupVersion is group version used to register these objects.
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">var</span> <span style="color:#a6e22e">SchemeGroupVersion</span> = <span style="color:#a6e22e">GroupVersion</span>
+
+<span style="color:#66d9ef">func</span> <span style="color:#a6e22e">Resource</span>(<span style="color:#a6e22e">resource</span> <span style="color:#66d9ef">string</span>) <span style="color:#a6e22e">schema</span>.<span style="color:#a6e22e">GroupResource</span> {
+	<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">SchemeGroupVersion</span>.<span style="color:#a6e22e">WithResource</span>(<span style="color:#a6e22e">resource</span>).<span style="color:#a6e22e">GroupResource</span>()
+}
+</code></pre></div><p>执行<code>hack/update-codegen.sh</code>：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">./hack/update-codegen.sh
-</code></pre></div><p>代码会生成在<code>example.com/foo-controller</code>目录下（回忆前面的<code>MODULE=example.com/foo-controller</code>和<code>OUTPUT_PKG=generated</code>参数）：</p>
+</code></pre></div><p>会得到<code>example.com/foo-controller</code>目录：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-txt" data-lang="txt">example.com
 └── foo-controller
-    ├── api
-    │   └── foo
-    │       └── v1alpha1
-    │           └── zz_generated.deepcopy.go
     └── generated
-        ├── clientset
-        ├── informers
-        └── listers
+        └── webapp
+            ├── clientset
+            ├── informers
+            └── listers
 </code></pre></div><p>移动文件：</p>
 <ul>
-<li><code>zz_generated.deepcopy.go</code>移动到<code>api/&lt;group&gt;/&lt;version&gt;</code>下</li>
 <li><code>example.com/foo-controller/generated</code>直接移出来，放到项目根下面<code>generated</code></li>
-<li>如果后面你修改了<code>types.go</code>，重新执行<code>./hack/update-codegen.sh</code>就行了。</li>
 </ul>
-<p>对于生成代码的说明：</p>
+<h2 id="例子程序">例子程序</h2>
+<p>先apply manifests yaml：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">kubectl apply -f config/crd/bases/webapp.example.com_guestbooks.yaml
+kubectl apply -f config/samples/webapp_v1_guestbook.yaml
+</code></pre></div><p>然后执行项目的<a href="https://github.com/chanjarster/kubebuilder-mix-codegen-how-to/blob/master/main.go">main.go</a>。</p>
+<h2 id="参考资料">参考资料</h2>
 <ul>
-<li><code>clientset</code>：用于操作<code>foos.foo.example.com</code>CRD资源</li>
-<li><code>informers</code>：Informer接收来自服务器的CRD的变更事件</li>
-<li><code>listers</code>：Lister提供只读的cache layer for GET和LIST请求</li>
-</ul>
-<h2 id="关于controller">关于Controller</h2>
-<p>controller代码可以看项目的<a href="https://github.com/chanjarster/k8s-code-gen-how-to/blob/master/main.go">main.go</a>。</p>
-<p>本例子里controller读取环境变量<code>KUBECONFIG</code>来启动Clientset以及和K8S通信，这个也符合<a href="https://github.com/kubernetes/client-go/blob/master/examples/out-of-cluster-client-configuration">k8s.io/client-go out-of-cluster example</a>。在实际生产环境中，可以参考<a href="https://github.com/kubernetes/client-go/blob/master/examples/in-cluster-client-configuration">k8s.io/client-go in-cluster example</a>。</p>
-<p>如果你想要更灵活的做法，比如当提供了<code>--kubeconfig</code>的时候采用out-of-cluster模式，否则则尝试in-cluster模式（看<code>/var/run/secrets/kubernetes.io/serviceaccount</code>），可以参考<a href="https://github.com/coreos/prometheus-operator/blob/v0.40.0/pkg/k8sutil/k8sutil.go#L61-L95">prometheus-operator k8sutil.go</a>的做法</p>
-<h2 id="参考文档">参考文档</h2>
-<ul>
+<li><a href="https://github.com/kubernetes/code-generator/tree/master/cmd/client-gen">code-generator client-gen tag references</a></li>
+<li><a href="https://book.kubebuilder.io/reference/reference.html">kubebuilder tag references</a></li>
 <li><a href="https://www.openshift.com/blog/kubernetes-deep-dive-code-generation-customresources">Kubernetes Deep Dive: Code Generation for CustomResources</a></li>
-<li><a href="https://insujang.github.io/2020-02-13/programming-kubernetes-crd/">Programming Kubernetes CRDs</a></li>
-<li><a href="https://github.com/kubernetes/sample-controller">Sample Controller</a></li>
-<li><a href="https://github.com/kubernetes/code-generator">code-generator</a></li>
-<li><a href="https://github.com/kubernetes/client-go">client-go</a></li>
-<li><a href="https://github.com/kubernetes/code-generator/tree/master/cmd/client-gen">client-gen tag docs</a></li>
+<li><a href="https://github.com/kubernetes-sigs/kubebuilder/tree/master/docs/book/src/cronjob-tutorial/testdata/project">kubebuilder sample project</a></li>
 </ul>
         </p>
     </div>
