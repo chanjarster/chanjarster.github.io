@@ -181,7 +181,7 @@ kubebuilder edit --multigroup<span style="color:#f92672">=</span>true
 ├── hack
 │   └── boilerplate.go.txt
 └── main.go
-</code></pre></div><h2 id="第二步生成resource和crd-manifests">第二步：生成Resource和CRD manifests</h2>
+</code></pre></div><h2 id="第二步生成resource和manifests">第二步：生成Resource和manifests</h2>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">kubebuilder create api --group webapp --version v1 --kind Guestbook
 Create Resource <span style="color:#f92672">[</span>y/n<span style="color:#f92672">]</span>
 y
@@ -207,14 +207,20 @@ n
     │   ├── guestbook_viewer_role.yaml
     └── samples
         └── webapp_v1_guestbook.yaml
+</code></pre></div><p>添加文件<code>apis/webapp/v1/rbac.go</code>，这个文件用生成RBAC manifests：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#75715e">// +kubebuilder:rbac:groups=webapp.example.com,resources=guestbooks,verbs=get;list;watch;create;update;patch;delete
+</span><span style="color:#75715e">// +kubebuilder:rbac:groups=webapp.example.com,resources=guestbooks/status,verbs=get;update;patch
+</span><span style="color:#75715e"></span>
+<span style="color:#f92672">package</span> <span style="color:#a6e22e">v1</span>
 </code></pre></div><p>然后生成CRD manifests：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">make manifests
 </code></pre></div><p>得到：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-yaml" data-lang="yaml">.
-├── config
-    └── crd
-        └── bases
-            └── webapp.example.com_guestbooks.yaml
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-yaml" data-lang="yaml">config
+├── crd
+│   └── bases
+│       └── webapp.example.com_guestbooks.yaml
+└── rbac
+    └── role.yaml
 </code></pre></div><p><strong>注意：</strong></p>
 <p>如果你修改了<code>guestbook_types.go</code>的结构，你需要执行以下命令来更新代码和manifests：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">make <span style="color:#f92672">&amp;&amp;</span> make manifests
