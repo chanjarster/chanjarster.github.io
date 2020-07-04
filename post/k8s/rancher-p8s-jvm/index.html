@@ -156,7 +156,40 @@
     <img src="step-2.png" width="100%"/> 
 </figure>
 
-<h2 id="应用配置jmx-exporter">应用配置JMX Exporter</h2>
+<h3 id="rbac">RBAC</h3>
+<p>给prometheus-operator的service account配置RBAC：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-yaml" data-lang="yaml"><span style="color:#66d9ef">apiVersion</span>: rbac.authorization.k8s.io/v1beta1
+<span style="color:#66d9ef">kind</span>: ClusterRole
+<span style="color:#66d9ef">metadata</span>:
+  <span style="color:#66d9ef">name</span>: prometheus-all-ns
+<span style="color:#66d9ef">rules</span>:
+- <span style="color:#66d9ef">apiGroups</span>: [<span style="color:#e6db74">&#34;&#34;</span>]
+  <span style="color:#66d9ef">resources</span>:
+  - nodes
+  - services
+  - endpoints
+  - pods
+  <span style="color:#66d9ef">verbs</span>: [<span style="color:#e6db74">&#34;get&#34;</span>, <span style="color:#e6db74">&#34;list&#34;</span>, <span style="color:#e6db74">&#34;watch&#34;</span>]
+- <span style="color:#66d9ef">apiGroups</span>: [<span style="color:#e6db74">&#34;&#34;</span>]
+  <span style="color:#66d9ef">resources</span>:
+  - configmaps
+  <span style="color:#66d9ef">verbs</span>: [<span style="color:#e6db74">&#34;get&#34;</span>]
+- <span style="color:#66d9ef">nonResourceURLs</span>: [<span style="color:#e6db74">&#34;/metrics&#34;</span>]
+  <span style="color:#66d9ef">verbs</span>: [<span style="color:#e6db74">&#34;get&#34;</span>]
+---
+<span style="color:#66d9ef">apiVersion</span>: rbac.authorization.k8s.io/v1beta1
+<span style="color:#66d9ef">kind</span>: ClusterRoleBinding
+<span style="color:#66d9ef">metadata</span>:
+  <span style="color:#66d9ef">name</span>: prometheus-all-ns
+<span style="color:#66d9ef">roleRef</span>:
+  <span style="color:#66d9ef">apiGroup</span>: rbac.authorization.k8s.io
+  <span style="color:#66d9ef">kind</span>: ClusterRole
+  <span style="color:#66d9ef">name</span>: prometheus-all-ns
+<span style="color:#66d9ef">subjects</span>:
+- <span style="color:#66d9ef">kind</span>: ServiceAccount
+  <span style="color:#66d9ef">name</span>: prometheus-k8s
+  <span style="color:#66d9ef">namespace</span>: monitoring
+</code></pre></div><h2 id="应用配置jmx-exporter">应用配置JMX Exporter</h2>
 <p>你的Java应用的镜像得配置JMX Exporter，配置方法见<a href="../../prom-grafana-jvm">使用Prometheus+Grafana监控JVM</a>，我在这里选择将JMX Exporter端口设置为6060。</p>
 <p>然后在你的Deployment/StatefulSets 中配置这个端口：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-yaml" data-lang="yaml"><span style="color:#66d9ef">apiVersion</span>: apps/v1
