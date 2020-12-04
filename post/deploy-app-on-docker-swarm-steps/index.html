@@ -276,31 +276,31 @@ $ docker network inspect -f <span style="color:#e6db74">&#39;{{json .IPAM}}&#39;
 <p>如果你对于Service部署在哪个Node上有要求，那么你得给Node打上Label：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ docker node update --label-add &lt;your-label&gt;<span style="color:#f92672">=</span><span style="color:#ae81ff">1</span> &lt;node-id&gt;
 </code></pre></div><p>然后在<code>docker-compose.yaml</code>里添加约束条件：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-yaml" data-lang="yaml"><span style="color:#66d9ef">version</span>: <span style="color:#e6db74">&#34;3.7&#34;</span>
-<span style="color:#66d9ef">services</span>:
-  <span style="color:#66d9ef">busybox</span>:
-    <span style="color:#66d9ef">image</span>: busybox
-    <span style="color:#66d9ef">deploy</span>:
-      <span style="color:#66d9ef">placement</span>:
-        <span style="color:#66d9ef">constraints</span>:
-          - node.labels.&lt;your-label&gt; == <span style="color:#ae81ff">1</span>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-yaml" data-lang="yaml"><span style="color:#f92672">version</span>: <span style="color:#e6db74">&#34;3.7&#34;</span>
+<span style="color:#f92672">services</span>:
+  <span style="color:#f92672">busybox</span>:
+    <span style="color:#f92672">image</span>: <span style="color:#ae81ff">busybox</span>
+    <span style="color:#f92672">deploy</span>:
+      <span style="color:#f92672">placement</span>:
+        <span style="color:#f92672">constraints</span>:
+          - <span style="color:#ae81ff">node.labels.&lt;your-label&gt; == 1</span>
 </code></pre></div><h3 id="44-启动service">4.4 启动service</h3>
 <p>对于stateless service，编写<code>docker-compose.yaml</code>，里面写了同时挂载<code>app-net</code>和<code>monitor-net</code>，比如：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-yaml" data-lang="yaml"><span style="color:#66d9ef">version</span>: <span style="color:#e6db74">&#34;3.7&#34;</span>
-<span style="color:#66d9ef">services</span>:
-  <span style="color:#66d9ef">busybox</span>:
-    <span style="color:#66d9ef">image</span>: busybox
-    <span style="color:#66d9ef">networks</span>:
-      <span style="color:#66d9ef">app-net</span>:
-      <span style="color:#66d9ef">monitor-net</span>:
-        <span style="color:#66d9ef">aliases</span>:
-          - busybox
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-yaml" data-lang="yaml"><span style="color:#f92672">version</span>: <span style="color:#e6db74">&#34;3.7&#34;</span>
+<span style="color:#f92672">services</span>:
+  <span style="color:#f92672">busybox</span>:
+    <span style="color:#f92672">image</span>: <span style="color:#ae81ff">busybox</span>
+    <span style="color:#f92672">networks</span>:
+      <span style="color:#f92672">app-net</span>:
+      <span style="color:#f92672">monitor-net</span>:
+        <span style="color:#f92672">aliases</span>:
+          - <span style="color:#ae81ff">busybox</span>
 ...
-<span style="color:#66d9ef">networks</span>:
-  <span style="color:#66d9ef">app-net</span>:
-    <span style="color:#66d9ef">external</span>: <span style="color:#66d9ef">true</span>
-  <span style="color:#66d9ef">monitor-net</span>:
-    <span style="color:#66d9ef">external</span>: <span style="color:#66d9ef">true</span>
+<span style="color:#f92672">networks</span>:
+  <span style="color:#f92672">app-net</span>:
+    <span style="color:#f92672">external</span>: <span style="color:#66d9ef">true</span>
+  <span style="color:#f92672">monitor-net</span>:
+    <span style="color:#f92672">external</span>: <span style="color:#66d9ef">true</span>
 </code></pre></div><p>注意上面设置了busybox service在monitor-net中的别名，这是因为如果你用<code>docker stack deploy</code>部署，那么busybox的名字默认是<code>&lt;stack-name&gt;_busybox</code>，这样对于prometheus而言此名字不稳定，不便于配置详见<a href="../p8s-scrape-container-in-docker-swarm-overlay-network/">Prometehus监控Docker Swarm Overlay网络中的容器</a>。</p>
 <p>然后用<code>docker stack deploy</code>部署：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ docker stack deploy <span style="color:#ae81ff">\
