@@ -144,8 +144,7 @@
     
     <div>
         <p>
-        <p><code>kubectl</code>实用小脚本集锦</p>
-<h2 id="查找没有设置resources-quotalimits的pod">查找没有设置Resources Quota(Limits)的Pod</h2>
+        <h2 id="查找没有设置resources-quotalimits的pod">查找没有设置Resources Quota(Limits)的Pod</h2>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">kubectl get --all-namespaces pods -o go-template<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;
 </span><span style="color:#e6db74">{{ range .items -}}
 </span><span style="color:#e6db74">{{ $pod := .metadata.name -}}
@@ -155,6 +154,19 @@
 </span><span style="color:#e6db74">NAMESPACE: {{ $ns }} POD: {{ $pod }}
 </span><span style="color:#e6db74">  Container: {{ .name }}
 </span><span style="color:#e6db74">  Resources: {{ .resources }}
+</span><span style="color:#e6db74">{{ end }}
+</span><span style="color:#e6db74">{{- end }}
+</span><span style="color:#e6db74">{{- end }}&#39;</span>
+</code></pre></div><h2 id="查找设置了requests-cpu的pod">查找设置了Requests CPU的Pod</h2>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">kubectl get --all-namespaces pods -o go-template<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;
+</span><span style="color:#e6db74">{{ range .items -}}
+</span><span style="color:#e6db74">{{ $pod := .metadata.name -}}
+</span><span style="color:#e6db74">{{ $ns := .metadata.namespace -}}
+</span><span style="color:#e6db74">{{- range .spec.containers }}
+</span><span style="color:#e6db74">{{- if and (.resources) (.resources.requests) (.resources.requests.cpu) }}
+</span><span style="color:#e6db74">NAMESPACE: {{ $ns }} POD: {{ $pod }}
+</span><span style="color:#e6db74">  Container: {{ .name }}
+</span><span style="color:#e6db74">  Requests CPU: {{ .resources.requests.cpu }}
 </span><span style="color:#e6db74">{{ end }}
 </span><span style="color:#e6db74">{{- end }}
 </span><span style="color:#e6db74">{{- end }}&#39;</span>
