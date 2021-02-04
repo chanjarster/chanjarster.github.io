@@ -149,21 +149,28 @@
 
 <span style="color:#75715e"># ref: http://stackoverflow.com/questions/34724980/finding-a-string-in-docker-logs-of-container</span>
 </code></pre></div><h2 id="返回json">返回json</h2>
-<p>给docker命令添加 <code>--format '{{ json .}}'</code>参数，能够使得返回结果变成JSON。，比如：</p>
+<p>给docker命令添加 <code>--format '{{ json .}}'</code>参数，能够使得返回结果变成JSON，知道JSON结构后你可以很方便的利用<code>--format</code>做其他事情，比如：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ docker image ls --format <span style="color:#e6db74">&#39;{{json .}}&#39;</span>
-</code></pre></div><h2 id="删除所有镜像">删除所有镜像</h2>
+</code></pre></div><h2 id="镜像">镜像</h2>
+<h3 id="删除所有镜像">删除所有镜像</h3>
 <p>利用<code>--format</code>参数得到镜像ID，然后删除：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">docker image ls --format <span style="color:#e6db74">&#39;{{ .ID}}&#39;</span> | xargs -n1 -I<span style="color:#f92672">{}</span> docker image rm  <span style="color:#f92672">{}</span>
-</code></pre></div><h2 id="得到容器的pid">得到容器的PID</h2>
+</code></pre></div><h3 id="得到镜像的pull命令">得到镜像的pull命令</h3>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">docker image ls --format <span style="color:#e6db74">&#39;docker pull {{.Repository}}:{{.Tag}}&#39;</span>
+</code></pre></div><h3 id="saveload镜像">save/load镜像</h3>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">docker save &lt;image&gt; &lt;image&gt;... | gzip &gt; &lt;name&gt;.tar.gz
+docker load --input &lt;name&gt;.tar.gz
+</code></pre></div><h2 id="容器">容器</h2>
+<h3 id="得到容器的pid">得到容器的PID</h3>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">docker inspect --format <span style="color:#e6db74">&#39;{{.State.Pid}}&#39;</span> &lt;container-name/id&gt;
-</code></pre></div><h2 id="列出所有容器的pid">列出所有容器的PID</h2>
+</code></pre></div><h3 id="列出所有容器的pid">列出所有容器的PID</h3>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">docker ps -q | xargs docker inspect --format <span style="color:#e6db74">&#39;{{.State.Pid}}, {{.Name}}&#39;</span>
-</code></pre></div><h2 id="列出容器暴露的端口">列出容器暴露的端口</h2>
+</code></pre></div><h3 id="列出容器暴露的端口">列出容器暴露的端口</h3>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">docker inspect --format <span style="color:#e6db74">&#39;
 </span><span style="color:#e6db74">{{- range $port, $hostPorts := .NetworkSettings.Ports }}
 </span><span style="color:#e6db74">container port: {{ $port }}, host ports: {{json $hostPorts}}
 </span><span style="color:#e6db74">{{- end -}}&#39;</span> &lt;container-name/id&gt;
-</code></pre></div><h2 id="列出所有容器暴露的端口">列出所有容器暴露的端口</h2>
+</code></pre></div><h3 id="列出所有容器暴露的端口">列出所有容器暴露的端口</h3>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">docker ps -q | xargs docker inspect --format <span style="color:#e6db74">&#39;
 </span><span style="color:#e6db74">Pid:{{.State.Pid}}, Name:{{ .Name }}
 </span><span style="color:#e6db74">{{- range $port, $hostPorts := .NetworkSettings.Ports }}
