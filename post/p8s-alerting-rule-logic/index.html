@@ -2,7 +2,6 @@
 
 <html lang="zh-cn">
     <head>
-	<meta name="generator" content="Hugo 0.78.2" />
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -29,8 +28,6 @@
     
     
  
-    
-    <link rel="alternate" type="application/rss+xml" href="https://chanjarster.github.io/index.xml" title="颇忒脱的技术博客" />
     
     
 </head>
@@ -141,77 +138,72 @@
 </nav>
         <div id="content" class="content-container">
         
-<div class = "article-content">
-        
-        <div class="description">
-            <p>颇忒脱的技术博客</p>
-        </div>
-        
-        
-        
-        
-        <article>
-            <h2>
-                <a href="https://chanjarster.github.io/post/d-transactions/base/">
-                    事务 - BASE
-                </a>
-            </h2>
-            <div><p></p></div>
-            <div class="post-footer">
-            <time>March 19, 2018</time>
-
-            
-            
-                
-                    <a class="tag" href="https://chanjarster.github.io/tags/%E5%88%86%E5%B8%83%E5%BC%8F%E4%BA%8B%E5%8A%A1">#分布式事务</a>
-                
-            
-            </div> 
-           
-        </article>
-        
-        <article>
-            <h2>
-                <a href="https://chanjarster.github.io/post/d-transactions/local-transaction/">
-                    事务 - 本地事务
-                </a>
-            </h2>
-            <div><p></p></div>
-            <div class="post-footer">
-            <time>March 16, 2018</time>
-
-            
-            
-                
-                    <a class="tag" href="https://chanjarster.github.io/tags/%E5%88%86%E5%B8%83%E5%BC%8F%E4%BA%8B%E5%8A%A1">#分布式事务</a>
-                
-            
-            </div> 
-           
-        </article>
-        
+<h1 class="post-title">Prometheus报警逻辑分析</h1>
+    
+    <time>February 26, 2021</time>
+    
+    <div>
+        <p>
+        <p>本文分析Prometheus的<a href="https://prometheus.io/docs/prometheus/2.25/configuration/alerting_rules/">Alerting Rule</a>的执行逻辑。</p>
+<h2 id="领域模型">领域模型</h2>
+<p>在Prometheus的定义中，报警规则由AlertingRule来描述，而AlertingRule则被归到<a href="https://prometheus.io/docs/prometheus/2.25/configuration/recording_rules/#rule_group">Group</a>中，比如下面的配置文件例子：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-yaml" data-lang="yaml"><span style="color:#f92672">groups</span>:
+- <span style="color:#f92672">name</span>: <span style="color:#ae81ff">example</span>
+  <span style="color:#f92672">interval</span>: <span style="color:#ae81ff">30s</span>
+  <span style="color:#f92672">rules</span>:
+  - <span style="color:#f92672">alert</span>: <span style="color:#ae81ff">HighRequestLatency</span>
+    <span style="color:#f92672">expr</span>: <span style="color:#ae81ff">job:request_latency_seconds:mean5m{job=&#34;myjob&#34;} &gt; 0.5</span>
+    <span style="color:#f92672">for</span>: <span style="color:#ae81ff">10m</span>
+    <span style="color:#f92672">labels</span>:
+      <span style="color:#f92672">severity</span>: <span style="color:#ae81ff">page</span>
+    <span style="color:#f92672">annotations</span>:
+      <span style="color:#f92672">summary</span>: <span style="color:#ae81ff">High request latency</span>
+</code></pre></div><p>每个AlertingRule在运行时还维护具体的报警对象（Alert）。</p>
+<p>下面是领域模型：</p>
+<p><img src="domain.png" style="zoom:50%" /></p>
+<h2 id="报警逻辑">报警逻辑</h2>
+<p>Prometheus会根据<code>group.interval</code>规定的时间，定时来执行AlertingRule（执行Eval方法），然后发送报警到Alertmanager，最后再更新AlertingRule的状态、Group的状态。</p>
+<p><img src="logic.png" style="zoom:65%" /></p>
+<h3 id="规则执行逻辑">规则执行逻辑</h3>
+<p>上图已经说明了，执行报警规则第一步是执行表达式（<code>expr</code>属性），然后是根据表达式执行结果，管理Alert对象，逻辑如下：</p>
+<p><img src="alert-state.png" style="zoom:65%" /></p>
+<p>Alert对象有三个状态：</p>
+<ul>
+<li><strong>Pending</strong>：活跃但是还未发送给Alertmanager，是Alert对象的初始状态。</li>
+<li><strong>Firing</strong>：长发送到Alertmanager。</li>
+<li><strong>Inactive</strong>：不活跃，即当前没有触发报警。</li>
+<li>虚拟状态“被删除”</li>
+</ul>
+<p>三种状态的迁移逻辑：</p>
+<p><strong>Pending -&gt; Firing</strong></p>
+<p>Alert对象当前处于Pending，触发报警规则，且距离初次活跃时间（<code>Alert.ActiveAt</code>）超过<code>&lt;for&gt;</code>（<code>AlertingRule.holdDuration</code>）的时长，那么这个Alert对象就会变成<strong>Firing</strong>状态。</p>
+<p><strong>Pending -&gt; 被删除</strong></p>
+<p>Alert对象当前处于Pending状态，不触发报警规则，那么这个Alert对象就直接被删除。</p>
+<p><strong>Firing -&gt; Inactive</strong></p>
+<p>Alert对象当前处于Firing状态，不触发报警规则，那么这个Alert对象会变成<strong>Inactive状态</strong>。</p>
+<p><strong>Inactive -&gt; Pending</strong></p>
+<p>Alert对象当前处于Inactive状态，触发报警规则，那么这个Alert对象会重置为Pending状态。</p>
+<p><strong>Inactive -&gt; 被删除</strong></p>
+<p>Alert对象当前处于Inactive状态，且保持超过了<code>resolved_retention</code>时长，则被删除。</p>
+<h3 id="报警发送的逻辑">报警发送的逻辑</h3>
+<p>AlertingRule执行之后，会把Firing状态的Alert发送出去，逻辑如下：</p>
+<p><img src="alert-sending.png" style="zoom:65%" /></p>
+<h3 id="更新alertingrule规则">更新AlertingRule规则</h3>
+<p>最后更新AlertingRule的状态，逻辑如下：</p>
+<p><img src="alerting-rule-state.png" style="zoom:65%" /></p>
+        </p>
     </div>
+    
+
+    <div class="page-footer">
         
-        <div class="paginator">
+        <hr class="footer-divider">
         
+            <a class="tag" href="https://chanjarster.github.io/tags/prometheus">#prometheus</a>
         
-        <p>Page 31 of 31</p>
-        <div class="paginator-group">
-            
-            <a class="color-link" href="https://chanjarster.github.io/page/30/">
-                    <svg width="13px" height="9px" viewBox="0 0 13 9" version="1.1" xmlns="https://www.w3.org/2000/svg" xmlns:xlink="https://www.w3.org/1999/xlink">
-                        <g class="color-arrow" fill="#63BDA2" fill-rule="nonzero">
-                            <polygon id="Path" points="1.75929935 4.50000282 5.3292523 7.62371165 4.6707477 8.37628835 0.240700645 4.49999718 4.67081049 0.623709205 5.32930951 1.37629079"></polygon>
-                            <polygon id="Path" points="13 4 13 5 1 5 1 4"></polygon>
-                        </g>
-                </svg>  
-                Newer          
-            </a>
-            
-            
-        </div>
-        
+      
     </div>
+
 
         
         </div>
