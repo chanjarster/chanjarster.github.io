@@ -294,6 +294,13 @@ rules:
 <h2 id="手动修改configmap">手动修改configmap</h2>
 <p>手动修改configmap，把leader指向一个存在的Pod。</p>
 <p>所有Ingress上的status字段状态都更新了。</p>
+<h2 id="排查游离在k8s集群之外的节点">排查游离在K8S集群之外的节点</h2>
+<p>现在可以推断存在游离在K8S集群之外，但是可以和K8S通信的服务器，后来果然在一台不在集群范围内的机器上找到了：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ docker ps -a|grep ingress
+...
+f4c861555842        a80ffa0b898e                         <span style="color:#e6db74">&#34;/usr/bin/dumb-init â€¦&#34;</span>   <span style="color:#ae81ff">5</span> months ago        Up <span style="color:#ae81ff">5</span> months                                     k8s_nginx-ingress-controller_nginx-ingress-controller-qxlt8_ingress-nginx_40487677-32c0-4936-bd1a-3e3cb99fbfa1_0
+...
+</code></pre></div><p>印证了之前的推断。</p>
 <h2 id="总结">总结</h2>
 <p>本次排查发现三个问题：</p>
 <ol>
@@ -301,7 +308,7 @@ rules:
 <p>Ingress对象的status字段不更新的问题。</p>
 </li>
 <li>
-<p>问题1产生的原因可能是，存在游离在K8S集群之外，但是可以和K8S通信的服务器，这个需要后面排查，如果不彻底解决，问题1以后可能还会出现。</p>
+<p>问题1产生的原因可能是，存在游离在K8S集群之外，但是可以和K8S通信的服务器。</p>
 </li>
 <li>
 <p>集群的nginx接入点疑似收到攻击。</p>
