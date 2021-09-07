@@ -29,8 +29,6 @@
     
  
     
-    <link rel="alternate" type="application/rss+xml" href="https://chanjarster.github.io/tags/redis/index.xml" title="颇忒脱的技术博客" />
-    
     
 </head>
     <body>
@@ -142,117 +140,52 @@
 </nav>
         <div id="content" class="content-container">
         
+<h1 class="post-title">某次压力测试中对Nginx的排障</h1>
+    
+    <time>September 7, 2021</time>
+    
+    <div>
+        <p>
+        <p>某次压力测试时，Jmeter得到大量connection reset、connect timeout的错误。</p>
+<h2 id="拓扑">拓扑</h2>
+<pre><code>Jmeter -&gt; nginx[:9001] -&gt; k8s worker[:80](ingress-nginx) -&gt; k8s pod[:10080]
+</code></pre><h2 id="观察nginx">观察nginx</h2>
+<p>nginx采用的是四层代理，用的是<a href="http://nginx.org/en/docs/stream/ngx_stream_core_module.html">stream模块</a></p>
+<p>查看 <code>/var/log/nginx/error.log</code>，看到大量<code>too many open files</code>的错误。</p>
+<p>观察<code>ulimit -a</code>得到<code>open files (-n) 1024</code>，这个值太小了，采用<a href="../linux/limits">这个方式调大</a>。</p>
+<h2 id="优化nginx">优化nginx</h2>
+<p>再优化nginx，调整 <code>/etc/nginx/nginx.conf</code> 。</p>
+<p>调整<a href="http://nginx.org/en/docs/ngx_core_module.html#worker_processes">worker_processes</a>，默认值是 1，改为auto。</p>
+<pre><code>worker_processes  auto;
+</code></pre><p>调整<a href="http://nginx.org/en/docs/ngx_core_module.html#worker_connections">worker_connections</a>，默认值是512太小了，压测并发有15000，因为服务器有10核，woker_processes的实际值是10，所以调整到1600，那么总共就是16000。</p>
+<pre><code>worker_connections 1600;
+</code></pre><p>调整<a href="http://nginx.org/en/docs/ngx_core_module.html#worker_rlimit_nofile">worker_rlimit_nofile</a>到16000，该值小于不能总的worker_connections：</p>
+<pre><code>worker_rlimit_nofile 16000;
+</code></pre><p>再次压测后，Jmeter得到502 bad gateway等错误。</p>
+<p>观察nginx的 <code>/var/log/nginx/error.log</code> ，没有新的错误日志产生。</p>
+<h2 id="观察ingress-nginx">观察ingress nginx</h2>
+<p>先设置ingress nginx配置 <a href="https://kubernetes.github.io/ingress-nginx/user-guide/nginx-configuration/configmap/#disable-access-log">disable-access-log=true</a> ，关闭access log打印，可以让我们专注在错误日志上。</p>
+<p>观察ingress nginx日志，发现先有大量Connection timed out错误：</p>
+<pre><code>[error] 46#46: *7495 upstream timed out (110: Connection timed out) while connecting to upstream
+....
+</code></pre><p>然后出现大量Cannot assign requested address的错误：</p>
+<pre><code>[crit] 46#46: *10527 connect() to 10.42.5.220:10080 failed (99: Cannot assign requested address) while connecting to upstream
+</code></pre><p>看来是ingress nginx和Pod的连接超时了，根据<a href="https://kubernetes.github.io/ingress-nginx/user-guide/nginx-configuration/configmap/">ingress nginx文档</a>，<code>proxy-connection-timeout</code>默认值5秒，太短了，调整到60秒。</p>
+<p>再次压测后Connection timed out问题没有了，而且Cannot assign requested address也没有了。</p>
+        </p>
+    </div>
+    
 
-  <h1>Tagged "redis"</h1>
-  
-  
-    
-    <article>
-            <h2>
-                <a href="https://chanjarster.github.io/post/redis/redis-bad-aof/">
-                    K8S中Redis损坏的AOF文件排查
-                </a>
-            </h2>
-            <div>
-                <p>
-                
-                </p>
-            </div>
-            <div class="post-footer">
-            <time>September 7, 2021</time>
-            </div> 
-        </article>
-    
-  
-    
-    <article>
-            <h2>
-                <a href="https://chanjarster.github.io/post/redis-lua-miaosha/">
-                    Redis解决超卖问题的方案汇总
-                </a>
-            </h2>
-            <div>
-                <p>
-                
-                </p>
-            </div>
-            <div class="post-footer">
-            <time>December 3, 2019</time>
-            </div> 
-        </article>
-    
-  
-    
-    <article>
-            <h2>
-                <a href="https://chanjarster.github.io/post/redis-cluster-design-summary/">
-                    Redis Cluster设计学习总结
-                </a>
-            </h2>
-            <div>
-                <p>
-                
-                </p>
-            </div>
-            <div class="post-footer">
-            <time>July 12, 2019</time>
-            </div> 
-        </article>
-    
-  
-    
-    <article>
-            <h2>
-                <a href="https://chanjarster.github.io/post/redis-cluster-config-propagation/">
-                    Redis Cluster配置传播及故障恢复笔记
-                </a>
-            </h2>
-            <div>
-                <p>
-                <p>本笔记是对<a href="https://redis.io/topics/cluster-spec#configuration-handling-propagation-and-failovers">Redis Cluster Spec - Configuration handling, propagation, and failovers</a>的归纳总结。</p>
-                </p>
-            </div>
-            <div class="post-footer">
-            <time>July 10, 2019</time>
-            </div> 
-        </article>
-    
-  
-    
-    <article>
-            <h2>
-                <a href="https://chanjarster.github.io/post/redis-cluster-node-failure-detection/">
-                    Redis Cluster节点故障探测算法笔记
-                </a>
-            </h2>
-            <div>
-                <p>
-                <p>本笔记是对<a href="https://redis.io/topics/cluster-spec#failure-detection">Redis Cluster Spec - Failure Detection</a>的归纳总结</p>
-                </p>
-            </div>
-            <div class="post-footer">
-            <time>July 9, 2019</time>
-            </div> 
-        </article>
-    
-  
-    
-    <article>
-            <h2>
-                <a href="https://chanjarster.github.io/post/redis-sentinel-spring-boot-example/">
-                    Spring Boot配置Redis Sentinel的例子
-                </a>
-            </h2>
-            <div>
-                <p>
-                <p>本文介绍Spring Boot连接<a href="https://redis.io/topics/sentinel">Redis Sentinel</a>的例子。</p>
-                </p>
-            </div>
-            <div class="post-footer">
-            <time>June 14, 2019</time>
-            </div> 
-        </article>
-    
+    <div class="page-footer">
+        
+        <hr class="footer-divider">
+        
+            <a class="tag" href="https://chanjarster.github.io/tags/nginx">#nginx</a>
+        
+            <a class="tag" href="https://chanjarster.github.io/tags/troubleshooting">#troubleshooting</a>
+        
+      
+    </div>
 
 
         

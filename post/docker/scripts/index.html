@@ -164,21 +164,38 @@
 docker load --input &lt;name&gt;.tar.gz
 </code></pre></div><h2 id="容器">容器</h2>
 <h3 id="得到容器的pid">得到容器的PID</h3>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">docker inspect --format <span style="color:#e6db74">&#39;{{.State.Pid}}&#39;</span> &lt;container-name/id&gt;
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ docker inspect --format <span style="color:#e6db74">&#39;{{.State.Pid}}&#39;</span> &lt;container-name/id&gt;
 </code></pre></div><h3 id="列出所有容器的pid">列出所有容器的PID</h3>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">docker ps -q | xargs docker inspect --format <span style="color:#e6db74">&#39;{{.State.Pid}}, {{.Name}}&#39;</span>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ docker ps -q | xargs docker inspect --format <span style="color:#e6db74">&#39;{{.State.Pid}}, {{.Name}}&#39;</span>
 </code></pre></div><h3 id="列出容器暴露的端口">列出容器暴露的端口</h3>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">docker inspect --format <span style="color:#e6db74">&#39;
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ docker inspect --format <span style="color:#e6db74">&#39;
 </span><span style="color:#e6db74">{{- range $port, $hostPorts := .NetworkSettings.Ports }}
 </span><span style="color:#e6db74">container port: {{ $port }}, host ports: {{json $hostPorts}}
 </span><span style="color:#e6db74">{{- end -}}&#39;</span> &lt;container-name/id&gt;
 </code></pre></div><h3 id="列出所有容器暴露的端口">列出所有容器暴露的端口</h3>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">docker ps -q | xargs docker inspect --format <span style="color:#e6db74">&#39;
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ docker ps -q | xargs docker inspect --format <span style="color:#e6db74">&#39;
 </span><span style="color:#e6db74">Pid:{{.State.Pid}}, Name:{{ .Name }}
 </span><span style="color:#e6db74">{{- range $port, $hostPorts := .NetworkSettings.Ports }}
 </span><span style="color:#e6db74">container port: {{ $port }}, host ports: {{json $hostPorts}}
 </span><span style="color:#e6db74">{{- end -}}&#39;</span>
-</code></pre></div>
+</code></pre></div><h3 id="观察网络命名空间">观察网络命名空间</h3>
+<p>docker使用linux network namespace来隔离网络设备，下面将你怎么在host上debug容器网络命名空间。</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash"><span style="color:#75715e"># 得到容器进程id</span>
+$ container_id<span style="color:#f92672">=</span>&lt;container_id&gt;
+$ pid<span style="color:#f92672">=</span><span style="color:#66d9ef">$(</span>docker inspect -f <span style="color:#e6db74">&#39;{{.State.Pid}}&#39;</span> <span style="color:#e6db74">${</span>container_id<span style="color:#e6db74">}</span><span style="color:#66d9ef">)</span>
+
+<span style="color:#75715e"># 创建 netns 目录</span>
+$ mkdir -p /var/run/netns/
+
+<span style="color:#75715e"># 创建命名空间软连接</span>
+$ ln -sfT /proc/$pid/ns/net /var/run/netns/<span style="color:#e6db74">${</span>container_id<span style="color:#e6db74">}</span>
+
+<span style="color:#75715e"># 运行ip netns命令访问这个命名空间</span>
+$ ip netns exec <span style="color:#e6db74">${</span>container_id<span style="color:#e6db74">}</span> ip a
+
+<span style="color:#75715e"># 运行 nsenter 进入命名空间，用 netstat 命令查看容器进程的tcp/udp连接情况</span>
+$ nsenter -t $pid -n netstat -antpl
+</code></pre></div><p>参考文档：<a href="https://www.thegeekdiary.com/how-to-access-docker-containers-network-namespace-from-host/">How to Access Docker Container’s Network Namespace from Host</a></p>
         </p>
     </div>
     

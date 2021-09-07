@@ -29,8 +29,6 @@
     
  
     
-    <link rel="alternate" type="application/rss+xml" href="https://chanjarster.github.io/tags/redis/index.xml" title="颇忒脱的技术博客" />
-    
     
 </head>
     <body>
@@ -142,117 +140,48 @@
 </nav>
         <div id="content" class="content-container">
         
+<h1 class="post-title">K8S中Redis损坏的AOF文件排查</h1>
+    
+    <time>September 7, 2021</time>
+    
+    <div>
+        <p>
+        <h2 id="现象">现象</h2>
+<p>redis-server Pod启动不起来。</p>
+<p>观察Pod日志，看到：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">Bad file format reading the append only file: make a backup of your AOF file, <span style="color:#66d9ef">then</span> use ./redis-check-aof --fix &lt;filename&gt;
+</code></pre></div><h2 id="修复">修复</h2>
+<p>错误很明确了，AOF文件破损，了解到之前因为Node出问题，把Pod强制删除过，应该是这个原因造成的。</p>
+<p>修改Yaml，设置启动命令为<code>/bin/sh</code>，开启tty和stdin，注释掉所有Probe：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-yaml" data-lang="yaml">   <span style="color:#ae81ff">...</span>
+   <span style="color:#f92672">tty</span>: <span style="color:#66d9ef">true</span>
+   <span style="color:#f92672">stdin</span>: <span style="color:#66d9ef">true</span>
+   <span style="color:#f92672">command</span>:
+   - <span style="color:#ae81ff">/bin/sh</span>
+   <span style="color:#ae81ff">...</span>
+   <span style="color:#75715e"># livenessProbe: ...</span>
+   <span style="color:#75715e"># readinessProbe: ...</span>
+</code></pre></div><p>容器启动后，因为用的是bitnami redis镜像，所以进入容器shell执行：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">redis-check-aof /bitnami/redis/data/appendonly.aof
+...
+Continue <span style="color:#f92672">[</span>y/N<span style="color:#f92672">]</span>: y
+</code></pre></div><p>然后再把上述修改撤回，重启Pod，问题修复。</p>
+        </p>
+    </div>
+    
 
-  <h1>Tagged "redis"</h1>
-  
-  
-    
-    <article>
-            <h2>
-                <a href="https://chanjarster.github.io/post/redis/redis-bad-aof/">
-                    K8S中Redis损坏的AOF文件排查
-                </a>
-            </h2>
-            <div>
-                <p>
-                
-                </p>
-            </div>
-            <div class="post-footer">
-            <time>September 7, 2021</time>
-            </div> 
-        </article>
-    
-  
-    
-    <article>
-            <h2>
-                <a href="https://chanjarster.github.io/post/redis-lua-miaosha/">
-                    Redis解决超卖问题的方案汇总
-                </a>
-            </h2>
-            <div>
-                <p>
-                
-                </p>
-            </div>
-            <div class="post-footer">
-            <time>December 3, 2019</time>
-            </div> 
-        </article>
-    
-  
-    
-    <article>
-            <h2>
-                <a href="https://chanjarster.github.io/post/redis-cluster-design-summary/">
-                    Redis Cluster设计学习总结
-                </a>
-            </h2>
-            <div>
-                <p>
-                
-                </p>
-            </div>
-            <div class="post-footer">
-            <time>July 12, 2019</time>
-            </div> 
-        </article>
-    
-  
-    
-    <article>
-            <h2>
-                <a href="https://chanjarster.github.io/post/redis-cluster-config-propagation/">
-                    Redis Cluster配置传播及故障恢复笔记
-                </a>
-            </h2>
-            <div>
-                <p>
-                <p>本笔记是对<a href="https://redis.io/topics/cluster-spec#configuration-handling-propagation-and-failovers">Redis Cluster Spec - Configuration handling, propagation, and failovers</a>的归纳总结。</p>
-                </p>
-            </div>
-            <div class="post-footer">
-            <time>July 10, 2019</time>
-            </div> 
-        </article>
-    
-  
-    
-    <article>
-            <h2>
-                <a href="https://chanjarster.github.io/post/redis-cluster-node-failure-detection/">
-                    Redis Cluster节点故障探测算法笔记
-                </a>
-            </h2>
-            <div>
-                <p>
-                <p>本笔记是对<a href="https://redis.io/topics/cluster-spec#failure-detection">Redis Cluster Spec - Failure Detection</a>的归纳总结</p>
-                </p>
-            </div>
-            <div class="post-footer">
-            <time>July 9, 2019</time>
-            </div> 
-        </article>
-    
-  
-    
-    <article>
-            <h2>
-                <a href="https://chanjarster.github.io/post/redis-sentinel-spring-boot-example/">
-                    Spring Boot配置Redis Sentinel的例子
-                </a>
-            </h2>
-            <div>
-                <p>
-                <p>本文介绍Spring Boot连接<a href="https://redis.io/topics/sentinel">Redis Sentinel</a>的例子。</p>
-                </p>
-            </div>
-            <div class="post-footer">
-            <time>June 14, 2019</time>
-            </div> 
-        </article>
-    
+    <div class="page-footer">
+        
+        <hr class="footer-divider">
+        
+            <a class="tag" href="https://chanjarster.github.io/tags/redis">#redis</a>
+        
+            <a class="tag" href="https://chanjarster.github.io/tags/k8s">#k8s</a>
+        
+            <a class="tag" href="https://chanjarster.github.io/tags/troubleshooting">#troubleshooting</a>
+        
+      
+    </div>
 
 
         
