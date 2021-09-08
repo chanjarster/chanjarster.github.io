@@ -140,34 +140,97 @@
 </nav>
         <div id="content" class="content-container">
         
-<h1 class="post-title">Linux内核参数/Limits调整方法</h1>
+<h1 class="post-title">网络监控实用脚本</h1>
     
     <time>September 7, 2021</time>
     
     <div>
         <p>
-        <h2 id="配置方法">配置方法</h2>
-<h3 id="查看内核限制">查看内核限制</h3>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">ulimit -a
-</code></pre></div><h3 id="系统级调整">系统级调整</h3>
-<p>添加配置</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">vi /etc/sysctl.conf
-</code></pre></div><p>生效配置</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">sysctl -p
-</code></pre></div><h3 id="用户级调整">用户级调整</h3>
-<p>修改配置</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">vi /etc/security/limits.conf
-</code></pre></div><h2 id="常用配置">常用配置</h2>
-<h3 id="max-open-files">max open files</h3>
-<p>系统级：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">fs.file-max<span style="color:#f92672">=</span><span style="color:#ae81ff">500000</span>
-</code></pre></div><p>验证：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">cat /proc/sys/fs/file-max
-</code></pre></div><p>用户级：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash"><span style="color:#75715e">## Example hard limit for max opened files</span>
-&lt;domain&gt;        hard nofile <span style="color:#ae81ff">4096</span>
-<span style="color:#75715e">## Example soft limit for max opened files</span>
-&lt;domain&gt;        soft nofile <span style="color:#ae81ff">1024</span>
+        <h2 id="man-tcp">man tcp</h2>
+<p>查看tcp协议的内核文档，相关内核参数。</p>
+<h2 id="netstat">netstat</h2>
+<p>根据连接状态分类统计：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ netstat -antpl | gawk -F<span style="color:#e6db74">&#39; &#39;</span> <span style="color:#e6db74">&#39;{ print $6 }&#39;</span> | sort | uniq -c
+      <span style="color:#ae81ff">1</span> established<span style="color:#f92672">)</span>
+      <span style="color:#ae81ff">5</span> ESTABLISHED
+      <span style="color:#ae81ff">1</span> Foreign
+      <span style="color:#ae81ff">4</span> LISTEN
+      <span style="color:#ae81ff">2</span> TIME_WAIT
+</code></pre></div><p>各协议统计：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ netstat -s
+
+Ip:
+    <span style="color:#ae81ff">36011721975</span> total packets received
+    <span style="color:#ae81ff">4</span> with invalid addresses
+    <span style="color:#ae81ff">25054109504</span> forwarded
+    <span style="color:#ae81ff">0</span> incoming packets discarded
+...
+Tcp:
+    <span style="color:#ae81ff">506169163</span> active connections openings
+    <span style="color:#ae81ff">28177249</span> passive connection openings
+    <span style="color:#ae81ff">143466</span> failed connection attempts
+    <span style="color:#ae81ff">48873</span> connection resets received
+...
+</code></pre></div><p>关注套接字统计信息：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ netstat -s | grep socket
+    <span style="color:#ae81ff">73</span> resets received <span style="color:#66d9ef">for</span> embryonic SYN_RECV sockets
+    <span style="color:#ae81ff">308582</span> TCP sockets finished time wait in fast timer
+    <span style="color:#ae81ff">8</span> delayed acks further delayed because of locked socket
+    <span style="color:#ae81ff">290566</span> times the listen queue of a socket overflowed
+    <span style="color:#ae81ff">290566</span> SYNs to LISTEN sockets dropped
+</code></pre></div><h2 id="conntrack">conntrack</h2>
+<p>统计总的连接跟踪数：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ conntrack -L -o extended | wc -l
+<span style="color:#ae81ff">100</span>
+</code></pre></div><p>统计TCP协议各个状态的连接跟踪数：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ conntrack -L -o extended | awk <span style="color:#e6db74">&#39;/^.*tcp.*$/ {sum[$6]++} END {for(i in sum) print i, sum[i]}&#39;</span>
+
+conntrack v1.4.3 <span style="color:#f92672">(</span>conntrack-tools<span style="color:#f92672">)</span>: <span style="color:#ae81ff">3349</span> flow entries have been shown.
+CLOSE_WAIT <span style="color:#ae81ff">17</span>
+CLOSE <span style="color:#ae81ff">31</span>
+ESTABLISHED <span style="color:#ae81ff">758</span>
+TIME_WAIT <span style="color:#ae81ff">387</span>
+SYN_SENT <span style="color:#ae81ff">72</span>
+</code></pre></div><p>统计各个源IP的连接跟踪数：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ conntrack -L -o extended | awk <span style="color:#e6db74">&#39;{print $7}&#39;</span> | cut -d <span style="color:#e6db74">&#34;=&#34;</span> -f <span style="color:#ae81ff">2</span> | sort | uniq -c | sort -nr | head -n <span style="color:#ae81ff">10</span>
+conntrack v1.4.3 <span style="color:#f92672">(</span>conntrack-tools<span style="color:#f92672">)</span>: <span style="color:#ae81ff">2693</span> flow entries have been shown.
+   <span style="color:#ae81ff">1048</span> 192.168.100.21
+    <span style="color:#ae81ff">669</span> 192.168.100.5
+    <span style="color:#ae81ff">504</span> 10.42.3.94
+     <span style="color:#ae81ff">61</span> 10.42.3.171
+     <span style="color:#ae81ff">44</span> 10.42.3.128
+     <span style="color:#ae81ff">41</span> 10.42.3.3
+     <span style="color:#ae81ff">38</span> 10.43.0.10
+     <span style="color:#ae81ff">26</span> 10.42.3.70
+     <span style="color:#ae81ff">18</span> 10.42.3.27
+     <span style="color:#ae81ff">16</span> 10.42.3.41
+</code></pre></div><p>统计各个四元组的连接跟踪数：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ conntrack -L -o extended | awk <span style="color:#e6db74">&#39;{print $6 &#34; &#34; $7 &#34; &#34; $8}&#39;</span>  | sort | uniq -c | sort -nr | head -n <span style="color:#ae81ff">10</span>
+
+conntrack v1.4.3 <span style="color:#f92672">(</span>conntrack-tools<span style="color:#f92672">)</span>: <span style="color:#ae81ff">3357</span> flow entries have been shown.
+    <span style="color:#ae81ff">500</span> ESTABLISHED src<span style="color:#f92672">=</span>10.42.3.94 dst<span style="color:#f92672">=</span>10.42.4.129
+     <span style="color:#ae81ff">30</span> TIME_WAIT src<span style="color:#f92672">=</span>192.168.100.21 dst<span style="color:#f92672">=</span>10.42.3.167
+     <span style="color:#ae81ff">30</span> TIME_WAIT src<span style="color:#f92672">=</span>192.168.100.21 dst<span style="color:#f92672">=</span>10.42.3.156
+     <span style="color:#ae81ff">30</span> TIME_WAIT src<span style="color:#f92672">=</span>192.168.100.21 dst<span style="color:#f92672">=</span>10.42.3.133
+     <span style="color:#ae81ff">30</span> TIME_WAIT src<span style="color:#f92672">=</span>192.168.100.21 dst<span style="color:#f92672">=</span>10.42.3.132
+     <span style="color:#ae81ff">21</span> ESTABLISHED src<span style="color:#f92672">=</span>10.42.3.70 dst<span style="color:#f92672">=</span>10.43.239.23
+     <span style="color:#ae81ff">19</span> CLOSE src<span style="color:#f92672">=</span>10.42.3.128 dst<span style="color:#f92672">=</span>10.43.117.95
+     <span style="color:#ae81ff">15</span> SYN_SENT src<span style="color:#f92672">=</span>10.42.3.27 dst<span style="color:#f92672">=</span>10.43.161.131
+     <span style="color:#ae81ff">13</span> SYN_SENT src<span style="color:#f92672">=</span>10.42.3.41 dst<span style="color:#f92672">=</span>10.43.223.88
+     <span style="color:#ae81ff">12</span> TIME_WAIT src<span style="color:#f92672">=</span>192.168.100.21 dst<span style="color:#f92672">=</span>10.42.3.71
+</code></pre></div><h2 id="ss">ss</h2>
+<p>查看连接状态统计：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ ss -s
+Total: <span style="color:#ae81ff">9190</span> <span style="color:#f92672">(</span>kernel 0<span style="color:#f92672">)</span>
+TCP:   <span style="color:#ae81ff">2450</span> <span style="color:#f92672">(</span>estab 30, closed 2309, orphaned 0, synrecv 0, timewait 1135/0<span style="color:#f92672">)</span>, ports <span style="color:#ae81ff">0</span>
+
+Transport Total     IP        IPv6
+*	        <span style="color:#ae81ff">0</span>         -         -
+RAW	      <span style="color:#ae81ff">0</span>         <span style="color:#ae81ff">0</span>         <span style="color:#ae81ff">0</span>
+UDP	      <span style="color:#ae81ff">2</span>         <span style="color:#ae81ff">2</span>         <span style="color:#ae81ff">0</span>
+TCP	      <span style="color:#ae81ff">141</span>       <span style="color:#ae81ff">75</span>        <span style="color:#ae81ff">66</span>
+INET	    <span style="color:#ae81ff">143</span>       <span style="color:#ae81ff">77</span>        <span style="color:#ae81ff">66</span>
+FRAG	    <span style="color:#ae81ff">0</span>         <span style="color:#ae81ff">0</span>         <span style="color:#ae81ff">0</span>
 </code></pre></div>
         </p>
     </div>
@@ -180,6 +243,8 @@
             <a class="tag" href="https://chanjarster.github.io/tags/linux">#linux</a>
         
             <a class="tag" href="https://chanjarster.github.io/tags/cheatsheet">#cheatsheet</a>
+        
+            <a class="tag" href="https://chanjarster.github.io/tags/network">#network</a>
         
       
     </div>
