@@ -29,6 +29,8 @@
     
  
     
+    <link rel="alternate" type="application/rss+xml" href="https://chanjarster.github.io/tags/%E6%80%A7%E8%83%BD%E8%B0%83%E4%BC%98/index.xml" title="颇忒脱的技术博客" />
+    
     
 </head>
     <body>
@@ -140,88 +142,135 @@
 </nav>
         <div id="content" class="content-container">
         
-<h1 class="post-title">慢磁盘导致etcd不健康问题排查</h1>
-    
-    <time>May 14, 2021</time>
-    
-    <div>
-        <p>
-        <h2 id="现象">现象</h2>
-<p>在Rancher中观察到K8S集群的etcd组件不健康：</p>
-<p><img src="1.png" alt=""></p>
-<h2 id="观察etcd的监控">观察Etcd的监控</h2>
-<p>因Rancher启用的集群监控，因此可以很方便的观察etcd的历史情况：</p>
-<p><img src="2.png" alt=""></p>
-<p>发现在历史上存在，磁盘同步耗时高达8秒的情况（图中尖刺）</p>
-<p>同时根据 <a href="https://itnext.io/etcd-performance-consideration-43d98a1525a3">这篇文章</a> 查询 wal_fsync 和 disk_commit 两个指标的P99值正常情况应该是在 25毫秒以内的。</p>
-<p>查询wal_fsync，发现P99高达8秒：：</p>
-<pre><code>histogram_quantile(0.99, rate(etcd_disk_wal_fsync_duration_seconds_bucket[5m]))
-</code></pre><p><img src="3.png" alt=""></p>
-<p>查询disk_commit，发现P99页高达8秒：</p>
-<pre><code>histogram_quantile(0.99, rate(etcd_disk_backend_commit_duration_seconds_bucket[5m]))
-</code></pre><p><img src="4.png" alt=""></p>
-<h2 id="观察节点的磁盘io">观察节点的磁盘IO</h2>
-<p>这时就怀疑磁盘问题了，观察节点的Disk IO指标，发现磁盘IO最高只有20 IOPS，也许这个就是磁盘的最高IOPS了：</p>
-<p><img src="5.png" alt=""></p>
-<p>初步怀疑是磁盘能提供的IOPS较低造成的，根据<a href="https://docs.rancher.cn/docs/rancher2/best-practices/optimize/etcd/_index/">Rancher文档</a>，Etcd服务器的顺序IOPS应该最低50，推荐500。下面进一步验证。</p>
-<h2 id="测试磁盘io">测试磁盘IO</h2>
-<p>在Etcd服务器上执行下列指令测试顺序写的IOPS：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">fio -filename<span style="color:#f92672">=</span>/var/test.file -direct<span style="color:#f92672">=</span><span style="color:#ae81ff">1</span> <span style="color:#ae81ff">\
-</span><span style="color:#ae81ff"></span> -iodepth <span style="color:#ae81ff">1</span> -thread -rw<span style="color:#f92672">=</span>write <span style="color:#ae81ff">\
-</span><span style="color:#ae81ff"></span> -ioengine<span style="color:#f92672">=</span>psync -bs<span style="color:#f92672">=</span>16k -size<span style="color:#f92672">=</span>2G -numjobs<span style="color:#f92672">=</span><span style="color:#ae81ff">10</span> <span style="color:#ae81ff">\
-</span><span style="color:#ae81ff"></span> -runtime<span style="color:#f92672">=</span><span style="color:#ae81ff">60</span> -group_reporting -name<span style="color:#f92672">=</span>test_w
-</code></pre></div><p>得到382 IOPS：</p>
-<p><img src="6.png" alt=""></p>
-<p>磁盘IOPS也算基本可用，应该不存在问题。</p>
-<h2 id="观察etcd日志">观察etcd日志</h2>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">docker logs --since <span style="color:#e6db74">&#39;2021-04-26T16:00:00&#39;</span> --until <span style="color:#e6db74">&#39;2021-04-26T16:30:00&#39;</span> etcd 2&gt;&amp;<span style="color:#ae81ff">1</span> | less
-</code></pre></div><p>存在大量落磁盘太慢的错误，以及请求超时的错误（etcd响应慢）。</p>
-<p>到这里似乎走进了死胡同。</p>
-<h2 id="网络搜索类似问题">网络搜索类似问题</h2>
-<p>有人遇到<a href="https://github.com/etcd-io/etcd/issues/10799">同样问题</a>，解决办法是更换了一块更快的硬盘。</p>
-<p>那么为何性能测试IOPS还行，但是实际上却不行呢？尝试换个思路来排查。</p>
-<h2 id="观察磁盘io延迟以及其他指标">观察磁盘IO延迟以及其他指标</h2>
-<p>执行命令：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">iostat -d -x <span style="color:#ae81ff">1</span> vda
-</code></pre></div><p>观察到：</p>
-<ol>
-<li>磁盘IO写入完成等待时间波动比较大，在50ms到1000ms不等</li>
-<li>平均写入请求的大小也在 8到11K左右</li>
-<li>磁盘IO利用率在90%左右</li>
-</ol>
-<p><img src="7.png" alt=""></p>
-<h2 id="观察etcd进程的io请求">观察etcd进程的IO请求</h2>
-<p>执行命令</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">pidstat -t -d <span style="color:#ae81ff">1</span>
-</code></pre></div><p>发现etcd有多个线程在进行磁盘的写操作，但这个是否会存在IO竞争从而导致写入完成等待时间超长，目前存疑。</p>
-<h2 id="跟踪etcd的系统调用">跟踪etcd的系统调用</h2>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">strace -p <span style="color:#66d9ef">$(</span>pgrep etcd<span style="color:#66d9ef">)</span> -e trace<span style="color:#f92672">=</span>write -o etcd_strace.log
-</code></pre></div><p>得到的write实在太多，不具无法提取有效信息。</p>
-<h2 id="跟踪etcd的打开文件">跟踪etcd的打开文件</h2>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">lsof -p <span style="color:#66d9ef">$(</span>pgrep etcd<span style="color:#66d9ef">)</span> | egrep <span style="color:#e6db74">&#39;REG|DIR&#39;</span>
-</code></pre></div><p>看到它打开的是wal以及db文件，这个和之前观察到的wal_fsync 和 disk_commit 对应的上。</p>
-<h2 id="思考一下">思考一下</h2>
-<p>到这里，实际上已经从历史情况+当前情况应证了，etcd的确在做disk commit和wal fsync的事情，而且这两件事情的磁盘IO等待比较长。因此，就算性能测试下来结果还行，但依然有很大概率是磁盘IO性能不佳导致的问题。</p>
-<h2 id="结果">结果</h2>
-<p>和客户沟通后，更换了超融合平台的存储，etcd服务器的IO等待降低到了正常水平，问题解决。</p>
-        </p>
-    </div>
-    
 
-    <div class="page-footer">
-        
-        <hr class="footer-divider">
-        
-            <a class="tag" href="https://chanjarster.github.io/tags/k8s">#k8s</a>
-        
-            <a class="tag" href="https://chanjarster.github.io/tags/etcd">#etcd</a>
-        
-            <a class="tag" href="https://chanjarster.github.io/tags/troubleshooting">#troubleshooting</a>
-        
-            <a class="tag" href="https://chanjarster.github.io/tags/%E6%80%A7%E8%83%BD%E8%B0%83%E4%BC%98">#性能调优</a>
-        
-      
-    </div>
+  <h1>Tagged "性能调优"</h1>
+  
+  
+    
+    <article>
+            <h2>
+                <a href="https://chanjarster.github.io/post/mysql/sql-opt-case-1/">
+                    SQL优化案例(1)
+                </a>
+            </h2>
+            <div>
+                <p>
+                
+                </p>
+            </div>
+            <div class="post-footer">
+            <time>September 24, 2021</time>
+            </div> 
+        </article>
+    
+  
+    
+    <article>
+            <h2>
+                <a href="https://chanjarster.github.io/post/linux/net-params/">
+                    常用网络内核参数优化
+                </a>
+            </h2>
+            <div>
+                <p>
+                
+                </p>
+            </div>
+            <div class="post-footer">
+            <time>September 8, 2021</time>
+            </div> 
+        </article>
+    
+  
+    
+    <article>
+            <h2>
+                <a href="https://chanjarster.github.io/post/nginx/benchmark-toubleshooting/">
+                    某次压力测试中对Nginx的排障
+                </a>
+            </h2>
+            <div>
+                <p>
+                
+                </p>
+            </div>
+            <div class="post-footer">
+            <time>September 7, 2021</time>
+            </div> 
+        </article>
+    
+  
+    
+    <article>
+            <h2>
+                <a href="https://chanjarster.github.io/post/pc-disk-slow-site/">
+                    PC磁盘性能地下导致访问网站很慢问题排查记录
+                </a>
+            </h2>
+            <div>
+                <p>
+                
+                </p>
+            </div>
+            <div class="post-footer">
+            <time>July 13, 2021</time>
+            </div> 
+        </article>
+    
+  
+    
+    <article>
+            <h2>
+                <a href="https://chanjarster.github.io/post/chrome-incognito-mode-faster/">
+                    Chrome隐私模式网页加载速度更快
+                </a>
+            </h2>
+            <div>
+                <p>
+                
+                </p>
+            </div>
+            <div class="post-footer">
+            <time>July 13, 2021</time>
+            </div> 
+        </article>
+    
+  
+    
+    <article>
+            <h2>
+                <a href="https://chanjarster.github.io/post/slow-disk-etcd-troubleshooting/">
+                    慢磁盘导致etcd不健康问题排查
+                </a>
+            </h2>
+            <div>
+                <p>
+                
+                </p>
+            </div>
+            <div class="post-footer">
+            <time>May 14, 2021</time>
+            </div> 
+        </article>
+    
+  
+    
+    <article>
+            <h2>
+                <a href="https://chanjarster.github.io/post/k8s/k8s-server-perf-test/">
+                    K8S服务器性能测试
+                </a>
+            </h2>
+            <div>
+                <p>
+                
+                </p>
+            </div>
+            <div class="post-footer">
+            <time>December 14, 2020</time>
+            </div> 
+        </article>
+    
 
 
         
