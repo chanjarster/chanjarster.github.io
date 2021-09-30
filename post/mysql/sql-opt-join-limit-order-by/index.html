@@ -637,37 +637,54 @@
 <li>Using temporary意思是为了排序，使用了临时表hold住结果。</li>
 <li>Using filesort意思是无法使用索引直接得到排好序的数据，需要利用内存或者磁盘文件排序。</li>
 </ul>
-<p>对于这个SQL有三种做法的：</p>
-<ol>
-<li>当前方案，<code>accountOrganization</code>做驱动表（500行），<code>account</code>是被驱动表（14w行），对结果做普通排序。</li>
-<li>优化方案一，<code>accountOrganization</code>做驱动表（500行），<code>account</code>是被驱动表（14w行），配合LIMIT，利用堆取结果的前20个（LIMIT 20），见<a href="http://mysql.taobao.org/monthly/2014/11/10/">filesort with small LIMIT optimization</a>，前提是数据能够在<code>sort_buffer_size</code>里放得下。</li>
-<li>优化方案二，<code>account</code>是驱动表（14w行），<code>accountOrganization</code>是被驱动表（500行），在<code>account</code>表新建字段<code>ACCOUNT_NAME_LEN</code>，并建立索引<code>ACCOUNT_NAME_LEN,ACCOUNT_NAME</code>，驱动表查询走<code>ACCOUNT_LEN_NAME</code>索引从而达避免排序。</li>
-</ol>
-<p>这三个方法的算法复杂度可以预估的：</p>
+<h3 id="三种方案评估">三种方案评估</h3>
+<p>那么对于这个SQL有三种做法，下面分析它们的复杂度。</p>
+<p>先汇总一下基本情况：</p>
 <ul>
-<li>方法一：500 + 500 * 2 * log2(14w) + 14w * log2(14w) = 2,523,590</li>
-<li>方法二：500 + 500 * 2 * log2(14w) + 14w * log2(20) = 622,390</li>
-<li>方法三：14w + 14w * log2(500) = 1,394,400</li>
+<li>
+<p>A表 <code>accountOrganization</code>表有N行</p>
+</li>
+<li>
+<p>B表 <code>account</code>表有M行</p>
+</li>
+<li>
+<p>JOIN条件<code>A.ID = B.ORGANIZATION_ID</code></p>
+</li>
+<li>
+<p><code>B.ORGANIZATION</code>上有索引。</p>
+</li>
 </ul>
-<p>方法一的公式解释：</p>
+<p>列出基本算法复杂度</p>
 <ul>
-<li>500，<code>accountOrganization</code>表行数。</li>
-<li>500 * 2 * log2(14w) ，拿着前一步的每一行，利用索引<code>ORGANIZATION_ID</code>到<code>account</code>表查一次数据的复杂度，一共查了500次，乘以2是因为多了一次回表到主键索引中找<code>ACCOUNT_NAME</code>字段。</li>
-<li>14w * log2(14w)，排序复杂度 nlog(n)，这里还涉及到磁盘IO。</li>
+<li>B+树查找复杂度 Log2(n)</li>
+<li>排序复杂度是 n * Log2(n)</li>
+<li>堆插入复杂度 Log2(n)</li>
 </ul>
-<p>方法二的公式解释：</p>
-<ul>
-<li>和前面一样。</li>
-<li>14w * log2(20)，一个大小为20的堆（LIMIT 20），插入数据的复杂度是 log2(20)，14w行全部都过一把。</li>
-</ul>
-<p>方法三的公式解释：</p>
-<ul>
-<li>14w，14w行<code>account</code>数据。</li>
-<li>14w * log2(500)，拿着前一步的每一行，利用<code>accountOrganization</code>表的<code>PRIMARY</code>索引查找一次数据的复杂度，一样查了14w次。</li>
-</ul>
-<p>可以看到，方案二是最佳方案。</p>
-<h3 id="分析当前方法">分析当前方法</h3>
-<p>filesort是可以在内存中发生了，我们需要跟踪优化器来查看SQL执行情况：</p>
+<h4 id="原方案">原方案</h4>
+<p>A做驱动表 N=500，B是被驱动表 M=14w，对结果做普通排序。</p>
+<p>算法复杂度分析：</p>
+<p>扫描A表 + A表每一行利用B表索引查找 + B表每条记录查找主键索引（回表） + B表记录的排序。</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">  N + N * Log2<span style="color:#f92672">(</span>M<span style="color:#f92672">)</span> + M * Log2<span style="color:#f92672">(</span>M<span style="color:#f92672">)</span> + M * Log2<span style="color:#f92672">(</span>M<span style="color:#f92672">)</span>
+<span style="color:#f92672">=</span> <span style="color:#ae81ff">500</span> + <span style="color:#ae81ff">500</span> * Log2<span style="color:#f92672">(</span>14w<span style="color:#f92672">)</span> + 14w * Log2<span style="color:#f92672">(</span>14w<span style="color:#f92672">)</span> + 14w * Log2<span style="color:#f92672">(</span>14w<span style="color:#f92672">)</span>
+<span style="color:#f92672">=</span> 4,372,745
+</code></pre></div><h4 id="优化方案一">优化方案一</h4>
+<p>A做驱动表 N=500，B是被驱动表 M=14w，利用<a href="http://mysql.taobao.org/monthly/2014/11/10/">filesort with small LIMIT optimization</a>优化，即利用一个尺寸20的堆（LIMIT 20）来取前20条数据，前提是数据能够在<code>sort_buffer_size</code>里放得下。</p>
+<p>算法复杂度分析：</p>
+<p>扫描A表 + A表每一行利用B表索引查找 + B表每行查找主键索引（回表） + B表每行过一遍堆。</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">  N + N * Log2<span style="color:#f92672">(</span>M<span style="color:#f92672">)</span> + M * Log2<span style="color:#f92672">(</span>M<span style="color:#f92672">)</span> + M * Log2<span style="color:#f92672">(</span>20<span style="color:#f92672">)</span>
+<span style="color:#f92672">=</span> <span style="color:#ae81ff">500</span> + <span style="color:#ae81ff">500</span> * Log2<span style="color:#f92672">(</span>14w<span style="color:#f92672">)</span> + 14w * Log2<span style="color:#f92672">(</span>14w<span style="color:#f92672">)</span> + 14w * Log2<span style="color:#f92672">(</span>20<span style="color:#f92672">)</span>
+<span style="color:#f92672">=</span> 2,612,945
+</code></pre></div><h4 id="优化方案二">优化方案二</h4>
+<p>B做驱动表 M=14w，A是被驱动表 N=500，在B表新建字段<code>ACCOUNT_NAME_LEN</code>，并建立索引<code>ACCOUNT_NAME_LEN,ACCOUNT_NAME</code>，查询时<strong>强制</strong>走<code>ACCOUNT_LEN_NAME</code>索引从而达避免排序。</p>
+<p>算法复杂度分析：</p>
+<p>扫描B表索引 + B表每一行利用A表主键查找。</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">  M + M * Log2<span style="color:#f92672">(</span>N<span style="color:#f92672">)</span>
+<span style="color:#f92672">=</span> 14w + 14w * Log2<span style="color:#f92672">(</span>500<span style="color:#f92672">)</span>
+<span style="color:#f92672">=</span> 1,394,400
+</code></pre></div><h4 id="方案抉择">方案抉择</h4>
+<p>虽然从分析结果看，方案二更好，但是方案二强制使用了某个索引。而方案一看上去不好，但是MySQL可能会根据查询条件使用合适的索引来过滤数据避免全表扫描，所以选择方案一。</p>
+<h3 id="实现优化方案一">实现优化方案一</h3>
+<p>实现优化方案一的关键是让filesort在内存中发生，然后配合LIMIT，我们需要跟踪优化器来查看原始SQL执行情况：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-SQL" data-lang="SQL"><span style="color:#66d9ef">SET</span> optimizer_trace<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;enabled=on&#34;</span>;
 <span style="color:#66d9ef">SET</span> OPTIMIZER_TRACE_MAX_MEM_SIZE<span style="color:#f92672">=</span><span style="color:#ae81ff">10485760</span>; 
 <span style="color:#66d9ef">SELECT</span> ...; <span style="color:#f92672">#</span> your query here
@@ -694,9 +711,7 @@
   <span style="color:#f92672">&#34;sort_mode&#34;</span>: <span style="color:#e6db74">&#34;&lt;fixed_sort_key, packed_additional_fields&gt;&#34;</span>
 }
 </code></pre></div><p>可以看到<code>num_initial_chunks_spilled_to_disk:141</code>，写了141个临时文件。</p>
-<h3 id="分析方案二">分析方案二</h3>
-<p>优化的重点在于避免filesort时写磁盘，让其在内存中完成。</p>
-<p>MySQL相关的系统参数有：</p>
+<p>让filesort在内存中发生的相关系统参数有：</p>
 <ul>
 <li><a href="https://dev.mysql.com/doc/refman/8.0/en/server-system-variables.html#sysvar_sort_buffer_size">sort_buffer_size</a>，规定了用于排序的缓存大小（字节），默认262144=256K。如果排序的数据在此buffer中能hold住，那么就会避免写磁盘。</li>
 <li><a href="https://dev.mysql.com/doc/refman/8.0/en/server-system-variables.html#sysvar_max_sort_length"><code>max_sort_length</code></a>，规定了排序时，每行最多取前多少个字节，如果行的尺寸超出该值，MySQL也就只会使用前多少个字节进行比较，该参数默认1024=1K。</li>
@@ -741,7 +756,6 @@
 }
 </code></pre></div><p>可以看到<code>filesort_priority_queue_optimization</code>启用了，同时<code>num_initial_chunks_spilled_to_disk</code>变成了0。</p>
 <p><code>filesort_priority_queue_optimization</code>启用意味着MySQL采用了优先级队列（堆）来从结果集中取最小的N个元素。</p>
-<h2 id="3考虑limit">3）考虑limit</h2>
 <p>在业务场景下，大部分分页每页20条，极少超过10页，因此这里不考虑深分页问题，所以加上<code>LIMIT 200, 220</code>看看：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#66d9ef">select</span> account.ACCOUNT_NAME
 <span style="color:#66d9ef">from</span> TB_B_ACCOUNT account
@@ -785,7 +799,7 @@
 <li>避免<code>JOIN</code>，分两次查询，第一次先查<code>ACCOUNT_NAME</code>，第二次根据<code>ACCOUNT_NAME</code>查询想要的数据。</li>
 <li>增加<code>sort_buffer_size</code>，避免<code>filesort</code>排序时写磁盘，并且利用堆+LIMIT来优化排序。</li>
 </ul>
-<p>参考资料：</p>
+<h2 id="参考资料">参考资料</h2>
 <ul>
 <li><a href="https://dev.mysql.com/doc/refman/8.0/en/explain-output.html">MySQL EXPLAIN解读</a></li>
 <li><a href="https://dev.mysql.com/doc/refman/8.0/en/limit-optimization.html">MySQL LIMIT 优化</a></li>

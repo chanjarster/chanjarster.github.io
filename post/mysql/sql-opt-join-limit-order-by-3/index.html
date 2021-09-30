@@ -199,14 +199,14 @@
   <span style="color:#66d9ef">and</span> <span style="color:#f92672">&lt;</span>condition<span style="color:#f92672">&gt;</span>
 <span style="color:#66d9ef">ORDER</span> <span style="color:#66d9ef">BY</span> <span style="color:#66d9ef">length</span>(account.ACCOUNT_NAME), account.ACCOUNT_NAME
 <span style="color:#66d9ef">limit</span> <span style="color:#ae81ff">20</span>;
-</code></pre></div><p>优化版本v1 SQL，先查出ACCOUNT_NAME，然后再查出详细信息：</p>
+</code></pre></div><p>优化版本v1 SQL，先查出ACCOUNT_NAME，然后再查出详细信息，可能会根据条件选择合适索引：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#66d9ef">select</span> account.ACCOUNT_NAME
 <span style="color:#66d9ef">from</span> TB_B_ACCOUNT account
 <span style="color:#66d9ef">where</span> <span style="color:#ae81ff">1</span> <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span>
   <span style="color:#66d9ef">and</span> <span style="color:#f92672">&lt;</span>condition<span style="color:#f92672">&gt;</span>
 <span style="color:#66d9ef">ORDER</span> <span style="color:#66d9ef">BY</span> <span style="color:#66d9ef">length</span>(account.ACCOUNT_NAME), account.ACCOUNT_NAME
 <span style="color:#66d9ef">LIMIT</span> <span style="color:#ae81ff">20</span>;
-</code></pre></div><p>优化版本v2 SQL，先查出ACCOUNT_NAME，然后再查出详细信息：</p>
+</code></pre></div><p>优化版本v2 SQL，先查出ACCOUNT_NAME，然后再查出详细信息，会使用<code>ACCOUNT_NAME_PAD</code>索引：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#66d9ef">select</span> account.ACCOUNT_NAME
 <span style="color:#66d9ef">from</span> TB_B_ACCOUNT account
 <span style="color:#66d9ef">where</span> <span style="color:#ae81ff">1</span> <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span>
@@ -526,7 +526,6 @@
 <thead>
 <tr>
 <th>查询参数/吞吐量</th>
-<th>未优化</th>
 <th>v1</th>
 <th>v2</th>
 </tr>
@@ -534,25 +533,21 @@
 <tbody>
 <tr>
 <td><code>LIKE 20%</code> ，预估140,000行</td>
-<td></td>
 <td>84.71 QPS</td>
 <td>67.61 QPS</td>
 </tr>
 <tr>
 <td><code>LIKE 202%</code> ，预估26,000行</td>
-<td></td>
 <td>96.93 QPS</td>
 <td>5.76 QPS</td>
 </tr>
 <tr>
 <td><code>LIKE 2021%</code> ，预估12,000 行</td>
-<td></td>
 <td>96.98 QPS</td>
 <td>5.18 QPS</td>
 </tr>
 <tr>
 <td><code>LIKE 20211%</code>，预估1,200行</td>
-<td></td>
 <td>585.31 QPS</td>
 <td>456.99 QPS</td>
 </tr>
@@ -597,6 +592,7 @@
 </table>
 <p>也就是说，当条件的预期结果集很少的时候，就会优先使用索引，而且还使用了<a href="https://dev.mysql.com/doc/refman/8.0/en/index-merge-optimization.html">Index Merge 优化</a>。</p>
 <p>那么为何在where clause 1中没有启用Index Merge 优化？这是因为当查询语句复杂的时候，MySQL不会启用该优化。</p>
+<p>事实上你在优化版本v1也能看到同样的结果（Index Merge优化）。</p>
 <h2 id="优化方向">优化方向</h2>
 <p>经过一系列测试，发现OR查询条件是影响索引使用的罪魁祸首，尝试用UNION修改：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#66d9ef">select</span> account.ACCOUNT_NAME
@@ -751,9 +747,9 @@
 <h2 id="优化方案">优化方案</h2>
 <p>所以针对不同的情况有三种形式：</p>
 <ul>
-<li>无条件时，ORDER BY ACCOUNT_NAME_PAD，这样可以走 ACCOUNT_NAME_PAD 索引：</li>
+<li>无条件时，ORDER BY ACCOUNT_NAME_PAD，这样就会利用 ACCOUNT_NAME_PAD 索引：</li>
 </ul>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#66d9ef">select</span> account.ACCOUNT_NAME
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#66d9ef">select</span> LTRIM(account.ACCOUNT_NAME_PAD)
 <span style="color:#66d9ef">from</span> TB_B_ACCOUNT account
 <span style="color:#66d9ef">ORDER</span> <span style="color:#66d9ef">BY</span> account.ACCOUNT_NAME_PAD
 <span style="color:#66d9ef">LIMIT</span> <span style="color:#ae81ff">20</span>
@@ -913,6 +909,14 @@
 </tr>
 </tbody>
 </table>
+<h2 id="参考资料">参考资料</h2>
+<ul>
+<li><a href="https://dev.mysql.com/doc/refman/8.0/en/explain-output.html">MySQL EXPLAIN解读</a></li>
+<li><a href="https://dev.mysql.com/doc/refman/8.0/en/limit-optimization.html">MySQL LIMIT 优化</a></li>
+<li><a href="https://dev.mysql.com/doc/refman/8.0/en/order-by-optimization.html">MySQL ORDER BY 优化</a></li>
+<li><a href="http://mysql.taobao.org/monthly/2014/11/10/">MySQL filesort with small LIMIT optimization</a></li>
+<li><a href="https://dev.mysql.com/doc/internals/en/optimizer-tracing.html">MySQL 优化器跟踪</a></li>
+</ul>
         </p>
     </div>
     
