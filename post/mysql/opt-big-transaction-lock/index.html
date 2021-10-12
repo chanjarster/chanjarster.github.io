@@ -29,8 +29,6 @@
     
  
     
-    <link rel="alternate" type="application/rss+xml" href="https://chanjarster.github.io/tags/%E6%80%A7%E8%83%BD%E8%B0%83%E4%BC%98/index.xml" title="颇忒脱的技术博客" />
-    
     
 </head>
     <body>
@@ -142,207 +140,95 @@
 </nav>
         <div id="content" class="content-container">
         
+<h1 class="post-title">SQL优化:大事务中的行锁获取超时</h1>
+    
+    <time>October 11, 2021</time>
+    
+    <div>
+        <p>
+        <p>在现场发现后台频繁抛出异常：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql">org.springframework.dao.CannotAcquireLockException: 
+<span style="color:#f92672">###</span> Error querying <span style="color:#66d9ef">database</span>.  Cause: com.mysql.jdbc.exceptions.jdbc4.MySQLTransactionRollbackException: <span style="color:#66d9ef">Lock</span> wait timeout exceeded; try restarting <span style="color:#66d9ef">transaction</span> 
+<span style="color:#f92672">###</span> <span style="color:#66d9ef">SQL</span>: <span style="color:#66d9ef">select</span> serialNumber <span style="color:#66d9ef">from</span> FF_ACT_FROM_SERIALNUMBER <span style="color:#66d9ef">where</span> id <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39;1&#39;</span> <span style="color:#66d9ef">for</span> <span style="color:#66d9ef">update</span>;; 
+<span style="color:#f92672">###</span> Cause: com.mysql.jdbc.exceptions.jdbc4.MySQLTransactionRollbackException: <span style="color:#66d9ef">Lock</span> wait timeout exceeded; try restarting <span style="color:#66d9ef">transaction</span> 
+</code></pre></div><p>看上去是<code>select serialNumber from FF_ACT_FROM_SERIALNUMBER where id = '1' for update</code>条语句尝试获取行锁的时候超市导致的。</p>
+<h2 id="分析">分析</h2>
+<p>和开发人员要到了完整的SQL语句：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#66d9ef">select</span> serialNumber <span style="color:#66d9ef">from</span> FF_ACT_FROM_SERIALNUMBER <span style="color:#66d9ef">where</span> id <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39;1&#39;</span> <span style="color:#66d9ef">for</span> <span style="color:#66d9ef">update</span>
+<span style="color:#66d9ef">update</span> FF_ACT_FROM_SERIALNUMBER <span style="color:#66d9ef">set</span> serialNumber <span style="color:#f92672">=</span> <span style="color:#f92672">#</span><span style="color:#960050;background-color:#1e0010">{</span>number<span style="color:#960050;background-color:#1e0010">}</span> <span style="color:#66d9ef">where</span> id <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39;1&#39;</span>
+</code></pre></div><p>以上两条SQL语句是在一个事务中执行的。对应的Java代码如下：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#a6e22e">@Transactional</span><span style="color:#f92672">(</span>propagation <span style="color:#f92672">=</span> Propagation<span style="color:#f92672">.</span><span style="color:#a6e22e">REQUIRES_NEW</span><span style="color:#f92672">)</span>
+<span style="color:#66d9ef">public</span> <span style="color:#66d9ef">int</span> <span style="color:#a6e22e">updateSerialNumber</span><span style="color:#f92672">(</span>String str<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+  <span style="color:#75715e">// 两条SQL
+</span><span style="color:#75715e"></span><span style="color:#f92672">}</span>
+</code></pre></div><p>而这个又是在一个大事务中执行的：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#a6e22e">@Transactional</span>
+<span style="color:#66d9ef">public</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">someOperation</span><span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
+  <span style="color:#75715e">// 很多其他SQL
+</span><span style="color:#75715e"></span>  <span style="color:#66d9ef">this</span><span style="color:#f92672">.</span><span style="color:#a6e22e">updateSerialNumber</span><span style="color:#f92672">(...);</span>
+  <span style="color:#75715e">// 很多其他SQL
+</span><span style="color:#75715e"></span><span style="color:#f92672">}</span>
+</code></pre></div><p>这里有一个烟雾弹，虽然<code>updateSerialNumber</code>方法标记了<code>REQUIRES_NEW</code>，似乎会在调用的时候开启一个新事务，从而获取一个新的数据库连接，但实际上不会，这是因为Spring AOP在调用<code>this</code>自身方法的时候，是不会经过切面的，详情见<a href="https://docs.spring.io/spring-framework/docs/current/reference/html/core.html#aop-understanding-aop-proxies">Understanding AOP Proxies</a>。</p>
+<p>经过开发沟通，<code>updateSerialNumber</code>的意思是刷新一个序列号，序列号的前两位是年份。</p>
+<p>而产生<code>lock wait timeout exceeded</code> 是因为行锁的占用在一个事务里，而只有等事务结束才会释放行锁。在高并发业务下，事务执行时间很长，导致获取行锁的事务堆积，排在后面的事务自然就会等待超时了。</p>
+<h2 id="解决办法">解决办法</h2>
+<p>有几个解决办法：</p>
+<ol>
+<li>去掉<code>someOperation()</code>的<code>@Transactional</code>，使其不要在一个事务中运行，和开发沟通后不能这么做，放弃。</li>
+<li>把<code>updateSerialNumber()</code>方法尽量放到<code>someOperation()</code>的最后执行，即放到事务的最后，和开发沟通后不能这么做，放弃。</li>
+<li>使用<code>sequence</code>代替<code>FF_ACT_FROM_SERIALNUMBER</code>表，和开发沟通后不能这么做，因为要保证序列号是年份前缀，放弃。</li>
+</ol>
+<p>最后的解决办法是，预先新建10个年份的sequence，比如<code>seq_2021</code>、<code>seq_2022</code>，代码根据系统当前年份使用对应sequence。</p>
+<h2 id="如果会开启新事务">如果会开启新事务</h2>
+<p>当然如果会开启一个新事务那就是另一个故事了。假设有两个线程，同时数据库连接池大小为2，那么很容易出现死锁：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>Thread A</th>
+<th>Thread B</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>T1</td>
+<td>begin transaction;<br/>select 1 from dual;</td>
+<td></td>
+</tr>
+<tr>
+<td>T2</td>
+<td></td>
+<td>begin transaction;<br/>select 1 from dual;</td>
+</tr>
+<tr>
+<td>T3</td>
+<td>begin transaction;<br/>select &hellip; for update;<br/><font color="red">(Blocked)</font></td>
+<td></td>
+</tr>
+<tr>
+<td>T4</td>
+<td></td>
+<td>begin transaction;<br/>select &hellip; for update;<br/><font color="red">(Blocked)</font></td>
+</tr>
+</tbody>
+</table>
+<p>每一次begin transaction都会获取一个数据库连接，在T2的时候，连接池的连接已经耗尽了，所以在T3时线程A就会被阻塞等待线程B释放连接，而在T4时线程B也在等待线程A释放连接，进入死锁。</p>
+<p>这种情况在连接池不够用的情况下（比如高并发）极易发生。</p>
+<p>当然实际项目中不会无限等待下去，因为连接池会有一个获取连接超时，不过超时后会导致所有线程A或者线程B的所有事务回滚。</p>
+        </p>
+    </div>
+    
 
-  <h1>Tagged "性能调优"</h1>
-  
-  
-    
-    <article>
-            <h2>
-                <a href="https://chanjarster.github.io/post/mysql/opt-big-transaction-lock/">
-                    SQL优化:大事务中的行锁获取超时
-                </a>
-            </h2>
-            <div>
-                <p>
-                
-                </p>
-            </div>
-            <div class="post-footer">
-            <time>October 11, 2021</time>
-            </div> 
-        </article>
-    
-  
-    
-    <article>
-            <h2>
-                <a href="https://chanjarster.github.io/post/mysql/opt-group-by/">
-                    SQL优化:一个超大表的GROUP BY
-                </a>
-            </h2>
-            <div>
-                <p>
-                
-                </p>
-            </div>
-            <div class="post-footer">
-            <time>October 11, 2021</time>
-            </div> 
-        </article>
-    
-  
-    
-    <article>
-            <h2>
-                <a href="https://chanjarster.github.io/post/mysql/sql-opt-join-limit-order-by-3/">
-                    SQL优化:一个含有JOIN&#43;LIMIT&#43;ORDER BY的SQL(下)
-                </a>
-            </h2>
-            <div>
-                <p>
-                
-                </p>
-            </div>
-            <div class="post-footer">
-            <time>September 28, 2021</time>
-            </div> 
-        </article>
-    
-  
-    
-    <article>
-            <h2>
-                <a href="https://chanjarster.github.io/post/mysql/sql-opt-join-limit-order-by-2/">
-                    SQL优化:一个含有JOIN&#43;LIMIT&#43;ORDER BY的SQL(中)
-                </a>
-            </h2>
-            <div>
-                <p>
-                
-                </p>
-            </div>
-            <div class="post-footer">
-            <time>September 28, 2021</time>
-            </div> 
-        </article>
-    
-  
-    
-    <article>
-            <h2>
-                <a href="https://chanjarster.github.io/post/mysql/sql-opt-join-limit-order-by/">
-                    SQL优化:一个含有JOIN&#43;LIMIT&#43;ORDER BY的SQL(上)
-                </a>
-            </h2>
-            <div>
-                <p>
-                
-                </p>
-            </div>
-            <div class="post-footer">
-            <time>September 27, 2021</time>
-            </div> 
-        </article>
-    
-  
-    
-    <article>
-            <h2>
-                <a href="https://chanjarster.github.io/post/linux/net-params/">
-                    常用网络内核参数优化
-                </a>
-            </h2>
-            <div>
-                <p>
-                
-                </p>
-            </div>
-            <div class="post-footer">
-            <time>September 8, 2021</time>
-            </div> 
-        </article>
-    
-  
-    
-    <article>
-            <h2>
-                <a href="https://chanjarster.github.io/post/nginx/benchmark-toubleshooting/">
-                    某次压力测试中对Nginx的排障
-                </a>
-            </h2>
-            <div>
-                <p>
-                
-                </p>
-            </div>
-            <div class="post-footer">
-            <time>September 7, 2021</time>
-            </div> 
-        </article>
-    
-  
-    
-    <article>
-            <h2>
-                <a href="https://chanjarster.github.io/post/pc-disk-slow-site/">
-                    PC磁盘性能地下导致访问网站很慢问题排查记录
-                </a>
-            </h2>
-            <div>
-                <p>
-                
-                </p>
-            </div>
-            <div class="post-footer">
-            <time>July 13, 2021</time>
-            </div> 
-        </article>
-    
-  
-    
-    <article>
-            <h2>
-                <a href="https://chanjarster.github.io/post/chrome-incognito-mode-faster/">
-                    Chrome隐私模式网页加载速度更快
-                </a>
-            </h2>
-            <div>
-                <p>
-                
-                </p>
-            </div>
-            <div class="post-footer">
-            <time>July 13, 2021</time>
-            </div> 
-        </article>
-    
-  
-    
-    <article>
-            <h2>
-                <a href="https://chanjarster.github.io/post/slow-disk-etcd-troubleshooting/">
-                    慢磁盘导致etcd不健康问题排查
-                </a>
-            </h2>
-            <div>
-                <p>
-                
-                </p>
-            </div>
-            <div class="post-footer">
-            <time>May 14, 2021</time>
-            </div> 
-        </article>
-    
-  
-    
-    <article>
-            <h2>
-                <a href="https://chanjarster.github.io/post/k8s/k8s-server-perf-test/">
-                    K8S服务器性能测试
-                </a>
-            </h2>
-            <div>
-                <p>
-                
-                </p>
-            </div>
-            <div class="post-footer">
-            <time>December 14, 2020</time>
-            </div> 
-        </article>
-    
+    <div class="page-footer">
+        
+        <hr class="footer-divider">
+        
+            <a class="tag" href="https://chanjarster.github.io/tags/mysql">#mysql</a>
+        
+            <a class="tag" href="https://chanjarster.github.io/tags/%E6%80%A7%E8%83%BD%E8%B0%83%E4%BC%98">#性能调优</a>
+        
+      
+    </div>
 
 
         

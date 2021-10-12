@@ -29,8 +29,6 @@
     
  
     
-    <link rel="alternate" type="application/rss+xml" href="https://chanjarster.github.io/tags/%E6%80%A7%E8%83%BD%E8%B0%83%E4%BC%98/index.xml" title="颇忒脱的技术博客" />
-    
     
 </head>
     <body>
@@ -142,207 +140,108 @@
 </nav>
         <div id="content" class="content-container">
         
+<h1 class="post-title">SQL优化:一个超大表的GROUP BY</h1>
+    
+    <time>October 11, 2021</time>
+    
+    <div>
+        <p>
+        <p>有一条SQL语句执行比较慢，在并发情况下存在瓶颈：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#66d9ef">select</span> 
+  t.APP_ID,
+  t.API_VERSION_MANAGEMENT <span style="color:#66d9ef">as</span> API_ID, 
+  <span style="color:#66d9ef">max</span>(t.QUERY_NUM)<span style="color:#66d9ef">as</span> DATA_COUNT 
+<span style="color:#66d9ef">from</span> data_statistics_log t 
+<span style="color:#66d9ef">group</span> <span style="color:#66d9ef">by</span> t.APP_ID,t.API_VERSION_MANAGEMENT
+</code></pre></div><p>这张表的数据量在60w左右，查看这张表的执行计划：</p>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">id</th>
+<th style="text-align:left">select_type</th>
+<th style="text-align:left">table</th>
+<th style="text-align:left">partitions</th>
+<th style="text-align:left">type</th>
+<th style="text-align:left">possible_keys</th>
+<th style="text-align:left">key</th>
+<th style="text-align:left">key_len</th>
+<th style="text-align:left">ref</th>
+<th style="text-align:left">rows</th>
+<th style="text-align:left">filtered</th>
+<th style="text-align:left">Extra</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">1</td>
+<td style="text-align:left">SIMPLE</td>
+<td style="text-align:left">t</td>
+<td style="text-align:left">NULL</td>
+<td style="text-align:left">ALL</td>
+<td style="text-align:left">NULL</td>
+<td style="text-align:left">NULL</td>
+<td style="text-align:left">NULL</td>
+<td style="text-align:left">NULL</td>
+<td style="text-align:left">608731</td>
+<td style="text-align:left">100</td>
+<td style="text-align:left">Using temporary</td>
+</tr>
+</tbody>
+</table>
+<p>可以看到使用了全表扫描和临时表。</p>
+<p>根据<a href="https://dev.mysql.com/doc/refman/8.0/en/group-by-optimization.html">MySQL GROUP BY优化</a>的要义，对此次查询的3个字段做联合索引：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#66d9ef">alter</span> <span style="color:#66d9ef">table</span> data_statistics_log <span style="color:#66d9ef">add</span> <span style="color:#66d9ef">index</span> query_max(APP_ID,API_VERSION_MANAGEMENT,QUERY_NUM);
+</code></pre></div><p>再看执行计划：</p>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">id</th>
+<th style="text-align:left">select_type</th>
+<th style="text-align:left">table</th>
+<th style="text-align:left">partitions</th>
+<th style="text-align:left">type</th>
+<th style="text-align:left">possible_keys</th>
+<th style="text-align:left">key</th>
+<th style="text-align:left">key_len</th>
+<th style="text-align:left">ref</th>
+<th style="text-align:left">rows</th>
+<th style="text-align:left">filtered</th>
+<th style="text-align:left">Extra</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">1</td>
+<td style="text-align:left">SIMPLE</td>
+<td style="text-align:left">t</td>
+<td style="text-align:left">NULL</td>
+<td style="text-align:left">range</td>
+<td style="text-align:left">query_max</td>
+<td style="text-align:left">query_max</td>
+<td style="text-align:left">497</td>
+<td style="text-align:left">NULL</td>
+<td style="text-align:left">5854</td>
+<td style="text-align:left">100</td>
+<td style="text-align:left">Using index for group-by</td>
+</tr>
+</tbody>
+</table>
+<p>在Extra可以看到<code>Using index for group-by</code>，说明使用了优化。</p>
+<p>对比之前的查询速度有了显著提升 2秒244毫秒 -&gt; 17毫秒。</p>
+        </p>
+    </div>
+    
 
-  <h1>Tagged "性能调优"</h1>
-  
-  
-    
-    <article>
-            <h2>
-                <a href="https://chanjarster.github.io/post/mysql/opt-big-transaction-lock/">
-                    SQL优化:大事务中的行锁获取超时
-                </a>
-            </h2>
-            <div>
-                <p>
-                
-                </p>
-            </div>
-            <div class="post-footer">
-            <time>October 11, 2021</time>
-            </div> 
-        </article>
-    
-  
-    
-    <article>
-            <h2>
-                <a href="https://chanjarster.github.io/post/mysql/opt-group-by/">
-                    SQL优化:一个超大表的GROUP BY
-                </a>
-            </h2>
-            <div>
-                <p>
-                
-                </p>
-            </div>
-            <div class="post-footer">
-            <time>October 11, 2021</time>
-            </div> 
-        </article>
-    
-  
-    
-    <article>
-            <h2>
-                <a href="https://chanjarster.github.io/post/mysql/sql-opt-join-limit-order-by-3/">
-                    SQL优化:一个含有JOIN&#43;LIMIT&#43;ORDER BY的SQL(下)
-                </a>
-            </h2>
-            <div>
-                <p>
-                
-                </p>
-            </div>
-            <div class="post-footer">
-            <time>September 28, 2021</time>
-            </div> 
-        </article>
-    
-  
-    
-    <article>
-            <h2>
-                <a href="https://chanjarster.github.io/post/mysql/sql-opt-join-limit-order-by-2/">
-                    SQL优化:一个含有JOIN&#43;LIMIT&#43;ORDER BY的SQL(中)
-                </a>
-            </h2>
-            <div>
-                <p>
-                
-                </p>
-            </div>
-            <div class="post-footer">
-            <time>September 28, 2021</time>
-            </div> 
-        </article>
-    
-  
-    
-    <article>
-            <h2>
-                <a href="https://chanjarster.github.io/post/mysql/sql-opt-join-limit-order-by/">
-                    SQL优化:一个含有JOIN&#43;LIMIT&#43;ORDER BY的SQL(上)
-                </a>
-            </h2>
-            <div>
-                <p>
-                
-                </p>
-            </div>
-            <div class="post-footer">
-            <time>September 27, 2021</time>
-            </div> 
-        </article>
-    
-  
-    
-    <article>
-            <h2>
-                <a href="https://chanjarster.github.io/post/linux/net-params/">
-                    常用网络内核参数优化
-                </a>
-            </h2>
-            <div>
-                <p>
-                
-                </p>
-            </div>
-            <div class="post-footer">
-            <time>September 8, 2021</time>
-            </div> 
-        </article>
-    
-  
-    
-    <article>
-            <h2>
-                <a href="https://chanjarster.github.io/post/nginx/benchmark-toubleshooting/">
-                    某次压力测试中对Nginx的排障
-                </a>
-            </h2>
-            <div>
-                <p>
-                
-                </p>
-            </div>
-            <div class="post-footer">
-            <time>September 7, 2021</time>
-            </div> 
-        </article>
-    
-  
-    
-    <article>
-            <h2>
-                <a href="https://chanjarster.github.io/post/pc-disk-slow-site/">
-                    PC磁盘性能地下导致访问网站很慢问题排查记录
-                </a>
-            </h2>
-            <div>
-                <p>
-                
-                </p>
-            </div>
-            <div class="post-footer">
-            <time>July 13, 2021</time>
-            </div> 
-        </article>
-    
-  
-    
-    <article>
-            <h2>
-                <a href="https://chanjarster.github.io/post/chrome-incognito-mode-faster/">
-                    Chrome隐私模式网页加载速度更快
-                </a>
-            </h2>
-            <div>
-                <p>
-                
-                </p>
-            </div>
-            <div class="post-footer">
-            <time>July 13, 2021</time>
-            </div> 
-        </article>
-    
-  
-    
-    <article>
-            <h2>
-                <a href="https://chanjarster.github.io/post/slow-disk-etcd-troubleshooting/">
-                    慢磁盘导致etcd不健康问题排查
-                </a>
-            </h2>
-            <div>
-                <p>
-                
-                </p>
-            </div>
-            <div class="post-footer">
-            <time>May 14, 2021</time>
-            </div> 
-        </article>
-    
-  
-    
-    <article>
-            <h2>
-                <a href="https://chanjarster.github.io/post/k8s/k8s-server-perf-test/">
-                    K8S服务器性能测试
-                </a>
-            </h2>
-            <div>
-                <p>
-                
-                </p>
-            </div>
-            <div class="post-footer">
-            <time>December 14, 2020</time>
-            </div> 
-        </article>
-    
+    <div class="page-footer">
+        
+        <hr class="footer-divider">
+        
+            <a class="tag" href="https://chanjarster.github.io/tags/mysql">#mysql</a>
+        
+            <a class="tag" href="https://chanjarster.github.io/tags/%E6%80%A7%E8%83%BD%E8%B0%83%E4%BC%98">#性能调优</a>
+        
+      
+    </div>
 
 
         

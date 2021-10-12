@@ -29,8 +29,6 @@
     
  
     
-    <link rel="alternate" type="application/rss+xml" href="https://chanjarster.github.io/tags/%E6%80%A7%E8%83%BD%E8%B0%83%E4%BC%98/index.xml" title="颇忒脱的技术博客" />
-    
     
 </head>
     <body>
@@ -142,207 +140,58 @@
 </nav>
         <div id="content" class="content-container">
         
+<h1 class="post-title">MySQL - 诊断锁的方法</h1>
+    
+    <time>October 9, 2021</time>
+    
+    <div>
+        <p>
+        <h2 id="等mdl锁">等MDL锁</h2>
+<p>下面语句长时间不返回，被锁住了：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#66d9ef">select</span> <span style="color:#f92672">*</span> <span style="color:#66d9ef">from</span> t <span style="color:#66d9ef">where</span> id<span style="color:#f92672">=</span><span style="color:#ae81ff">1</span>;
+</code></pre></div><p>先用<code>show processlist</code>查看：</p>
+<p><img src="mdl-1.webp" alt=""></p>
+<p>可以看到<code>Waiting for table metadata lock</code>，但是没法看到另一个线程在干什么，值看到Command是Sleep。</p>
+<p>MySQL启动时设置performance_schema=on，相比于设置为 off 会有 10% 左右的性能损失，然后：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#66d9ef">select</span> blocking_pid <span style="color:#66d9ef">from</span> sys.schema_table_lock_waits;
+</code></pre></div><p>找到造成阻塞的process id，把这个连接用 kill 命令断开即可。</p>
+<h2 id="等flush">等flush</h2>
+<p>下面语句长时间不返回：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#66d9ef">select</span> <span style="color:#f92672">*</span> <span style="color:#66d9ef">from</span> t <span style="color:#66d9ef">where</span> id<span style="color:#f92672">=</span><span style="color:#ae81ff">1</span>;
+</code></pre></div><p>用<code>select * from information_schema.processlist where id=?;</code>查看：</p>
+<p><img src="flush-wait.webp" alt=""></p>
+<p>看到状态是<code>Waiting for table flush</code>，表示的是现在有一个线程<strong>正要</strong>对表 t 做 flush 操作。MySQL 里面对表做 flush 操作的用法，一般有以下两个：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql">flush tables t <span style="color:#66d9ef">with</span> <span style="color:#66d9ef">read</span> <span style="color:#66d9ef">lock</span>;
+flush tables <span style="color:#66d9ef">with</span> <span style="color:#66d9ef">read</span> <span style="color:#66d9ef">lock</span>;
+</code></pre></div><p>注意，这都是读锁，应该是不会阻塞我们的SQL的，除非它们也被别的线程堵住了。</p>
+<p>我们用<code>show processlist</code>查看：</p>
+<p><img src="flush-wait-2.webp" alt=""></p>
+<p><code>select sleep(1) from t</code>把表t打开，但是<code>flush table ...</code>需要把表t关闭，于是就这么阻塞了。</p>
+<h2 id="等行锁">等行锁</h2>
+<p>下列语句对某行记录添加了读锁：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#66d9ef">select</span> <span style="color:#f92672">*</span> <span style="color:#66d9ef">from</span> t <span style="color:#66d9ef">where</span> id<span style="color:#f92672">=</span><span style="color:#ae81ff">1</span> <span style="color:#66d9ef">lock</span> <span style="color:#66d9ef">in</span> <span style="color:#66d9ef">share</span> <span style="color:#66d9ef">mode</span>; 
+</code></pre></div><p>如果此时这行记录上已经持有了一个写锁，这条sql就会阻塞，比如：</p>
+<p><img src="row-wait-1.webp" alt=""></p>
+<p>但是<code>show processlist</code>看不出来：</p>
+<p><img src="row-wait-2.webp" alt=""></p>
+<p>所以要通过<code>sys.innodb_lock_waits</code>查询谁占着写锁：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#66d9ef">select</span> <span style="color:#f92672">*</span> <span style="color:#66d9ef">from</span> sys.innodb_lock_waits <span style="color:#66d9ef">where</span> locked_table<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;`test`.`t`&#39;</span>;
+</code></pre></div><p>得到结果：</p>
+<p><img src="row-wait-3.webp" alt=""></p>
+<p>可以看到，4 号线程是造成堵塞的罪魁祸首，干掉它的方式 KILL QUERY 4 或 KILL 4。</p>
+<p>其实KILL QUERY 4是不对的，因为<code>update</code>语句已经执行完毕了，只是事务没有提交，这也是为什么blocking_query: NULL的原因。</p>
+        </p>
+    </div>
+    
 
-  <h1>Tagged "性能调优"</h1>
-  
-  
-    
-    <article>
-            <h2>
-                <a href="https://chanjarster.github.io/post/mysql/opt-big-transaction-lock/">
-                    SQL优化:大事务中的行锁获取超时
-                </a>
-            </h2>
-            <div>
-                <p>
-                
-                </p>
-            </div>
-            <div class="post-footer">
-            <time>October 11, 2021</time>
-            </div> 
-        </article>
-    
-  
-    
-    <article>
-            <h2>
-                <a href="https://chanjarster.github.io/post/mysql/opt-group-by/">
-                    SQL优化:一个超大表的GROUP BY
-                </a>
-            </h2>
-            <div>
-                <p>
-                
-                </p>
-            </div>
-            <div class="post-footer">
-            <time>October 11, 2021</time>
-            </div> 
-        </article>
-    
-  
-    
-    <article>
-            <h2>
-                <a href="https://chanjarster.github.io/post/mysql/sql-opt-join-limit-order-by-3/">
-                    SQL优化:一个含有JOIN&#43;LIMIT&#43;ORDER BY的SQL(下)
-                </a>
-            </h2>
-            <div>
-                <p>
-                
-                </p>
-            </div>
-            <div class="post-footer">
-            <time>September 28, 2021</time>
-            </div> 
-        </article>
-    
-  
-    
-    <article>
-            <h2>
-                <a href="https://chanjarster.github.io/post/mysql/sql-opt-join-limit-order-by-2/">
-                    SQL优化:一个含有JOIN&#43;LIMIT&#43;ORDER BY的SQL(中)
-                </a>
-            </h2>
-            <div>
-                <p>
-                
-                </p>
-            </div>
-            <div class="post-footer">
-            <time>September 28, 2021</time>
-            </div> 
-        </article>
-    
-  
-    
-    <article>
-            <h2>
-                <a href="https://chanjarster.github.io/post/mysql/sql-opt-join-limit-order-by/">
-                    SQL优化:一个含有JOIN&#43;LIMIT&#43;ORDER BY的SQL(上)
-                </a>
-            </h2>
-            <div>
-                <p>
-                
-                </p>
-            </div>
-            <div class="post-footer">
-            <time>September 27, 2021</time>
-            </div> 
-        </article>
-    
-  
-    
-    <article>
-            <h2>
-                <a href="https://chanjarster.github.io/post/linux/net-params/">
-                    常用网络内核参数优化
-                </a>
-            </h2>
-            <div>
-                <p>
-                
-                </p>
-            </div>
-            <div class="post-footer">
-            <time>September 8, 2021</time>
-            </div> 
-        </article>
-    
-  
-    
-    <article>
-            <h2>
-                <a href="https://chanjarster.github.io/post/nginx/benchmark-toubleshooting/">
-                    某次压力测试中对Nginx的排障
-                </a>
-            </h2>
-            <div>
-                <p>
-                
-                </p>
-            </div>
-            <div class="post-footer">
-            <time>September 7, 2021</time>
-            </div> 
-        </article>
-    
-  
-    
-    <article>
-            <h2>
-                <a href="https://chanjarster.github.io/post/pc-disk-slow-site/">
-                    PC磁盘性能地下导致访问网站很慢问题排查记录
-                </a>
-            </h2>
-            <div>
-                <p>
-                
-                </p>
-            </div>
-            <div class="post-footer">
-            <time>July 13, 2021</time>
-            </div> 
-        </article>
-    
-  
-    
-    <article>
-            <h2>
-                <a href="https://chanjarster.github.io/post/chrome-incognito-mode-faster/">
-                    Chrome隐私模式网页加载速度更快
-                </a>
-            </h2>
-            <div>
-                <p>
-                
-                </p>
-            </div>
-            <div class="post-footer">
-            <time>July 13, 2021</time>
-            </div> 
-        </article>
-    
-  
-    
-    <article>
-            <h2>
-                <a href="https://chanjarster.github.io/post/slow-disk-etcd-troubleshooting/">
-                    慢磁盘导致etcd不健康问题排查
-                </a>
-            </h2>
-            <div>
-                <p>
-                
-                </p>
-            </div>
-            <div class="post-footer">
-            <time>May 14, 2021</time>
-            </div> 
-        </article>
-    
-  
-    
-    <article>
-            <h2>
-                <a href="https://chanjarster.github.io/post/k8s/k8s-server-perf-test/">
-                    K8S服务器性能测试
-                </a>
-            </h2>
-            <div>
-                <p>
-                
-                </p>
-            </div>
-            <div class="post-footer">
-            <time>December 14, 2020</time>
-            </div> 
-        </article>
-    
+    <div class="page-footer">
+        
+        <hr class="footer-divider">
+        
+            <a class="tag" href="https://chanjarster.github.io/tags/mysql">#mysql</a>
+        
+      
+    </div>
 
 
         

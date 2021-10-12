@@ -151,19 +151,26 @@
 <li>读锁：可以并发读，如果有写操作，则必须等读锁释放</li>
 <li>写锁：不能并发读，也不能并发写，都必须等写锁释放才能继续</li>
 </ul>
+<p>锁的类型：</p>
+<ul>
+<li>全局锁</li>
+<li>表级锁：表锁、MDL锁</li>
+</ul>
 <h2 id="全局锁">全局锁</h2>
 <p>使用<a href="https://dev.mysql.com/doc/refman/8.0/en/flush.html#flush-tables-with-read-lock">FLUSH TABLES WITH READ LOCK</a>会让你给整个数据库加一个读锁。这会阻塞所有DML、DDL、更新类事务的commit，直到被释放。</p>
-<p><strong>全局锁的典型使用场景是，做全库逻辑备份。</strong></p>
-<p>怎么释放？TODO</p>
-<h2 id="表级锁">表级锁</h2>
+<p><strong>全局锁的典型使用场景是MyISAM引擎做全库逻辑备份，为的是解决备份时数据不一致的问题。</strong></p>
+<p>如果是InnoDB引擎的表，因为支持MVCC，可以通过<code>mysqldump --single-transaction</code>来解决备份时数据一致性问题。</p>
+<p>释放方法：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql">UNLOCK TABLES;
+</code></pre></div><h2 id="表级锁">表级锁</h2>
 <h3 id="表锁">表锁</h3>
 <p>通过下面语句给表加上读锁或写锁，还有释放：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#75715e">-- 加锁
-</span><span style="color:#75715e"></span><span style="color:#66d9ef">lock</span> tables ... <span style="color:#66d9ef">read</span><span style="color:#f92672">/</span><span style="color:#66d9ef">write</span>
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">LOCK</span> TABLES ... <span style="color:#66d9ef">read</span><span style="color:#f92672">/</span><span style="color:#66d9ef">write</span>
 <span style="color:#75715e">-- 释放
-</span><span style="color:#75715e"></span>unlock tables
+</span><span style="color:#75715e"></span>UNLOCK TABLES
 <span style="color:#75715e">-- 例如
-</span><span style="color:#75715e"></span><span style="color:#66d9ef">lock</span> tables t1 <span style="color:#66d9ef">read</span>, t2 <span style="color:#66d9ef">write</span>
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">LOCK</span> TABLES t1 <span style="color:#66d9ef">read</span>, t2 <span style="color:#66d9ef">write</span>
 </code></pre></div><p>MySQL的锁不是可重入的，即加锁之后，当前连接/session也受制于这个锁。</p>
 <p>如果加的是读锁：</p>
 <ul>
@@ -182,20 +189,17 @@
 <li>对表结构变更的时候，加上MDL写锁</li>
 </ul>
 <p>**陷阱：MDL锁在语句开始时申请，但是要在事务提交之后才会释放。**所以下面语句会导致很多数据库操作被阻塞：</p>
-<figure>
-    <img src="mdl-phases.png" width="100%"/> 
-</figure>
-
+<p><img src="mdl-phases.png" alt=""></p>
 <ol>
 <li>session A开启事务，查询，得到MDL读锁</li>
 <li>session B查询，得到MDL读锁</li>
 <li>session C加字段，要得到MDL写锁，阻塞</li>
-<li>session D查询，要得到MDL读锁，阻塞</li>
+<li>session D查询，要得到MDL读锁，但是前面有写锁在排队，阻塞</li>
 </ol>
 <p>因为session A没有提交事务，所以就造成了后续一连串的阻塞。如果某个表上的查询语句频繁，而且客户端有重试机制，也就是说超时后会再起一个新 session 再请求的话，这个库的线程很快就会爆满。</p>
 <p><strong>解决办法：</strong></p>
 <p>问题的本质在于一个MDL写锁在等待MDL读锁的释放，而读锁却在一个长事务里，导致后续的MDL读锁堆积。</p>
-<p>所以可以在执行DDL之前看有没有长事务在跑，如果有，Kill掉这个长事务，或者等待长事务结束在DDL。</p>
+<p>所以可以在执行DDL之前看有没有长事务在跑，如果有，Kill掉这个长事务，或者等待长事务结束再DDL。</p>
 <p>还可以给DDL添加超时时间，如果等待超时则放弃，然后人工再重试（MariaDB和AliSQL支持下面语法）：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#66d9ef">ALTER</span> <span style="color:#66d9ef">TABLE</span> tbl_name NOWAIT <span style="color:#66d9ef">add</span> <span style="color:#66d9ef">column</span> ...
 <span style="color:#66d9ef">ALTER</span> <span style="color:#66d9ef">TABLE</span> tbl_name WAIT N <span style="color:#66d9ef">add</span> <span style="color:#66d9ef">column</span> ... 
@@ -229,6 +233,17 @@
 <li><strong>行锁在需要的时候才获取（执行具体语句时）</strong></li>
 <li><strong>事务持有的行锁在事务提交时才会被释放。（这个和MDL锁一样一样的）</strong></li>
 </ul>
+<p>所以为了降低锁的影响，要把最可能造成锁冲突、最可能影响并发度的锁尽量往后放，这样锁持有的时间变短了，降低并发时事务之间产生的等待。</p>
+<p>下面两种写法也会加上行锁：</p>
+<ul>
+<li><code>select ... lock in share mode</code>，加上读锁（S锁，共享锁）</li>
+<li><code>select ... for share</code>，8.0 新增语法，效果同上</li>
+<li><code>select ... for update</code>，语义和<code>UPDATE/DELETE</code>一样，加上写锁（X锁，排他锁）</li>
+</ul>
+<p><code>SELECT ... FOR SHARE/LOCK IN SHARE MODE</code> 只会锁定扫描过程中使用的索引里的记录行，即如果你的查询正好使用了覆盖索引，那么只有这个索引里的记录行会被锁定，主键索引的记录行是不会被锁定的。</p>
+<p><code>SELECT ... FOR UPDATE</code>除了会锁定扫描过程中使用的索引里的记录行，相关的索引的记录行也会被锁定。换句话说如果你使用了覆盖索引，但是主键索引里的记录行也会被锁定。而又因为主键索引就已经包含了所有字段，那么就相当于锁定表的整行记录。</p>
+<p><font color="red">所以一定要注意，MySQL锁定的行实际上是索引上的行，只不过有时候锁定的是主键索引，看上去像锁定整行一样</font></p>
+<p>更多参考资料，详情见<a href="https://dev.mysql.com/doc/refman/8.0/en/select.html">SELECT 语法</a>和<a href="https://dev.mysql.com/doc/refman/8.0/en/innodb-locking-reads.html">Locking Reads</a></p>
 <h3 id="死锁">死锁</h3>
 <p>因为上面的两个特性，很容易造成死锁：</p>
 <table>
@@ -295,9 +310,6 @@
 <li>记录一条交易日志。</li>
 </ol>
 <p>显然更新影院B账户余额的并发度比更新顾客A账户余额高很多，应该把它放后面。可以按照3、1、2的顺序执行。</p>
-<h2 id="数据库备份">数据库备份</h2>
-<p>可以使用<a href="https://dev.mysql.com/doc/refman/8.0/en/flush.html#flush-tables-with-read-lock">FLUSH TABLES WITH READ LOCK</a>把数据库整个锁了来备份，目的是得到一致性视图。MyISAM引擎不支持MVCC，所以可以用这个方法。</p>
-<p><code>mysqldump --single-transaction</code>则能利用InnoDB的MVCC机制来得到一个一致性视图。<code>--single-transaction</code>方法只适用于所有的表使用事务引擎的库（InnoDB）。</p>
         </p>
     </div>
     
