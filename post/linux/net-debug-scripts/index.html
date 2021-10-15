@@ -231,6 +231,47 @@ UDP	      <span style="color:#ae81ff">2</span>         <span style="color:#ae81f
 TCP	      <span style="color:#ae81ff">141</span>       <span style="color:#ae81ff">75</span>        <span style="color:#ae81ff">66</span>
 INET	    <span style="color:#ae81ff">143</span>       <span style="color:#ae81ff">77</span>        <span style="color:#ae81ff">66</span>
 FRAG	    <span style="color:#ae81ff">0</span>         <span style="color:#ae81ff">0</span>         <span style="color:#ae81ff">0</span>
+</code></pre></div><h2 id="hping3">hping3</h2>
+<p>测试网络延迟Round-Trip Time：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">
+<span style="color:#75715e"># -c表示发送3次请求，-S表示设置TCP SYN，-p表示端口号为80</span>
+$ hping3 -c <span style="color:#ae81ff">3</span> -S -p <span style="color:#ae81ff">80</span> baidu.com
+HPING baidu.com <span style="color:#f92672">(</span>eth0 123.125.115.110<span style="color:#f92672">)</span>: S set, <span style="color:#ae81ff">40</span> headers + <span style="color:#ae81ff">0</span> data bytes
+len<span style="color:#f92672">=</span><span style="color:#ae81ff">46</span> ip<span style="color:#f92672">=</span>123.125.115.110 ttl<span style="color:#f92672">=</span><span style="color:#ae81ff">51</span> id<span style="color:#f92672">=</span><span style="color:#ae81ff">47908</span> sport<span style="color:#f92672">=</span><span style="color:#ae81ff">80</span> flags<span style="color:#f92672">=</span>SA seq<span style="color:#f92672">=</span><span style="color:#ae81ff">0</span> win<span style="color:#f92672">=</span><span style="color:#ae81ff">8192</span> rtt<span style="color:#f92672">=</span>20.9 ms
+len<span style="color:#f92672">=</span><span style="color:#ae81ff">46</span> ip<span style="color:#f92672">=</span>123.125.115.110 ttl<span style="color:#f92672">=</span><span style="color:#ae81ff">51</span> id<span style="color:#f92672">=</span><span style="color:#ae81ff">6788</span>  sport<span style="color:#f92672">=</span><span style="color:#ae81ff">80</span> flags<span style="color:#f92672">=</span>SA seq<span style="color:#f92672">=</span><span style="color:#ae81ff">1</span> win<span style="color:#f92672">=</span><span style="color:#ae81ff">8192</span> rtt<span style="color:#f92672">=</span>20.9 ms
+len<span style="color:#f92672">=</span><span style="color:#ae81ff">46</span> ip<span style="color:#f92672">=</span>123.125.115.110 ttl<span style="color:#f92672">=</span><span style="color:#ae81ff">51</span> id<span style="color:#f92672">=</span><span style="color:#ae81ff">37699</span> sport<span style="color:#f92672">=</span><span style="color:#ae81ff">80</span> flags<span style="color:#f92672">=</span>SA seq<span style="color:#f92672">=</span><span style="color:#ae81ff">2</span> win<span style="color:#f92672">=</span><span style="color:#ae81ff">8192</span> rtt<span style="color:#f92672">=</span>20.9 ms
+
+--- baidu.com hping statistic ---
+<span style="color:#ae81ff">3</span> packets transmitted, <span style="color:#ae81ff">3</span> packets received, 0% packet loss
+round-trip min/avg/max <span style="color:#f92672">=</span> 20.9/20.9/20.9 ms
+</code></pre></div><h2 id="traceroute">traceroute</h2>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash"><span style="color:#75715e"># --tcp表示使用TCP协议，-p表示端口号，-n表示不对结果中的IP地址执行反向域名解析</span>
+$ traceroute --tcp -p <span style="color:#ae81ff">80</span> -n baidu.com
+traceroute to baidu.com <span style="color:#f92672">(</span>123.125.115.110<span style="color:#f92672">)</span>, <span style="color:#ae81ff">30</span> hops max, <span style="color:#ae81ff">60</span> byte packets
+ <span style="color:#ae81ff">1</span>  * * *
+ <span style="color:#ae81ff">2</span>  * * *
+ <span style="color:#ae81ff">3</span>  * * *
+ <span style="color:#ae81ff">4</span>  * * *
+ <span style="color:#ae81ff">5</span>  * * *
+ <span style="color:#ae81ff">6</span>  * * *
+ <span style="color:#ae81ff">7</span>  * * *
+ <span style="color:#ae81ff">8</span>  * * *
+ <span style="color:#ae81ff">9</span>  * * *
+<span style="color:#ae81ff">10</span>  * * *
+<span style="color:#ae81ff">11</span>  * * *
+<span style="color:#ae81ff">12</span>  * * *
+<span style="color:#ae81ff">13</span>  * * *
+<span style="color:#ae81ff">14</span>  123.125.115.110  20.684 ms *  20.798 ms
+</code></pre></div><p>traceroute 会在路由的每一跳发送三个包，并在收到响应后，输出往返延时。如果无响应或者响应超时（默认 5s），就会输出一个星号。</p>
+<h2 id="sar">sar</h2>
+<p>安装：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">yum install -y sysstat
+</code></pre></div><p>观察 PPS（每秒收发的报文数）和BPS（每秒收发的字节数）：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ sar -n DEV <span style="color:#ae81ff">1</span>
+08:55:49        IFACE   rxpck/s   txpck/s    rxkB/s    txkB/s   rxcmp/s   txcmp/s  rxmcst/s   %ifutil
+08:55:50      docker0      0.00      0.00      0.00      0.00      0.00      0.00      0.00      0.00
+08:55:50         eth0  22274.00    629.00   1174.64     37.78      0.00      0.00      0.00      0.02
+08:55:50           lo      0.00      0.00      0.00      0.00      0.00      0.00      0.00      0.00
 </code></pre></div>
         </p>
     </div>
