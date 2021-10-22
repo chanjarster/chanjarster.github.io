@@ -226,6 +226,28 @@ flush tables <span style="color:#66d9ef">with</span> <span style="color:#66d9ef"
 <li>由于锁是一个个加的，要避免死锁，对同一组资源，要按照尽量相同的顺序访问；</li>
 <li>在发生死锁的时刻，for update 这条语句占有的资源更多，回滚成本更大，所以 InnoDB 选择了回滚成本更小的 lock in share mode 语句，来回滚。</li>
 </ol>
+<h2 id="快捷sql">快捷SQL</h2>
+<p>查慢SQL（慢于5秒）：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#66d9ef">select</span> COMMAND, TIME, <span style="color:#66d9ef">STATE</span>, substr(INFO, <span style="color:#ae81ff">1</span>, <span style="color:#ae81ff">100</span>), <span style="color:#66d9ef">length</span>(INFO) <span style="color:#66d9ef">from</span> information_schema.processlist 
+<span style="color:#66d9ef">where</span> 
+  COMMAND<span style="color:#f92672">&lt;&gt;</span><span style="color:#e6db74">&#39;Sleep&#39;</span> 
+  <span style="color:#66d9ef">and</span> db<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;&lt;db&gt;&#39;</span> 
+  <span style="color:#66d9ef">and</span> TIME <span style="color:#f92672">&gt;=</span> <span style="color:#ae81ff">5</span>
+<span style="color:#66d9ef">order</span> <span style="color:#66d9ef">by</span> TIME <span style="color:#66d9ef">desc</span> <span style="color:#66d9ef">limit</span> <span style="color:#ae81ff">10</span>;
+</code></pre></div><p>查行锁：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#66d9ef">select</span> <span style="color:#f92672">*</span> <span style="color:#66d9ef">from</span> sys.innodb_lock_waits <span style="color:#66d9ef">where</span> locked_table <span style="color:#66d9ef">like</span> <span style="color:#e6db74">&#39;`&lt;db&gt;`.%&#39;</span>;
+</code></pre></div><p>查行锁+Block Pid正在执行的SQL：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#66d9ef">select</span> 
+  w.wait_started, w.wait_age_secs, w.locked_table, w.locked_index, w.locked_type,
+  w.waiting_pid, substr(wp.INFO, <span style="color:#ae81ff">1</span>, <span style="color:#ae81ff">100</span>) waiting_query,
+  w.blocking_pid, w.blocking_query, w.blocking_trx_started, w.blocking_trx_age,
+  substr(bp.INFO, <span style="color:#ae81ff">1</span>, <span style="color:#ae81ff">100</span>) blocking_query
+<span style="color:#66d9ef">from</span> sys.innodb_lock_waits w 
+<span style="color:#66d9ef">join</span> information_schema.processlist bp <span style="color:#66d9ef">on</span> bp.ID<span style="color:#f92672">=</span>w.blocking_pid
+<span style="color:#66d9ef">join</span> information_schema.processlist wp <span style="color:#66d9ef">on</span> wp.ID<span style="color:#f92672">=</span>w.waiting_pid
+<span style="color:#66d9ef">where</span> 
+  w.locked_table <span style="color:#66d9ef">like</span> <span style="color:#e6db74">&#39;`&lt;db&gt;`.%&#39;</span>;
+</code></pre></div>
         </p>
     </div>
     
