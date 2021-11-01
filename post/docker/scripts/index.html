@@ -196,6 +196,21 @@ $ ip netns exec <span style="color:#e6db74">${</span>container_id<span style="co
 <span style="color:#75715e"># 运行 nsenter 进入命名空间，用 netstat 命令查看容器进程的tcp/udp连接情况</span>
 $ nsenter -t $pid -n netstat -antpl
 </code></pre></div><p>参考文档：<a href="https://www.thegeekdiary.com/how-to-access-docker-containers-network-namespace-from-host/">How to Access Docker Container’s Network Namespace from Host</a></p>
+<h3 id="列出关闭的容器">列出关闭的容器</h3>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">docker ps -a --format <span style="color:#e6db74">&#39;Container: {{ .Names }} Status: {{ json .Status }}&#39;</span> | grep <span style="color:#e6db74">&#39;Exited&#39;</span>
+</code></pre></div><h2 id="overlay2-storage-driver">overlay2 storage driver</h2>
+<h3 id="根据overlay目录反查容器">根据overlay目录反查容器</h3>
+<p>假设你在<code>/var/lib/docker/overlay2</code>下看到了某个目录（比如：<code>608b180efc64419c27e5e54ca79511d1066475b3636535f5e2134a9f6187c35b</code>），那么你想知道这个目录所属哪个容器：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">docker ps -a --format <span style="color:#e6db74">&#39;{{ .Names }}&#39;</span> <span style="color:#ae81ff">\
+</span><span style="color:#ae81ff"></span>| xargs -n1 -I<span style="color:#f92672">{}</span> docker inspect <span style="color:#f92672">{}</span> --format <span style="color:#e6db74">&#39;Container: {{ .Name }} Dir: {{ .GraphDriver.Data.LowerDir }}&#39;</span> <span style="color:#ae81ff">\
+</span><span style="color:#ae81ff"></span>| grep <span style="color:#e6db74">&#39;608b180efc64419c27e5e54ca79511d1066475b3636535f5e2134a9f6187c35b&#39;</span>
+</code></pre></div><p>有时候会得到多个结果，这是因为多个容器所使用的镜像共享了同一个层。</p>
+<h3 id="根据overlay目录反查镜像">根据overlay目录反查镜像</h3>
+<p>在上面的结果里找到了多个结果后，想要找一个这个层从哪一个镜像引入的，可以这样：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">docker image ls --format <span style="color:#e6db74">&#39;{{ .ID }}&#39;</span> <span style="color:#ae81ff">\
+</span><span style="color:#ae81ff"></span>| xargs -n1 -I<span style="color:#f92672">{}</span> docker image inspect <span style="color:#f92672">{}</span> --format <span style="color:#e6db74">&#39;Image: {{ .RepoTags }} Dir: {{ .GraphDriver.Data.LowerDir }}&#39;</span> <span style="color:#ae81ff">\
+</span><span style="color:#ae81ff"></span>| grep <span style="color:#e6db74">&#39;608b180efc64419c27e5e54ca79511d1066475b3636535f5e2134a9f6187c35b&#39;</span>
+</code></pre></div>
         </p>
     </div>
     
