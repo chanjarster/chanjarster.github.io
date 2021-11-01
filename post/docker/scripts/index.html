@@ -167,6 +167,8 @@ docker load --input &lt;name&gt;.tar.gz
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ docker inspect --format <span style="color:#e6db74">&#39;{{.State.Pid}}&#39;</span> &lt;container-name/id&gt;
 </code></pre></div><h3 id="列出所有容器的pid">列出所有容器的PID</h3>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ docker ps -q | xargs docker inspect --format <span style="color:#e6db74">&#39;{{.State.Pid}}, {{.Name}}&#39;</span>
+</code></pre></div><h3 id="列出所有关闭的容器">列出所有关闭的容器</h3>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">docker ps -a --format <span style="color:#e6db74">&#39;Container: {{ .Names }} Status: {{ json .Status }}&#39;</span> | grep <span style="color:#e6db74">&#39;Exited&#39;</span>
 </code></pre></div><h3 id="列出容器暴露的端口">列出容器暴露的端口</h3>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ docker inspect --format <span style="color:#e6db74">&#39;
 </span><span style="color:#e6db74">{{- range $port, $hostPorts := .NetworkSettings.Ports }}
@@ -196,9 +198,7 @@ $ ip netns exec <span style="color:#e6db74">${</span>container_id<span style="co
 <span style="color:#75715e"># 运行 nsenter 进入命名空间，用 netstat 命令查看容器进程的tcp/udp连接情况</span>
 $ nsenter -t $pid -n netstat -antpl
 </code></pre></div><p>参考文档：<a href="https://www.thegeekdiary.com/how-to-access-docker-containers-network-namespace-from-host/">How to Access Docker Container’s Network Namespace from Host</a></p>
-<h3 id="列出关闭的容器">列出关闭的容器</h3>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">docker ps -a --format <span style="color:#e6db74">&#39;Container: {{ .Names }} Status: {{ json .Status }}&#39;</span> | grep <span style="color:#e6db74">&#39;Exited&#39;</span>
-</code></pre></div><h2 id="overlay2-storage-driver">overlay2 storage driver</h2>
+<h2 id="overlay2-storage-driver">overlay2 storage driver</h2>
 <h3 id="根据overlay目录反查容器">根据overlay目录反查容器</h3>
 <p>假设你在<code>/var/lib/docker/overlay2</code>下看到了某个目录（比如：<code>608b180efc64419c27e5e54ca79511d1066475b3636535f5e2134a9f6187c35b</code>），那么你想知道这个目录所属哪个容器：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">docker ps -a --format <span style="color:#e6db74">&#39;{{ .Names }}&#39;</span> <span style="color:#ae81ff">\
