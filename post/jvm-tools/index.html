@@ -163,6 +163,23 @@
 <li><a href="https://github.com/openjdk/jdk8u-dev/blob/master/jdk/src/share/classes/sun/jvmstat/perfdata/monitor/protocol/local/PerfDataFile.java#L57-L79">PerfDataFile.java</a> 规定了PID文件的匹配模式，<a href="https://github.com/openjdk/jdk8u-dev/blob/master/jdk/src/share/classes/sun/jvmstat/perfdata/monitor/protocol/local/PerfDataFile.java#L294-L305">tmpDirName</a> 属性是平台相关的</li>
 <li><a href="https://github.com/openjdk/jdk8u-dev/blob/master/jdk/src/share/native/sun/misc/VMSupport.c#L59">VMSupport.c</a> -&gt; <a href="https://github.com/openjdk/jdk8u-dev/blob/master/jdk/src/share/javavm/export/jvm.h#L1359">jvm.h</a> -&gt; <a href="https://github.com/openjdk/jdk8u-dev/blob/master/hotspot/src/share/vm/prims/jvm.cpp#L424">jvm.cpp</a> 规定了 <code>JVM_GetTemporaryDirectory</code>的返回值</li>
 </ul>
+<p>所以说，如果你把别的机器的<code>/tmp/hsperfdata_&lt;usr&gt;/&lt;pid&gt;</code> 复制到你本地，jps也是能够返回结果的。</p>
+<p><strong>但是</strong>，前提是PID得在你的机器上存在，比如别的机器上PID是2121，那么你的机器上也必须有PID=2121的进程，无论这个进程是什么。否则jps会返回<code> -- process information unavailable</code> 这样的信息。</p>
+<p>如果你这样执行jps（其实所有命令都可以这样执行），可以看到异常：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">java -cp $JAVA_HOME/lib/tools.jar -Djps.debug<span style="color:#f92672">=</span>true -Djps.printStackTrace<span style="color:#f92672">=</span>true sun.tools.jps.Jps
+
+sun.jvmstat.monitor.MonitorException: <span style="color:#ae81ff">2121</span> not found
+        at sun.jvmstat.perfdata.monitor.protocol.local.PerfDataBuffer.&lt;init&gt;<span style="color:#f92672">(</span>PerfDataBuffer.java:84<span style="color:#f92672">)</span>
+        at sun.jvmstat.perfdata.monitor.protocol.local.LocalMonitoredVm.&lt;init&gt;<span style="color:#f92672">(</span>LocalMonitoredVm.java:68<span style="color:#f92672">)</span>
+        at sun.jvmstat.perfdata.monitor.protocol.local.MonitoredHostProvider.getMonitoredVm<span style="color:#f92672">(</span>MonitoredHostProvider.java:77<span style="color:#f92672">)</span>
+        at sun.tools.jps.Jps.main<span style="color:#f92672">(</span>Jps.java:92<span style="color:#f92672">)</span>
+Caused by: java.lang.IllegalArgumentException: Process not found
+        at sun.misc.Perf.attach<span style="color:#f92672">(</span>Native Method<span style="color:#f92672">)</span>
+        at sun.misc.Perf.attachImpl<span style="color:#f92672">(</span>Perf.java:270<span style="color:#f92672">)</span>
+        at sun.misc.Perf.attach<span style="color:#f92672">(</span>Perf.java:200<span style="color:#f92672">)</span>
+        at sun.jvmstat.perfdata.monitor.protocol.local.PerfDataBuffer.&lt;init&gt;<span style="color:#f92672">(</span>PerfDataBuffer.java:64<span style="color:#f92672">)</span>
+        ... <span style="color:#ae81ff">3</span> more
+</code></pre></div><p>顺着这个错误分析<a href="https://github.com/openjdk/jdk8u-dev/blob/master/jdk/src/share/classes/sun/jvmstat/perfdata/monitor/protocol/local/PerfDataBuffer.java">PerfDataBuffer.java</a>，可以发现解决的办法就是创建一个<code>/tmp/hsperfdata_&lt;pid&gt;</code>的文件。</p>
 <h2 id="jstat">jstat</h2>
 <p>先说结论：</p>
 <ul>
