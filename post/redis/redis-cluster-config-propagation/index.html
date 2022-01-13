@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+
+<html lang="zh-cn">
+    <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="format-detection" content="telephone=no"/>
+
+    <title>Redis Cluster配置传播及故障恢复笔记 | 颇忒脱的技术博客</title>
+    
+    <link rel="apple-touch-icon" sizes="180x180" href="https://chanjarster.github.io/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="https://chanjarster.github.io/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="https://chanjarster.github.io/favicon-16x16.png">
+    <link rel="manifest" href="https://chanjarster.github.io/manifest.json">
+    <link rel="mask-icon" href="https://chanjarster.github.io/safari-pinned-tab.svg" color="#FF3DB4">
+    <meta name="theme-color" content="#ffffff">
+
+    
+    
+    
+    <link rel="stylesheet" href="https://chanjarster.github.io/css/main.min.fb0741ac272e7c9bef84b235a2f86925ce49db17e728cfc0e73fa00ec39c73ee.css"/>
+
+    
+    
+    
+
+    
+    
+ 
+    </head>
+
+    <body>
+        
+<nav>
+  <header>
+    <div class="site-title">
+        <a href="https://chanjarster.github.io/">颇忒脱的技术博客</a>
+    </div>  
+</header>
+
+  <div class="nav-menu">
+  
+    <a class="color-link nav-link" href="https://chanjarster.github.io/">Home</a>
+  
+    <a class="color-link nav-link" href="https://chanjarster.github.io/tags/%E6%94%B6%E8%97%8F%E5%A4%B9/">Bookmarks</a>
+  
+    <a class="color-link nav-link" href="https://chanjarster.github.io/post/jvm/index-page">JVM</a>
+  
+    <a class="color-link nav-link" href="https://chanjarster.github.io/post/concurrent-programming/index-page">并发编程</a>
+  
+    <a class="color-link nav-link" href="https://chanjarster.github.io/post/mysql/index-page">MySQL</a>
+  
+    <a class="color-link nav-link" href="https://chanjarster.github.io/tags/go/">Go</a>
+  
+    <a class="color-link nav-link" href="https://chanjarster.github.io/tags/gc/">GC</a>
+  
+    <a class="color-link nav-link" href="https://chanjarster.github.io/tags/kernel/">Kernel</a>
+  
+    <a class="color-link nav-link" href="https://chanjarster.github.io/tags/cheatsheet/">Cheatsheet</a>
+  
+    <a class="color-link nav-link" href="https://chanjarster.github.io/tags/troubleshooting/">排障实战记录</a>
+  
+    <a class="color-link nav-link" href="https://github.com/chanjarster">Works</a>
+  
+    <a class="color-link nav-link" href="https://chanjarster.github.io/tags/">Tags</a>
+  
+  <a class="color-link nav-link" href="https://chanjarster.github.io/index.xml" target="_blank" rel="noopener" type="application/rss+xml">RSS</a>
+</div>
+<footer class="footer">
+	<div class="social-icons">
+        
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+    
+    
+    <a class="social-icon" href="chanjarster" target="_blank" rel="noopener" title="GitHub">
+        <svg width="28px" height="28px" viewBox="0 0 28 28" version="1.1" fill="#ABABAB" xmlns="https://www.w3.org/2000/svg" xmlns:xlink="https://www.w3.org/1999/xlink">
+            <path d="M13.9988029,1.32087331 C6.82105037,1.32087331 1,7.14112562 1,14.3212723 C1,20.0649109 4.72454649,24.9370678 9.89038951,26.6560892 C10.5408085,26.7757983 10.7778323,26.374374 10.7778323,26.0296121 C10.7778323,25.7215609 10.7666595,24.9035493 10.760275,23.8189856 C7.14426471,24.6042767 6.38131925,22.0760223 6.38131925,22.0760223 C5.78995672,20.5740732 4.93762853,20.1742451 4.93762853,20.1742451 C3.75729765,19.3682044 5.02701126,19.3841656 5.02701126,19.3841656 C6.33183953,19.4759425 7.01817121,20.7241085 7.01817121,20.7241085 C8.17775254,22.7104801 10.0611744,22.1366749 10.8017741,21.8038838 C10.919887,20.9643246 11.2558703,20.3913175 11.6269683,20.066507 C8.74038491,19.7385043 5.70536235,18.6228163 5.70536235,13.6413251 C5.70536235,12.2223743 6.21213051,11.0611968 7.04370914,10.1530044 C6.90963504,9.82420367 6.46351945,8.50181809 7.17139875,6.71256734 C7.17139875,6.71256734 8.26234691,6.36301702 10.7459099,8.04532771 C11.78259,7.75642995 12.8950858,7.61277914 14.000399,7.60719272 C15.1049142,7.61277914 16.2166119,7.75642995 17.2548881,8.04532771 C19.736855,6.36301702 20.8262071,6.71256734 20.8262071,6.71256734 C21.5356825,8.50181809 21.0895669,9.82420367 20.9562909,10.1530044 C21.7894656,11.0611968 22.2922435,12.2223743 22.2922435,13.6413251 C22.2922435,18.6355852 19.2524325,19.734514 16.3570705,20.0561322 C16.8231376,20.4575564 17.2389269,21.2508282 17.2389269,22.4638795 C17.2389269,24.2012564 17.2229657,25.603448 17.2229657,26.0296121 C17.2229657,26.3775663 17.4575954,26.7821827 18.116793,26.6552912 C23.2786458,24.9322794 27,20.0633148 27,14.3212723 C27,7.14112562 21.1789496,1.32087331 13.9988029,1.32087331"></path>
+        </svg>
+    </a>
+    
+
+    
+    
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+</div>
+
+
+
+
+    <p><a href="https://github.com/kimcc/hugo-theme-noteworthy" target="_blank" rel="noopener">Noteworthy theme</a></p>
+    <p><a href="https://gohugo.io" target="_blank" rel="noopener">Built with Hugo</a></p>
+
+	<script src="https://chanjarster.github.io/js/main.min.fa5c2b23e07b5d9bfad267a52b4b24fdb053e6fb7524993383594926a3ac270c.js" integrity="sha256-+lwrI+B7XZv60melK0sk/bBT5vt1JJkzg1lJJqOsJww=" crossorigin="anonymous"></script>
+</footer>
+
+</nav>
+
+        <div id="content" class="content-container">
+        
+
+<h1 class="post-title">Redis Cluster配置传播及故障恢复笔记</h1>
+    
+    <time>July 10, 2019</time>
+    
+    <div>
+        <p>
+        <p>本笔记是对<a href="https://redis.io/topics/cluster-spec#configuration-handling-propagation-and-failovers">Redis Cluster Spec - Configuration handling, propagation, and failovers</a>的归纳总结。</p>
+<h2 id="epoch">Epoch</h2>
+<p>因为Redis Cluster没有中心节点，因此Cluster中的每个Node都存有：1）自己的状态（<a href="https://github.com/antirez/redis/blob/5.0.0/src/cluster.h#L116-L141">ClusterNode源码</a>）；2）Cluster的状态（<a href="https://github.com/antirez/redis/blob/5.0.0/src/cluster.h#L143-L181">ClusterState源码</a>）。换句话说每个Node都有一个自己的视角来观察Cluster。</p>
+<p>如果大家眼中看到的是一致的自然没有什么问题，如果不一致怎么办？Redis Cluster用是Epoch来解决。那么Epoch是什么？Epoch翻译过来的意思是时代。Redis Cluster定下了规矩，旧时代的说了不算，要听新时代的，某些情况下旧时代发来的请求不予理会（比如一个死了很久的Master复活）。</p>
+<p>你可以看到Cluster状态中有一个currentEpoch字段，意思是整个集群当前的时代。考虑到这个Cluster状态是Node从自己的视角观察到的，因此也可以认为是这个Node所处的时代。</p>
+<p>Node状态中有一个configEpoch字段，意思并非这个Node所处的时代，而是用来表示Slots由哪个Node掌管的意思——回忆一下有一个Slots-&gt;Node的Map。</p>
+<p>集群状态发生变更就要产生一个新时代，准确点说当发生Slots易主的情况就要产生一个新时代。你可以理解为Cluster就是当今世界，Slots易主就是世界格局发生变更，每一次变更都是一个新时代。</p>
+<p>Redis Cluster中的Node通过Gossip协议传播自己的状态+自己所认为的Cluster的状态，传播过程中都会带上configEpoch和currentEpoch（<a href="https://github.com/antirez/redis/blob/5.0.0/src/cluster.h#L252-L275">ClusterMsg源码</a>），运用旧时代听新时代的规则，使得Node们达成一致，也就是Cluster状态达成一致。</p>
+<p>下面是一些实现细节的总结：</p>
+<ul>
+<li>Epoch是一个64位无符号整形</li>
+<li>每个Master有自己的ConfigEpoch且在整个Cluster中唯一、Slave的ConfigEpoch随其Master</li>
+<li>CurrentEpoch = max(ConfigEpoch)</li>
+<li>Master的ConfigEpoch初始值是0，也就是说CurrentEpoch的初始值也是0</li>
+</ul>
+<h2 id="slave-promotion">Slave Promotion</h2>
+<h3 id="slave的动作">Slave的动作</h3>
+<p>下面是总结的在发生Slave Promotion时，Slave做的事情。</p>
+<p><img src="slave-promotion.png" style="zoom:50%" /></p>
+<h3 id="master的动作">Master的动作</h3>
+<p>下面是总结的在发生Slave Promotion时，Master做的事情。</p>
+<p><img src="master-voting.png" style="zoom:50%" /></p>
+<h2 id="传播slots的配置">传播Slots的配置</h2>
+<p>Slave赢得选举之后会在己侧更新Slots上的归属信息，然后在定时的PING/PONG中将这个信息传播出去。</p>
+<p>PING/PONG总是会携带上Slots所属Master的信息（包括ConfigEpoch）</p>
+<p>PING的Reciever如果发现Sender的某个Slot上的Master.ConfigEpoch比自己这里记录的小，那么就会返回<code>UPDATE</code>告诉Sender更新Slots归属信息。</p>
+<p>下面是两个规则：</p>
+<ol>
+<li>如果一个Slot不属于任何Master，然后有一个Master宣称拥有它，那么就修改己侧的Slots信息把这个Slot关联到这个Master上。</li>
+<li>如果一个Slot已经归属一个Master，然后又有一个Master宣称拥有它，那么就看谁的ConfigEpoch大，大的那个赢</li>
+</ol>
+<h2 id="node复活后遇到的问题">Node复活后遇到的问题</h2>
+<p>Node A有两个Slot，然后它死了，它被顶替了，等它复活时发现两个Slot一个被Node B接管，另一个被Node C接管了，那么它：</p>
+<ol>
+<li>因为自己的ConfigEpoch已经很旧了，所以它复活后不负责任何Slot</li>
+<li>然后它会成为最后一个Slot的Master的Slave</li>
+</ol>
+<h2 id="slave迁移算法">Slave迁移算法</h2>
+<p>Slave迁移时一个自动过程。</p>
+<p>举个例子，现在有Master A、B，它们对应的Slave有A1、B1、B2。现在A死了，A1顶替上去，不过这个时候A1就是一个光棍Master（它没有Slave），B有富余的Slave（B1和B2），把其中一个匀给A1当Slave。</p>
+<p>这个过程不需要共识，因为只是修改Slave的归属，也不会修改ConfigEpoch。</p>
+<p>Slave迁移有两个规则：</p>
+<ol>
+<li>当有多个Slave富余时，选择NodeID字典顺最小的那个来迁移</li>
+<li>只有当Master的Slave数量&gt;=<code>cluster-migration-barrier</code>时，才会挑选它的Slave做Migration</li>
+</ol>
+<h2 id="两个跳过共识修改configepoch的操作">两个跳过共识修改ConfigEpoch的操作</h2>
+<p>下面两个操作比较危险，最好确定一个成功后再执行另一个：</p>
+<ul>
+<li><code>CLUSTER_FAILOVER TAKEOVER</code>（手动Failover）直接将一个Slave提升为Master，不需要大多数Master同意。</li>
+<li>Slot Migration同样不需要大多数Master同意。</li>
+</ul>
+<p>所以就有可能出现同一个Slot有两个相同ConfigEpoch的Master宣称由自己负责，这种冲突的解决算法是：</p>
+<ul>
+<li>如果Master A发现Master B也宣称了对Slot X的主权，并且两者的ConfigEpoch一样</li>
+<li>如果Master A的NodeID的字典顺比Master B的小</li>
+<li>那么Master A就把己侧的CurrentEpoch+1，同时ConfigEpoch改成和CurrentEpoch一样</li>
+</ul>
+<h2 id="node重置">Node重置</h2>
+<p>略，见<a href="https://redis.io/topics/cluster-spec#node-resets">文档</a>。</p>
+<h2 id="移除node">移除Node</h2>
+<p>略，见<a href="https://redis.io/topics/cluster-spec#removing-nodes-from-a-cluster">文档</a>。</p>
+<h2 id="一些自问自答">一些自问自答</h2>
+<p>Q：ConfigEpoch何时变化？</p>
+<p>A：Slave Promotion时、手动Failover时、Slot Migration时</p>
+<p>Q：ConfigEpoch怎么变化？</p>
+<p>A：Node-&gt;ConfigEpoch = Cluster-&gt;CurrentEpoch + 1，结果也就是Cluster-&gt;CurrentEpoch加1了。<a href="https://github.com/antirez/redis/blob/5.0.0/src/cluster.c#L983-L1029">源码见这里</a>。</p>
+<p>Q：两个Master的ConfigEpoch一样怎么办？</p>
+<p>A：这个会出现在两个Slave同时Promotion时，解决办法是NodeID字典序比较小的那个会再一次Bump ConfigEpoch，<a href="https://github.com/antirez/redis/blob/5.0.0/src/cluster.c#L1031-L1092">源码见这里</a>。</p>
+<p>Q：ConfigEpoch有什么用？</p>
+<p>A：当有两个Master宣称自己拥有同一个/批Slot时，ConfigEpoch大的那个赢，因为大的那个代表最新信息，其他Node只会采用赢的那方所宣称的信息。</p>
+<p>Q：CurrentEpoch有什么用？</p>
+<p>A：1）用来判定Node所获得的Cluster信息的新旧。2）当Node要变更ConfigEpoch时派用处。</p>
+<h3 id="参考资料">参考资料</h3>
+<p>官方文档，有些不是太清楚：</p>
+<ul>
+<li><a href="https://redis.io/topics/cluster-spec#configuration-handling-propagation-and-failovers">Redis Cluster Spec - Configuration handling, propagation, and failovers</a></li>
+</ul>
+<p>下面是饿了么工程师写的文章，比较透彻</p>
+<ul>
+<li><a href="https://zhuanlan.zhihu.com/p/25060071">Redis Cluster 原理与管理</a></li>
+</ul>
+<p>下面是两篇阿里工程师的，写的没有上面的好</p>
+<ul>
+<li><a href="https://yq.aliyun.com/articles/638627">深入理解redis cluster的failover机制</a></li>
+<li><a href="https://yq.aliyun.com/articles/680237">深入解析redis cluster gossip机制</a></li>
+</ul>
+        </p>
+    </div>
+    
+
+    
+
+    <div class="page-footer">
+        
+        <hr class="footer-divider">
+        
+            <a class="tag" href="https://chanjarster.github.io/tags/redis">#redis</a>
+        
+            <a class="tag" href="https://chanjarster.github.io/tags/%E5%88%86%E5%B8%83%E5%BC%8F%E7%AE%97%E6%B3%95">#分布式算法</a>
+        
+      
+    </div>
+
+
+        
+        </div>
+        <footer class="footer-mobile">
+	<div class="social-icons">
+        
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+    
+    
+    <a class="social-icon" href="chanjarster" target="_blank" rel="noopener" title="GitHub">
+        <svg width="28px" height="28px" viewBox="0 0 28 28" version="1.1" fill="#ABABAB" xmlns="https://www.w3.org/2000/svg" xmlns:xlink="https://www.w3.org/1999/xlink">
+            <path d="M13.9988029,1.32087331 C6.82105037,1.32087331 1,7.14112562 1,14.3212723 C1,20.0649109 4.72454649,24.9370678 9.89038951,26.6560892 C10.5408085,26.7757983 10.7778323,26.374374 10.7778323,26.0296121 C10.7778323,25.7215609 10.7666595,24.9035493 10.760275,23.8189856 C7.14426471,24.6042767 6.38131925,22.0760223 6.38131925,22.0760223 C5.78995672,20.5740732 4.93762853,20.1742451 4.93762853,20.1742451 C3.75729765,19.3682044 5.02701126,19.3841656 5.02701126,19.3841656 C6.33183953,19.4759425 7.01817121,20.7241085 7.01817121,20.7241085 C8.17775254,22.7104801 10.0611744,22.1366749 10.8017741,21.8038838 C10.919887,20.9643246 11.2558703,20.3913175 11.6269683,20.066507 C8.74038491,19.7385043 5.70536235,18.6228163 5.70536235,13.6413251 C5.70536235,12.2223743 6.21213051,11.0611968 7.04370914,10.1530044 C6.90963504,9.82420367 6.46351945,8.50181809 7.17139875,6.71256734 C7.17139875,6.71256734 8.26234691,6.36301702 10.7459099,8.04532771 C11.78259,7.75642995 12.8950858,7.61277914 14.000399,7.60719272 C15.1049142,7.61277914 16.2166119,7.75642995 17.2548881,8.04532771 C19.736855,6.36301702 20.8262071,6.71256734 20.8262071,6.71256734 C21.5356825,8.50181809 21.0895669,9.82420367 20.9562909,10.1530044 C21.7894656,11.0611968 22.2922435,12.2223743 22.2922435,13.6413251 C22.2922435,18.6355852 19.2524325,19.734514 16.3570705,20.0561322 C16.8231376,20.4575564 17.2389269,21.2508282 17.2389269,22.4638795 C17.2389269,24.2012564 17.2229657,25.603448 17.2229657,26.0296121 C17.2229657,26.3775663 17.4575954,26.7821827 18.116793,26.6552912 C23.2786458,24.9322794 27,20.0633148 27,14.3212723 C27,7.14112562 21.1789496,1.32087331 13.9988029,1.32087331"></path>
+        </svg>
+    </a>
+    
+
+    
+    
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+</div>
+
+
+
+
+	<div class="footer-mobile-links">
+        <p><a href="https://github.com/kimcc/hugo-theme-noteworthy" target="_blank" rel="noopener">Noteworthy theme</a></p>
+		<span class="divider-bar">|</span>
+        <p><a href="https://gohugo.io" target="_blank" rel="noopener">Built with Hugo</a></p>
+	</div>
+
+	<script src="https://chanjarster.github.io/js/main.min.fa5c2b23e07b5d9bfad267a52b4b24fdb053e6fb7524993383594926a3ac270c.js" integrity="sha256-+lwrI+B7XZv60melK0sk/bBT5vt1JJkzg1lJJqOsJww=" crossorigin="anonymous"></script>
+</footer>
+
+    </body>
+</html>

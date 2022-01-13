@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+
+<html lang="zh-cn">
+    <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="format-detection" content="telephone=no"/>
+
+    <title>Redis集群方案对比 | 颇忒脱的技术博客</title>
+    
+    <link rel="apple-touch-icon" sizes="180x180" href="https://chanjarster.github.io/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="https://chanjarster.github.io/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="https://chanjarster.github.io/favicon-16x16.png">
+    <link rel="manifest" href="https://chanjarster.github.io/manifest.json">
+    <link rel="mask-icon" href="https://chanjarster.github.io/safari-pinned-tab.svg" color="#FF3DB4">
+    <meta name="theme-color" content="#ffffff">
+
+    
+    
+    
+    <link rel="stylesheet" href="https://chanjarster.github.io/css/main.min.fb0741ac272e7c9bef84b235a2f86925ce49db17e728cfc0e73fa00ec39c73ee.css"/>
+
+    
+    
+    
+
+    
+    
+ 
+    </head>
+
+    <body>
+        
+<nav>
+  <header>
+    <div class="site-title">
+        <a href="https://chanjarster.github.io/">颇忒脱的技术博客</a>
+    </div>  
+</header>
+
+  <div class="nav-menu">
+  
+    <a class="color-link nav-link" href="https://chanjarster.github.io/">Home</a>
+  
+    <a class="color-link nav-link" href="https://chanjarster.github.io/tags/%E6%94%B6%E8%97%8F%E5%A4%B9/">Bookmarks</a>
+  
+    <a class="color-link nav-link" href="https://chanjarster.github.io/post/jvm/index-page">JVM</a>
+  
+    <a class="color-link nav-link" href="https://chanjarster.github.io/post/concurrent-programming/index-page">并发编程</a>
+  
+    <a class="color-link nav-link" href="https://chanjarster.github.io/post/mysql/index-page">MySQL</a>
+  
+    <a class="color-link nav-link" href="https://chanjarster.github.io/tags/go/">Go</a>
+  
+    <a class="color-link nav-link" href="https://chanjarster.github.io/tags/gc/">GC</a>
+  
+    <a class="color-link nav-link" href="https://chanjarster.github.io/tags/kernel/">Kernel</a>
+  
+    <a class="color-link nav-link" href="https://chanjarster.github.io/tags/cheatsheet/">Cheatsheet</a>
+  
+    <a class="color-link nav-link" href="https://chanjarster.github.io/tags/troubleshooting/">排障实战记录</a>
+  
+    <a class="color-link nav-link" href="https://github.com/chanjarster">Works</a>
+  
+    <a class="color-link nav-link" href="https://chanjarster.github.io/tags/">Tags</a>
+  
+  <a class="color-link nav-link" href="https://chanjarster.github.io/index.xml" target="_blank" rel="noopener" type="application/rss+xml">RSS</a>
+</div>
+<footer class="footer">
+	<div class="social-icons">
+        
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+    
+    
+    <a class="social-icon" href="chanjarster" target="_blank" rel="noopener" title="GitHub">
+        <svg width="28px" height="28px" viewBox="0 0 28 28" version="1.1" fill="#ABABAB" xmlns="https://www.w3.org/2000/svg" xmlns:xlink="https://www.w3.org/1999/xlink">
+            <path d="M13.9988029,1.32087331 C6.82105037,1.32087331 1,7.14112562 1,14.3212723 C1,20.0649109 4.72454649,24.9370678 9.89038951,26.6560892 C10.5408085,26.7757983 10.7778323,26.374374 10.7778323,26.0296121 C10.7778323,25.7215609 10.7666595,24.9035493 10.760275,23.8189856 C7.14426471,24.6042767 6.38131925,22.0760223 6.38131925,22.0760223 C5.78995672,20.5740732 4.93762853,20.1742451 4.93762853,20.1742451 C3.75729765,19.3682044 5.02701126,19.3841656 5.02701126,19.3841656 C6.33183953,19.4759425 7.01817121,20.7241085 7.01817121,20.7241085 C8.17775254,22.7104801 10.0611744,22.1366749 10.8017741,21.8038838 C10.919887,20.9643246 11.2558703,20.3913175 11.6269683,20.066507 C8.74038491,19.7385043 5.70536235,18.6228163 5.70536235,13.6413251 C5.70536235,12.2223743 6.21213051,11.0611968 7.04370914,10.1530044 C6.90963504,9.82420367 6.46351945,8.50181809 7.17139875,6.71256734 C7.17139875,6.71256734 8.26234691,6.36301702 10.7459099,8.04532771 C11.78259,7.75642995 12.8950858,7.61277914 14.000399,7.60719272 C15.1049142,7.61277914 16.2166119,7.75642995 17.2548881,8.04532771 C19.736855,6.36301702 20.8262071,6.71256734 20.8262071,6.71256734 C21.5356825,8.50181809 21.0895669,9.82420367 20.9562909,10.1530044 C21.7894656,11.0611968 22.2922435,12.2223743 22.2922435,13.6413251 C22.2922435,18.6355852 19.2524325,19.734514 16.3570705,20.0561322 C16.8231376,20.4575564 17.2389269,21.2508282 17.2389269,22.4638795 C17.2389269,24.2012564 17.2229657,25.603448 17.2229657,26.0296121 C17.2229657,26.3775663 17.4575954,26.7821827 18.116793,26.6552912 C23.2786458,24.9322794 27,20.0633148 27,14.3212723 C27,7.14112562 21.1789496,1.32087331 13.9988029,1.32087331"></path>
+        </svg>
+    </a>
+    
+
+    
+    
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+</div>
+
+
+
+
+    <p><a href="https://github.com/kimcc/hugo-theme-noteworthy" target="_blank" rel="noopener">Noteworthy theme</a></p>
+    <p><a href="https://gohugo.io" target="_blank" rel="noopener">Built with Hugo</a></p>
+
+	<script src="https://chanjarster.github.io/js/main.min.fa5c2b23e07b5d9bfad267a52b4b24fdb053e6fb7524993383594926a3ac270c.js" integrity="sha256-+lwrI+B7XZv60melK0sk/bBT5vt1JJkzg1lJJqOsJww=" crossorigin="anonymous"></script>
+</footer>
+
+</nav>
+
+        <div id="content" class="content-container">
+        
+
+<h1 class="post-title">Redis集群方案对比</h1>
+    
+    <time>January 13, 2022</time>
+    
+    <div>
+        <p>
+        <p>本文专注于从程序角度看如何使用Redis集群，以及相关的方案。</p>
+<h2 id="概要">概要</h2>
+<p>为何要做集群？主要原因就是为了做Sharding/Partitioning，所以Redis集群方案等价为Redis Sharding/Partitioning方案。</p>
+<p><a href="https://redis.io/topics/partitioning">Partitioning: how to split data among multiple Redis instances</a> 对Redis做集群的利弊和考量做了详细说明。因此，在确定方案之前，要先确定你的Redis是用来做什么的？做Cache还是数据持久化，不同方案对此的支持程度是不同的。不言自明的是，如果Redis用途是Cache，整个集群方案会更简单。</p>
+<p>需要注意的是，无论采取何种方案，因为Sharding的存在，天然会导致有些命令在集群环境下是无法（正常）工作的，因此对于程序的改造是不可避免的。</p>
+<p>Redis集群的方案基本上由以下组件构成：</p>
+<ul>
+<li>Client</li>
+<li>Proxy</li>
+<li>Redis实例</li>
+</ul>
+<p>集群管理组件和Redis Sentinel不在本文的探讨范围之内。</p>
+<p>而这些组件又可以做出以下细分：</p>
+<table>
+<thead>
+<tr>
+<th style="text-align:center">组件</th>
+<th style="text-align:center">类型</th>
+<th style="text-align:left">说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:center">Redis</td>
+<td style="text-align:center">simple</td>
+<td style="text-align:left">最简单的standalone Redis实例</td>
+</tr>
+<tr>
+<td style="text-align:center"></td>
+<td style="text-align:center">cluster</td>
+<td style="text-align:left"><a href="https://redis.io/topics/cluster-tutorial">Redis Cluster</a></td>
+</tr>
+<tr>
+<td style="text-align:center">Proxy</td>
+<td style="text-align:center">sharding</td>
+<td style="text-align:left">连接多个Redis Simple实例，内置Sharding逻辑</td>
+</tr>
+<tr>
+<td style="text-align:center"></td>
+<td style="text-align:center">cluster</td>
+<td style="text-align:left">支持<a href="https://redis.io/topics/cluster-tutorial">Redis Cluster</a></td>
+</tr>
+<tr>
+<td style="text-align:center">Client</td>
+<td style="text-align:center">simple</td>
+<td style="text-align:left">傻瓜式客户端，只能连接单个Redis Simple实例</td>
+</tr>
+<tr>
+<td style="text-align:center"></td>
+<td style="text-align:center">sharding</td>
+<td style="text-align:left">连接多个Redis Simple实例，内置Sharding逻辑</td>
+</tr>
+<tr>
+<td style="text-align:center"></td>
+<td style="text-align:center">cluster</td>
+<td style="text-align:left">支持<a href="https://redis.io/topics/cluster-tutorial">Redis Cluster</a></td>
+</tr>
+</tbody>
+</table>
+<h2 id="先说结论">先说结论</h2>
+<p>可以组合出以下几种方案（方案顺序最便利-&gt;最麻烦）：</p>
+<table>
+<thead>
+<tr>
+<th style="text-align:center">Client</th>
+<th style="text-align:center">Proxy</th>
+<th style="text-align:center">Redis</th>
+<th style="text-align:left">便利性</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:center">simple</td>
+<td style="text-align:center">cluster</td>
+<td style="text-align:center">cluster</td>
+<td style="text-align:left">无改动</td>
+</tr>
+<tr>
+<td style="text-align:center">simple</td>
+<td style="text-align:center">sharding</td>
+<td style="text-align:center">simple</td>
+<td style="text-align:left">无改动，另外需要Dashboard来管理集群</td>
+</tr>
+<tr>
+<td style="text-align:center">cluster</td>
+<td style="text-align:center">&ndash;</td>
+<td style="text-align:center">cluster</td>
+<td style="text-align:left">可能有改动</td>
+</tr>
+<tr>
+<td style="text-align:center">sharding</td>
+<td style="text-align:center">&ndash;</td>
+<td style="text-align:center">simple</td>
+<td style="text-align:left">可能有改动，无改动，另外需要Dashboard来管理集群</td>
+</tr>
+</tbody>
+</table>
+<p>注意：这里的程序改动指的是建立连接或者API的改动，不包括Redis命令的改动，这部分改动是不可避免的。</p>
+<h2 id="组件">组件</h2>
+<p>具体讲讲集群的各个组件，以及可用的开源项目。</p>
+<h3 id="proxy">Proxy</h3>
+<p>不管何种Proxy，其目的都是伪装成一个Simple Redis实例，使得程序无需改造就能够利用Redis集群。</p>
+<h4 id="sharding类型">sharding类型</h4>
+<p>这种类型的Proxy连接多个simple redis实例，根据自己的Sharding/LB算法，把请求分配到各个redis实例上。</p>
+<p>这类Proxy 需要配合 Dashboard（管理组件）才能够更新节点列表。更复杂的运维任务也需要Dashboard配合。</p>
+<h4 id="cluster类型">cluster类型</h4>
+<p>这种类型的Proxy直接连接在<a href="https://redis.io/topics/cluster-tutorial">Redis Cluster</a>上，集群的管理工作全部交给<a href="https://redis.io/topics/cluster-tutorial">Redis Cluster</a>，Proxy能够感知到集群节点变化，并且路由命令到正确的Slot上，避免MOVED/ASK重定向，提升执行效率。</p>
+<h4 id="开源项目">开源项目</h4>
+<table>
+<thead>
+<tr>
+<th style="text-align:center">项目</th>
+<th style="text-align:center">sharding</th>
+<th style="text-align:center">cluster</th>
+<th style="text-align:center">维护</th>
+<th style="text-align:left">说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:center"><a href="https://github.com/twitter/twemproxy">twemproxy</a></td>
+<td style="text-align:center">Y</td>
+<td style="text-align:center"></td>
+<td style="text-align:center">不活跃</td>
+<td style="text-align:left"></td>
+</tr>
+<tr>
+<td style="text-align:center"><a href="https://github.com/eleme/corvus">corvus</a></td>
+<td style="text-align:center">Y</td>
+<td style="text-align:center"></td>
+<td style="text-align:center">停止</td>
+<td style="text-align:left">改进<a href="https://github.com/twitter/twemproxy">twemproxy</a>，饿了么</td>
+</tr>
+<tr>
+<td style="text-align:center"><a href="https://github.com/CodisLabs/codis">Codis</a></td>
+<td style="text-align:center">Y</td>
+<td style="text-align:center"></td>
+<td style="text-align:center">停止</td>
+<td style="text-align:left">改进<a href="https://github.com/twitter/twemproxy">twemproxy</a>，自带Dashboard，豌豆荚</td>
+</tr>
+<tr>
+<td style="text-align:center"><a href="https://samaritan-proxy.github.io/docs/arch/protocol/redis/redis/">samaritan</a></td>
+<td style="text-align:center">?</td>
+<td style="text-align:center">Y</td>
+<td style="text-align:center">停止</td>
+<td style="text-align:left"><a href="https://github.com/eleme/corvus">corvus</a>的继任项目，sidecar形式的proxy，只支持Redis &lt;= 5.0，配套Dashboard <a href="https://github.com/samaritan-proxy/sash">sash</a></td>
+</tr>
+<tr>
+<td style="text-align:center"><a href="https://github.com/RedisLabs/redis-cluster-proxy">Redis Cluster Proxy</a></td>
+<td style="text-align:center"></td>
+<td style="text-align:center">Y</td>
+<td style="text-align:center">停止</td>
+<td style="text-align:left">官方搞的，处于alpha状态，不推荐生产使用</td>
+</tr>
+<tr>
+<td style="text-align:center"><a href="https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/other_protocols/redis">envoy</a></td>
+<td style="text-align:center">?</td>
+<td style="text-align:center">Y</td>
+<td style="text-align:center">活跃</td>
+<td style="text-align:left">sidecar形式的proxy, redis只是其中一项功能</td>
+</tr>
+<tr>
+<td style="text-align:center"><a href="https://github.com/netease-im/camellia">camellia-redis-proxy</a></td>
+<td style="text-align:center">Y</td>
+<td style="text-align:center">Y</td>
+<td style="text-align:center">活跃</td>
+<td style="text-align:left">网易</td>
+</tr>
+</tbody>
+</table>
+<h3 id="client">Client</h3>
+<p>Client方案和Proxy方案类似，可以类比为把Proxy的基本功能以类库的形式集成到Client里。</p>
+<p>simple （傻瓜式）client没什么好谈的，就是最简单的客户端，只能连接一个Redis实例。</p>
+<p>随着技术的发展，有些simple client也渐渐支持sharding和cluster特性。</p>
+<p>不过需要注意的是，某些Client的实现不是太好，不同模式的API形式不一致，这意味着一定的改造成本。</p>
+<h4 id="sharding类型-1">sharding类型</h4>
+<p>这种类型的Client连接多个simple redis实例，根据自己的Sharding/LB算法，把请求分配到各个redis实例上。</p>
+<p>这类Client 需要配合 Dashboard（管理组件）才能够更新节点列表。更复杂的运维任务也需要Dashboard配合。</p>
+<h4 id="cluster类型-1">cluster类型</h4>
+<p>这种类型的 Client 直接支持 <a href="https://redis.io/topics/cluster-tutorial">Redis Cluster</a> 协议，能够感知到集群中节点的变化。</p>
+<h4 id="开源项目-1">开源项目</h4>
+<table>
+<thead>
+<tr>
+<th style="text-align:center">项目</th>
+<th style="text-align:center">sharding</th>
+<th style="text-align:center">cluster</th>
+<th style="text-align:center">API一致</th>
+<th style="text-align:center">维护</th>
+<th style="text-align:left">说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:center"><a href="https://github.com/redis/jedis">jedis</a></td>
+<td style="text-align:center"><a href="https://github.com/redis/jedis/wiki/AdvancedUsage#shardedjedis">ShardedJedis</a></td>
+<td style="text-align:center"></td>
+<td style="text-align:center">N</td>
+<td style="text-align:center"></td>
+<td style="text-align:left"></td>
+</tr>
+<tr>
+<td style="text-align:center"><a href="https://lettuce.io/docs/">lettuce</a></td>
+<td style="text-align:center"></td>
+<td style="text-align:center">Y</td>
+<td style="text-align:center">Y</td>
+<td style="text-align:center">活跃</td>
+<td style="text-align:left"></td>
+</tr>
+<tr>
+<td style="text-align:center"><a href="https://github.com/netease-im/camellia">camellia-redis</a></td>
+<td style="text-align:center">Y</td>
+<td style="text-align:center">Y</td>
+<td style="text-align:center">Y</td>
+<td style="text-align:center">活跃</td>
+<td style="text-align:left">网易</td>
+</tr>
+</tbody>
+</table>
+        </p>
+    </div>
+    
+
+    
+
+    <div class="page-footer">
+        
+        <hr class="footer-divider">
+        
+            <a class="tag" href="https://chanjarster.github.io/tags/redis">#redis</a>
+        
+            <a class="tag" href="https://chanjarster.github.io/tags/%E5%88%86%E5%B8%83%E5%BC%8F%E7%AE%97%E6%B3%95">#分布式算法</a>
+        
+      
+    </div>
+
+
+        
+        </div>
+        <footer class="footer-mobile">
+	<div class="social-icons">
+        
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+    
+    
+    <a class="social-icon" href="chanjarster" target="_blank" rel="noopener" title="GitHub">
+        <svg width="28px" height="28px" viewBox="0 0 28 28" version="1.1" fill="#ABABAB" xmlns="https://www.w3.org/2000/svg" xmlns:xlink="https://www.w3.org/1999/xlink">
+            <path d="M13.9988029,1.32087331 C6.82105037,1.32087331 1,7.14112562 1,14.3212723 C1,20.0649109 4.72454649,24.9370678 9.89038951,26.6560892 C10.5408085,26.7757983 10.7778323,26.374374 10.7778323,26.0296121 C10.7778323,25.7215609 10.7666595,24.9035493 10.760275,23.8189856 C7.14426471,24.6042767 6.38131925,22.0760223 6.38131925,22.0760223 C5.78995672,20.5740732 4.93762853,20.1742451 4.93762853,20.1742451 C3.75729765,19.3682044 5.02701126,19.3841656 5.02701126,19.3841656 C6.33183953,19.4759425 7.01817121,20.7241085 7.01817121,20.7241085 C8.17775254,22.7104801 10.0611744,22.1366749 10.8017741,21.8038838 C10.919887,20.9643246 11.2558703,20.3913175 11.6269683,20.066507 C8.74038491,19.7385043 5.70536235,18.6228163 5.70536235,13.6413251 C5.70536235,12.2223743 6.21213051,11.0611968 7.04370914,10.1530044 C6.90963504,9.82420367 6.46351945,8.50181809 7.17139875,6.71256734 C7.17139875,6.71256734 8.26234691,6.36301702 10.7459099,8.04532771 C11.78259,7.75642995 12.8950858,7.61277914 14.000399,7.60719272 C15.1049142,7.61277914 16.2166119,7.75642995 17.2548881,8.04532771 C19.736855,6.36301702 20.8262071,6.71256734 20.8262071,6.71256734 C21.5356825,8.50181809 21.0895669,9.82420367 20.9562909,10.1530044 C21.7894656,11.0611968 22.2922435,12.2223743 22.2922435,13.6413251 C22.2922435,18.6355852 19.2524325,19.734514 16.3570705,20.0561322 C16.8231376,20.4575564 17.2389269,21.2508282 17.2389269,22.4638795 C17.2389269,24.2012564 17.2229657,25.603448 17.2229657,26.0296121 C17.2229657,26.3775663 17.4575954,26.7821827 18.116793,26.6552912 C23.2786458,24.9322794 27,20.0633148 27,14.3212723 C27,7.14112562 21.1789496,1.32087331 13.9988029,1.32087331"></path>
+        </svg>
+    </a>
+    
+
+    
+    
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+</div>
+
+
+
+
+	<div class="footer-mobile-links">
+        <p><a href="https://github.com/kimcc/hugo-theme-noteworthy" target="_blank" rel="noopener">Noteworthy theme</a></p>
+		<span class="divider-bar">|</span>
+        <p><a href="https://gohugo.io" target="_blank" rel="noopener">Built with Hugo</a></p>
+	</div>
+
+	<script src="https://chanjarster.github.io/js/main.min.fa5c2b23e07b5d9bfad267a52b4b24fdb053e6fb7524993383594926a3ac270c.js" integrity="sha256-+lwrI+B7XZv60melK0sk/bBT5vt1JJkzg1lJJqOsJww=" crossorigin="anonymous"></script>
+</footer>
+
+    </body>
+</html>
