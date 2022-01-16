@@ -1,161 +1,228 @@
-<!DOCTYPE html>
-
-<html lang="zh-cn">
-    <head>
+<!doctype html><html lang="zh-cn" data-palette="blue"
+  >
+  <head>
     <meta charset="utf-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="format-detection" content="telephone=no"/>
+    <title>如何在Tomcat中做TLS客户端认证 - 颇忒脱的技术博客</title><link rel="apple-touch-icon" href="/images/icons/icon-180x180.png" sizes="180x180">
+<link rel="icon" href="/images/icons/icon-32x32.png" sizes="32x32" type="image/png">
+<link rel="icon" href="/images/icons/icon-16x16.png" sizes="16x16" type="image/png">
+<link rel="icon" href="/images/icons/favicon.ico">
+<link rel="manifest" href="/manifest.json">
+<meta name="keywords" content="" />
+<meta name="description" content="" /><meta itemprop="name" content="如何在Tomcat中做TLS客户端认证">
+<meta itemprop="description" content=""><meta itemprop="datePublished" content="2019-03-27T15:01:57+08:00" />
+<meta itemprop="dateModified" content="2019-03-27T15:01:57+08:00" />
+<meta itemprop="wordCount" content="5323">
+<meta itemprop="keywords" content="java,tls,openssl," /><meta property="og:title" content="如何在Tomcat中做TLS客户端认证" />
+<meta property="og:description" content="" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="/post/tls/how-to-tls-client-authentication-in-tomcat/" /><meta property="article:section" content="post" />
+<meta property="article:published_time" content="2019-03-27T15:01:57+08:00" />
+<meta property="article:modified_time" content="2019-03-27T15:01:57+08:00" /><meta property="og:site_name" content="颇忒脱的技术博客" />
 
-    <title>如何在Tomcat中做TLS客户端认证 | 颇忒脱的技术博客</title>
-    
-    <link rel="apple-touch-icon" sizes="180x180" href="https://chanjarster.github.io/apple-touch-icon.png">
-    <link rel="icon" type="image/png" sizes="32x32" href="https://chanjarster.github.io/favicon-32x32.png">
-    <link rel="icon" type="image/png" sizes="16x16" href="https://chanjarster.github.io/favicon-16x16.png">
-    <link rel="manifest" href="https://chanjarster.github.io/manifest.json">
-    <link rel="mask-icon" href="https://chanjarster.github.io/safari-pinned-tab.svg" color="#FF3DB4">
-    <meta name="theme-color" content="#ffffff">
-
-    
-    
-    
-    <link rel="stylesheet" href="https://chanjarster.github.io/css/main.min.fb0741ac272e7c9bef84b235a2f86925ce49db17e728cfc0e73fa00ec39c73ee.css"/>
-
-    
-    
-    
-
-    
-    
- 
-    </head>
-
-    <body>
-        
-<nav>
-  <header>
-    <div class="site-title">
-        <a href="https://chanjarster.github.io/">颇忒脱的技术博客</a>
-    </div>  
-</header>
-
-  <div class="nav-menu">
-  
-    <a class="color-link nav-link" href="https://chanjarster.github.io/">Home</a>
-  
-    <a class="color-link nav-link" href="https://chanjarster.github.io/tags/%E6%94%B6%E8%97%8F%E5%A4%B9/">Bookmarks</a>
-  
-    <a class="color-link nav-link" href="https://chanjarster.github.io/post/jvm/index-page">JVM</a>
-  
-    <a class="color-link nav-link" href="https://chanjarster.github.io/post/concurrent-programming/index-page">并发编程</a>
-  
-    <a class="color-link nav-link" href="https://chanjarster.github.io/post/mysql/index-page">MySQL</a>
-  
-    <a class="color-link nav-link" href="https://chanjarster.github.io/tags/go/">Go</a>
-  
-    <a class="color-link nav-link" href="https://chanjarster.github.io/tags/gc/">GC</a>
-  
-    <a class="color-link nav-link" href="https://chanjarster.github.io/tags/kernel/">Kernel</a>
-  
-    <a class="color-link nav-link" href="https://chanjarster.github.io/tags/cheatsheet/">Cheatsheet</a>
-  
-    <a class="color-link nav-link" href="https://chanjarster.github.io/tags/troubleshooting/">排障实战记录</a>
-  
-    <a class="color-link nav-link" href="https://github.com/chanjarster">Works</a>
-  
-    <a class="color-link nav-link" href="https://chanjarster.github.io/tags/">Tags</a>
-  
-  <a class="color-link nav-link" href="https://chanjarster.github.io/index.xml" target="_blank" rel="noopener" type="application/rss+xml">RSS</a>
-</div>
-<footer class="footer">
-	<div class="social-icons">
-        
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-    
-    
-    <a class="social-icon" href="chanjarster" target="_blank" rel="noopener" title="GitHub">
-        <svg width="28px" height="28px" viewBox="0 0 28 28" version="1.1" fill="#ABABAB" xmlns="https://www.w3.org/2000/svg" xmlns:xlink="https://www.w3.org/1999/xlink">
-            <path d="M13.9988029,1.32087331 C6.82105037,1.32087331 1,7.14112562 1,14.3212723 C1,20.0649109 4.72454649,24.9370678 9.89038951,26.6560892 C10.5408085,26.7757983 10.7778323,26.374374 10.7778323,26.0296121 C10.7778323,25.7215609 10.7666595,24.9035493 10.760275,23.8189856 C7.14426471,24.6042767 6.38131925,22.0760223 6.38131925,22.0760223 C5.78995672,20.5740732 4.93762853,20.1742451 4.93762853,20.1742451 C3.75729765,19.3682044 5.02701126,19.3841656 5.02701126,19.3841656 C6.33183953,19.4759425 7.01817121,20.7241085 7.01817121,20.7241085 C8.17775254,22.7104801 10.0611744,22.1366749 10.8017741,21.8038838 C10.919887,20.9643246 11.2558703,20.3913175 11.6269683,20.066507 C8.74038491,19.7385043 5.70536235,18.6228163 5.70536235,13.6413251 C5.70536235,12.2223743 6.21213051,11.0611968 7.04370914,10.1530044 C6.90963504,9.82420367 6.46351945,8.50181809 7.17139875,6.71256734 C7.17139875,6.71256734 8.26234691,6.36301702 10.7459099,8.04532771 C11.78259,7.75642995 12.8950858,7.61277914 14.000399,7.60719272 C15.1049142,7.61277914 16.2166119,7.75642995 17.2548881,8.04532771 C19.736855,6.36301702 20.8262071,6.71256734 20.8262071,6.71256734 C21.5356825,8.50181809 21.0895669,9.82420367 20.9562909,10.1530044 C21.7894656,11.0611968 22.2922435,12.2223743 22.2922435,13.6413251 C22.2922435,18.6355852 19.2524325,19.734514 16.3570705,20.0561322 C16.8231376,20.4575564 17.2389269,21.2508282 17.2389269,22.4638795 C17.2389269,24.2012564 17.2229657,25.603448 17.2229657,26.0296121 C17.2229657,26.3775663 17.4575954,26.7821827 18.116793,26.6552912 C23.2786458,24.9322794 27,20.0633148 27,14.3212723 C27,7.14112562 21.1789496,1.32087331 13.9988029,1.32087331"></path>
-        </svg>
+<meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="如何在Tomcat中做TLS客户端认证"/>
+<meta name="twitter:description" content=""/>
+<meta name="robots" content="index, follow" /><link rel="stylesheet" href="/css/main.min.b7a6eda8d46e39a549f182cf72a9ff4f4c1d4d82c31ecc3ede0b7f4d5b26f32b.css" integrity="sha256-t6btqNRuOaVJ8YLPcqn/T0wdTYLDHsw&#43;3gt/TVsm8ys=" crossorigin="anonymous"><link rel="stylesheet" href="/css/viewer.min.3d228794bcedbbfa0412beb8fbc1ec6973202945e42af7004f742a4d7bd620ab.css" integrity="sha256-PSKHlLztu/oEEr64&#43;8HsaXMgKUXkKvcAT3QqTXvWIKs=" crossorigin="anonymous"></head>
+  <body><script>const items=['mode','palette'];items.forEach(function(a){const b=localStorage.getItem('hbs-'+a);b&&document.body.parentElement.setAttribute('data-'+a,b)})</script><header><nav class="navbar top-app-bar top-app-bar-expand-lg fixed-top">
+  <div class="container">
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent"
+      aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <i class="fas fa-bars"></i>
+    </button><a class="navbar-brand flex-grow-1 flex-lg-grow-0 text-center text-lg-start mx-auto me-lg-3" href="/"><img class="logo" alt="Logo" src="/images/avatar.jpg" loading="lazy"
+   width="455" height="455"
+   />颇忒脱的技术博客
     </a>
     
+    <button class="navbar-settings" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvasSettings"
+  aria-controls="offcanvasSettings" aria-label="Toggle settings">
+  <i class="fas fa-ellipsis-v"></i>
+</button>
 
-    
-    
-    
+<div class="offcanvas offcanvas-end surface h-100" tabindex="-1" id="offcanvasSettings" aria-labelledby="offcanvasSettings">
+  <div class="offcanvas-header">
+    <h3 class="offcanvas-title">设置</h3>
+    <button type="button" class="btn btn-sm btn-outline-primary" data-bs-dismiss="offcanvas" aria-label="Close">
+      <i class="fas fa-times"></i>
+    </button>
+  </div>
+  <div class="offcanvas-body d-flex flex-column">
 
-    
+<section class="setting">
+  <form class="row">
+    <div class="col-auto">
+      <label><i class="fas fa-fw fa-adjust"></i> 模式</label>
+    </div>
+    <div class="col-auto ms-auto">
+      <div class="form-check form-switch">
+        <input class="form-check-input" type="checkbox" id="modeSwitcher">
+      </div>
+    </div>
+  </form>
+</section>
 
-    
+<section class="setting">
+  <form class="font-size-switcher-form row">
+    <div class="col-auto">
+      <label for="fontSize" class="form-label"><i class="fas fa-fw fa-font"></i> 字体大小</label>
+    </div>
+    <div class="col-auto ms-auto">
+      <input type="range" class="form-range" min="-2" max="2" id="fontSize">
+    </div>
+  </form>
+</section>
 
-    
 
-    
-
-    
-
-    
-
-    
+<section class="setting palettes">
+  <form class="row">
+    <div class="col-auto">
+      <label><i class="fas fa-fw fa-palette"></i> 配色</label>
+    </div>
+    <div class="col-auto ms-auto">
+      <a id="btnPalette" class="btn btn-sm btn-outline-primary" role="button" aria-label="palettePicker">
+        <i class="fas fa-eye-dropper"></i>
+      </a>
+    </div>
+  </form>
+  <div class="mt-2 d-flex justify-content-between visually-hidden" id="palettePicker"><button type="button" id="palette-blue" aria-label="蓝色"
+        class="btn btn-sm w-100 palette" data-palette="blue">
+      </button><button type="button" id="palette-blue-gray" aria-label="蓝灰色"
+        class="btn btn-sm w-100 palette" data-palette="blue-gray">
+      </button><button type="button" id="palette-brown" aria-label="棕色"
+        class="btn btn-sm w-100 palette" data-palette="brown">
+      </button><button type="button" id="palette-cyan" aria-label="青色"
+        class="btn btn-sm w-100 palette" data-palette="cyan">
+      </button><button type="button" id="palette-green" aria-label="绿色"
+        class="btn btn-sm w-100 palette" data-palette="green">
+      </button><button type="button" id="palette-indigo" aria-label="靛青色"
+        class="btn btn-sm w-100 palette" data-palette="indigo">
+      </button><button type="button" id="palette-orange" aria-label="橙色"
+        class="btn btn-sm w-100 palette" data-palette="orange">
+      </button><button type="button" id="palette-pink" aria-label="粉色"
+        class="btn btn-sm w-100 palette" data-palette="pink">
+      </button><button type="button" id="palette-purple" aria-label="紫色"
+        class="btn btn-sm w-100 palette" data-palette="purple">
+      </button><button type="button" id="palette-red" aria-label="红色"
+        class="btn btn-sm w-100 palette" data-palette="red">
+      </button><button type="button" id="palette-teal" aria-label="蓝绿色"
+        class="btn btn-sm w-100 palette" data-palette="teal">
+      </button><button type="button" id="palette-yellow" aria-label="黄色"
+        class="btn btn-sm w-100 palette" data-palette="yellow">
+      </button></div>
+</section>
+<section class="setting actions d-flex justify-content-around mt-auto overflow-auto">
+  <a role="button" class="action action-go-back" href="javascript: window.history.back();">
+    <span class="action-icon"><i class="fas fa-2x fa-arrow-left"></i></span> 返回
+  </a>
+  <a role="button" class="action action-reload-page">
+    <span class="action-icon"><i class="fas fa-2x fa-redo-alt"></i></span> 刷新
+  </a>
+  <a role="button" class="action action-copy-url">
+    <span class="action-icon"><i class="fas fa-2x fa-link"></i></span> 复制链接
+  </a></section>
 
 </div>
+</div>
 
-
-
-
-    <p><a href="https://github.com/kimcc/hugo-theme-noteworthy" target="_blank" rel="noopener">Noteworthy theme</a></p>
-    <p><a href="https://gohugo.io" target="_blank" rel="noopener">Built with Hugo</a></p>
-
-	<script src="https://chanjarster.github.io/js/main.min.fa5c2b23e07b5d9bfad267a52b4b24fdb053e6fb7524993383594926a3ac270c.js" integrity="sha256-+lwrI+B7XZv60melK0sk/bBT5vt1JJkzg1lJJqOsJww=" crossorigin="anonymous"></script>
-</footer>
-
+    <div class="collapse navbar-collapse" tabindex="-1" id="navbarSupportedContent" aria-labelledby="navbarSupportedContent">
+      <form class="search-bar my-1" action="/search">
+  <div class="input-group input-group-sm">
+    <span class="btn btn-search disabled position-absolute left-0"><i class="fas fa-fw fa-search"></i></span>
+    <input class="form-control rounded-pill" name="q" type="search" aria-label="Search">
+  </div>
+</form>
+      <ul class="navbar-nav ms-auto"><li class="nav-item">
+          <a class="nav-link" href="/series/">
+            <i class="fas fa-fw fa-columns"></i>专栏
+          </a>
+        </li><li class="nav-item dropdown">
+          <a class="nav-link" id="navbarDropdownIndex" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+            <i class="fas fa-fw fa-chevron-circle-down"></i>快速索引
+          </a>
+          <ul class="dropdown-menu" aria-labelledby="navbarDropdownIndex"><li>
+              <a class="dropdown-item"
+                href="/tags/go">
+                Go
+              </a>
+            </li><li>
+              <a class="dropdown-item"
+                href="/tags/gc">
+                GC
+              </a>
+            </li><li>
+              <a class="dropdown-item"
+                href="/tags/kernel">
+                Kernel
+              </a>
+            </li><li>
+              <a class="dropdown-item"
+                href="/tags/cheatsheet">
+                Cheatsheet
+              </a>
+            </li><li>
+              <a class="dropdown-item"
+                href="/tags/troubleshooting">
+                排障实战记录
+              </a>
+            </li></ul>
+        </li><li class="nav-item">
+          <a class="nav-link" href="/tags/">
+            <i class="fas fa-fw fa-tags"></i>标签
+          </a>
+        </li><li class="nav-item">
+          <a class="nav-link" href="/archives/">
+            <i class="fas fa-fw fa-file-archive"></i>归档
+          </a>
+        </li></ul>
+    </div>
+  </div>
 </nav>
-
-        <div id="content" class="content-container">
-        
-
-<h1 class="post-title">如何在Tomcat中做TLS客户端认证</h1>
+</header>
+<main role="main" class="container">
+      <div class="row content">
+<div class="col-lg-8">
+  <div class="container"><nav class="row card component" aria-label="breadcrumb">
+  <div class="card-body">
+    <ol class="breadcrumb "><li class="breadcrumb-item"><a href="/">主页</a></li><li class="breadcrumb-item"><a href="/post/">文章</a></li><li class="breadcrumb-item active">如何在Tomcat中做TLS客户端认证</li></ol>
+  </div>
+</nav><div class="post-panel-wrapper">
+  <div class="d-flex flex-column component rounded post-panel">
     
-    <time>March 27, 2019</time>
+    <a class="action action-panel-toggler" role="button" title="Panel toggler">
+      <i class="fas fa-fw fa-chevron-circle-down"></i>
+    </a>
+    <a id="sidebarToggler" class="action d-none d-lg-block" role="button" title="Sidebar toggler">
+  <i class="fas fa-fw fa-expand-alt" data-fa-transform="rotate-45"></i>
+</a>
+
     
-    <div>
-        <p>
-        <p>常见的https网站做的是服务端认证（server authentication），浏览器通过证书判断你所访问的https://baidu.com是否真的是百度，而不是其他人伪造的网站。同时还对流量加密，防止别人窃听你的流量。</p>
+
+    
+    <a class="action" href="#post-copyright" role="button" aria-label="Copyright" title="Copyright">
+  <i class="fas fa-fw fa-copyright"></i>
+</a>
+    <a class="action" href="#post-comments" role="button" aria-label="Comments" title="Comments">
+  <i class="fas fa-fw fa-comments"></i>
+</a>
+    <a class="action" href="#postTOC" aria-controls="Table of contents" role="button" title="Table of contents">
+  <i class="fas fa-fw fa-list-alt"></i>
+</a>
+    
+  </div>
+</div>
+<article class="row card component mb-4 post">
+  <div class="card-header ">
+    <h1 class="card-title post-title">如何在Tomcat中做TLS客户端认证
+</h1>
+  </div>
+  <div class="card-body"><div class="post-meta">
+  <span class="post-date" title="创建于 2019-03-27 15:01:57 &#43;0800 CST。">
+    2019-03-27
+  </span><span class="post-reading-time">
+    11 分钟阅读
+  </span><span class="post-taxonomies"><a href="/tags/java/" class="badge post-taxonomy">java</a><a href="/tags/tls/" class="badge post-taxonomy">tls</a><a href="/tags/openssl/" class="badge post-taxonomy">openssl</a></span>
+</div>
+<div class="post-content mb-3"><p>常见的https网站做的是服务端认证（server authentication），浏览器通过证书判断你所访问的https://baidu.com是否真的是百度，而不是其他人伪造的网站。同时还对流量加密，防止别人窃听你的流量。</p>
 <p>tls还可以做客户端认证（client authentication），即服务端判断客户端是否为其所信任的客户端。由此可见，客户端认证用于那些需要受控访问服务端。</p>
 <p>在数据中心中，有些服务是非常敏感的，那么我们要做到：</p>
 <ol>
@@ -165,589 +232,768 @@
 </ol>
 <p>所以很明显，前两个问题可以通过服务端认证解决，最后一个问题可以通过客户端认证解决。顺便一提，如果要使用客户端认证就必须使用服务端认证。</p>
 <p>先来讲讲概念然后举个tomcat的例子讲讲怎么做。</p>
-<h2 id="概念">概念</h2>
-<h3 id="服务端认证">服务端认证</h3>
+<h2 id="概念">概念<a class="anchor ms-1" href="#概念"><i class="fas fa-link"></i></a></h2>
+<h3 id="服务端认证">服务端认证<a class="anchor ms-1" href="#服务端认证"><i class="fas fa-link"></i></a></h3>
 <p>不论是做Server authentication还是Client authentication都需要证书。证书的来源有两种：</p>
 <ul>
 <li>由权威CA签发，一般都是去购买。也可以使用let&rsquo;s encrypt申请免费证书。</li>
 <li>自己签发</li>
 </ul>
 <p>在一切可能的情况下都应该使用权威CA签发的证书，为什么这么建议？因为这里牵涉到一个信任问题，浏览器、编程语言SDK和某些工具都维护了一个信任CA证书清单，只要是由这些CA签发的证书那就信任，否则就不信任。而这个链条是可以多级的，这里就不展开了。你只需要知道由信任CA签发的所有证书都是可信的。比如JDK自带的信任CA证书可以通过下面命令看到：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">keytool -list -keystore $JAVA_HOME/jre/lib/security/cacerts
-
-verisignclass2g2ca <span style="color:#f92672">[</span>jdk<span style="color:#f92672">]</span>, 2016-8-25, trustedCertEntry,
-证书指纹 <span style="color:#f92672">(</span>SHA1<span style="color:#f92672">)</span>: B3:EA:C4:47:76:C9:C8:1C:EA:F2:9D:95:B6:CC:A0:08:1B:67:EC:9D
-digicertassuredidg3 <span style="color:#f92672">[</span>jdk<span style="color:#f92672">]</span>, 2016-8-25, trustedCertEntry,
-证书指纹 <span style="color:#f92672">(</span>SHA1<span style="color:#f92672">)</span>: F5:17:A2:4F:9A:48:C6:C9:F8:A2:00:26:9F:DC:0F:48:2C:AB:30:89
-verisignuniversalrootca <span style="color:#f92672">[</span>jdk<span style="color:#f92672">]</span>, 2016-8-25, trustedCertEntry,
-...
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>keytool -list -keystore <span class="nv">$JAVA_HOME</span>/jre/lib/security/cacerts
+<span class="ln">2</span>
+<span class="ln">3</span>verisignclass2g2ca <span class="o">[</span>jdk<span class="o">]</span>, 2016-8-25, trustedCertEntry,
+<span class="ln">4</span>证书指纹 <span class="o">(</span>SHA1<span class="o">)</span>: B3:EA:C4:47:76:C9:C8:1C:EA:F2:9D:95:B6:CC:A0:08:1B:67:EC:9D
+<span class="ln">5</span>digicertassuredidg3 <span class="o">[</span>jdk<span class="o">]</span>, 2016-8-25, trustedCertEntry,
+<span class="ln">6</span>证书指纹 <span class="o">(</span>SHA1<span class="o">)</span>: F5:17:A2:4F:9A:48:C6:C9:F8:A2:00:26:9F:DC:0F:48:2C:AB:30:89
+<span class="ln">7</span>verisignuniversalrootca <span class="o">[</span>jdk<span class="o">]</span>, 2016-8-25, trustedCertEntry,
+<span class="ln">8</span>...
 </code></pre></div><p>让你输密码的时候输入<code>changeit</code>。</p>
 <p>如果这个证书不是由信任CA签发的（比如自己签发）会发生什么？浏览器、编程语言SDK、你所使用的工具会报告以下错误：</p>
 <p>curl：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-txt" data-lang="txt">curl: (60) SSL certificate problem: self signed certificate in certificate chain
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln">1</span>curl: (60) SSL certificate problem: self signed certificate in certificate chain
 </code></pre></div><p>Java：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-txt" data-lang="txt">Exception in thread &#34;main&#34; javax.net.ssl.SSLHandshakeException: sun.security.validator.ValidatorException: PKIX path building failed: sun.security.provider.certpath.SunCertPathBuilderException: unable to find valid certification path to requested target
-	at sun.security.ssl.Alerts.getSSLException(Alerts.java:192)
-	at sun.security.ssl.SSLSocketImpl.fatal(SSLSocketImpl.java:1964)
-	at sun.security.ssl.Handshaker.fatalSE(Handshaker.java:328)
-	at sun.security.ssl.Handshaker.fatalSE(Handshaker.java:322)
-	at sun.security.ssl.ClientHandshaker.serverCertificate(ClientHandshaker.java:1614)
-...
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln">1</span>Exception in thread &#34;main&#34; javax.net.ssl.SSLHandshakeException: sun.security.validator.ValidatorException: PKIX path building failed: sun.security.provider.certpath.SunCertPathBuilderException: unable to find valid certification path to requested target
+<span class="ln">2</span>	at sun.security.ssl.Alerts.getSSLException(Alerts.java:192)
+<span class="ln">3</span>	at sun.security.ssl.SSLSocketImpl.fatal(SSLSocketImpl.java:1964)
+<span class="ln">4</span>	at sun.security.ssl.Handshaker.fatalSE(Handshaker.java:328)
+<span class="ln">5</span>	at sun.security.ssl.Handshaker.fatalSE(Handshaker.java:322)
+<span class="ln">6</span>	at sun.security.ssl.ClientHandshaker.serverCertificate(ClientHandshaker.java:1614)
+<span class="ln">7</span>...
 </code></pre></div><p>浏览器：</p>
-<p><img src="browser-warning.png" alt=""></p>
+<p><img class="img-fluid" alt="" src="/post/tls/how-to-tls-client-authentication-in-tomcat/browser-warning.png" loading="lazy"
+   width="628" height="406"
+   />
+</p>
 <p>这个错误实际上就是在告诉你这个证书不可信任，可能是一个伪造站点，让你小心点儿。如果这个证书由权威CA签发，那么就没有这个问题了。但是权威CA签发的证书要求申请人拥有域名，如果你这个服务是内部使用的没有域名，那就只能自己签发了。那么如何解决上面的问题呢？你得把自己签发的证书加入到信任CA证书清单里。</p>
 <p>下图是权威CA签发证书的示例：</p>
-<p><img src="server-authentication-ca.png" alt=""></p>
+<p><img class="img-fluid" alt="" src="/post/tls/how-to-tls-client-authentication-in-tomcat/server-authentication-ca.png" loading="lazy"
+   width="625" height="442"
+   />
+</p>
 <p>可以看到客户端有一个truststore，这个就是存放信任CA证书的地方，服务端有一个keystore，存放的自己的证书及对应的私钥。</p>
 <p>下图是自签发证书的示例：</p>
-<p><img src="server-authentication-self-sign.png" alt=""></p>
+<p><img class="img-fluid" alt="" src="/post/tls/how-to-tls-client-authentication-in-tomcat/server-authentication-self-sign.png" loading="lazy"
+   width="522" height="442"
+   />
+</p>
 <p>在上面可以看到我们自己成为了一个Root CA，把它放到客户端的truststore里。</p>
-<h3 id="客户端认证">客户端认证</h3>
+<h3 id="客户端认证">客户端认证<a class="anchor ms-1" href="#客户端认证"><i class="fas fa-link"></i></a></h3>
 <p>前面讲过客户端认证是服务端来验证客户端是否可信的机制，其实做法和服务端认证类似只不过方向相反。客户端认证大多数情况下只能是自签发的（因为没有域名），虽然不是不可以从权威CA签发但是存在一些问题。下面解释为什么，假设权威CA是let&rsquo;s encrypt，然后服务端信任它签发的所有证书。但是let&rsquo;s encrypt是阿猫阿狗都可以申请的，现在有一个黑客申请了这个证书，然后请求你的服务端，服务端就认可了。</p>
 <p>上面这个问题可以用这个方法解决：比如你用let&rsquo;s encrypt申请了A证书，黑客用let&rsquo;s encrypt申请了B证书，你的服务端的truststore只信任A证书，那么黑客用B证书访问你的时候就会被拒绝。但是这就带来另一个问题，比如你在开发的时候客户端证书有这么几套：生产用、调试用、开发用，那么每次客户端签发一个证书都要更新到你的服务器的truststore里，这也太麻烦了。</p>
 <p>所以结合安全性和便利性，我们把自己变成Root CA，然后服务端信任它，这样一来服务端就可以在开发的时候把Client Root CA内置进去，大大减轻了维护truststore的工作量，看下图：</p>
-<p><img src="client-authentication.png" alt=""></p>
-<h2 id="用tomcat举个例子">用Tomcat举个例子</h2>
+<p><img class="img-fluid" alt="" src="/post/tls/how-to-tls-client-authentication-in-tomcat/client-authentication.png" loading="lazy"
+   width="522" height="442"
+   />
+</p>
+<h2 id="用tomcat举个例子">用Tomcat举个例子<a class="anchor ms-1" href="#用tomcat举个例子"><i class="fas fa-link"></i></a></h2>
 <p>下面举一个Tomcat做客户端认证的例子，因为是测试用，所以服务端认证也是用的自签发证书。</p>
-<p>我们用了<a href="https://github.com/cloudflare/cfssl">cfssl</a>这个工具来生成证书。</p>
-<h3 id="服务端">服务端</h3>
+<p>我们用了<a href="https://github.com/cloudflare/cfssl" target="_blank" rel="noopener noreferrer">cfssl</a>
+这个工具来生成证书。</p>
+<h3 id="服务端">服务端<a class="anchor ms-1" href="#服务端"><i class="fas fa-link"></i></a></h3>
 <p>先弄一套目录：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash"><span style="color:#75715e"># 放自签发的服务端CA根证书</span>
-server-secrets/ca
-<span style="color:#75715e"># 放自签发的服务端的证书</span>
-server-secrets/cert
-<span style="color:#75715e"># 放服务端的keystore和truststore</span>
-server-secrets/jks
-</code></pre></div><h4 id="生成自签名ca证书">生成自签名CA证书</h4>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span><span class="c1"># 放自签发的服务端CA根证书</span>
+<span class="ln">2</span>server-secrets/ca
+<span class="ln">3</span><span class="c1"># 放自签发的服务端的证书</span>
+<span class="ln">4</span>server-secrets/cert
+<span class="ln">5</span><span class="c1"># 放服务端的keystore和truststore</span>
+<span class="ln">6</span>server-secrets/jks
+</code></pre></div><h4 id="生成自签名ca证书">生成自签名CA证书<a class="anchor ms-1" href="#生成自签名ca证书"><i class="fas fa-link"></i></a></h4>
 <p>新建文件：server-secrets/ca/server-root-ca-csr.json</p>
 <p>内容如下：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-json" data-lang="json">{
-  <span style="color:#f92672">&#34;key&#34;</span>: {
-    <span style="color:#f92672">&#34;algo&#34;</span>: <span style="color:#e6db74">&#34;rsa&#34;</span>,
-    <span style="color:#f92672">&#34;size&#34;</span>: <span style="color:#ae81ff">2048</span>
-  },
-  <span style="color:#f92672">&#34;names&#34;</span>: [
-    {
-      <span style="color:#f92672">&#34;O&#34;</span>: <span style="color:#e6db74">&#34;Company&#34;</span>,
-      <span style="color:#f92672">&#34;OU&#34;</span>: <span style="color:#e6db74">&#34;Datacenter&#34;</span>,
-      <span style="color:#f92672">&#34;L&#34;</span>: <span style="color:#e6db74">&#34;Shanghai&#34;</span>,
-      <span style="color:#f92672">&#34;ST&#34;</span>: <span style="color:#e6db74">&#34;Shanghai&#34;</span>,
-      <span style="color:#f92672">&#34;C&#34;</span>: <span style="color:#e6db74">&#34;CN&#34;</span>
-    }
-  ],
-  <span style="color:#f92672">&#34;CN&#34;</span>: <span style="color:#e6db74">&#34;server-root-ca&#34;</span>
-}
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-json" data-lang="json"><span class="ln"> 1</span><span class="p">{</span>
+<span class="ln"> 2</span>  <span class="nt">&#34;key&#34;</span><span class="p">:</span> <span class="p">{</span>
+<span class="ln"> 3</span>    <span class="nt">&#34;algo&#34;</span><span class="p">:</span> <span class="s2">&#34;rsa&#34;</span><span class="p">,</span>
+<span class="ln"> 4</span>    <span class="nt">&#34;size&#34;</span><span class="p">:</span> <span class="mi">2048</span>
+<span class="ln"> 5</span>  <span class="p">},</span>
+<span class="ln"> 6</span>  <span class="nt">&#34;names&#34;</span><span class="p">:</span> <span class="p">[</span>
+<span class="ln"> 7</span>    <span class="p">{</span>
+<span class="ln"> 8</span>      <span class="nt">&#34;O&#34;</span><span class="p">:</span> <span class="s2">&#34;Company&#34;</span><span class="p">,</span>
+<span class="ln"> 9</span>      <span class="nt">&#34;OU&#34;</span><span class="p">:</span> <span class="s2">&#34;Datacenter&#34;</span><span class="p">,</span>
+<span class="ln">10</span>      <span class="nt">&#34;L&#34;</span><span class="p">:</span> <span class="s2">&#34;Shanghai&#34;</span><span class="p">,</span>
+<span class="ln">11</span>      <span class="nt">&#34;ST&#34;</span><span class="p">:</span> <span class="s2">&#34;Shanghai&#34;</span><span class="p">,</span>
+<span class="ln">12</span>      <span class="nt">&#34;C&#34;</span><span class="p">:</span> <span class="s2">&#34;CN&#34;</span>
+<span class="ln">13</span>    <span class="p">}</span>
+<span class="ln">14</span>  <span class="p">],</span>
+<span class="ln">15</span>  <span class="nt">&#34;CN&#34;</span><span class="p">:</span> <span class="s2">&#34;server-root-ca&#34;</span>
+<span class="ln">16</span><span class="p">}</span>
 </code></pre></div><p>运行下面命令生成Server ROOT CA证书：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">cfssl gencert --initca<span style="color:#f92672">=</span>true ./server-root-ca-csr.json | cfssljson --bare server-root-ca
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>cfssl gencert --initca<span class="o">=</span><span class="nb">true</span> ./server-root-ca-csr.json <span class="p">|</span> cfssljson --bare server-root-ca
 </code></pre></div><p>会得到下面几个文件：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-txt" data-lang="txt">server-secrets/ca/
-├── server-root-ca-key.pem
-├── server-root-ca.csr
-└── server-root-ca.pem
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln">1</span>server-secrets/ca/
+<span class="ln">2</span>├── server-root-ca-key.pem
+<span class="ln">3</span>├── server-root-ca.csr
+<span class="ln">4</span>└── server-root-ca.pem
 </code></pre></div><p>用下面命令验证证书：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">openssl x509 -in ./server-root-ca.pem -text -noout
-
-Certificate:
-    Data:
-        Version: <span style="color:#ae81ff">3</span> <span style="color:#f92672">(</span>0x2<span style="color:#f92672">)</span>
-        Serial Number:
-            0c:8a:1a:ca:da:fa:4c:17:6c:1f:42:40:4c:f1:90:f4:fd:1d:fe:58
-    Signature Algorithm: sha256WithRSAEncryption
-        Issuer: C<span style="color:#f92672">=</span>CN, ST<span style="color:#f92672">=</span>Shanghai, L<span style="color:#f92672">=</span>Shanghai, O<span style="color:#f92672">=</span>Company, OU<span style="color:#f92672">=</span>Datacenter, CN<span style="color:#f92672">=</span>server-root-ca
-        Validity
-            Not Before: Mar <span style="color:#ae81ff">27</span> 05:14:00 <span style="color:#ae81ff">2019</span> GMT
-            Not After : Mar <span style="color:#ae81ff">25</span> 05:14:00 <span style="color:#ae81ff">2024</span> GMT
-        Subject: C<span style="color:#f92672">=</span>CN, ST<span style="color:#f92672">=</span>Shanghai, L<span style="color:#f92672">=</span>Shanghai, O<span style="color:#f92672">=</span>Company, OU<span style="color:#f92672">=</span>Datacenter, CN<span style="color:#f92672">=</span>server-root-ca
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln"> 1</span>openssl x509 -in ./server-root-ca.pem -text -noout
+<span class="ln"> 2</span>
+<span class="ln"> 3</span>Certificate:
+<span class="ln"> 4</span>    Data:
+<span class="ln"> 5</span>        Version: <span class="m">3</span> <span class="o">(</span>0x2<span class="o">)</span>
+<span class="ln"> 6</span>        Serial Number:
+<span class="ln"> 7</span>            0c:8a:1a:ca:da:fa:4c:17:6c:1f:42:40:4c:f1:90:f4:fd:1d:fe:58
+<span class="ln"> 8</span>    Signature Algorithm: sha256WithRSAEncryption
+<span class="ln"> 9</span>        Issuer: <span class="nv">C</span><span class="o">=</span>CN, <span class="nv">ST</span><span class="o">=</span>Shanghai, <span class="nv">L</span><span class="o">=</span>Shanghai, <span class="nv">O</span><span class="o">=</span>Company, <span class="nv">OU</span><span class="o">=</span>Datacenter, <span class="nv">CN</span><span class="o">=</span>server-root-ca
+<span class="ln">10</span>        Validity
+<span class="ln">11</span>            Not Before: Mar <span class="m">27</span> 05:14:00 <span class="m">2019</span> GMT
+<span class="ln">12</span>            Not After : Mar <span class="m">25</span> 05:14:00 <span class="m">2024</span> GMT
+<span class="ln">13</span>        Subject: <span class="nv">C</span><span class="o">=</span>CN, <span class="nv">ST</span><span class="o">=</span>Shanghai, <span class="nv">L</span><span class="o">=</span>Shanghai, <span class="nv">O</span><span class="o">=</span>Company, <span class="nv">OU</span><span class="o">=</span>Datacenter, <span class="nv">CN</span><span class="o">=</span>server-root-ca
 </code></pre></div><p>可以看到签发人和被签发人是同一个。</p>
-<h4 id="生成自签发证书">生成自签发证书</h4>
+<h4 id="生成自签发证书">生成自签发证书<a class="anchor ms-1" href="#生成自签发证书"><i class="fas fa-link"></i></a></h4>
 <p>新建文件 server-secrets/cert/server-gencert.json，内容如下：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-json" data-lang="json">{
-  <span style="color:#f92672">&#34;signing&#34;</span>: {
-    <span style="color:#f92672">&#34;default&#34;</span>: {
-        <span style="color:#f92672">&#34;usages&#34;</span>: [
-          <span style="color:#e6db74">&#34;signing&#34;</span>,
-          <span style="color:#e6db74">&#34;key encipherment&#34;</span>,
-          <span style="color:#e6db74">&#34;server auth&#34;</span>
-        ],
-        <span style="color:#f92672">&#34;expiry&#34;</span>: <span style="color:#e6db74">&#34;87600h&#34;</span>
-    }
-  }
-}
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-json" data-lang="json"><span class="ln"> 1</span><span class="p">{</span>
+<span class="ln"> 2</span>  <span class="nt">&#34;signing&#34;</span><span class="p">:</span> <span class="p">{</span>
+<span class="ln"> 3</span>    <span class="nt">&#34;default&#34;</span><span class="p">:</span> <span class="p">{</span>
+<span class="ln"> 4</span>        <span class="nt">&#34;usages&#34;</span><span class="p">:</span> <span class="p">[</span>
+<span class="ln"> 5</span>          <span class="s2">&#34;signing&#34;</span><span class="p">,</span>
+<span class="ln"> 6</span>          <span class="s2">&#34;key encipherment&#34;</span><span class="p">,</span>
+<span class="ln"> 7</span>          <span class="s2">&#34;server auth&#34;</span>
+<span class="ln"> 8</span>        <span class="p">],</span>
+<span class="ln"> 9</span>        <span class="nt">&#34;expiry&#34;</span><span class="p">:</span> <span class="s2">&#34;87600h&#34;</span>
+<span class="ln">10</span>    <span class="p">}</span>
+<span class="ln">11</span>  <span class="p">}</span>
+<span class="ln">12</span><span class="p">}</span>
 </code></pre></div><p>可以看到我们会生成用来做server auth的证书。</p>
 <p>新建文件 server-secrets/cert/demo-csr.json，内容如下：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-json" data-lang="json">{
-  <span style="color:#f92672">&#34;key&#34;</span>: {
-    <span style="color:#f92672">&#34;algo&#34;</span>: <span style="color:#e6db74">&#34;rsa&#34;</span>,
-    <span style="color:#f92672">&#34;size&#34;</span>: <span style="color:#ae81ff">2048</span>
-  },
-  <span style="color:#f92672">&#34;names&#34;</span>: [
-    {
-      <span style="color:#f92672">&#34;O&#34;</span>: <span style="color:#e6db74">&#34;Company&#34;</span>,
-      <span style="color:#f92672">&#34;OU&#34;</span>: <span style="color:#e6db74">&#34;Datacenter&#34;</span>,
-      <span style="color:#f92672">&#34;L&#34;</span>: <span style="color:#e6db74">&#34;Shanghai&#34;</span>,
-      <span style="color:#f92672">&#34;ST&#34;</span>: <span style="color:#e6db74">&#34;Shanghai&#34;</span>,
-      <span style="color:#f92672">&#34;C&#34;</span>: <span style="color:#e6db74">&#34;CN&#34;</span>
-    }
-  ],
-  <span style="color:#f92672">&#34;CN&#34;</span>: <span style="color:#e6db74">&#34;server-demo&#34;</span>,
-  <span style="color:#f92672">&#34;hosts&#34;</span>: [
-    <span style="color:#e6db74">&#34;127.0.0.1&#34;</span>,
-    <span style="color:#e6db74">&#34;localhost&#34;</span>
-  ]
-}
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-json" data-lang="json"><span class="ln"> 1</span><span class="p">{</span>
+<span class="ln"> 2</span>  <span class="nt">&#34;key&#34;</span><span class="p">:</span> <span class="p">{</span>
+<span class="ln"> 3</span>    <span class="nt">&#34;algo&#34;</span><span class="p">:</span> <span class="s2">&#34;rsa&#34;</span><span class="p">,</span>
+<span class="ln"> 4</span>    <span class="nt">&#34;size&#34;</span><span class="p">:</span> <span class="mi">2048</span>
+<span class="ln"> 5</span>  <span class="p">},</span>
+<span class="ln"> 6</span>  <span class="nt">&#34;names&#34;</span><span class="p">:</span> <span class="p">[</span>
+<span class="ln"> 7</span>    <span class="p">{</span>
+<span class="ln"> 8</span>      <span class="nt">&#34;O&#34;</span><span class="p">:</span> <span class="s2">&#34;Company&#34;</span><span class="p">,</span>
+<span class="ln"> 9</span>      <span class="nt">&#34;OU&#34;</span><span class="p">:</span> <span class="s2">&#34;Datacenter&#34;</span><span class="p">,</span>
+<span class="ln">10</span>      <span class="nt">&#34;L&#34;</span><span class="p">:</span> <span class="s2">&#34;Shanghai&#34;</span><span class="p">,</span>
+<span class="ln">11</span>      <span class="nt">&#34;ST&#34;</span><span class="p">:</span> <span class="s2">&#34;Shanghai&#34;</span><span class="p">,</span>
+<span class="ln">12</span>      <span class="nt">&#34;C&#34;</span><span class="p">:</span> <span class="s2">&#34;CN&#34;</span>
+<span class="ln">13</span>    <span class="p">}</span>
+<span class="ln">14</span>  <span class="p">],</span>
+<span class="ln">15</span>  <span class="nt">&#34;CN&#34;</span><span class="p">:</span> <span class="s2">&#34;server-demo&#34;</span><span class="p">,</span>
+<span class="ln">16</span>  <span class="nt">&#34;hosts&#34;</span><span class="p">:</span> <span class="p">[</span>
+<span class="ln">17</span>    <span class="s2">&#34;127.0.0.1&#34;</span><span class="p">,</span>
+<span class="ln">18</span>    <span class="s2">&#34;localhost&#34;</span>
+<span class="ln">19</span>  <span class="p">]</span>
+<span class="ln">20</span><span class="p">}</span>
 </code></pre></div><p>看上面的hosts，你可以根据自己的需要填写域名或IP，这里因为是本地演示所以是127.0.0.1和localhost。</p>
 <p>运行下面命令生成证书</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">cfssl gencert <span style="color:#ae81ff">\
-</span><span style="color:#ae81ff"></span>  --ca ../ca/server-root-ca.pem <span style="color:#ae81ff">\
-</span><span style="color:#ae81ff"></span>  --ca-key ../ca/server-root-ca-key.pem <span style="color:#ae81ff">\
-</span><span style="color:#ae81ff"></span>  --config ./server-gencert.json <span style="color:#ae81ff">\
-</span><span style="color:#ae81ff"></span>  ./demo-csr.json | cfssljson --bare ./demo
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>cfssl gencert <span class="se">\
+</span><span class="ln">2</span><span class="se"></span>  --ca ../ca/server-root-ca.pem <span class="se">\
+</span><span class="ln">3</span><span class="se"></span>  --ca-key ../ca/server-root-ca-key.pem <span class="se">\
+</span><span class="ln">4</span><span class="se"></span>  --config ./server-gencert.json <span class="se">\
+</span><span class="ln">5</span><span class="se"></span>  ./demo-csr.json <span class="p">|</span> cfssljson --bare ./demo
 </code></pre></div><p>得到文件：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-txt" data-lang="txt">server-secrets/cert/
-├── demo-key.pem
-├── demo.csr
-└── demo.pem
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln">1</span>server-secrets/cert/
+<span class="ln">2</span>├── demo-key.pem
+<span class="ln">3</span>├── demo.csr
+<span class="ln">4</span>└── demo.pem
 </code></pre></div><p>验证结果：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">openssl x509 -in ./demo.pem -text -noout
-
-Certificate:
-    Data:
-        Version: <span style="color:#ae81ff">3</span> <span style="color:#f92672">(</span>0x2<span style="color:#f92672">)</span>
-        Serial Number:
-            1d:d0:51:97:6c:ce:ea:29:2a:f4:3b:3c:48:a3:69:b0:ef:f3:26:7b
-    Signature Algorithm: sha256WithRSAEncryption
-        Issuer: C<span style="color:#f92672">=</span>CN, ST<span style="color:#f92672">=</span>Shanghai, L<span style="color:#f92672">=</span>Shanghai, O<span style="color:#f92672">=</span>Company, OU<span style="color:#f92672">=</span>Datacenter, CN<span style="color:#f92672">=</span>server-root-ca
-        Validity
-            Not Before: Mar <span style="color:#ae81ff">27</span> 05:17:00 <span style="color:#ae81ff">2019</span> GMT
-            Not After : Mar <span style="color:#ae81ff">24</span> 05:17:00 <span style="color:#ae81ff">2029</span> GMT
-        Subject: C<span style="color:#f92672">=</span>CN, ST<span style="color:#f92672">=</span>Shanghai, L<span style="color:#f92672">=</span>Shanghai, O<span style="color:#f92672">=</span>Company, OU<span style="color:#f92672">=</span>Datacenter, CN<span style="color:#f92672">=</span>server-demo
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln"> 1</span>openssl x509 -in ./demo.pem -text -noout
+<span class="ln"> 2</span>
+<span class="ln"> 3</span>Certificate:
+<span class="ln"> 4</span>    Data:
+<span class="ln"> 5</span>        Version: <span class="m">3</span> <span class="o">(</span>0x2<span class="o">)</span>
+<span class="ln"> 6</span>        Serial Number:
+<span class="ln"> 7</span>            1d:d0:51:97:6c:ce:ea:29:2a:f4:3b:3c:48:a3:69:b0:ef:f3:26:7b
+<span class="ln"> 8</span>    Signature Algorithm: sha256WithRSAEncryption
+<span class="ln"> 9</span>        Issuer: <span class="nv">C</span><span class="o">=</span>CN, <span class="nv">ST</span><span class="o">=</span>Shanghai, <span class="nv">L</span><span class="o">=</span>Shanghai, <span class="nv">O</span><span class="o">=</span>Company, <span class="nv">OU</span><span class="o">=</span>Datacenter, <span class="nv">CN</span><span class="o">=</span>server-root-ca
+<span class="ln">10</span>        Validity
+<span class="ln">11</span>            Not Before: Mar <span class="m">27</span> 05:17:00 <span class="m">2019</span> GMT
+<span class="ln">12</span>            Not After : Mar <span class="m">24</span> 05:17:00 <span class="m">2029</span> GMT
+<span class="ln">13</span>        Subject: <span class="nv">C</span><span class="o">=</span>CN, <span class="nv">ST</span><span class="o">=</span>Shanghai, <span class="nv">L</span><span class="o">=</span>Shanghai, <span class="nv">O</span><span class="o">=</span>Company, <span class="nv">OU</span><span class="o">=</span>Datacenter, <span class="nv">CN</span><span class="o">=</span>server-demo
 </code></pre></div><p>可以看到签发者是server-root-ca，Subject是server-demo。</p>
-<h4 id="将证书导入keystore">将证书导入keystore</h4>
+<h4 id="将证书导入keystore">将证书导入keystore<a class="anchor ms-1" href="#将证书导入keystore"><i class="fas fa-link"></i></a></h4>
 <p>到 server-secrets/jks，执行下面命令生成pkcs12格式的keystore（JDK识别这个格式）</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">openssl pkcs12 -export <span style="color:#ae81ff">\
-</span><span style="color:#ae81ff"></span>  -in ../cert/demo.pem <span style="color:#ae81ff">\
-</span><span style="color:#ae81ff"></span>  -inkey ../cert/demo-key.pem <span style="color:#ae81ff">\
-</span><span style="color:#ae81ff"></span>  -out server-demo.keystore <span style="color:#ae81ff">\
-</span><span style="color:#ae81ff"></span>  -name server-demo <span style="color:#ae81ff">\
-</span><span style="color:#ae81ff"></span>  -CAfile ../ca/server-root-ca.pem <span style="color:#ae81ff">\
-</span><span style="color:#ae81ff"></span>  -caname root -chain
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>openssl pkcs12 -export <span class="se">\
+</span><span class="ln">2</span><span class="se"></span>  -in ../cert/demo.pem <span class="se">\
+</span><span class="ln">3</span><span class="se"></span>  -inkey ../cert/demo-key.pem <span class="se">\
+</span><span class="ln">4</span><span class="se"></span>  -out server-demo.keystore <span class="se">\
+</span><span class="ln">5</span><span class="se"></span>  -name server-demo <span class="se">\
+</span><span class="ln">6</span><span class="se"></span>  -CAfile ../ca/server-root-ca.pem <span class="se">\
+</span><span class="ln">7</span><span class="se"></span>  -caname root -chain
 </code></pre></div><p>过程中会让你输入密码，你就输入：server-demo-ks。</p>
 <p>得到文件：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-txt" data-lang="txt">server-secrets/jks/
-└── server-demo.keystore
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln">1</span>server-secrets/jks/
+<span class="ln">2</span>└── server-demo.keystore
 </code></pre></div><p>用JDK提供的keytool看看里面的内容：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">keytool -list -keystore server-demo.keystore
-
-server-demo, 2019-3-27, PrivateKeyEntry,
-证书指纹 <span style="color:#f92672">(</span>SHA1<span style="color:#f92672">)</span>: B2:E5:46:63:BB:00:E7:82:48:A4:2F:EC:01:41:CE:B4:4B:CE:68:7A
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>keytool -list -keystore server-demo.keystore
+<span class="ln">2</span>
+<span class="ln">3</span>server-demo, 2019-3-27, PrivateKeyEntry,
+<span class="ln">4</span>证书指纹 <span class="o">(</span>SHA1<span class="o">)</span>: B2:E5:46:63:BB:00:E7:82:48:A4:2F:EC:01:41:CE:B4:4B:CE:68:7A
 </code></pre></div><p>让你输入密码的时候就输入：server-demo-ks。</p>
-<h3 id="客户端">客户端</h3>
+<h3 id="客户端">客户端<a class="anchor ms-1" href="#客户端"><i class="fas fa-link"></i></a></h3>
 <p>先弄一套目录：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-txt" data-lang="txt"># 放自签发的客户端CA根证书
-client-secrets/ca
-# 放自签发的客户端的证书
-client-secrets/cert
-# 放客户端的keystore和truststore
-client-secrets/jks
-</code></pre></div><h4 id="生成自签名ca证书-1">生成自签名CA证书</h4>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln">1</span># 放自签发的客户端CA根证书
+<span class="ln">2</span>client-secrets/ca
+<span class="ln">3</span># 放自签发的客户端的证书
+<span class="ln">4</span>client-secrets/cert
+<span class="ln">5</span># 放客户端的keystore和truststore
+<span class="ln">6</span>client-secrets/jks
+</code></pre></div><h4 id="生成自签名ca证书-1">生成自签名CA证书<a class="anchor ms-1" href="#生成自签名ca证书-1"><i class="fas fa-link"></i></a></h4>
 <p>新建文件 client-secrets/ca/client-root-ca-csr.json：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-json" data-lang="json">{
-  <span style="color:#f92672">&#34;key&#34;</span>: {
-    <span style="color:#f92672">&#34;algo&#34;</span>: <span style="color:#e6db74">&#34;rsa&#34;</span>,
-    <span style="color:#f92672">&#34;size&#34;</span>: <span style="color:#ae81ff">2048</span>
-  },
-  <span style="color:#f92672">&#34;names&#34;</span>: [
-    {
-      <span style="color:#f92672">&#34;O&#34;</span>: <span style="color:#e6db74">&#34;Company&#34;</span>,
-      <span style="color:#f92672">&#34;OU&#34;</span>: <span style="color:#e6db74">&#34;Datacenter&#34;</span>,
-      <span style="color:#f92672">&#34;L&#34;</span>: <span style="color:#e6db74">&#34;Shanghai&#34;</span>,
-      <span style="color:#f92672">&#34;ST&#34;</span>: <span style="color:#e6db74">&#34;Shanghai&#34;</span>,
-      <span style="color:#f92672">&#34;C&#34;</span>: <span style="color:#e6db74">&#34;CN&#34;</span>
-    }
-  ],
-  <span style="color:#f92672">&#34;CN&#34;</span>: <span style="color:#e6db74">&#34;client-root-ca&#34;</span>
-}
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-json" data-lang="json"><span class="ln"> 1</span><span class="p">{</span>
+<span class="ln"> 2</span>  <span class="nt">&#34;key&#34;</span><span class="p">:</span> <span class="p">{</span>
+<span class="ln"> 3</span>    <span class="nt">&#34;algo&#34;</span><span class="p">:</span> <span class="s2">&#34;rsa&#34;</span><span class="p">,</span>
+<span class="ln"> 4</span>    <span class="nt">&#34;size&#34;</span><span class="p">:</span> <span class="mi">2048</span>
+<span class="ln"> 5</span>  <span class="p">},</span>
+<span class="ln"> 6</span>  <span class="nt">&#34;names&#34;</span><span class="p">:</span> <span class="p">[</span>
+<span class="ln"> 7</span>    <span class="p">{</span>
+<span class="ln"> 8</span>      <span class="nt">&#34;O&#34;</span><span class="p">:</span> <span class="s2">&#34;Company&#34;</span><span class="p">,</span>
+<span class="ln"> 9</span>      <span class="nt">&#34;OU&#34;</span><span class="p">:</span> <span class="s2">&#34;Datacenter&#34;</span><span class="p">,</span>
+<span class="ln">10</span>      <span class="nt">&#34;L&#34;</span><span class="p">:</span> <span class="s2">&#34;Shanghai&#34;</span><span class="p">,</span>
+<span class="ln">11</span>      <span class="nt">&#34;ST&#34;</span><span class="p">:</span> <span class="s2">&#34;Shanghai&#34;</span><span class="p">,</span>
+<span class="ln">12</span>      <span class="nt">&#34;C&#34;</span><span class="p">:</span> <span class="s2">&#34;CN&#34;</span>
+<span class="ln">13</span>    <span class="p">}</span>
+<span class="ln">14</span>  <span class="p">],</span>
+<span class="ln">15</span>  <span class="nt">&#34;CN&#34;</span><span class="p">:</span> <span class="s2">&#34;client-root-ca&#34;</span>
+<span class="ln">16</span><span class="p">}</span>
 </code></pre></div><p>运行下面命令生成Client ROOT CA证书：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">cfssl gencert --initca<span style="color:#f92672">=</span>true ./client-root-ca-csr.json | cfssljson --bare client-root-ca
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>cfssl gencert --initca<span class="o">=</span><span class="nb">true</span> ./client-root-ca-csr.json <span class="p">|</span> cfssljson --bare client-root-ca
 </code></pre></div><p>会得到下面几个文件：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-txt" data-lang="txt">client-secrets/ca/
-├── client-root-ca-key.pem
-├── client-root-ca.csr
-└── client-root-ca.pem
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln">1</span>client-secrets/ca/
+<span class="ln">2</span>├── client-root-ca-key.pem
+<span class="ln">3</span>├── client-root-ca.csr
+<span class="ln">4</span>└── client-root-ca.pem
 </code></pre></div><p>用下面命令验证证书：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">openssl x509 -in ./client-root-ca.pem -text -noout
-
-Certificate:
-    Data:
-        Version: <span style="color:#ae81ff">3</span> <span style="color:#f92672">(</span>0x2<span style="color:#f92672">)</span>
-        Serial Number:
-            7e:fc:f3:53:07:1a:17:ae:24:34:d5:1d:00:02:d6:e4:24:09:92:12
-    Signature Algorithm: sha256WithRSAEncryption
-        Issuer: C<span style="color:#f92672">=</span>CN, ST<span style="color:#f92672">=</span>Shanghai, L<span style="color:#f92672">=</span>Shanghai, O<span style="color:#f92672">=</span>Company, OU<span style="color:#f92672">=</span>Datacenter, CN<span style="color:#f92672">=</span>client-root-ca
-        Validity
-            Not Before: Mar <span style="color:#ae81ff">27</span> 05:20:00 <span style="color:#ae81ff">2019</span> GMT
-            Not After : Mar <span style="color:#ae81ff">25</span> 05:20:00 <span style="color:#ae81ff">2024</span> GMT
-        Subject: C<span style="color:#f92672">=</span>CN, ST<span style="color:#f92672">=</span>Shanghai, L<span style="color:#f92672">=</span>Shanghai, O<span style="color:#f92672">=</span>Company, OU<span style="color:#f92672">=</span>Datacenter, CN<span style="color:#f92672">=</span>client-root-ca
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln"> 1</span>openssl x509 -in ./client-root-ca.pem -text -noout
+<span class="ln"> 2</span>
+<span class="ln"> 3</span>Certificate:
+<span class="ln"> 4</span>    Data:
+<span class="ln"> 5</span>        Version: <span class="m">3</span> <span class="o">(</span>0x2<span class="o">)</span>
+<span class="ln"> 6</span>        Serial Number:
+<span class="ln"> 7</span>            7e:fc:f3:53:07:1a:17:ae:24:34:d5:1d:00:02:d6:e4:24:09:92:12
+<span class="ln"> 8</span>    Signature Algorithm: sha256WithRSAEncryption
+<span class="ln"> 9</span>        Issuer: <span class="nv">C</span><span class="o">=</span>CN, <span class="nv">ST</span><span class="o">=</span>Shanghai, <span class="nv">L</span><span class="o">=</span>Shanghai, <span class="nv">O</span><span class="o">=</span>Company, <span class="nv">OU</span><span class="o">=</span>Datacenter, <span class="nv">CN</span><span class="o">=</span>client-root-ca
+<span class="ln">10</span>        Validity
+<span class="ln">11</span>            Not Before: Mar <span class="m">27</span> 05:20:00 <span class="m">2019</span> GMT
+<span class="ln">12</span>            Not After : Mar <span class="m">25</span> 05:20:00 <span class="m">2024</span> GMT
+<span class="ln">13</span>        Subject: <span class="nv">C</span><span class="o">=</span>CN, <span class="nv">ST</span><span class="o">=</span>Shanghai, <span class="nv">L</span><span class="o">=</span>Shanghai, <span class="nv">O</span><span class="o">=</span>Company, <span class="nv">OU</span><span class="o">=</span>Datacenter, <span class="nv">CN</span><span class="o">=</span>client-root-ca
 </code></pre></div><p>可以看到签发人和被签发人是同一个。</p>
-<h4 id="生成自签发证书-1">生成自签发证书</h4>
+<h4 id="生成自签发证书-1">生成自签发证书<a class="anchor ms-1" href="#生成自签发证书-1"><i class="fas fa-link"></i></a></h4>
 <p>新建文件 client-secrets/cert/client-gencert.json，内容如下：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-json" data-lang="json">{
-  <span style="color:#f92672">&#34;signing&#34;</span>: {
-    <span style="color:#f92672">&#34;default&#34;</span>: {
-        <span style="color:#f92672">&#34;usages&#34;</span>: [
-          <span style="color:#e6db74">&#34;signing&#34;</span>,
-          <span style="color:#e6db74">&#34;key encipherment&#34;</span>,
-          <span style="color:#e6db74">&#34;client auth&#34;</span>
-        ],
-        <span style="color:#f92672">&#34;expiry&#34;</span>: <span style="color:#e6db74">&#34;87600h&#34;</span>
-    }
-  }
-}
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-json" data-lang="json"><span class="ln"> 1</span><span class="p">{</span>
+<span class="ln"> 2</span>  <span class="nt">&#34;signing&#34;</span><span class="p">:</span> <span class="p">{</span>
+<span class="ln"> 3</span>    <span class="nt">&#34;default&#34;</span><span class="p">:</span> <span class="p">{</span>
+<span class="ln"> 4</span>        <span class="nt">&#34;usages&#34;</span><span class="p">:</span> <span class="p">[</span>
+<span class="ln"> 5</span>          <span class="s2">&#34;signing&#34;</span><span class="p">,</span>
+<span class="ln"> 6</span>          <span class="s2">&#34;key encipherment&#34;</span><span class="p">,</span>
+<span class="ln"> 7</span>          <span class="s2">&#34;client auth&#34;</span>
+<span class="ln"> 8</span>        <span class="p">],</span>
+<span class="ln"> 9</span>        <span class="nt">&#34;expiry&#34;</span><span class="p">:</span> <span class="s2">&#34;87600h&#34;</span>
+<span class="ln">10</span>    <span class="p">}</span>
+<span class="ln">11</span>  <span class="p">}</span>
+<span class="ln">12</span><span class="p">}</span>
 </code></pre></div><p>可以看到我们会生成用来做client auth的证书。</p>
 <p>新建文件 client-secrets/cert/demo-csr.json，内容如下：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-json" data-lang="json">{
-  <span style="color:#f92672">&#34;key&#34;</span>: {
-    <span style="color:#f92672">&#34;algo&#34;</span>: <span style="color:#e6db74">&#34;rsa&#34;</span>,
-    <span style="color:#f92672">&#34;size&#34;</span>: <span style="color:#ae81ff">2048</span>
-  },
-  <span style="color:#f92672">&#34;names&#34;</span>: [
-    {
-      <span style="color:#f92672">&#34;O&#34;</span>: <span style="color:#e6db74">&#34;Company&#34;</span>,
-      <span style="color:#f92672">&#34;OU&#34;</span>: <span style="color:#e6db74">&#34;Datacenter&#34;</span>,
-      <span style="color:#f92672">&#34;L&#34;</span>: <span style="color:#e6db74">&#34;Shanghai&#34;</span>,
-      <span style="color:#f92672">&#34;ST&#34;</span>: <span style="color:#e6db74">&#34;Shanghai&#34;</span>,
-      <span style="color:#f92672">&#34;C&#34;</span>: <span style="color:#e6db74">&#34;CN&#34;</span>
-    }
-  ],
-  <span style="color:#f92672">&#34;CN&#34;</span>: <span style="color:#e6db74">&#34;client-demo&#34;</span>
-}
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-json" data-lang="json"><span class="ln"> 1</span><span class="p">{</span>
+<span class="ln"> 2</span>  <span class="nt">&#34;key&#34;</span><span class="p">:</span> <span class="p">{</span>
+<span class="ln"> 3</span>    <span class="nt">&#34;algo&#34;</span><span class="p">:</span> <span class="s2">&#34;rsa&#34;</span><span class="p">,</span>
+<span class="ln"> 4</span>    <span class="nt">&#34;size&#34;</span><span class="p">:</span> <span class="mi">2048</span>
+<span class="ln"> 5</span>  <span class="p">},</span>
+<span class="ln"> 6</span>  <span class="nt">&#34;names&#34;</span><span class="p">:</span> <span class="p">[</span>
+<span class="ln"> 7</span>    <span class="p">{</span>
+<span class="ln"> 8</span>      <span class="nt">&#34;O&#34;</span><span class="p">:</span> <span class="s2">&#34;Company&#34;</span><span class="p">,</span>
+<span class="ln"> 9</span>      <span class="nt">&#34;OU&#34;</span><span class="p">:</span> <span class="s2">&#34;Datacenter&#34;</span><span class="p">,</span>
+<span class="ln">10</span>      <span class="nt">&#34;L&#34;</span><span class="p">:</span> <span class="s2">&#34;Shanghai&#34;</span><span class="p">,</span>
+<span class="ln">11</span>      <span class="nt">&#34;ST&#34;</span><span class="p">:</span> <span class="s2">&#34;Shanghai&#34;</span><span class="p">,</span>
+<span class="ln">12</span>      <span class="nt">&#34;C&#34;</span><span class="p">:</span> <span class="s2">&#34;CN&#34;</span>
+<span class="ln">13</span>    <span class="p">}</span>
+<span class="ln">14</span>  <span class="p">],</span>
+<span class="ln">15</span>  <span class="nt">&#34;CN&#34;</span><span class="p">:</span> <span class="s2">&#34;client-demo&#34;</span>
+<span class="ln">16</span><span class="p">}</span>
 </code></pre></div><p>这里没有hosts，这是因为我们不需要用这个证书来做服务端认证。</p>
 <p>运行下面命令生成证书</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">cfssl gencert <span style="color:#ae81ff">\
-</span><span style="color:#ae81ff"></span>  --ca ../ca/client-root-ca.pem <span style="color:#ae81ff">\
-</span><span style="color:#ae81ff"></span>  --ca-key ../ca/client-root-ca-key.pem <span style="color:#ae81ff">\
-</span><span style="color:#ae81ff"></span>  --config ./client-gencert.json <span style="color:#ae81ff">\
-</span><span style="color:#ae81ff"></span>  ./demo-csr.json | cfssljson --bare ./demo
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>cfssl gencert <span class="se">\
+</span><span class="ln">2</span><span class="se"></span>  --ca ../ca/client-root-ca.pem <span class="se">\
+</span><span class="ln">3</span><span class="se"></span>  --ca-key ../ca/client-root-ca-key.pem <span class="se">\
+</span><span class="ln">4</span><span class="se"></span>  --config ./client-gencert.json <span class="se">\
+</span><span class="ln">5</span><span class="se"></span>  ./demo-csr.json <span class="p">|</span> cfssljson --bare ./demo
 </code></pre></div><p>得到文件：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-txt" data-lang="txt">client-secrets/cert/
-├── demo-key.pem
-├── demo.csr
-└── demo.pem
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln">1</span>client-secrets/cert/
+<span class="ln">2</span>├── demo-key.pem
+<span class="ln">3</span>├── demo.csr
+<span class="ln">4</span>└── demo.pem
 </code></pre></div><p>验证结果：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">openssl x509 -in ./demo.pem -text -noout
-
-Certificate:
-    Data:
-        Version: <span style="color:#ae81ff">3</span> <span style="color:#f92672">(</span>0x2<span style="color:#f92672">)</span>
-        Serial Number:
-            6e:50:e2:2c:02:bb:ef:fd:03:d9:2c:0a:8f:ba:90:65:fb:c4:b5:75
-    Signature Algorithm: sha256WithRSAEncryption
-        Issuer: C<span style="color:#f92672">=</span>CN, ST<span style="color:#f92672">=</span>Shanghai, L<span style="color:#f92672">=</span>Shanghai, O<span style="color:#f92672">=</span>Company, OU<span style="color:#f92672">=</span>Datacenter, CN<span style="color:#f92672">=</span>client-root-ca
-        Validity
-            Not Before: Mar <span style="color:#ae81ff">27</span> 05:21:00 <span style="color:#ae81ff">2019</span> GMT
-            Not After : Mar <span style="color:#ae81ff">24</span> 05:21:00 <span style="color:#ae81ff">2029</span> GMT
-        Subject: C<span style="color:#f92672">=</span>CN, ST<span style="color:#f92672">=</span>Shanghai, L<span style="color:#f92672">=</span>Shanghai, O<span style="color:#f92672">=</span>Company, OU<span style="color:#f92672">=</span>Datacenter, CN<span style="color:#f92672">=</span>client-demo
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln"> 1</span>openssl x509 -in ./demo.pem -text -noout
+<span class="ln"> 2</span>
+<span class="ln"> 3</span>Certificate:
+<span class="ln"> 4</span>    Data:
+<span class="ln"> 5</span>        Version: <span class="m">3</span> <span class="o">(</span>0x2<span class="o">)</span>
+<span class="ln"> 6</span>        Serial Number:
+<span class="ln"> 7</span>            6e:50:e2:2c:02:bb:ef:fd:03:d9:2c:0a:8f:ba:90:65:fb:c4:b5:75
+<span class="ln"> 8</span>    Signature Algorithm: sha256WithRSAEncryption
+<span class="ln"> 9</span>        Issuer: <span class="nv">C</span><span class="o">=</span>CN, <span class="nv">ST</span><span class="o">=</span>Shanghai, <span class="nv">L</span><span class="o">=</span>Shanghai, <span class="nv">O</span><span class="o">=</span>Company, <span class="nv">OU</span><span class="o">=</span>Datacenter, <span class="nv">CN</span><span class="o">=</span>client-root-ca
+<span class="ln">10</span>        Validity
+<span class="ln">11</span>            Not Before: Mar <span class="m">27</span> 05:21:00 <span class="m">2019</span> GMT
+<span class="ln">12</span>            Not After : Mar <span class="m">24</span> 05:21:00 <span class="m">2029</span> GMT
+<span class="ln">13</span>        Subject: <span class="nv">C</span><span class="o">=</span>CN, <span class="nv">ST</span><span class="o">=</span>Shanghai, <span class="nv">L</span><span class="o">=</span>Shanghai, <span class="nv">O</span><span class="o">=</span>Company, <span class="nv">OU</span><span class="o">=</span>Datacenter, <span class="nv">CN</span><span class="o">=</span>client-demo
 </code></pre></div><p>可以看到签发者是client-root-ca，Subject是client-demo。</p>
-<h4 id="将证书导入keystore-1">将证书导入keystore</h4>
+<h4 id="将证书导入keystore-1">将证书导入keystore<a class="anchor ms-1" href="#将证书导入keystore-1"><i class="fas fa-link"></i></a></h4>
 <p>到 client-secrets/jks，执行下面命令生成pkcs12格式的keystore（JDK识别这个格式）</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">openssl pkcs12 -export <span style="color:#ae81ff">\
-</span><span style="color:#ae81ff"></span>  -in ../cert/demo.pem <span style="color:#ae81ff">\
-</span><span style="color:#ae81ff"></span>  -inkey ../cert/demo-key.pem <span style="color:#ae81ff">\
-</span><span style="color:#ae81ff"></span>  -out client-demo.keystore <span style="color:#ae81ff">\
-</span><span style="color:#ae81ff"></span>  -name client-demo <span style="color:#ae81ff">\
-</span><span style="color:#ae81ff"></span>  -CAfile ../ca/client-root-ca.pem <span style="color:#ae81ff">\
-</span><span style="color:#ae81ff"></span>  -caname root -chain
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>openssl pkcs12 -export <span class="se">\
+</span><span class="ln">2</span><span class="se"></span>  -in ../cert/demo.pem <span class="se">\
+</span><span class="ln">3</span><span class="se"></span>  -inkey ../cert/demo-key.pem <span class="se">\
+</span><span class="ln">4</span><span class="se"></span>  -out client-demo.keystore <span class="se">\
+</span><span class="ln">5</span><span class="se"></span>  -name client-demo <span class="se">\
+</span><span class="ln">6</span><span class="se"></span>  -CAfile ../ca/client-root-ca.pem <span class="se">\
+</span><span class="ln">7</span><span class="se"></span>  -caname root -chain
 </code></pre></div><p>过程中会让你输入密码，你就输入：client-demo-ks。</p>
 <p>得到文件：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-txt" data-lang="txt">client-secrets/jks/
-└── client-demo.keystore
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln">1</span>client-secrets/jks/
+<span class="ln">2</span>└── client-demo.keystore
 </code></pre></div><p>用JDK提供的keytool看看里面的内容：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">keytool -list -keystore client-demo.keystore
-
-client-demo, 2019-3-27, PrivateKeyEntry,
-证书指纹 <span style="color:#f92672">(</span>SHA1<span style="color:#f92672">)</span>: 83:AE:0E:5E:0C:CE:86:C9:D1:84:D7:6F:87:F3:76:1F:B4:3E:46:31
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>keytool -list -keystore client-demo.keystore
+<span class="ln">2</span>
+<span class="ln">3</span>client-demo, 2019-3-27, PrivateKeyEntry,
+<span class="ln">4</span>证书指纹 <span class="o">(</span>SHA1<span class="o">)</span>: 83:AE:0E:5E:0C:CE:86:C9:D1:84:D7:6F:87:F3:76:1F:B4:3E:46:31
 </code></pre></div><p>让你输入密码的时候就输入：client-demo-ks。</p>
-<h3 id="两端互信">两端互信</h3>
+<h3 id="两端互信">两端互信<a class="anchor ms-1" href="#两端互信"><i class="fas fa-link"></i></a></h3>
 <p>好了，到此为止server和client的证书都已经生成了，接下来只需要将各自的root-ca添加到彼此都truststore中。</p>
-<h4 id="把server-root-ca导入到client的truststore中">把server-root-ca导入到client的truststore中</h4>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">cd client-secrets/jks
-
-keytool -importcert <span style="color:#ae81ff">\
-</span><span style="color:#ae81ff"></span>  -alias server-root-ca <span style="color:#ae81ff">\
-</span><span style="color:#ae81ff"></span>  -storetype pkcs12 <span style="color:#ae81ff">\
-</span><span style="color:#ae81ff"></span>  -keystore client.truststore <span style="color:#ae81ff">\
-</span><span style="color:#ae81ff"></span>  -storepass client-ts <span style="color:#ae81ff">\
-</span><span style="color:#ae81ff"></span>  -file ../../server-secrets/ca/server-root-ca.pem -noprompt
+<h4 id="把server-root-ca导入到client的truststore中">把server-root-ca导入到client的truststore中<a class="anchor ms-1" href="#把server-root-ca导入到client的truststore中"><i class="fas fa-link"></i></a></h4>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span><span class="nb">cd</span> client-secrets/jks
+<span class="ln">2</span>
+<span class="ln">3</span>keytool -importcert <span class="se">\
+</span><span class="ln">4</span><span class="se"></span>  -alias server-root-ca <span class="se">\
+</span><span class="ln">5</span><span class="se"></span>  -storetype pkcs12 <span class="se">\
+</span><span class="ln">6</span><span class="se"></span>  -keystore client.truststore <span class="se">\
+</span><span class="ln">7</span><span class="se"></span>  -storepass client-ts <span class="se">\
+</span><span class="ln">8</span><span class="se"></span>  -file ../../server-secrets/ca/server-root-ca.pem -noprompt
 </code></pre></div><p>注意上面的-storepass参数，这个是trustore的密码：client-ts。</p>
 <p>得到文件：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-txt" data-lang="txt">client-secrets/jks/
-└── client.truststore
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln">1</span>client-secrets/jks/
+<span class="ln">2</span>└── client.truststore
 </code></pre></div><p>用JDK提供的keytool看看里面的内容：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">keytool -list -keystore client.truststore
-
-server-root-ca, 2019-3-27, trustedCertEntry,
-证书指纹 <span style="color:#f92672">(</span>SHA1<span style="color:#f92672">)</span>: 75:E3:78:97:85:B2:29:38:25:3C:FD:EC:68:97:9B:78:A0:5F:BB:9D
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>keytool -list -keystore client.truststore
+<span class="ln">2</span>
+<span class="ln">3</span>server-root-ca, 2019-3-27, trustedCertEntry,
+<span class="ln">4</span>证书指纹 <span class="o">(</span>SHA1<span class="o">)</span>: 75:E3:78:97:85:B2:29:38:25:3C:FD:EC:68:97:9B:78:A0:5F:BB:9D
 </code></pre></div><p>让你输入密码的时候就输入：client-ts。</p>
-<h4 id="把client-root-ca导入到server的truststore中">把client-root-ca导入到server的truststore中</h4>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">cd server-secrets/jks
-
-keytool -importcert <span style="color:#ae81ff">\
-</span><span style="color:#ae81ff"></span>  -alias client-root-ca <span style="color:#ae81ff">\
-</span><span style="color:#ae81ff"></span>  -storetype pkcs12 <span style="color:#ae81ff">\
-</span><span style="color:#ae81ff"></span>  -keystore server.truststore <span style="color:#ae81ff">\
-</span><span style="color:#ae81ff"></span>  -storepass server-ts <span style="color:#ae81ff">\
-</span><span style="color:#ae81ff"></span>  -file ../../client-secrets/ca/client-root-ca.pem -noprompt
+<h4 id="把client-root-ca导入到server的truststore中">把client-root-ca导入到server的truststore中<a class="anchor ms-1" href="#把client-root-ca导入到server的truststore中"><i class="fas fa-link"></i></a></h4>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span><span class="nb">cd</span> server-secrets/jks
+<span class="ln">2</span>
+<span class="ln">3</span>keytool -importcert <span class="se">\
+</span><span class="ln">4</span><span class="se"></span>  -alias client-root-ca <span class="se">\
+</span><span class="ln">5</span><span class="se"></span>  -storetype pkcs12 <span class="se">\
+</span><span class="ln">6</span><span class="se"></span>  -keystore server.truststore <span class="se">\
+</span><span class="ln">7</span><span class="se"></span>  -storepass server-ts <span class="se">\
+</span><span class="ln">8</span><span class="se"></span>  -file ../../client-secrets/ca/client-root-ca.pem -noprompt
 </code></pre></div><p>注意上面的-storepass参数，这个是trustore的密码：server-ts。</p>
 <p>得到文件：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-txt" data-lang="txt">server-secrets/jks/
-└── server.truststore
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln">1</span>server-secrets/jks/
+<span class="ln">2</span>└── server.truststore
 </code></pre></div><p>用JDK提供的keytool看看里面的内容：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">keytool -list -keystore server.truststore
-
-client-root-ca, 2019-3-27, trustedCertEntry,
-证书指纹 <span style="color:#f92672">(</span>SHA1<span style="color:#f92672">)</span>: 1E:95:2C:12:AA:7E:6D:E7:74:F1:83:C2:B8:73:6F:EE:57:FB:CA:46
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>keytool -list -keystore server.truststore
+<span class="ln">2</span>
+<span class="ln">3</span>client-root-ca, 2019-3-27, trustedCertEntry,
+<span class="ln">4</span>证书指纹 <span class="o">(</span>SHA1<span class="o">)</span>: 1E:95:2C:12:AA:7E:6D:E7:74:F1:83:C2:B8:73:6F:EE:57:FB:CA:46
 </code></pre></div><p>让你输入密码的时候就输入：server-ts。</p>
-<h3 id="配置tomcat">配置Tomcat</h3>
+<h3 id="配置tomcat">配置Tomcat<a class="anchor ms-1" href="#配置tomcat"><i class="fas fa-link"></i></a></h3>
 <p>好了，我们现在client和server都有了自己证书放在了自己的keystore中，而且把彼此的root-ca证书放到了自己的truststore里。现在我们弄一个tomcat作为server，然后为他配置SSL。</p>
 <p>修改tomcat/conf/server.xml，添加如下Connector：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-xml" data-lang="xml"><span style="color:#f92672">&lt;Connector</span> <span style="color:#a6e22e">port=</span><span style="color:#e6db74">&#34;8443&#34;</span> <span style="color:#a6e22e">protocol=</span><span style="color:#e6db74">&#34;org.apache.coyote.http11.Http11NioProtocol&#34;</span>
-           <span style="color:#a6e22e">maxThreads=</span><span style="color:#e6db74">&#34;150&#34;</span> <span style="color:#a6e22e">SSLEnabled=</span><span style="color:#e6db74">&#34;true&#34;</span><span style="color:#f92672">&gt;</span>
-    <span style="color:#f92672">&lt;SSLHostConfig</span>
-      <span style="color:#a6e22e">certificateVerification=</span><span style="color:#e6db74">&#34;required&#34;</span>
-      <span style="color:#a6e22e">truststoreFile=</span><span style="color:#e6db74">&#34;/path/to/server-secrets/jks/server.truststore&#34;</span>
-      <span style="color:#a6e22e">truststorePassword=</span><span style="color:#e6db74">&#34;server-ts&#34;</span> 
-      <span style="color:#a6e22e">truststoreType=</span><span style="color:#e6db74">&#34;PKCS12&#34;</span><span style="color:#f92672">&gt;</span>
-        <span style="color:#f92672">&lt;Certificate</span>
-          <span style="color:#a6e22e">certificateKeyAlias=</span><span style="color:#e6db74">&#34;server-demo&#34;</span>
-          <span style="color:#a6e22e">certificateKeystoreFile=</span><span style="color:#e6db74">&#34;/path/to/server-secrets/demo-jks/server-demo.keystore&#34;</span>
-          <span style="color:#a6e22e">certificateKeystoreType=</span><span style="color:#e6db74">&#34;PKCS12&#34;</span>
-          <span style="color:#a6e22e">certificateKeystorePassword=</span><span style="color:#e6db74">&#34;server-demo-ks&#34;</span>
-          <span style="color:#a6e22e">type=</span><span style="color:#e6db74">&#34;RSA&#34;</span> <span style="color:#f92672">/&gt;</span>
-    <span style="color:#f92672">&lt;/SSLHostConfig&gt;</span>
-<span style="color:#f92672">&lt;/Connector&gt;</span>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-xml" data-lang="xml"><span class="ln"> 1</span><span class="nt">&lt;Connector</span> <span class="na">port=</span><span class="s">&#34;8443&#34;</span> <span class="na">protocol=</span><span class="s">&#34;org.apache.coyote.http11.Http11NioProtocol&#34;</span>
+<span class="ln"> 2</span>           <span class="na">maxThreads=</span><span class="s">&#34;150&#34;</span> <span class="na">SSLEnabled=</span><span class="s">&#34;true&#34;</span><span class="nt">&gt;</span>
+<span class="ln"> 3</span>    <span class="nt">&lt;SSLHostConfig</span>
+<span class="ln"> 4</span>      <span class="na">certificateVerification=</span><span class="s">&#34;required&#34;</span>
+<span class="ln"> 5</span>      <span class="na">truststoreFile=</span><span class="s">&#34;/path/to/server-secrets/jks/server.truststore&#34;</span>
+<span class="ln"> 6</span>      <span class="na">truststorePassword=</span><span class="s">&#34;server-ts&#34;</span> 
+<span class="ln"> 7</span>      <span class="na">truststoreType=</span><span class="s">&#34;PKCS12&#34;</span><span class="nt">&gt;</span>
+<span class="ln"> 8</span>        <span class="nt">&lt;Certificate</span>
+<span class="ln"> 9</span>          <span class="na">certificateKeyAlias=</span><span class="s">&#34;server-demo&#34;</span>
+<span class="ln">10</span>          <span class="na">certificateKeystoreFile=</span><span class="s">&#34;/path/to/server-secrets/demo-jks/server-demo.keystore&#34;</span>
+<span class="ln">11</span>          <span class="na">certificateKeystoreType=</span><span class="s">&#34;PKCS12&#34;</span>
+<span class="ln">12</span>          <span class="na">certificateKeystorePassword=</span><span class="s">&#34;server-demo-ks&#34;</span>
+<span class="ln">13</span>          <span class="na">type=</span><span class="s">&#34;RSA&#34;</span> <span class="nt">/&gt;</span>
+<span class="ln">14</span>    <span class="nt">&lt;/SSLHostConfig&gt;</span>
+<span class="ln">15</span><span class="nt">&lt;/Connector&gt;</span>
 </code></pre></div><p>可以看到我们开启了客户端认证<code>certificateVerification=&quot;required&quot;</code>，也开启了服务端认证<code>&lt;Certificate&gt;</code>。记得修改上面的keystore和truststore的路径。</p>
 <p>修改tomcat/conf/web.xml，添加如下元素：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-xml" data-lang="xml"><span style="color:#f92672">&lt;security-constraint&gt;</span>
-  <span style="color:#f92672">&lt;web-resource-collection&gt;</span>
-    <span style="color:#f92672">&lt;web-resource-name&gt;</span>Automatic Forward to HTTPS/SSL<span style="color:#f92672">&lt;/web-resource-name&gt;</span>
-    <span style="color:#f92672">&lt;url-pattern&gt;</span>/*<span style="color:#f92672">&lt;/url-pattern&gt;</span>
-  <span style="color:#f92672">&lt;/web-resource-collection&gt;</span>
-  <span style="color:#f92672">&lt;user-data-constraint&gt;</span>
-    <span style="color:#f92672">&lt;transport-guarantee&gt;</span>CONFIDENTIAL<span style="color:#f92672">&lt;/transport-guarantee&gt;</span>
-  <span style="color:#f92672">&lt;/user-data-constraint&gt;</span>
-<span style="color:#f92672">&lt;/security-constraint&gt;</span>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-xml" data-lang="xml"><span class="ln">1</span><span class="nt">&lt;security-constraint&gt;</span>
+<span class="ln">2</span>  <span class="nt">&lt;web-resource-collection&gt;</span>
+<span class="ln">3</span>    <span class="nt">&lt;web-resource-name&gt;</span>Automatic Forward to HTTPS/SSL<span class="nt">&lt;/web-resource-name&gt;</span>
+<span class="ln">4</span>    <span class="nt">&lt;url-pattern&gt;</span>/*<span class="nt">&lt;/url-pattern&gt;</span>
+<span class="ln">5</span>  <span class="nt">&lt;/web-resource-collection&gt;</span>
+<span class="ln">6</span>  <span class="nt">&lt;user-data-constraint&gt;</span>
+<span class="ln">7</span>    <span class="nt">&lt;transport-guarantee&gt;</span>CONFIDENTIAL<span class="nt">&lt;/transport-guarantee&gt;</span>
+<span class="ln">8</span>  <span class="nt">&lt;/user-data-constraint&gt;</span>
+<span class="ln">9</span><span class="nt">&lt;/security-constraint&gt;</span>
 </code></pre></div><p>这个作用是当访问8080端口时，都跳转到8443端口，强制走HTTPS。</p>
 <p>启动tomcat：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">tomcat/bin/catalina.sh run
-</code></pre></div><h3 id="用curl测试">用curl测试</h3>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>tomcat/bin/catalina.sh run
+</code></pre></div><h3 id="用curl测试">用curl测试<a class="anchor ms-1" href="#用curl测试"><i class="fas fa-link"></i></a></h3>
 <p>好了，我们现在用curl来测试访问一下：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">curl https://localhost:8443/
-
-curl: <span style="color:#f92672">(</span>60<span style="color:#f92672">)</span> SSL certificate problem: self signed certificate in certificate chain
-...
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>curl https://localhost:8443/
+<span class="ln">2</span>
+<span class="ln">3</span>curl: <span class="o">(</span>60<span class="o">)</span> SSL certificate problem: self signed certificate in certificate chain
+<span class="ln">4</span>...
 </code></pre></div><p>看到curl说服务端用的是一个自签发的证书，不可信，也就是说服务端认证失败。添加<code>--insecure</code>试试：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">curl --insecure https://localhost:8443/
-
-curl: <span style="color:#f92672">(</span>35<span style="color:#f92672">)</span> error:1401E412:SSL routines:CONNECT_CR_FINISHED:sslv3 alert bad certificate
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>curl --insecure https://localhost:8443/
+<span class="ln">2</span>
+<span class="ln">3</span>curl: <span class="o">(</span>35<span class="o">)</span> error:1401E412:SSL routines:CONNECT_CR_FINISHED:sslv3 alert bad certificate
 </code></pre></div><p>这里就说明客户端认证失败。</p>
 <p>所以如果要正确访问得像下面这样，指定server-root-ca证书，以及客户端自己签发的证书及private key：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">curl --cacert server-secrets/ca/server-root-ca.pem <span style="color:#ae81ff">\
-</span><span style="color:#ae81ff"></span>  --key client-secrets/cert/demo-key.pem <span style="color:#ae81ff">\
-</span><span style="color:#ae81ff"></span>  --cert client-secrets/cert/demo.pem <span style="color:#ae81ff">\
-</span><span style="color:#ae81ff"></span>  https://localhost:8443/
-
-&lt;!DOCTYPE html&gt;
-&lt;html lang<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;en&#34;</span>&gt;
-...
-</code></pre></div><h3 id="httpclient测试">Httpclient测试</h3>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>curl --cacert server-secrets/ca/server-root-ca.pem <span class="se">\
+</span><span class="ln">2</span><span class="se"></span>  --key client-secrets/cert/demo-key.pem <span class="se">\
+</span><span class="ln">3</span><span class="se"></span>  --cert client-secrets/cert/demo.pem <span class="se">\
+</span><span class="ln">4</span><span class="se"></span>  https://localhost:8443/
+<span class="ln">5</span>
+<span class="ln">6</span>&lt;!DOCTYPE html&gt;
+<span class="ln">7</span>&lt;html <span class="nv">lang</span><span class="o">=</span><span class="s2">&#34;en&#34;</span>&gt;
+<span class="ln">8</span>...
+</code></pre></div><h3 id="httpclient测试">Httpclient测试<a class="anchor ms-1" href="#httpclient测试"><i class="fas fa-link"></i></a></h3>
 <p>我们现在用Httpclient来访问看看。pom.xml中添加依赖：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-xml" data-lang="xml"><span style="color:#f92672">&lt;dependency&gt;</span>
-  <span style="color:#f92672">&lt;groupId&gt;</span>org.apache.httpcomponents<span style="color:#f92672">&lt;/groupId&gt;</span>
-  <span style="color:#f92672">&lt;artifactId&gt;</span>httpclient<span style="color:#f92672">&lt;/artifactId&gt;</span>
-  <span style="color:#f92672">&lt;version&gt;</span>4.5.7<span style="color:#f92672">&lt;/version&gt;</span>
-<span style="color:#f92672">&lt;/dependency&gt;</span>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-xml" data-lang="xml"><span class="ln">1</span><span class="nt">&lt;dependency&gt;</span>
+<span class="ln">2</span>  <span class="nt">&lt;groupId&gt;</span>org.apache.httpcomponents<span class="nt">&lt;/groupId&gt;</span>
+<span class="ln">3</span>  <span class="nt">&lt;artifactId&gt;</span>httpclient<span class="nt">&lt;/artifactId&gt;</span>
+<span class="ln">4</span>  <span class="nt">&lt;version&gt;</span>4.5.7<span class="nt">&lt;/version&gt;</span>
+<span class="ln">5</span><span class="nt">&lt;/dependency&gt;</span>
 </code></pre></div><p>Java代码，记得把文件路径改掉：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#f92672">import</span> org.apache.http.HttpEntity<span style="color:#f92672">;</span>
-<span style="color:#f92672">import</span> org.apache.http.HttpException<span style="color:#f92672">;</span>
-<span style="color:#f92672">import</span> org.apache.http.client.methods.CloseableHttpResponse<span style="color:#f92672">;</span>
-<span style="color:#f92672">import</span> org.apache.http.client.methods.HttpGet<span style="color:#f92672">;</span>
-<span style="color:#f92672">import</span> org.apache.http.conn.ssl.SSLConnectionSocketFactory<span style="color:#f92672">;</span>
-<span style="color:#f92672">import</span> org.apache.http.impl.client.CloseableHttpClient<span style="color:#f92672">;</span>
-<span style="color:#f92672">import</span> org.apache.http.impl.client.HttpClients<span style="color:#f92672">;</span>
-<span style="color:#f92672">import</span> org.apache.http.ssl.SSLContexts<span style="color:#f92672">;</span>
-<span style="color:#f92672">import</span> org.apache.http.util.EntityUtils<span style="color:#f92672">;</span>
-
-<span style="color:#f92672">import</span> javax.net.ssl.SSLContext<span style="color:#f92672">;</span>
-<span style="color:#f92672">import</span> java.io.File<span style="color:#f92672">;</span>
-<span style="color:#f92672">import</span> java.io.IOException<span style="color:#f92672">;</span>
-
-<span style="color:#66d9ef">public</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">Client</span> <span style="color:#f92672">{</span>
-
-  <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">static</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">main</span><span style="color:#f92672">(</span>String<span style="color:#f92672">[]</span> args<span style="color:#f92672">)</span> <span style="color:#66d9ef">throws</span> Exception <span style="color:#f92672">{</span>
-
-    SSLContext sslcontext <span style="color:#f92672">=</span> SSLContexts<span style="color:#f92672">.</span><span style="color:#a6e22e">custom</span><span style="color:#f92672">()</span>
-        <span style="color:#f92672">.</span><span style="color:#a6e22e">loadTrustMaterial</span><span style="color:#f92672">(</span>
-            <span style="color:#66d9ef">new</span> File<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;/path/to/client-secrets/demo-jks/client.truststore&#34;</span><span style="color:#f92672">),</span>
-            <span style="color:#e6db74">&#34;client-ts&#34;</span><span style="color:#f92672">.</span><span style="color:#a6e22e">toCharArray</span><span style="color:#f92672">()</span>
-        <span style="color:#f92672">)</span>
-        <span style="color:#f92672">.</span><span style="color:#a6e22e">loadKeyMaterial</span><span style="color:#f92672">(</span>
-            <span style="color:#66d9ef">new</span> File<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;/path/to/client-secrets/demo-jks/client-demo.keystore&#34;</span><span style="color:#f92672">),</span>
-            <span style="color:#e6db74">&#34;client-demo-ks&#34;</span><span style="color:#f92672">.</span><span style="color:#a6e22e">toCharArray</span><span style="color:#f92672">(),</span>
-            <span style="color:#e6db74">&#34;client-demo-ks&#34;</span><span style="color:#f92672">.</span><span style="color:#a6e22e">toCharArray</span><span style="color:#f92672">())</span>
-        <span style="color:#f92672">.</span><span style="color:#a6e22e">build</span><span style="color:#f92672">();</span>
-
-    SSLConnectionSocketFactory sslsf <span style="color:#f92672">=</span> <span style="color:#66d9ef">new</span> SSLConnectionSocketFactory<span style="color:#f92672">(</span>
-        sslcontext<span style="color:#f92672">,</span>
-        SSLConnectionSocketFactory<span style="color:#f92672">.</span><span style="color:#a6e22e">getDefaultHostnameVerifier</span><span style="color:#f92672">());</span>
-
-    CloseableHttpClient httpclient <span style="color:#f92672">=</span> HttpClients<span style="color:#f92672">.</span><span style="color:#a6e22e">custom</span><span style="color:#f92672">()</span>
-        <span style="color:#f92672">.</span><span style="color:#a6e22e">setSSLSocketFactory</span><span style="color:#f92672">(</span>sslsf<span style="color:#f92672">)</span>
-        <span style="color:#f92672">.</span><span style="color:#a6e22e">build</span><span style="color:#f92672">();</span>
-
-    HttpGet httpGet <span style="color:#f92672">=</span> <span style="color:#66d9ef">new</span> HttpGet<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;https://localhost:8443&#34;</span><span style="color:#f92672">);</span>
-    CloseableHttpResponse response <span style="color:#f92672">=</span> httpclient<span style="color:#f92672">.</span><span style="color:#a6e22e">execute</span><span style="color:#f92672">(</span>httpGet<span style="color:#f92672">);</span>
-    <span style="color:#66d9ef">try</span> <span style="color:#f92672">{</span>
-      System<span style="color:#f92672">.</span><span style="color:#a6e22e">out</span><span style="color:#f92672">.</span><span style="color:#a6e22e">println</span><span style="color:#f92672">(</span>response<span style="color:#f92672">.</span><span style="color:#a6e22e">getStatusLine</span><span style="color:#f92672">());</span>
-      HttpEntity entity <span style="color:#f92672">=</span> response<span style="color:#f92672">.</span><span style="color:#a6e22e">getEntity</span><span style="color:#f92672">();</span>
-      System<span style="color:#f92672">.</span><span style="color:#a6e22e">out</span><span style="color:#f92672">.</span><span style="color:#a6e22e">println</span><span style="color:#f92672">(</span>EntityUtils<span style="color:#f92672">.</span><span style="color:#a6e22e">toString</span><span style="color:#f92672">(</span>entity<span style="color:#f92672">));</span>
-    <span style="color:#f92672">}</span> <span style="color:#66d9ef">finally</span> <span style="color:#f92672">{</span>
-      response<span style="color:#f92672">.</span><span style="color:#a6e22e">close</span><span style="color:#f92672">();</span>
-    <span style="color:#f92672">}</span>
-
-  <span style="color:#f92672">}</span>
-<span style="color:#f92672">}</span>
-</code></pre></div><h2 id="安全性考虑">安全性考虑</h2>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln"> 1</span><span class="kn">import</span> <span class="nn">org.apache.http.HttpEntity</span><span class="o">;</span>
+<span class="ln"> 2</span><span class="kn">import</span> <span class="nn">org.apache.http.HttpException</span><span class="o">;</span>
+<span class="ln"> 3</span><span class="kn">import</span> <span class="nn">org.apache.http.client.methods.CloseableHttpResponse</span><span class="o">;</span>
+<span class="ln"> 4</span><span class="kn">import</span> <span class="nn">org.apache.http.client.methods.HttpGet</span><span class="o">;</span>
+<span class="ln"> 5</span><span class="kn">import</span> <span class="nn">org.apache.http.conn.ssl.SSLConnectionSocketFactory</span><span class="o">;</span>
+<span class="ln"> 6</span><span class="kn">import</span> <span class="nn">org.apache.http.impl.client.CloseableHttpClient</span><span class="o">;</span>
+<span class="ln"> 7</span><span class="kn">import</span> <span class="nn">org.apache.http.impl.client.HttpClients</span><span class="o">;</span>
+<span class="ln"> 8</span><span class="kn">import</span> <span class="nn">org.apache.http.ssl.SSLContexts</span><span class="o">;</span>
+<span class="ln"> 9</span><span class="kn">import</span> <span class="nn">org.apache.http.util.EntityUtils</span><span class="o">;</span>
+<span class="ln">10</span>
+<span class="ln">11</span><span class="kn">import</span> <span class="nn">javax.net.ssl.SSLContext</span><span class="o">;</span>
+<span class="ln">12</span><span class="kn">import</span> <span class="nn">java.io.File</span><span class="o">;</span>
+<span class="ln">13</span><span class="kn">import</span> <span class="nn">java.io.IOException</span><span class="o">;</span>
+<span class="ln">14</span>
+<span class="ln">15</span><span class="kd">public</span> <span class="kd">class</span> <span class="nc">Client</span> <span class="o">{</span>
+<span class="ln">16</span>
+<span class="ln">17</span>  <span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">main</span><span class="o">(</span><span class="n">String</span><span class="o">[]</span> <span class="n">args</span><span class="o">)</span> <span class="kd">throws</span> <span class="n">Exception</span> <span class="o">{</span>
+<span class="ln">18</span>
+<span class="ln">19</span>    <span class="n">SSLContext</span> <span class="n">sslcontext</span> <span class="o">=</span> <span class="n">SSLContexts</span><span class="o">.</span><span class="na">custom</span><span class="o">()</span>
+<span class="ln">20</span>        <span class="o">.</span><span class="na">loadTrustMaterial</span><span class="o">(</span>
+<span class="ln">21</span>            <span class="k">new</span> <span class="n">File</span><span class="o">(</span><span class="s">&#34;/path/to/client-secrets/demo-jks/client.truststore&#34;</span><span class="o">),</span>
+<span class="ln">22</span>            <span class="s">&#34;client-ts&#34;</span><span class="o">.</span><span class="na">toCharArray</span><span class="o">()</span>
+<span class="ln">23</span>        <span class="o">)</span>
+<span class="ln">24</span>        <span class="o">.</span><span class="na">loadKeyMaterial</span><span class="o">(</span>
+<span class="ln">25</span>            <span class="k">new</span> <span class="n">File</span><span class="o">(</span><span class="s">&#34;/path/to/client-secrets/demo-jks/client-demo.keystore&#34;</span><span class="o">),</span>
+<span class="ln">26</span>            <span class="s">&#34;client-demo-ks&#34;</span><span class="o">.</span><span class="na">toCharArray</span><span class="o">(),</span>
+<span class="ln">27</span>            <span class="s">&#34;client-demo-ks&#34;</span><span class="o">.</span><span class="na">toCharArray</span><span class="o">())</span>
+<span class="ln">28</span>        <span class="o">.</span><span class="na">build</span><span class="o">();</span>
+<span class="ln">29</span>
+<span class="ln">30</span>    <span class="n">SSLConnectionSocketFactory</span> <span class="n">sslsf</span> <span class="o">=</span> <span class="k">new</span> <span class="n">SSLConnectionSocketFactory</span><span class="o">(</span>
+<span class="ln">31</span>        <span class="n">sslcontext</span><span class="o">,</span>
+<span class="ln">32</span>        <span class="n">SSLConnectionSocketFactory</span><span class="o">.</span><span class="na">getDefaultHostnameVerifier</span><span class="o">());</span>
+<span class="ln">33</span>
+<span class="ln">34</span>    <span class="n">CloseableHttpClient</span> <span class="n">httpclient</span> <span class="o">=</span> <span class="n">HttpClients</span><span class="o">.</span><span class="na">custom</span><span class="o">()</span>
+<span class="ln">35</span>        <span class="o">.</span><span class="na">setSSLSocketFactory</span><span class="o">(</span><span class="n">sslsf</span><span class="o">)</span>
+<span class="ln">36</span>        <span class="o">.</span><span class="na">build</span><span class="o">();</span>
+<span class="ln">37</span>
+<span class="ln">38</span>    <span class="n">HttpGet</span> <span class="n">httpGet</span> <span class="o">=</span> <span class="k">new</span> <span class="n">HttpGet</span><span class="o">(</span><span class="s">&#34;https://localhost:8443&#34;</span><span class="o">);</span>
+<span class="ln">39</span>    <span class="n">CloseableHttpResponse</span> <span class="n">response</span> <span class="o">=</span> <span class="n">httpclient</span><span class="o">.</span><span class="na">execute</span><span class="o">(</span><span class="n">httpGet</span><span class="o">);</span>
+<span class="ln">40</span>    <span class="k">try</span> <span class="o">{</span>
+<span class="ln">41</span>      <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="n">response</span><span class="o">.</span><span class="na">getStatusLine</span><span class="o">());</span>
+<span class="ln">42</span>      <span class="n">HttpEntity</span> <span class="n">entity</span> <span class="o">=</span> <span class="n">response</span><span class="o">.</span><span class="na">getEntity</span><span class="o">();</span>
+<span class="ln">43</span>      <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="n">EntityUtils</span><span class="o">.</span><span class="na">toString</span><span class="o">(</span><span class="n">entity</span><span class="o">));</span>
+<span class="ln">44</span>    <span class="o">}</span> <span class="k">finally</span> <span class="o">{</span>
+<span class="ln">45</span>      <span class="n">response</span><span class="o">.</span><span class="na">close</span><span class="o">();</span>
+<span class="ln">46</span>    <span class="o">}</span>
+<span class="ln">47</span>
+<span class="ln">48</span>  <span class="o">}</span>
+<span class="ln">49</span><span class="o">}</span>
+</code></pre></div><h2 id="安全性考虑">安全性考虑<a class="anchor ms-1" href="#安全性考虑"><i class="fas fa-link"></i></a></h2>
 <ul>
 <li>所有private key都很重要！如果它被泄漏了，就要回收它所对应都证书。如果CA的private key泄漏了，那么用它签发的所有证书都要被回收。</li>
 <li>keystore和truststore的密码设置的要复杂一些。</li>
 </ul>
-<h2 id="关于反向代理">关于反向代理</h2>
+<h2 id="关于反向代理">关于反向代理<a class="anchor ms-1" href="#关于反向代理"><i class="fas fa-link"></i></a></h2>
 <p>因为服务端认证所需要的证书直接配置在Tomcat上的，因此在做反向代理的时候不能使用SSL Termination模式，而是得使用SSL Passthrough模式。</p>
-<h2 id="其他语言sdk工具">其他语言、SDK、工具</h2>
+<h2 id="其他语言sdk工具">其他语言、SDK、工具<a class="anchor ms-1" href="#其他语言sdk工具"><i class="fas fa-link"></i></a></h2>
 <p>上面讲的方法不是只适用于Tomcat和Httpclient的，TLS的服务端认证与客户端认证应该在绝大部分的语言、SDK、类库都有支持，请自行参阅文档实践。文中的keystore和truststore是Java特有的，不过不必迷惑，因为它们仅仅起到一个存放证书和private key的保险箱，有些语言或工具则是直接使用证书和private key，比如前面提到的curl。</p>
-<h2 id="参考资料">参考资料</h2>
+<h2 id="参考资料">参考资料<a class="anchor ms-1" href="#参考资料"><i class="fas fa-link"></i></a></h2>
 <ul>
-<li><a href="https://github.com/cloudflare/cfssl">cfssl</a></li>
-<li><a href="https://tomcat.apache.org/tomcat-8.5-doc/ssl-howto.html">SSL/TLS Configuration HOW-TO</a></li>
-<li><a href="https://tomcat.apache.org/tomcat-8.5-doc/config/http.html#SSL_Support">SSL Support</a></li>
-<li><a href="http://www.maximporges.com/2009/11/18/configuring-tomcat-ssl-clientserver-authentication/">CONFIGURING TOMCAT SSL CLIENT/SERVER AUTHENTICATION</a>，这篇文章有点古老了，server.xml的配置方式已经不一样了，仅供参考。</li>
-<li><a href="https://hc.apache.org/httpcomponents-client-ga/httpclient/examples/org/apache/http/examples/client/ClientCustomSSL.java">ClientCustomSSL.java</a></li>
-<li><a href="https://docs.oracle.com/javase/8/docs/technotes/guides/security/jsse/JSSERefGuide.html">JSSE Reference Guide</a></li>
+<li><a href="https://github.com/cloudflare/cfssl" target="_blank" rel="noopener noreferrer">cfssl</a>
+</li>
+<li><a href="https://tomcat.apache.org/tomcat-8.5-doc/ssl-howto.html" target="_blank" rel="noopener noreferrer">SSL/TLS Configuration HOW-TO</a>
+</li>
+<li><a href="https://tomcat.apache.org/tomcat-8.5-doc/config/http.html#SSL_Support" target="_blank" rel="noopener noreferrer">SSL Support</a>
+</li>
+<li><a href="http://www.maximporges.com/2009/11/18/configuring-tomcat-ssl-clientserver-authentication/" target="_blank" rel="noopener noreferrer">CONFIGURING TOMCAT SSL CLIENT/SERVER AUTHENTICATION</a>
+，这篇文章有点古老了，server.xml的配置方式已经不一样了，仅供参考。</li>
+<li><a href="https://hc.apache.org/httpcomponents-client-ga/httpclient/examples/org/apache/http/examples/client/ClientCustomSSL.java" target="_blank" rel="noopener noreferrer">ClientCustomSSL.java</a>
+</li>
+<li><a href="https://docs.oracle.com/javase/8/docs/technotes/guides/security/jsse/JSSERefGuide.html" target="_blank" rel="noopener noreferrer">JSSE Reference Guide</a>
+</li>
 </ul>
 <p>一些基础概念：</p>
 <ul>
-<li><a href="https://sites.google.com/site/ddmwsst/digital-certificates">Basics of Digital Certificates and Certificate Authority</a>，基础概念，挺重要</li>
-<li><a href="https://sites.google.com/site/ddmwsst/create-your-own-certificate-and-ca">Create Your Own Certificate and CA</a>，这篇文章挺重要的，主要讲了如何使用keytool和openssl来生成证书的过程</li>
-<li><a href="https://blog.cloudflare.com/introducing-tls-client-auth/">Introducing TLS with Client Authentication</a></li>
-<li><a href="https://medium.com/sitewards/the-magic-of-tls-x509-and-mutual-authentication-explained-b2162dec4401">The magic of TLS, X509 and mutual authentication explained</a></li>
+<li><a href="https://sites.google.com/site/ddmwsst/digital-certificates" target="_blank" rel="noopener noreferrer">Basics of Digital Certificates and Certificate Authority</a>
+，基础概念，挺重要</li>
+<li><a href="https://sites.google.com/site/ddmwsst/create-your-own-certificate-and-ca" target="_blank" rel="noopener noreferrer">Create Your Own Certificate and CA</a>
+，这篇文章挺重要的，主要讲了如何使用keytool和openssl来生成证书的过程</li>
+<li><a href="https://blog.cloudflare.com/introducing-tls-client-auth/" target="_blank" rel="noopener noreferrer">Introducing TLS with Client Authentication</a>
+</li>
+<li><a href="https://medium.com/sitewards/the-magic-of-tls-x509-and-mutual-authentication-explained-b2162dec4401" target="_blank" rel="noopener noreferrer">The magic of TLS, X509 and mutual authentication explained</a>
+</li>
 </ul>
 <p>其他运用客户端认证的软件的相关文档，很有启发：</p>
 <ul>
-<li><a href="http://play.etcd.io/install">Etcd - Play etcd</a> TLS部分</li>
-<li><a href="https://github.com/etcd-io/etcd/blob/master/Documentation/op-guide/security.md#example-2-client-to-server-authentication-with-https-client-certificates">Etcd - Example 2: Client-to-server authentication with HTTPS client certificates</a></li>
-<li><a href="https://coreos.com/os/docs/latest/generate-self-signed-certificates.html">Coreos - Generate self-signed certificates</a></li>
-</ul>
-        </p>
+<li><a href="http://play.etcd.io/install" target="_blank" rel="noopener noreferrer">Etcd - Play etcd</a>
+ TLS部分</li>
+<li><a href="https://github.com/etcd-io/etcd/blob/master/Documentation/op-guide/security.md#example-2-client-to-server-authentication-with-https-client-certificates" target="_blank" rel="noopener noreferrer">Etcd - Example 2: Client-to-server authentication with HTTPS client certificates</a>
+</li>
+<li><a href="https://coreos.com/os/docs/latest/generate-self-signed-certificates.html" target="_blank" rel="noopener noreferrer">Coreos - Generate self-signed certificates</a>
+</li>
+</ul></div></div>
+  <div class="card-footer"><div class="post-navs d-flex justify-content-evenly">
+  <div class="post-nav post-prev"><i class="fas fa-fw fa-chevron-left"></i>
+    <a href="/post/concurrent-programming/parallel-latency-throughput/">并行、延迟与吞吐量
+</a>
+  </div><div class="post-nav post-next">
+    <a href="/post/kernel/sync-async-blocking-non-blocking-io-abstract/">关于同步/异步、阻塞/非阻塞IO的摘要
+</a>
+    <i class="fas fa-fw fa-chevron-right"></i>
+  </div></div></div>
+</article>
+<div class="post-copyright mb-3 row card component" id="post-copyright">
+    <div class="card-header">
+        <h2 class="card-title">版权</h2>
     </div>
-    
+    <div class="card-body"><a class="d-flex align-items-center flex-column" target="_blank" rel="license noopener noreferrer" href="https://creativecommons.org/licenses/by-nc-nd/4.0/deed.zh">
+  <span><i class="fab fa-fw fa-2x fa-creative-commons"></i><i class="fab fa-fw fa-2x fa-creative-commons-by"></i><i class="fab fa-fw fa-2x fa-creative-commons-nc"></i><i class="fab fa-fw fa-2x fa-creative-commons-nd"></i></span>
+  CC BY-NC-ND 4.0 
+</a>
 
-    
 
-    <div class="page-footer">
-        
-        <hr class="footer-divider">
-        
-            <a class="tag" href="https://chanjarster.github.io/tags/java">#java</a>
-        
-            <a class="tag" href="https://chanjarster.github.io/tags/tls">#tls</a>
-        
-            <a class="tag" href="https://chanjarster.github.io/tags/openssl">#openssl</a>
-        
-      
     </div>
-
-
-        
-        </div>
-        <footer class="footer-mobile">
-	<div class="social-icons">
-        
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-    
-    
-    <a class="social-icon" href="chanjarster" target="_blank" rel="noopener" title="GitHub">
-        <svg width="28px" height="28px" viewBox="0 0 28 28" version="1.1" fill="#ABABAB" xmlns="https://www.w3.org/2000/svg" xmlns:xlink="https://www.w3.org/1999/xlink">
-            <path d="M13.9988029,1.32087331 C6.82105037,1.32087331 1,7.14112562 1,14.3212723 C1,20.0649109 4.72454649,24.9370678 9.89038951,26.6560892 C10.5408085,26.7757983 10.7778323,26.374374 10.7778323,26.0296121 C10.7778323,25.7215609 10.7666595,24.9035493 10.760275,23.8189856 C7.14426471,24.6042767 6.38131925,22.0760223 6.38131925,22.0760223 C5.78995672,20.5740732 4.93762853,20.1742451 4.93762853,20.1742451 C3.75729765,19.3682044 5.02701126,19.3841656 5.02701126,19.3841656 C6.33183953,19.4759425 7.01817121,20.7241085 7.01817121,20.7241085 C8.17775254,22.7104801 10.0611744,22.1366749 10.8017741,21.8038838 C10.919887,20.9643246 11.2558703,20.3913175 11.6269683,20.066507 C8.74038491,19.7385043 5.70536235,18.6228163 5.70536235,13.6413251 C5.70536235,12.2223743 6.21213051,11.0611968 7.04370914,10.1530044 C6.90963504,9.82420367 6.46351945,8.50181809 7.17139875,6.71256734 C7.17139875,6.71256734 8.26234691,6.36301702 10.7459099,8.04532771 C11.78259,7.75642995 12.8950858,7.61277914 14.000399,7.60719272 C15.1049142,7.61277914 16.2166119,7.75642995 17.2548881,8.04532771 C19.736855,6.36301702 20.8262071,6.71256734 20.8262071,6.71256734 C21.5356825,8.50181809 21.0895669,9.82420367 20.9562909,10.1530044 C21.7894656,11.0611968 22.2922435,12.2223743 22.2922435,13.6413251 C22.2922435,18.6355852 19.2524325,19.734514 16.3570705,20.0561322 C16.8231376,20.4575564 17.2389269,21.2508282 17.2389269,22.4638795 C17.2389269,24.2012564 17.2229657,25.603448 17.2229657,26.0296121 C17.2229657,26.3775663 17.4575954,26.7821827 18.116793,26.6552912 C23.2786458,24.9322794 27,20.0633148 27,14.3212723 C27,7.14112562 21.1789496,1.32087331 13.9988029,1.32087331"></path>
-        </svg>
-    </a>
-    
-
-    
-    
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
 </div>
-
-
-
-
-	<div class="footer-mobile-links">
-        <p><a href="https://github.com/kimcc/hugo-theme-noteworthy" target="_blank" rel="noopener">Noteworthy theme</a></p>
-		<span class="divider-bar">|</span>
-        <p><a href="https://gohugo.io" target="_blank" rel="noopener">Built with Hugo</a></p>
-	</div>
-
-	<script src="https://chanjarster.github.io/js/main.min.fa5c2b23e07b5d9bfad267a52b4b24fdb053e6fb7524993383594926a3ac270c.js" integrity="sha256-+lwrI+B7XZv60melK0sk/bBT5vt1JJkzg1lJJqOsJww=" crossorigin="anonymous"></script>
+<section class="related-posts row card component">
+    <div class="card-header">
+      <h2 class="card-title">相关文章</h2>
+    </div>
+    <div class="card-body">
+      <ul class="post-list"><li>
+          <a href="/post/is-logging-to-console-slow/">为何把日志打印到控制台很慢？
+</a>
+          <span class="float-end post-date">2019-02-22
+</span>
+        </li><li>
+          <a href="/post/prom-alert-jvm/">使用Prometheus&#43;Alertmanager告警JVM异常情况
+</a>
+          <span class="float-end post-date">2018-10-26
+</span>
+        </li><li>
+          <a href="/post/prom-grafana-jvm/">使用Prometheus&#43;Grafana监控JVM
+</a>
+          <span class="float-end post-date">2018-10-24
+</span>
+        </li><li>
+          <a href="/post/visualvm-remote-monitoring-jmx-k8s/">利用VisualVm和JMX远程监控K8S里的Java进程
+</a>
+          <span class="float-end post-date">2018-10-15
+</span>
+        </li><li>
+          <a href="/post/visualvm-remote-monitoring-jmx-ssl/">VisualVm利用SSL连接JMX的方法
+</a>
+          <span class="float-end post-date">2018-10-10
+</span>
+        </li></ul>
+    </div>
+  </section><div class="card component row post-comments" id="post-comments">
+  <div class="card-header">
+    <h2 class="card-title">评论</h2>
+  </div>
+  <div class="card-body"></div>
+</div></div>
+</div><aside class="col-lg-4 sidebar d-flex">
+  <div class="container d-flex flex-column">
+    
+    <section class="card row text-center profile component">
+  <div class="card-body">
+    <div class="col-12 d-flex align-items-center justify-content-center"><img class="profile-avatar rounded-circle" alt="颇忒脱" src="/images/avatar.jpg" loading="lazy"
+   width="455" height="455"
+   /></div>
+    <div class="col-12 profile-meta"><div class="profile-name">颇忒脱</div><nav class="social-links nav justify-content-center"><a class="nav-link social-link" target="_blank" href="https://github.com/chanjarster" title="GitHub" rel="noopener noreferrer">
+        <i class="fa-fw fa-2x fab fa-github"></i>
+      </a></nav>
+</div>
+  </div>
+</section>
+  <div class="post-toc row mb-4 card component" id="postTOC">
+  <div class="card-header">
+    <h2 class="card-title">目录</h2>
+  </div>
+  <div class="card-body">
+    <nav id="TableOfContents">
+  <ul>
+    <li><a href="#概念">概念</a>
+      <ul>
+        <li><a href="#服务端认证">服务端认证</a></li>
+        <li><a href="#客户端认证">客户端认证</a></li>
+      </ul>
+    </li>
+    <li><a href="#用tomcat举个例子">用Tomcat举个例子</a>
+      <ul>
+        <li><a href="#服务端">服务端</a></li>
+        <li><a href="#客户端">客户端</a></li>
+        <li><a href="#两端互信">两端互信</a></li>
+        <li><a href="#配置tomcat">配置Tomcat</a></li>
+        <li><a href="#用curl测试">用curl测试</a></li>
+        <li><a href="#httpclient测试">Httpclient测试</a></li>
+      </ul>
+    </li>
+    <li><a href="#安全性考虑">安全性考虑</a></li>
+    <li><a href="#关于反向代理">关于反向代理</a></li>
+    <li><a href="#其他语言sdk工具">其他语言、SDK、工具</a></li>
+    <li><a href="#参考资料">参考资料</a></li>
+  </ul>
+</nav>
+  </div>
+</div><section class="featured-posts row card component">
+    <div class="card-header">
+      <h2 class="card-title">精选文章</h2>
+    </div>
+    <div class="card-body">
+      <ul class="post-list"><li>
+          <a href="/post/mysql/index-page/">MySQL系列
+</a>
+        </li><li>
+          <a href="/post/concurrent-programming/index-page/">并发编程系列
+</a>
+        </li><li>
+          <a href="/post/jvm/index-page/">JVM系列
+</a>
+        </li></ul>
+    </div>
+  </section><section class="recent-posts row card component">
+  <div class="card-header">
+    <h2 class="card-title">最近文章</h2>
+  </div>
+  <div class="card-body">
+    <ul class="post-list"><li>
+        <a href="/post/jvm/gc-log-options/">JVM - GC日志参数
+</a>
+      </li><li>
+        <a href="/post/redis/redis-cluster-solutions-compare/">Redis集群方案对比
+</a>
+      </li><li>
+        <a href="/post/linux/namespace/">Linux命名空间一些笔记
+</a>
+      </li><li>
+        <a href="/post/jvm-tools/">Jps Jstat Jstack...的工作原理
+</a>
+      </li><li>
+        <a href="/post/mysql/opt-big-transaction-lock/">SQL优化:大事务中的行锁获取超时
+</a>
+      </li></ul>
+  </div>
+</section><section class="tags-taxonomies row card component">
+      <div class="card-header">
+        <h2 class="card-title">
+          <a href="/tags">标签</a>
+        </h2>
+      </div>
+      <div class="card-body">
+        <div class="py-2"><a href="/tags/arts/" class="badge rounded post-taxonomy" title="ARTS">
+            ARTS<span class="badge badge-sm text-white bg-accent ms-1">193</span></a><a href="/tags/arts-a/" class="badge rounded post-taxonomy" title="ARTS-A">
+            ARTS-A<span class="badge badge-sm text-white bg-accent ms-1">125</span></a><a href="/tags/arts-t/" class="badge rounded post-taxonomy" title="ARTS-T">
+            ARTS-T<span class="badge badge-sm text-white bg-accent ms-1">59</span></a><a href="/tags/jvm/" class="badge rounded post-taxonomy" title="jvm">
+            jvm<span class="badge badge-sm text-white bg-accent ms-1">35</span></a><a href="/tags/k8s/" class="badge rounded post-taxonomy" title="k8s">
+            k8s<span class="badge badge-sm text-white bg-accent ms-1">34</span></a><a href="/tags/mysql/" class="badge rounded post-taxonomy" title="mysql">
+            mysql<span class="badge badge-sm text-white bg-accent ms-1">22</span></a><a href="/tags/troubleshooting/" class="badge rounded post-taxonomy" title="troubleshooting">
+            troubleshooting<span class="badge badge-sm text-white bg-accent ms-1">21</span></a><a href="/tags/docker/" class="badge rounded post-taxonomy" title="docker">
+            docker<span class="badge badge-sm text-white bg-accent ms-1">20</span></a><a href="/tags/%E5%B9%B6%E5%8F%91%E7%BC%96%E7%A8%8B/" class="badge rounded post-taxonomy" title="并发编程&#34;">
+            并发编程&#34;<span class="badge badge-sm text-white bg-accent ms-1">20</span></a><a href="/tags/cheatsheet/" class="badge rounded post-taxonomy" title="cheatsheet">
+            cheatsheet<span class="badge badge-sm text-white bg-accent ms-1">16</span></a><a href="/tags/java/" class="badge rounded post-taxonomy" title="java">
+            java<span class="badge badge-sm text-white bg-accent ms-1">14</span></a><a href="/tags/kernel/" class="badge rounded post-taxonomy" title="kernel">
+            kernel<span class="badge badge-sm text-white bg-accent ms-1">13</span></a><a href="/tags/%E6%80%A7%E8%83%BD%E8%B0%83%E4%BC%98/" class="badge rounded post-taxonomy" title="性能调优">
+            性能调优<span class="badge badge-sm text-white bg-accent ms-1">11</span></a><a href="/tags/%E5%BE%AE%E6%9C%8D%E5%8A%A1/" class="badge rounded post-taxonomy" title="微服务">
+            微服务<span class="badge badge-sm text-white bg-accent ms-1">10</span></a><a href="/tags/arts-r/" class="badge rounded post-taxonomy" title="ARTS-R">
+            ARTS-R<span class="badge badge-sm text-white bg-accent ms-1">9</span></a><a href="/tags/prometheus/" class="badge rounded post-taxonomy" title="prometheus">
+            prometheus<span class="badge badge-sm text-white bg-accent ms-1">9</span></a><a href="/tags/go/" class="badge rounded post-taxonomy" title="go">
+            go<span class="badge badge-sm text-white bg-accent ms-1">8</span></a><a href="/tags/linux/" class="badge rounded post-taxonomy" title="linux">
+            linux<span class="badge badge-sm text-white bg-accent ms-1">7</span></a><a href="/tags/redis/" class="badge rounded post-taxonomy" title="redis">
+            redis<span class="badge badge-sm text-white bg-accent ms-1">7</span></a><a href="/tags/gc/" class="badge rounded post-taxonomy" title="gc">
+            gc<span class="badge badge-sm text-white bg-accent ms-1">6</span></a><a href="/tags/%E8%BF%90%E7%BB%B4/" class="badge rounded post-taxonomy" title="运维">
+            运维<span class="badge badge-sm text-white bg-accent ms-1">6</span></a><a href="/tags/ci_cd/" class="badge rounded post-taxonomy" title="CI_CD">
+            CI_CD<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/debug/" class="badge rounded post-taxonomy" title="debug">
+            debug<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/interview/" class="badge rounded post-taxonomy" title="interview">
+            interview<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/jmx/" class="badge rounded post-taxonomy" title="jmx">
+            jmx<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/%E5%88%86%E5%B8%83%E5%BC%8F%E4%BA%8B%E5%8A%A1/" class="badge rounded post-taxonomy" title="分布式事务">
+            分布式事务<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/%E5%88%86%E5%B8%83%E5%BC%8F%E7%AE%97%E6%B3%95/" class="badge rounded post-taxonomy" title="分布式算法">
+            分布式算法<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/%E6%94%B6%E8%97%8F%E5%A4%B9/" class="badge rounded post-taxonomy" title="收藏夹">
+            收藏夹<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/openssl/" class="badge rounded post-taxonomy" title="openssl">
+            openssl<span class="badge badge-sm text-white bg-accent ms-1">4</span></a><a href="/tags/rancher/" class="badge rounded post-taxonomy" title="rancher">
+            rancher<span class="badge badge-sm text-white bg-accent ms-1">4</span></a><a href="/tags/tls/" class="badge rounded post-taxonomy" title="tls">
+            tls<span class="badge badge-sm text-white bg-accent ms-1">4</span></a><a href="/tags/visualvm/" class="badge rounded post-taxonomy" title="visualvm">
+            visualvm<span class="badge badge-sm text-white bg-accent ms-1">4</span></a><a href="/tags/%E6%97%A5%E5%BF%97/" class="badge rounded post-taxonomy" title="日志">
+            日志<span class="badge badge-sm text-white bg-accent ms-1">4</span></a><a href="/tags/classloader/" class="badge rounded post-taxonomy" title="ClassLoader">
+            ClassLoader<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/ingress/" class="badge rounded post-taxonomy" title="ingress">
+            ingress<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/jenkins/" class="badge rounded post-taxonomy" title="Jenkins">
+            Jenkins<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/network/" class="badge rounded post-taxonomy" title="network">
+            network<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/scheduling/" class="badge rounded post-taxonomy" title="scheduling">
+            scheduling<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/thread/" class="badge rounded post-taxonomy" title="thread">
+            thread<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/%E5%88%86%E5%B8%83%E5%BC%8F%E6%9E%B6%E6%9E%84/" class="badge rounded post-taxonomy" title="分布式架构">
+            分布式架构<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/%E9%AB%98%E5%B9%B6%E5%8F%91/" class="badge rounded post-taxonomy" title="高并发">
+            高并发<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/grafana/" class="badge rounded post-taxonomy" title="grafana">
+            grafana<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/jdbc/" class="badge rounded post-taxonomy" title="JDBC">
+            JDBC<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/nginx/" class="badge rounded post-taxonomy" title="nginx">
+            nginx<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/%E6%95%B0%E6%8D%AE%E5%BA%93%E6%97%B6%E5%8C%BA%E9%82%A3%E4%BA%9B%E4%BA%8B%E5%84%BF/" class="badge rounded post-taxonomy" title="数据库时区那些事儿">
+            数据库时区那些事儿<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/%E7%9B%91%E6%8E%A7/" class="badge rounded post-taxonomy" title="监控">
+            监控<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/%E9%99%90%E6%B5%81/" class="badge rounded post-taxonomy" title="限流">
+            限流<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/akka/" class="badge rounded post-taxonomy" title="Akka">
+            Akka<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/alertmanager/" class="badge rounded post-taxonomy" title="alertmanager">
+            alertmanager<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/chrome/" class="badge rounded post-taxonomy" title="chrome">
+            chrome<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/elasticsearch/" class="badge rounded post-taxonomy" title="elasticsearch">
+            elasticsearch<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/etcd/" class="badge rounded post-taxonomy" title="etcd">
+            etcd<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/fluentd/" class="badge rounded post-taxonomy" title="fluentd">
+            fluentd<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/harbor/" class="badge rounded post-taxonomy" title="harbor">
+            harbor<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/helm/" class="badge rounded post-taxonomy" title="helm">
+            helm<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/hystrix/" class="badge rounded post-taxonomy" title="hystrix">
+            hystrix<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/io/" class="badge rounded post-taxonomy" title="io">
+            io<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/jdpa/" class="badge rounded post-taxonomy" title="jdpa">
+            jdpa<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/jwt/" class="badge rounded post-taxonomy" title="jwt">
+            jwt<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/kafka/" class="badge rounded post-taxonomy" title="kafka">
+            kafka<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/kibana/" class="badge rounded post-taxonomy" title="kibana">
+            kibana<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/mq/" class="badge rounded post-taxonomy" title="MQ">
+            MQ<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/oauth/" class="badge rounded post-taxonomy" title="oauth">
+            oauth<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/oracle/" class="badge rounded post-taxonomy" title="Oracle">
+            Oracle<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/reactor/" class="badge rounded post-taxonomy" title="reactor">
+            reactor<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/spring-boot/" class="badge rounded post-taxonomy" title="spring-boot">
+            spring-boot<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/spring-cloud/" class="badge rounded post-taxonomy" title="Spring Cloud">
+            Spring Cloud<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/ssl/" class="badge rounded post-taxonomy" title="ssl">
+            ssl<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/tiller/" class="badge rounded post-taxonomy" title="tiller">
+            tiller<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/vtable/" class="badge rounded post-taxonomy" title="vtable">
+            vtable<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/%E6%95%B0%E7%A0%81/" class="badge rounded post-taxonomy" title="数码">
+            数码<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/%E6%B6%88%E6%81%AF%E9%98%9F%E5%88%97/" class="badge rounded post-taxonomy" title="消息队列">
+            消息队列<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/%E7%BC%93%E5%AD%98/" class="badge rounded post-taxonomy" title="缓存">
+            缓存<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/%E8%B0%83%E7%94%A8%E9%93%BE%E8%BF%BD%E8%B8%AA/" class="badge rounded post-taxonomy" title="调用链追踪">
+            调用链追踪<span class="badge badge-sm text-white bg-accent ms-1">1</span></a></div>
+      </div>
+    </section>
+    
+  </div>
+</aside>
+</div>
+    </main><footer class="footer mt-auto py-3 text-center container"><nav class="social-links nav justify-content-center mb-2"><a class="nav-link social-link" target="_blank" href="https://github.com/chanjarster" title="GitHub" rel="noopener noreferrer">
+        <i class="fa-fw fa-2x fab fa-github"></i>
+      </a></nav>
+<div class="copyright mb-2">
+  Copyright © 2016-2022 Razon Yang. All Rights Reserved.
+</div>
+<div class="powered-by mb-2">
+  Powered by <a href="https://gohugo.io" target="_blank" rel="noopener noreferrer">Hugo</a> and the <a href="https://github.com/razonyang/hugo-theme-bootstrap" target="_blank" rel="noopener noreferrer">Bootstrap</a> theme.
+</div>
+<a href="https://www.netlify.com" target="_blank" rel="noopener noreferrer">
+    <img src="https://www.netlify.com/img/global/badges/netlify-color-accent.svg" alt="Deploys by Netlify" width="114" height="51" />
+</a>
 </footer>
-
-    </body>
+<script src="/js/main.cbf2ace5d5fcb68b11b93647393ec41735869f18f31091c0941a01dfdf417dfc.js" integrity="sha256-y/Ks5dX8tosRuTZHOT7EFzWGnxjzEJHAlBoB399Bffw=" crossorigin="anonymous" defer></script><script src="/js/icons.min.a35670f2f90c398e5ee5c8e509b428fae75aa2746854cee10b60794633076859.js" integrity="sha256-o1Zw8vkMOY5e5cjlCbQo&#43;udaonRoVM7hC2B5RjMHaFk=" crossorigin="anonymous" defer></script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('\/service-worker.js').then(function(reg) {
+      console.log('Successfully registered service worker', reg);
+    }).catch(function(err) {
+      console.warn('Error whilst registering service worker', err);
+    });
+  });
+}
+</script><script src="/js/viewer.min.4dba52a0a790f909408b7385316651299158381686401d50ff1f04dda6476473.js" integrity="sha256-TbpSoKeQ&#43;QlAi3OFMWZRKZFYOBaGQB1Q/x8E3aZHZHM=" crossorigin="anonymous" defer></script>
+</body>
 </html>

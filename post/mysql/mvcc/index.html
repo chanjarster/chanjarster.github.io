@@ -1,171 +1,238 @@
-<!DOCTYPE html>
-
-<html lang="zh-cn">
-    <head>
+<!doctype html><html lang="zh-cn" data-palette="blue"
+  >
+  <head>
     <meta charset="utf-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="format-detection" content="telephone=no"/>
+    <title>MySQL - MVCC和事务隔离 - 颇忒脱的技术博客</title><link rel="apple-touch-icon" href="/images/icons/icon-180x180.png" sizes="180x180">
+<link rel="icon" href="/images/icons/icon-32x32.png" sizes="32x32" type="image/png">
+<link rel="icon" href="/images/icons/icon-16x16.png" sizes="16x16" type="image/png">
+<link rel="icon" href="/images/icons/favicon.ico">
+<link rel="manifest" href="/manifest.json">
+<meta name="keywords" content="" />
+<meta name="description" content="" /><meta itemprop="name" content="MySQL - MVCC和事务隔离">
+<meta itemprop="description" content=""><meta itemprop="datePublished" content="2019-12-30T20:03:02+08:00" />
+<meta itemprop="dateModified" content="2019-12-30T20:03:02+08:00" />
+<meta itemprop="wordCount" content="2722">
+<meta itemprop="keywords" content="mysql," /><meta property="og:title" content="MySQL - MVCC和事务隔离" />
+<meta property="og:description" content="" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="/post/mysql/mvcc/" /><meta property="article:section" content="post" />
+<meta property="article:published_time" content="2019-12-30T20:03:02+08:00" />
+<meta property="article:modified_time" content="2019-12-30T20:03:02+08:00" /><meta property="og:site_name" content="颇忒脱的技术博客" />
 
-    <title>MySQL - MVCC和事务隔离 | 颇忒脱的技术博客</title>
-    
-    <link rel="apple-touch-icon" sizes="180x180" href="https://chanjarster.github.io/apple-touch-icon.png">
-    <link rel="icon" type="image/png" sizes="32x32" href="https://chanjarster.github.io/favicon-32x32.png">
-    <link rel="icon" type="image/png" sizes="16x16" href="https://chanjarster.github.io/favicon-16x16.png">
-    <link rel="manifest" href="https://chanjarster.github.io/manifest.json">
-    <link rel="mask-icon" href="https://chanjarster.github.io/safari-pinned-tab.svg" color="#FF3DB4">
-    <meta name="theme-color" content="#ffffff">
-
-    
-    
-    
-    <link rel="stylesheet" href="https://chanjarster.github.io/css/main.min.fb0741ac272e7c9bef84b235a2f86925ce49db17e728cfc0e73fa00ec39c73ee.css"/>
-
-    
-    
-    
-
-    
-    
- 
-    </head>
-
-    <body>
-        
-<nav>
-  <header>
-    <div class="site-title">
-        <a href="https://chanjarster.github.io/">颇忒脱的技术博客</a>
-    </div>  
-</header>
-
-  <div class="nav-menu">
-  
-    <a class="color-link nav-link" href="https://chanjarster.github.io/">Home</a>
-  
-    <a class="color-link nav-link" href="https://chanjarster.github.io/tags/%E6%94%B6%E8%97%8F%E5%A4%B9/">Bookmarks</a>
-  
-    <a class="color-link nav-link" href="https://chanjarster.github.io/post/jvm/index-page">JVM</a>
-  
-    <a class="color-link nav-link" href="https://chanjarster.github.io/post/concurrent-programming/index-page">并发编程</a>
-  
-    <a class="color-link nav-link" href="https://chanjarster.github.io/post/mysql/index-page">MySQL</a>
-  
-    <a class="color-link nav-link" href="https://chanjarster.github.io/tags/go/">Go</a>
-  
-    <a class="color-link nav-link" href="https://chanjarster.github.io/tags/gc/">GC</a>
-  
-    <a class="color-link nav-link" href="https://chanjarster.github.io/tags/kernel/">Kernel</a>
-  
-    <a class="color-link nav-link" href="https://chanjarster.github.io/tags/cheatsheet/">Cheatsheet</a>
-  
-    <a class="color-link nav-link" href="https://chanjarster.github.io/tags/troubleshooting/">排障实战记录</a>
-  
-    <a class="color-link nav-link" href="https://github.com/chanjarster">Works</a>
-  
-    <a class="color-link nav-link" href="https://chanjarster.github.io/tags/">Tags</a>
-  
-  <a class="color-link nav-link" href="https://chanjarster.github.io/index.xml" target="_blank" rel="noopener" type="application/rss+xml">RSS</a>
-</div>
-<footer class="footer">
-	<div class="social-icons">
-        
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-    
-    
-    <a class="social-icon" href="chanjarster" target="_blank" rel="noopener" title="GitHub">
-        <svg width="28px" height="28px" viewBox="0 0 28 28" version="1.1" fill="#ABABAB" xmlns="https://www.w3.org/2000/svg" xmlns:xlink="https://www.w3.org/1999/xlink">
-            <path d="M13.9988029,1.32087331 C6.82105037,1.32087331 1,7.14112562 1,14.3212723 C1,20.0649109 4.72454649,24.9370678 9.89038951,26.6560892 C10.5408085,26.7757983 10.7778323,26.374374 10.7778323,26.0296121 C10.7778323,25.7215609 10.7666595,24.9035493 10.760275,23.8189856 C7.14426471,24.6042767 6.38131925,22.0760223 6.38131925,22.0760223 C5.78995672,20.5740732 4.93762853,20.1742451 4.93762853,20.1742451 C3.75729765,19.3682044 5.02701126,19.3841656 5.02701126,19.3841656 C6.33183953,19.4759425 7.01817121,20.7241085 7.01817121,20.7241085 C8.17775254,22.7104801 10.0611744,22.1366749 10.8017741,21.8038838 C10.919887,20.9643246 11.2558703,20.3913175 11.6269683,20.066507 C8.74038491,19.7385043 5.70536235,18.6228163 5.70536235,13.6413251 C5.70536235,12.2223743 6.21213051,11.0611968 7.04370914,10.1530044 C6.90963504,9.82420367 6.46351945,8.50181809 7.17139875,6.71256734 C7.17139875,6.71256734 8.26234691,6.36301702 10.7459099,8.04532771 C11.78259,7.75642995 12.8950858,7.61277914 14.000399,7.60719272 C15.1049142,7.61277914 16.2166119,7.75642995 17.2548881,8.04532771 C19.736855,6.36301702 20.8262071,6.71256734 20.8262071,6.71256734 C21.5356825,8.50181809 21.0895669,9.82420367 20.9562909,10.1530044 C21.7894656,11.0611968 22.2922435,12.2223743 22.2922435,13.6413251 C22.2922435,18.6355852 19.2524325,19.734514 16.3570705,20.0561322 C16.8231376,20.4575564 17.2389269,21.2508282 17.2389269,22.4638795 C17.2389269,24.2012564 17.2229657,25.603448 17.2229657,26.0296121 C17.2229657,26.3775663 17.4575954,26.7821827 18.116793,26.6552912 C23.2786458,24.9322794 27,20.0633148 27,14.3212723 C27,7.14112562 21.1789496,1.32087331 13.9988029,1.32087331"></path>
-        </svg>
+<meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="MySQL - MVCC和事务隔离"/>
+<meta name="twitter:description" content=""/>
+<meta name="robots" content="index, follow" /><link rel="stylesheet" href="/css/main.min.b7a6eda8d46e39a549f182cf72a9ff4f4c1d4d82c31ecc3ede0b7f4d5b26f32b.css" integrity="sha256-t6btqNRuOaVJ8YLPcqn/T0wdTYLDHsw&#43;3gt/TVsm8ys=" crossorigin="anonymous"><link rel="stylesheet" href="/css/viewer.min.3d228794bcedbbfa0412beb8fbc1ec6973202945e42af7004f742a4d7bd620ab.css" integrity="sha256-PSKHlLztu/oEEr64&#43;8HsaXMgKUXkKvcAT3QqTXvWIKs=" crossorigin="anonymous"></head>
+  <body><script>const items=['mode','palette'];items.forEach(function(a){const b=localStorage.getItem('hbs-'+a);b&&document.body.parentElement.setAttribute('data-'+a,b)})</script><header><nav class="navbar top-app-bar top-app-bar-expand-lg fixed-top">
+  <div class="container">
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent"
+      aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <i class="fas fa-bars"></i>
+    </button><a class="navbar-brand flex-grow-1 flex-lg-grow-0 text-center text-lg-start mx-auto me-lg-3" href="/"><img class="logo" alt="Logo" src="/images/avatar.jpg" loading="lazy"
+   width="455" height="455"
+   />颇忒脱的技术博客
     </a>
     
+    <button class="navbar-settings" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvasSettings"
+  aria-controls="offcanvasSettings" aria-label="Toggle settings">
+  <i class="fas fa-ellipsis-v"></i>
+</button>
 
-    
-    
-    
+<div class="offcanvas offcanvas-end surface h-100" tabindex="-1" id="offcanvasSettings" aria-labelledby="offcanvasSettings">
+  <div class="offcanvas-header">
+    <h3 class="offcanvas-title">设置</h3>
+    <button type="button" class="btn btn-sm btn-outline-primary" data-bs-dismiss="offcanvas" aria-label="Close">
+      <i class="fas fa-times"></i>
+    </button>
+  </div>
+  <div class="offcanvas-body d-flex flex-column">
 
-    
+<section class="setting">
+  <form class="row">
+    <div class="col-auto">
+      <label><i class="fas fa-fw fa-adjust"></i> 模式</label>
+    </div>
+    <div class="col-auto ms-auto">
+      <div class="form-check form-switch">
+        <input class="form-check-input" type="checkbox" id="modeSwitcher">
+      </div>
+    </div>
+  </form>
+</section>
 
-    
+<section class="setting">
+  <form class="font-size-switcher-form row">
+    <div class="col-auto">
+      <label for="fontSize" class="form-label"><i class="fas fa-fw fa-font"></i> 字体大小</label>
+    </div>
+    <div class="col-auto ms-auto">
+      <input type="range" class="form-range" min="-2" max="2" id="fontSize">
+    </div>
+  </form>
+</section>
 
-    
 
-    
-
-    
-
-    
-
-    
+<section class="setting palettes">
+  <form class="row">
+    <div class="col-auto">
+      <label><i class="fas fa-fw fa-palette"></i> 配色</label>
+    </div>
+    <div class="col-auto ms-auto">
+      <a id="btnPalette" class="btn btn-sm btn-outline-primary" role="button" aria-label="palettePicker">
+        <i class="fas fa-eye-dropper"></i>
+      </a>
+    </div>
+  </form>
+  <div class="mt-2 d-flex justify-content-between visually-hidden" id="palettePicker"><button type="button" id="palette-blue" aria-label="蓝色"
+        class="btn btn-sm w-100 palette" data-palette="blue">
+      </button><button type="button" id="palette-blue-gray" aria-label="蓝灰色"
+        class="btn btn-sm w-100 palette" data-palette="blue-gray">
+      </button><button type="button" id="palette-brown" aria-label="棕色"
+        class="btn btn-sm w-100 palette" data-palette="brown">
+      </button><button type="button" id="palette-cyan" aria-label="青色"
+        class="btn btn-sm w-100 palette" data-palette="cyan">
+      </button><button type="button" id="palette-green" aria-label="绿色"
+        class="btn btn-sm w-100 palette" data-palette="green">
+      </button><button type="button" id="palette-indigo" aria-label="靛青色"
+        class="btn btn-sm w-100 palette" data-palette="indigo">
+      </button><button type="button" id="palette-orange" aria-label="橙色"
+        class="btn btn-sm w-100 palette" data-palette="orange">
+      </button><button type="button" id="palette-pink" aria-label="粉色"
+        class="btn btn-sm w-100 palette" data-palette="pink">
+      </button><button type="button" id="palette-purple" aria-label="紫色"
+        class="btn btn-sm w-100 palette" data-palette="purple">
+      </button><button type="button" id="palette-red" aria-label="红色"
+        class="btn btn-sm w-100 palette" data-palette="red">
+      </button><button type="button" id="palette-teal" aria-label="蓝绿色"
+        class="btn btn-sm w-100 palette" data-palette="teal">
+      </button><button type="button" id="palette-yellow" aria-label="黄色"
+        class="btn btn-sm w-100 palette" data-palette="yellow">
+      </button></div>
+</section>
+<section class="setting actions d-flex justify-content-around mt-auto overflow-auto">
+  <a role="button" class="action action-go-back" href="javascript: window.history.back();">
+    <span class="action-icon"><i class="fas fa-2x fa-arrow-left"></i></span> 返回
+  </a>
+  <a role="button" class="action action-reload-page">
+    <span class="action-icon"><i class="fas fa-2x fa-redo-alt"></i></span> 刷新
+  </a>
+  <a role="button" class="action action-copy-url">
+    <span class="action-icon"><i class="fas fa-2x fa-link"></i></span> 复制链接
+  </a></section>
 
 </div>
+</div>
 
-
-
-
-    <p><a href="https://github.com/kimcc/hugo-theme-noteworthy" target="_blank" rel="noopener">Noteworthy theme</a></p>
-    <p><a href="https://gohugo.io" target="_blank" rel="noopener">Built with Hugo</a></p>
-
-	<script src="https://chanjarster.github.io/js/main.min.fa5c2b23e07b5d9bfad267a52b4b24fdb053e6fb7524993383594926a3ac270c.js" integrity="sha256-+lwrI+B7XZv60melK0sk/bBT5vt1JJkzg1lJJqOsJww=" crossorigin="anonymous"></script>
-</footer>
-
+    <div class="collapse navbar-collapse" tabindex="-1" id="navbarSupportedContent" aria-labelledby="navbarSupportedContent">
+      <form class="search-bar my-1" action="/search">
+  <div class="input-group input-group-sm">
+    <span class="btn btn-search disabled position-absolute left-0"><i class="fas fa-fw fa-search"></i></span>
+    <input class="form-control rounded-pill" name="q" type="search" aria-label="Search">
+  </div>
+</form>
+      <ul class="navbar-nav ms-auto"><li class="nav-item">
+          <a class="nav-link" href="/series/">
+            <i class="fas fa-fw fa-columns"></i>专栏
+          </a>
+        </li><li class="nav-item dropdown">
+          <a class="nav-link" id="navbarDropdownIndex" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+            <i class="fas fa-fw fa-chevron-circle-down"></i>快速索引
+          </a>
+          <ul class="dropdown-menu" aria-labelledby="navbarDropdownIndex"><li>
+              <a class="dropdown-item"
+                href="/tags/go">
+                Go
+              </a>
+            </li><li>
+              <a class="dropdown-item"
+                href="/tags/gc">
+                GC
+              </a>
+            </li><li>
+              <a class="dropdown-item"
+                href="/tags/kernel">
+                Kernel
+              </a>
+            </li><li>
+              <a class="dropdown-item"
+                href="/tags/cheatsheet">
+                Cheatsheet
+              </a>
+            </li><li>
+              <a class="dropdown-item"
+                href="/tags/troubleshooting">
+                排障实战记录
+              </a>
+            </li></ul>
+        </li><li class="nav-item">
+          <a class="nav-link" href="/tags/">
+            <i class="fas fa-fw fa-tags"></i>标签
+          </a>
+        </li><li class="nav-item">
+          <a class="nav-link" href="/archives/">
+            <i class="fas fa-fw fa-file-archive"></i>归档
+          </a>
+        </li></ul>
+    </div>
+  </div>
 </nav>
-
-        <div id="content" class="content-container">
-        
-
-<h1 class="post-title">MySQL - MVCC和事务隔离</h1>
+</header>
+<main role="main" class="container">
+      <div class="row content">
+<div class="col-lg-8">
+  <div class="container"><nav class="row card component" aria-label="breadcrumb">
+  <div class="card-body">
+    <ol class="breadcrumb "><li class="breadcrumb-item"><a href="/">主页</a></li><li class="breadcrumb-item"><a href="/post/">文章</a></li><li class="breadcrumb-item active">MySQL - MVCC和事务隔离</li></ol>
+  </div>
+</nav><div class="post-panel-wrapper">
+  <div class="d-flex flex-column component rounded post-panel">
     
-    <time>December 30, 2019</time>
+    <a class="action action-panel-toggler" role="button" title="Panel toggler">
+      <i class="fas fa-fw fa-chevron-circle-down"></i>
+    </a>
+    <a id="sidebarToggler" class="action d-none d-lg-block" role="button" title="Sidebar toggler">
+  <i class="fas fa-fw fa-expand-alt" data-fa-transform="rotate-45"></i>
+</a>
+
     
-    <div>
-        <p>
-        <p>前面提到过MySQL通过MVCC来实现事务隔离（准确的说是InnoDB引擎实现了MVCC）。那么接下来详细讲讲这个MVCC。</p>
-<h2 id="先思考一下">先思考一下</h2>
+
+    
+    <a class="action" href="#post-copyright" role="button" aria-label="Copyright" title="Copyright">
+  <i class="fas fa-fw fa-copyright"></i>
+</a>
+    <a class="action" href="#post-comments" role="button" aria-label="Comments" title="Comments">
+  <i class="fas fa-fw fa-comments"></i>
+</a>
+    <a class="action" href="#postTOC" aria-controls="Table of contents" role="button" title="Table of contents">
+  <i class="fas fa-fw fa-list-alt"></i>
+</a>
+    
+  </div>
+</div>
+<article class="row card component mb-4 post">
+  <div class="card-header ">
+    <h1 class="card-title post-title">MySQL - MVCC和事务隔离
+</h1>
+  </div>
+  <div class="card-body"><div class="post-meta">
+  <span class="post-date" title="创建于 2019-12-30 20:03:02 &#43;0800 CST。">
+    2019-12-30
+  </span><span class="post-reading-time">
+    6 分钟阅读
+  </span><span class="post-taxonomies"><a href="/tags/mysql/" class="badge post-taxonomy">mysql</a></span>
+</div>
+<div class="post-content mb-3"><p>前面提到过MySQL通过MVCC来实现事务隔离（准确的说是InnoDB引擎实现了MVCC）。那么接下来详细讲讲这个MVCC。</p>
+<h2 id="先思考一下">先思考一下<a class="anchor ms-1" href="#先思考一下"><i class="fas fa-link"></i></a></h2>
 <p>下面是一个例子，这个例子中的数据库事务隔离级别是RR（Repeatable Read），并且auto commit=1。</p>
 <p>有一张表，且有(1,1)和(2,2)两条数据：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#66d9ef">CREATE</span> <span style="color:#66d9ef">TABLE</span> <span style="color:#f92672">`</span>t<span style="color:#f92672">`</span> (
-  <span style="color:#f92672">`</span>id<span style="color:#f92672">`</span> int(<span style="color:#ae81ff">11</span>) <span style="color:#66d9ef">NOT</span> <span style="color:#66d9ef">NULL</span>,
-  <span style="color:#f92672">`</span>k<span style="color:#f92672">`</span> int(<span style="color:#ae81ff">11</span>) <span style="color:#66d9ef">DEFAULT</span> <span style="color:#66d9ef">NULL</span>,
-  <span style="color:#66d9ef">PRIMARY</span> <span style="color:#66d9ef">KEY</span> (<span style="color:#f92672">`</span>id<span style="color:#f92672">`</span>)
-) ENGINE<span style="color:#f92672">=</span>InnoDB;
-<span style="color:#66d9ef">insert</span> <span style="color:#66d9ef">into</span> t(id, k) <span style="color:#66d9ef">values</span>(<span style="color:#ae81ff">1</span>,<span style="color:#ae81ff">1</span>),(<span style="color:#ae81ff">2</span>,<span style="color:#ae81ff">2</span>);
-</code></pre></div><p>下面是三个事务的执行语句的情况，自上而下代表时间的先后。</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="ln">1</span><span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="o">`</span><span class="n">t</span><span class="o">`</span><span class="w"> </span><span class="p">(</span><span class="w">
+</span><span class="ln">2</span><span class="w">  </span><span class="o">`</span><span class="n">id</span><span class="o">`</span><span class="w"> </span><span class="nb">int</span><span class="p">(</span><span class="mi">11</span><span class="p">)</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="p">,</span><span class="w">
+</span><span class="ln">3</span><span class="w">  </span><span class="o">`</span><span class="n">k</span><span class="o">`</span><span class="w"> </span><span class="nb">int</span><span class="p">(</span><span class="mi">11</span><span class="p">)</span><span class="w"> </span><span class="k">DEFAULT</span><span class="w"> </span><span class="k">NULL</span><span class="p">,</span><span class="w">
+</span><span class="ln">4</span><span class="w">  </span><span class="k">PRIMARY</span><span class="w"> </span><span class="k">KEY</span><span class="w"> </span><span class="p">(</span><span class="o">`</span><span class="n">id</span><span class="o">`</span><span class="p">)</span><span class="w">
+</span><span class="ln">5</span><span class="w"></span><span class="p">)</span><span class="w"> </span><span class="n">ENGINE</span><span class="o">=</span><span class="n">InnoDB</span><span class="p">;</span><span class="w">
+</span><span class="ln">6</span><span class="w"></span><span class="k">insert</span><span class="w"> </span><span class="k">into</span><span class="w"> </span><span class="n">t</span><span class="p">(</span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="n">k</span><span class="p">)</span><span class="w"> </span><span class="k">values</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">),(</span><span class="mi">2</span><span class="p">,</span><span class="mi">2</span><span class="p">);</span><span class="w">
+</span></code></pre></div><p>下面是三个事务的执行语句的情况，自上而下代表时间的先后。</p>
 <table>
 <thead>
 <tr>
@@ -220,8 +287,9 @@
 <p><code>start transaction with consistent snapshot</code>代表了在开启一个事务的时候同时开启一个一致性视图，事务C因为开启了auto commit的关系，所以虽然只有一条语句但是也自成一个事务。</p>
 <p>现在问事务A的select得到的值是什么？事务B的select得到的又是什么？</p>
 <p>解答这个问题就要回答所谓的“一致性视图”到底是怎么实现的。</p>
-<h2 id="一致性视图">一致性视图</h2>
-<p>一致性视图就相当于给数据库拍了一个快照，当然这个快照是逻辑的不是物理的。在<a href="../isolation">MySQL - 事务隔离</a>里我们提到了可以通过undo log来得到read view，那么关键问题就变成了：如何能够得到所有表属于这个快照的read view。那先讲三点：</p>
+<h2 id="一致性视图">一致性视图<a class="anchor ms-1" href="#一致性视图"><i class="fas fa-link"></i></a></h2>
+<p>一致性视图就相当于给数据库拍了一个快照，当然这个快照是逻辑的不是物理的。在<a href="../isolation">MySQL - 事务隔离</a>
+里我们提到了可以通过undo log来得到read view，那么关键问题就变成了：如何能够得到所有表属于这个快照的read view。那先讲三点：</p>
 <ol>
 <li>开启事务的时候，会得到一个全局唯一且单调递增的transaction id</li>
 <li>每次更新行的时候，都会把这个transaciton id一并保存，并且将其记为row trx_id</li>
@@ -229,16 +297,14 @@
 </ol>
 <p>那么，如果你现在的transaction id是100，那么你在读一张表的时候就能够规定，只取row trx_id &lt;= 100的read view，这样不就是相当于给数据库打了快照了吗？</p>
 <p>下面这张图就是一行有4个版本（read view）V1、V2、V3、V4，通过undo log U1、U2、U3能够得到它们，还有事务id。</p>
-<figure>
-    <img src="row-trx-id.png" width="100%"/> 
+<figure><img src="row-trx-id.png" width="100%"/>
 </figure>
 
-<h3 id="innodb的实现">InnoDB的实现</h3>
+<h3 id="innodb的实现">InnoDB的实现<a class="anchor ms-1" href="#innodb的实现"><i class="fas fa-link"></i></a></h3>
 <p>在实现上InnoDB 为每个事务构造了一个数组，用来保存这个事务启动瞬间，当前正在“活跃”的所有事务 ID。“活跃”指的就是，启动了但还没提交。</p>
 <p>数组里面事务 ID 的最小值记为低水位，当前系统里面已经创建过的事务 ID 的最大值加 1 记为高水位。这个视图数组和高水位，就组成了当前事务的一致性视图（read-view）。</p>
 <p>而数据版本的可见性规则，就是基于数据的 row trx_id 和这个一致性视图的对比结果得到的。</p>
-<figure>
-    <img src="hi-lo.png" width="100%"/> 
+<figure><img src="hi-lo.png" width="100%"/>
 </figure>
 
 <p>这样，对于当前事务的启动瞬间来说，一个数据版本的 row trx_id，有以下几种可能：</p>
@@ -252,7 +318,7 @@
 </ol>
 </li>
 </ol>
-<h2 id="回过头来看例子">回过头来看例子</h2>
+<h2 id="回过头来看例子">回过头来看例子<a class="anchor ms-1" href="#回过头来看例子"><i class="fas fa-link"></i></a></h2>
 <p>现在问事务A的select得到的值是什么？事务B的select得到的又是什么？</p>
 <p>假设：</p>
 <ol>
@@ -262,21 +328,19 @@
 </ol>
 <p>那么，事务 A 的视图数组就是 [99,100], 事务 B 的视图数组是 [99,100,101], 事务 C 的视图数组是 [99,100,101,102]</p>
 <p>下面是时间线：</p>
-<figure>
-    <img src="tx-timeline.png" width="100%"/> 
+<figure><img src="tx-timeline.png" width="100%"/>
 </figure>
 
-<h3 id="查询逻辑">查询逻辑</h3>
+<h3 id="查询逻辑">查询逻辑<a class="anchor ms-1" href="#查询逻辑"><i class="fas fa-link"></i></a></h3>
 <p>可以看到事务A得到的结果是1，也就是row trx_id=90的那个版本，因为它处于低水位之下。</p>
-<h3 id="更新逻辑">更新逻辑</h3>
+<h3 id="更新逻辑">更新逻辑<a class="anchor ms-1" href="#更新逻辑"><i class="fas fa-link"></i></a></h3>
 <p>可以看到事务B把结果从2变成了3，按照道理说事务C[102]处于高水位之外，应该看不到才对啊。这是因为<strong>更新数据都是先读后写的，而这个读，只能读当前的值，称为“当前读”（current read）</strong>。因为如果不这么做事务C的更新就会被冲掉。</p>
 <p>从而，事务B后面的select得到的是3。</p>
-<h2 id="开启事务的两种方式">开启事务的两种方式</h2>
+<h2 id="开启事务的两种方式">开启事务的两种方式<a class="anchor ms-1" href="#开启事务的两种方式"><i class="fas fa-link"></i></a></h2>
 <p>前面已经看到了，可以使用<code>start transaction with consistent snapshot</code>来开启事务，同时它还会创建一个一致性视图。但是这个语句只有当事务隔离级别是RR的时候才有用，否则它和下面的<code>begin/start transaction</code>效果是一样的。</p>
 <p><code>begin/start transaction</code>也可以开启一个事务，但是它不会创建一个一致性视图，只有当后面执行第一条操作InnoDB表的语句才会创建一致性视图。</p>
 <p>下面是RC（Read Commit）级别下的时间线：</p>
-<figure>
-    <img src="tx-timeline.png" width="100%"/> 
+<figure><img src="tx-timeline.png" width="100%"/>
 </figure>
 
 <p>考虑到执行第一条快照读语句时才会创建一致性视图（也就是那个数组），那么可得出：</p>
@@ -284,51 +348,50 @@
 <li>A能够读到C提交的结果，2</li>
 <li>B因为更新的时候当前读，所以得到结果3</li>
 </ul>
-<h2 id="小节">小节</h2>
+<h2 id="小节">小节<a class="anchor ms-1" href="#小节"><i class="fas fa-link"></i></a></h2>
 <p>InnoDB 的行数据有多个版本，每个数据版本有自己的 row trx_id，每个事务或者语句有自己的一致性视图。普通查询语句是一致性读，一致性读会根据 row trx_id 和一致性视图确定数据版本的可见性。</p>
 <ul>
 <li>对于可重复读（RR），查询只承认在事务启动前就已经提交完成的数据；</li>
 <li>对于读提交（RC），查询只承认在语句启动前就已经提交完成的数据；而当前读，总是读取已经提交完成的最新版本。</li>
 </ul>
-<h2 id="思考题">思考题</h2>
+<h2 id="思考题">思考题<a class="anchor ms-1" href="#思考题"><i class="fas fa-link"></i></a></h2>
 <p>下面描述了一个场景：数据明明没有变，为何却无法更新。</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql">mysql<span style="color:#f92672">&gt;</span> <span style="color:#66d9ef">CREATE</span> <span style="color:#66d9ef">TABLE</span> <span style="color:#f92672">`</span>t<span style="color:#f92672">`</span> (
-  <span style="color:#f92672">`</span>id<span style="color:#f92672">`</span> int(<span style="color:#ae81ff">11</span>) <span style="color:#66d9ef">NOT</span> <span style="color:#66d9ef">NULL</span>,
-  <span style="color:#f92672">`</span><span style="color:#66d9ef">c</span><span style="color:#f92672">`</span> int(<span style="color:#ae81ff">11</span>) <span style="color:#66d9ef">DEFAULT</span> <span style="color:#66d9ef">NULL</span>,
-  <span style="color:#66d9ef">PRIMARY</span> <span style="color:#66d9ef">KEY</span> (<span style="color:#f92672">`</span>id<span style="color:#f92672">`</span>)
-) ENGINE<span style="color:#f92672">=</span>InnoDB;
-<span style="color:#66d9ef">insert</span> <span style="color:#66d9ef">into</span> t(id, <span style="color:#66d9ef">c</span>) <span style="color:#66d9ef">values</span>(<span style="color:#ae81ff">1</span>,<span style="color:#ae81ff">1</span>),(<span style="color:#ae81ff">2</span>,<span style="color:#ae81ff">2</span>),(<span style="color:#ae81ff">3</span>,<span style="color:#ae81ff">3</span>),(<span style="color:#ae81ff">4</span>,<span style="color:#ae81ff">4</span>);
-</code></pre></div><div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">mysql&gt; begin;
-Query OK, <span style="color:#ae81ff">0</span> rows affected <span style="color:#f92672">(</span>0.00 sec<span style="color:#f92672">)</span>
-
-mysql&gt; <span style="color:#66d9ef">select</span> * from t;
-+----+------+
-| id | c    |
-+----+------+
-| <span style="color:#ae81ff">1</span>  | <span style="color:#ae81ff">1</span>    |
-| <span style="color:#ae81ff">2</span>  | <span style="color:#ae81ff">2</span>    |
-| <span style="color:#ae81ff">3</span>  | <span style="color:#ae81ff">3</span>    |
-| <span style="color:#ae81ff">4</span>  | <span style="color:#ae81ff">4</span>    |
-+----+------+
-<span style="color:#ae81ff">4</span> rows in set <span style="color:#f92672">(</span>0.00 sec<span style="color:#f92672">)</span>
-
-mysql&gt; update t set c<span style="color:#f92672">=</span><span style="color:#ae81ff">0</span> where id<span style="color:#f92672">=</span>c;
-Query OK, <span style="color:#ae81ff">0</span> rows affected <span style="color:#f92672">(</span>0.00 sec<span style="color:#f92672">)</span>
-Rows matched: <span style="color:#ae81ff">0</span> Changed: <span style="color:#ae81ff">0</span> Warnings: <span style="color:#ae81ff">0</span>
-
-mysql&gt; <span style="color:#66d9ef">select</span> * from t;
-+----+------+
-| id | c    |
-+----+------+
-| <span style="color:#ae81ff">1</span>  | <span style="color:#ae81ff">1</span>    |
-| <span style="color:#ae81ff">2</span>  | <span style="color:#ae81ff">2</span>    |
-| <span style="color:#ae81ff">3</span>  | <span style="color:#ae81ff">3</span>    |
-| <span style="color:#ae81ff">4</span>  | <span style="color:#ae81ff">4</span>    |
-+----+------+
-<span style="color:#ae81ff">4</span> rows in set <span style="color:#f92672">(</span>0.00 sec<span style="color:#f92672">)</span>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="ln">1</span><span class="n">mysql</span><span class="o">&gt;</span><span class="w"> </span><span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="o">`</span><span class="n">t</span><span class="o">`</span><span class="w"> </span><span class="p">(</span><span class="w">
+</span><span class="ln">2</span><span class="w">  </span><span class="o">`</span><span class="n">id</span><span class="o">`</span><span class="w"> </span><span class="nb">int</span><span class="p">(</span><span class="mi">11</span><span class="p">)</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="p">,</span><span class="w">
+</span><span class="ln">3</span><span class="w">  </span><span class="o">`</span><span class="k">c</span><span class="o">`</span><span class="w"> </span><span class="nb">int</span><span class="p">(</span><span class="mi">11</span><span class="p">)</span><span class="w"> </span><span class="k">DEFAULT</span><span class="w"> </span><span class="k">NULL</span><span class="p">,</span><span class="w">
+</span><span class="ln">4</span><span class="w">  </span><span class="k">PRIMARY</span><span class="w"> </span><span class="k">KEY</span><span class="w"> </span><span class="p">(</span><span class="o">`</span><span class="n">id</span><span class="o">`</span><span class="p">)</span><span class="w">
+</span><span class="ln">5</span><span class="w"></span><span class="p">)</span><span class="w"> </span><span class="n">ENGINE</span><span class="o">=</span><span class="n">InnoDB</span><span class="p">;</span><span class="w">
+</span><span class="ln">6</span><span class="w"></span><span class="k">insert</span><span class="w"> </span><span class="k">into</span><span class="w"> </span><span class="n">t</span><span class="p">(</span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="k">c</span><span class="p">)</span><span class="w"> </span><span class="k">values</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">),(</span><span class="mi">2</span><span class="p">,</span><span class="mi">2</span><span class="p">),(</span><span class="mi">3</span><span class="p">,</span><span class="mi">3</span><span class="p">),(</span><span class="mi">4</span><span class="p">,</span><span class="mi">4</span><span class="p">);</span><span class="w">
+</span></code></pre></div><div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln"> 1</span>mysql&gt; begin<span class="p">;</span>
+<span class="ln"> 2</span>Query OK, <span class="m">0</span> rows affected <span class="o">(</span>0.00 sec<span class="o">)</span>
+<span class="ln"> 3</span>
+<span class="ln"> 4</span>mysql&gt; <span class="k">select</span> * from t<span class="p">;</span>
+<span class="ln"> 5</span>+----+------+
+<span class="ln"> 6</span><span class="p">|</span> id <span class="p">|</span> c    <span class="p">|</span>
+<span class="ln"> 7</span>+----+------+
+<span class="ln"> 8</span><span class="p">|</span> <span class="m">1</span>  <span class="p">|</span> <span class="m">1</span>    <span class="p">|</span>
+<span class="ln"> 9</span><span class="p">|</span> <span class="m">2</span>  <span class="p">|</span> <span class="m">2</span>    <span class="p">|</span>
+<span class="ln">10</span><span class="p">|</span> <span class="m">3</span>  <span class="p">|</span> <span class="m">3</span>    <span class="p">|</span>
+<span class="ln">11</span><span class="p">|</span> <span class="m">4</span>  <span class="p">|</span> <span class="m">4</span>    <span class="p">|</span>
+<span class="ln">12</span>+----+------+
+<span class="ln">13</span><span class="m">4</span> rows in <span class="nb">set</span> <span class="o">(</span>0.00 sec<span class="o">)</span>
+<span class="ln">14</span>
+<span class="ln">15</span>mysql&gt; update t <span class="nb">set</span> <span class="nv">c</span><span class="o">=</span><span class="m">0</span> where <span class="nv">id</span><span class="o">=</span>c<span class="p">;</span>
+<span class="ln">16</span>Query OK, <span class="m">0</span> rows affected <span class="o">(</span>0.00 sec<span class="o">)</span>
+<span class="ln">17</span>Rows matched: <span class="m">0</span> Changed: <span class="m">0</span> Warnings: <span class="m">0</span>
+<span class="ln">18</span>
+<span class="ln">19</span>mysql&gt; <span class="k">select</span> * from t<span class="p">;</span>
+<span class="ln">20</span>+----+------+
+<span class="ln">21</span><span class="p">|</span> id <span class="p">|</span> c    <span class="p">|</span>
+<span class="ln">22</span>+----+------+
+<span class="ln">23</span><span class="p">|</span> <span class="m">1</span>  <span class="p">|</span> <span class="m">1</span>    <span class="p">|</span>
+<span class="ln">24</span><span class="p">|</span> <span class="m">2</span>  <span class="p">|</span> <span class="m">2</span>    <span class="p">|</span>
+<span class="ln">25</span><span class="p">|</span> <span class="m">3</span>  <span class="p">|</span> <span class="m">3</span>    <span class="p">|</span>
+<span class="ln">26</span><span class="p">|</span> <span class="m">4</span>  <span class="p">|</span> <span class="m">4</span>    <span class="p">|</span>
+<span class="ln">27</span>+----+------+
+<span class="ln">28</span><span class="m">4</span> rows in <span class="nb">set</span> <span class="o">(</span>0.00 sec<span class="o">)</span>
 </code></pre></div><p>要怎样做才能产生这种情况呢？回顾这张图：</p>
-<figure>
-    <img src="hi-lo.png" width="100%"/> 
+<figure><img src="hi-lo.png" width="100%"/>
 </figure>
 
 <ul>
@@ -414,104 +477,256 @@ mysql&gt; <span style="color:#66d9ef">select</span> * from t;
 <li>事务B commit（如果没有commit，后面的事务A的操作会阻塞住的）</li>
 <li>事务A update，当前读，所以没有行被更新</li>
 <li>事务A select，发现row trx_id(101)在数组内，是活跃事务提交的，因此不可见，得到的结果还是没变的</li>
-</ul>
-        </p>
+</ul></div></div>
+  <div class="card-footer"><div class="post-navs d-flex justify-content-evenly">
+  <div class="post-nav post-prev"><i class="fas fa-fw fa-chevron-left"></i>
+    <a href="/post/mysql/locks/">MySQL - 锁
+</a>
+  </div><div class="post-nav post-next">
+    <a href="/post/mysql/page-change-buffer-index/">MySQL - 数据页、change Buffer和索引
+</a>
+    <i class="fas fa-fw fa-chevron-right"></i>
+  </div></div></div>
+</article>
+<div class="post-copyright mb-3 row card component" id="post-copyright">
+    <div class="card-header">
+        <h2 class="card-title">版权</h2>
     </div>
-    
+    <div class="card-body"><a class="d-flex align-items-center flex-column" target="_blank" rel="license noopener noreferrer" href="https://creativecommons.org/licenses/by-nc-nd/4.0/deed.zh">
+  <span><i class="fab fa-fw fa-2x fa-creative-commons"></i><i class="fab fa-fw fa-2x fa-creative-commons-by"></i><i class="fab fa-fw fa-2x fa-creative-commons-nc"></i><i class="fab fa-fw fa-2x fa-creative-commons-nd"></i></span>
+  CC BY-NC-ND 4.0 
+</a>
 
-    
 
-    <div class="page-footer">
-        
-        <hr class="footer-divider">
-        
-            <a class="tag" href="https://chanjarster.github.io/tags/mysql">#mysql</a>
-        
-      
     </div>
-
-
-        
-        </div>
-        <footer class="footer-mobile">
-	<div class="social-icons">
-        
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-    
-    
-    <a class="social-icon" href="chanjarster" target="_blank" rel="noopener" title="GitHub">
-        <svg width="28px" height="28px" viewBox="0 0 28 28" version="1.1" fill="#ABABAB" xmlns="https://www.w3.org/2000/svg" xmlns:xlink="https://www.w3.org/1999/xlink">
-            <path d="M13.9988029,1.32087331 C6.82105037,1.32087331 1,7.14112562 1,14.3212723 C1,20.0649109 4.72454649,24.9370678 9.89038951,26.6560892 C10.5408085,26.7757983 10.7778323,26.374374 10.7778323,26.0296121 C10.7778323,25.7215609 10.7666595,24.9035493 10.760275,23.8189856 C7.14426471,24.6042767 6.38131925,22.0760223 6.38131925,22.0760223 C5.78995672,20.5740732 4.93762853,20.1742451 4.93762853,20.1742451 C3.75729765,19.3682044 5.02701126,19.3841656 5.02701126,19.3841656 C6.33183953,19.4759425 7.01817121,20.7241085 7.01817121,20.7241085 C8.17775254,22.7104801 10.0611744,22.1366749 10.8017741,21.8038838 C10.919887,20.9643246 11.2558703,20.3913175 11.6269683,20.066507 C8.74038491,19.7385043 5.70536235,18.6228163 5.70536235,13.6413251 C5.70536235,12.2223743 6.21213051,11.0611968 7.04370914,10.1530044 C6.90963504,9.82420367 6.46351945,8.50181809 7.17139875,6.71256734 C7.17139875,6.71256734 8.26234691,6.36301702 10.7459099,8.04532771 C11.78259,7.75642995 12.8950858,7.61277914 14.000399,7.60719272 C15.1049142,7.61277914 16.2166119,7.75642995 17.2548881,8.04532771 C19.736855,6.36301702 20.8262071,6.71256734 20.8262071,6.71256734 C21.5356825,8.50181809 21.0895669,9.82420367 20.9562909,10.1530044 C21.7894656,11.0611968 22.2922435,12.2223743 22.2922435,13.6413251 C22.2922435,18.6355852 19.2524325,19.734514 16.3570705,20.0561322 C16.8231376,20.4575564 17.2389269,21.2508282 17.2389269,22.4638795 C17.2389269,24.2012564 17.2229657,25.603448 17.2229657,26.0296121 C17.2229657,26.3775663 17.4575954,26.7821827 18.116793,26.6552912 C23.2786458,24.9322794 27,20.0633148 27,14.3212723 C27,7.14112562 21.1789496,1.32087331 13.9988029,1.32087331"></path>
-        </svg>
-    </a>
-    
-
-    
-    
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
 </div>
-
-
-
-
-	<div class="footer-mobile-links">
-        <p><a href="https://github.com/kimcc/hugo-theme-noteworthy" target="_blank" rel="noopener">Noteworthy theme</a></p>
-		<span class="divider-bar">|</span>
-        <p><a href="https://gohugo.io" target="_blank" rel="noopener">Built with Hugo</a></p>
-	</div>
-
-	<script src="https://chanjarster.github.io/js/main.min.fa5c2b23e07b5d9bfad267a52b4b24fdb053e6fb7524993383594926a3ac270c.js" integrity="sha256-+lwrI+B7XZv60melK0sk/bBT5vt1JJkzg1lJJqOsJww=" crossorigin="anonymous"></script>
+<section class="related-posts row card component">
+    <div class="card-header">
+      <h2 class="card-title">相关文章</h2>
+    </div>
+    <div class="card-body">
+      <ul class="post-list"><li>
+          <a href="/post/mysql/locks/">MySQL - 锁
+</a>
+          <span class="float-end post-date">2019-12-20
+</span>
+        </li><li>
+          <a href="/post/mysql/indices/">MySQL - 索引
+</a>
+          <span class="float-end post-date">2019-12-20
+</span>
+        </li><li>
+          <a href="/post/mysql/index-page/">MySQL系列
+</a>
+          <span class="float-end post-date">2019-12-20
+</span>
+        </li><li>
+          <a href="/post/mysql/isolation/">MySQL - 事务隔离
+</a>
+          <span class="float-end post-date">2019-12-19
+</span>
+        </li><li>
+          <a href="/post/mysql/commands-params/">MySQL - 常见命令及参数
+</a>
+          <span class="float-end post-date">2019-12-18
+</span>
+        </li></ul>
+    </div>
+  </section><div class="card component row post-comments" id="post-comments">
+  <div class="card-header">
+    <h2 class="card-title">评论</h2>
+  </div>
+  <div class="card-body"></div>
+</div></div>
+</div><aside class="col-lg-4 sidebar d-flex">
+  <div class="container d-flex flex-column">
+    
+    <section class="card row text-center profile component">
+  <div class="card-body">
+    <div class="col-12 d-flex align-items-center justify-content-center"><img class="profile-avatar rounded-circle" alt="颇忒脱" src="/images/avatar.jpg" loading="lazy"
+   width="455" height="455"
+   /></div>
+    <div class="col-12 profile-meta"><div class="profile-name">颇忒脱</div><nav class="social-links nav justify-content-center"><a class="nav-link social-link" target="_blank" href="https://github.com/chanjarster" title="GitHub" rel="noopener noreferrer">
+        <i class="fa-fw fa-2x fab fa-github"></i>
+      </a></nav>
+</div>
+  </div>
+</section>
+  <div class="post-toc row mb-4 card component" id="postTOC">
+  <div class="card-header">
+    <h2 class="card-title">目录</h2>
+  </div>
+  <div class="card-body">
+    <nav id="TableOfContents">
+  <ul>
+    <li><a href="#先思考一下">先思考一下</a></li>
+    <li><a href="#一致性视图">一致性视图</a>
+      <ul>
+        <li><a href="#innodb的实现">InnoDB的实现</a></li>
+      </ul>
+    </li>
+    <li><a href="#回过头来看例子">回过头来看例子</a>
+      <ul>
+        <li><a href="#查询逻辑">查询逻辑</a></li>
+        <li><a href="#更新逻辑">更新逻辑</a></li>
+      </ul>
+    </li>
+    <li><a href="#开启事务的两种方式">开启事务的两种方式</a></li>
+    <li><a href="#小节">小节</a></li>
+    <li><a href="#思考题">思考题</a></li>
+  </ul>
+</nav>
+  </div>
+</div><section class="featured-posts row card component">
+    <div class="card-header">
+      <h2 class="card-title">精选文章</h2>
+    </div>
+    <div class="card-body">
+      <ul class="post-list"><li>
+          <a href="/post/mysql/index-page/">MySQL系列
+</a>
+        </li><li>
+          <a href="/post/concurrent-programming/index-page/">并发编程系列
+</a>
+        </li><li>
+          <a href="/post/jvm/index-page/">JVM系列
+</a>
+        </li></ul>
+    </div>
+  </section><section class="recent-posts row card component">
+  <div class="card-header">
+    <h2 class="card-title">最近文章</h2>
+  </div>
+  <div class="card-body">
+    <ul class="post-list"><li>
+        <a href="/post/jvm/gc-log-options/">JVM - GC日志参数
+</a>
+      </li><li>
+        <a href="/post/redis/redis-cluster-solutions-compare/">Redis集群方案对比
+</a>
+      </li><li>
+        <a href="/post/linux/namespace/">Linux命名空间一些笔记
+</a>
+      </li><li>
+        <a href="/post/jvm-tools/">Jps Jstat Jstack...的工作原理
+</a>
+      </li><li>
+        <a href="/post/mysql/opt-big-transaction-lock/">SQL优化:大事务中的行锁获取超时
+</a>
+      </li></ul>
+  </div>
+</section><section class="tags-taxonomies row card component">
+      <div class="card-header">
+        <h2 class="card-title">
+          <a href="/tags">标签</a>
+        </h2>
+      </div>
+      <div class="card-body">
+        <div class="py-2"><a href="/tags/arts/" class="badge rounded post-taxonomy" title="ARTS">
+            ARTS<span class="badge badge-sm text-white bg-accent ms-1">193</span></a><a href="/tags/arts-a/" class="badge rounded post-taxonomy" title="ARTS-A">
+            ARTS-A<span class="badge badge-sm text-white bg-accent ms-1">125</span></a><a href="/tags/arts-t/" class="badge rounded post-taxonomy" title="ARTS-T">
+            ARTS-T<span class="badge badge-sm text-white bg-accent ms-1">59</span></a><a href="/tags/jvm/" class="badge rounded post-taxonomy" title="jvm">
+            jvm<span class="badge badge-sm text-white bg-accent ms-1">35</span></a><a href="/tags/k8s/" class="badge rounded post-taxonomy" title="k8s">
+            k8s<span class="badge badge-sm text-white bg-accent ms-1">34</span></a><a href="/tags/mysql/" class="badge rounded post-taxonomy" title="mysql">
+            mysql<span class="badge badge-sm text-white bg-accent ms-1">22</span></a><a href="/tags/troubleshooting/" class="badge rounded post-taxonomy" title="troubleshooting">
+            troubleshooting<span class="badge badge-sm text-white bg-accent ms-1">21</span></a><a href="/tags/docker/" class="badge rounded post-taxonomy" title="docker">
+            docker<span class="badge badge-sm text-white bg-accent ms-1">20</span></a><a href="/tags/%E5%B9%B6%E5%8F%91%E7%BC%96%E7%A8%8B/" class="badge rounded post-taxonomy" title="并发编程&#34;">
+            并发编程&#34;<span class="badge badge-sm text-white bg-accent ms-1">20</span></a><a href="/tags/cheatsheet/" class="badge rounded post-taxonomy" title="cheatsheet">
+            cheatsheet<span class="badge badge-sm text-white bg-accent ms-1">16</span></a><a href="/tags/java/" class="badge rounded post-taxonomy" title="java">
+            java<span class="badge badge-sm text-white bg-accent ms-1">14</span></a><a href="/tags/kernel/" class="badge rounded post-taxonomy" title="kernel">
+            kernel<span class="badge badge-sm text-white bg-accent ms-1">13</span></a><a href="/tags/%E6%80%A7%E8%83%BD%E8%B0%83%E4%BC%98/" class="badge rounded post-taxonomy" title="性能调优">
+            性能调优<span class="badge badge-sm text-white bg-accent ms-1">11</span></a><a href="/tags/%E5%BE%AE%E6%9C%8D%E5%8A%A1/" class="badge rounded post-taxonomy" title="微服务">
+            微服务<span class="badge badge-sm text-white bg-accent ms-1">10</span></a><a href="/tags/arts-r/" class="badge rounded post-taxonomy" title="ARTS-R">
+            ARTS-R<span class="badge badge-sm text-white bg-accent ms-1">9</span></a><a href="/tags/prometheus/" class="badge rounded post-taxonomy" title="prometheus">
+            prometheus<span class="badge badge-sm text-white bg-accent ms-1">9</span></a><a href="/tags/go/" class="badge rounded post-taxonomy" title="go">
+            go<span class="badge badge-sm text-white bg-accent ms-1">8</span></a><a href="/tags/linux/" class="badge rounded post-taxonomy" title="linux">
+            linux<span class="badge badge-sm text-white bg-accent ms-1">7</span></a><a href="/tags/redis/" class="badge rounded post-taxonomy" title="redis">
+            redis<span class="badge badge-sm text-white bg-accent ms-1">7</span></a><a href="/tags/gc/" class="badge rounded post-taxonomy" title="gc">
+            gc<span class="badge badge-sm text-white bg-accent ms-1">6</span></a><a href="/tags/%E8%BF%90%E7%BB%B4/" class="badge rounded post-taxonomy" title="运维">
+            运维<span class="badge badge-sm text-white bg-accent ms-1">6</span></a><a href="/tags/ci_cd/" class="badge rounded post-taxonomy" title="CI_CD">
+            CI_CD<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/debug/" class="badge rounded post-taxonomy" title="debug">
+            debug<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/interview/" class="badge rounded post-taxonomy" title="interview">
+            interview<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/jmx/" class="badge rounded post-taxonomy" title="jmx">
+            jmx<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/%E5%88%86%E5%B8%83%E5%BC%8F%E4%BA%8B%E5%8A%A1/" class="badge rounded post-taxonomy" title="分布式事务">
+            分布式事务<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/%E5%88%86%E5%B8%83%E5%BC%8F%E7%AE%97%E6%B3%95/" class="badge rounded post-taxonomy" title="分布式算法">
+            分布式算法<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/%E6%94%B6%E8%97%8F%E5%A4%B9/" class="badge rounded post-taxonomy" title="收藏夹">
+            收藏夹<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/openssl/" class="badge rounded post-taxonomy" title="openssl">
+            openssl<span class="badge badge-sm text-white bg-accent ms-1">4</span></a><a href="/tags/rancher/" class="badge rounded post-taxonomy" title="rancher">
+            rancher<span class="badge badge-sm text-white bg-accent ms-1">4</span></a><a href="/tags/tls/" class="badge rounded post-taxonomy" title="tls">
+            tls<span class="badge badge-sm text-white bg-accent ms-1">4</span></a><a href="/tags/visualvm/" class="badge rounded post-taxonomy" title="visualvm">
+            visualvm<span class="badge badge-sm text-white bg-accent ms-1">4</span></a><a href="/tags/%E6%97%A5%E5%BF%97/" class="badge rounded post-taxonomy" title="日志">
+            日志<span class="badge badge-sm text-white bg-accent ms-1">4</span></a><a href="/tags/classloader/" class="badge rounded post-taxonomy" title="ClassLoader">
+            ClassLoader<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/ingress/" class="badge rounded post-taxonomy" title="ingress">
+            ingress<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/jenkins/" class="badge rounded post-taxonomy" title="Jenkins">
+            Jenkins<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/network/" class="badge rounded post-taxonomy" title="network">
+            network<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/scheduling/" class="badge rounded post-taxonomy" title="scheduling">
+            scheduling<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/thread/" class="badge rounded post-taxonomy" title="thread">
+            thread<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/%E5%88%86%E5%B8%83%E5%BC%8F%E6%9E%B6%E6%9E%84/" class="badge rounded post-taxonomy" title="分布式架构">
+            分布式架构<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/%E9%AB%98%E5%B9%B6%E5%8F%91/" class="badge rounded post-taxonomy" title="高并发">
+            高并发<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/grafana/" class="badge rounded post-taxonomy" title="grafana">
+            grafana<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/jdbc/" class="badge rounded post-taxonomy" title="JDBC">
+            JDBC<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/nginx/" class="badge rounded post-taxonomy" title="nginx">
+            nginx<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/%E6%95%B0%E6%8D%AE%E5%BA%93%E6%97%B6%E5%8C%BA%E9%82%A3%E4%BA%9B%E4%BA%8B%E5%84%BF/" class="badge rounded post-taxonomy" title="数据库时区那些事儿">
+            数据库时区那些事儿<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/%E7%9B%91%E6%8E%A7/" class="badge rounded post-taxonomy" title="监控">
+            监控<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/%E9%99%90%E6%B5%81/" class="badge rounded post-taxonomy" title="限流">
+            限流<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/akka/" class="badge rounded post-taxonomy" title="Akka">
+            Akka<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/alertmanager/" class="badge rounded post-taxonomy" title="alertmanager">
+            alertmanager<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/chrome/" class="badge rounded post-taxonomy" title="chrome">
+            chrome<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/elasticsearch/" class="badge rounded post-taxonomy" title="elasticsearch">
+            elasticsearch<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/etcd/" class="badge rounded post-taxonomy" title="etcd">
+            etcd<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/fluentd/" class="badge rounded post-taxonomy" title="fluentd">
+            fluentd<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/harbor/" class="badge rounded post-taxonomy" title="harbor">
+            harbor<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/helm/" class="badge rounded post-taxonomy" title="helm">
+            helm<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/hystrix/" class="badge rounded post-taxonomy" title="hystrix">
+            hystrix<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/io/" class="badge rounded post-taxonomy" title="io">
+            io<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/jdpa/" class="badge rounded post-taxonomy" title="jdpa">
+            jdpa<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/jwt/" class="badge rounded post-taxonomy" title="jwt">
+            jwt<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/kafka/" class="badge rounded post-taxonomy" title="kafka">
+            kafka<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/kibana/" class="badge rounded post-taxonomy" title="kibana">
+            kibana<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/mq/" class="badge rounded post-taxonomy" title="MQ">
+            MQ<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/oauth/" class="badge rounded post-taxonomy" title="oauth">
+            oauth<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/oracle/" class="badge rounded post-taxonomy" title="Oracle">
+            Oracle<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/reactor/" class="badge rounded post-taxonomy" title="reactor">
+            reactor<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/spring-boot/" class="badge rounded post-taxonomy" title="spring-boot">
+            spring-boot<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/spring-cloud/" class="badge rounded post-taxonomy" title="Spring Cloud">
+            Spring Cloud<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/ssl/" class="badge rounded post-taxonomy" title="ssl">
+            ssl<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/tiller/" class="badge rounded post-taxonomy" title="tiller">
+            tiller<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/vtable/" class="badge rounded post-taxonomy" title="vtable">
+            vtable<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/%E6%95%B0%E7%A0%81/" class="badge rounded post-taxonomy" title="数码">
+            数码<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/%E6%B6%88%E6%81%AF%E9%98%9F%E5%88%97/" class="badge rounded post-taxonomy" title="消息队列">
+            消息队列<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/%E7%BC%93%E5%AD%98/" class="badge rounded post-taxonomy" title="缓存">
+            缓存<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/%E8%B0%83%E7%94%A8%E9%93%BE%E8%BF%BD%E8%B8%AA/" class="badge rounded post-taxonomy" title="调用链追踪">
+            调用链追踪<span class="badge badge-sm text-white bg-accent ms-1">1</span></a></div>
+      </div>
+    </section>
+    
+  </div>
+</aside>
+</div>
+    </main><footer class="footer mt-auto py-3 text-center container"><nav class="social-links nav justify-content-center mb-2"><a class="nav-link social-link" target="_blank" href="https://github.com/chanjarster" title="GitHub" rel="noopener noreferrer">
+        <i class="fa-fw fa-2x fab fa-github"></i>
+      </a></nav>
+<div class="copyright mb-2">
+  Copyright © 2016-2022 Razon Yang. All Rights Reserved.
+</div>
+<div class="powered-by mb-2">
+  Powered by <a href="https://gohugo.io" target="_blank" rel="noopener noreferrer">Hugo</a> and the <a href="https://github.com/razonyang/hugo-theme-bootstrap" target="_blank" rel="noopener noreferrer">Bootstrap</a> theme.
+</div>
+<a href="https://www.netlify.com" target="_blank" rel="noopener noreferrer">
+    <img src="https://www.netlify.com/img/global/badges/netlify-color-accent.svg" alt="Deploys by Netlify" width="114" height="51" />
+</a>
 </footer>
-
-    </body>
+<script src="/js/main.cbf2ace5d5fcb68b11b93647393ec41735869f18f31091c0941a01dfdf417dfc.js" integrity="sha256-y/Ks5dX8tosRuTZHOT7EFzWGnxjzEJHAlBoB399Bffw=" crossorigin="anonymous" defer></script><script src="/js/icons.min.a35670f2f90c398e5ee5c8e509b428fae75aa2746854cee10b60794633076859.js" integrity="sha256-o1Zw8vkMOY5e5cjlCbQo&#43;udaonRoVM7hC2B5RjMHaFk=" crossorigin="anonymous" defer></script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('\/service-worker.js').then(function(reg) {
+      console.log('Successfully registered service worker', reg);
+    }).catch(function(err) {
+      console.warn('Error whilst registering service worker', err);
+    });
+  });
+}
+</script><script src="/js/viewer.min.4dba52a0a790f909408b7385316651299158381686401d50ff1f04dda6476473.js" integrity="sha256-TbpSoKeQ&#43;QlAi3OFMWZRKZFYOBaGQB1Q/x8E3aZHZHM=" crossorigin="anonymous" defer></script>
+</body>
 </html>

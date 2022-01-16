@@ -1,163 +1,232 @@
-<!DOCTYPE html>
-
-<html lang="zh-cn">
-    <head>
+<!doctype html><html lang="zh-cn" data-palette="blue"
+  >
+  <head>
     <meta charset="utf-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="format-detection" content="telephone=no"/>
+    <title>ClassLoader（一）- 介绍 - 颇忒脱的技术博客</title><link rel="apple-touch-icon" href="/images/icons/icon-180x180.png" sizes="180x180">
+<link rel="icon" href="/images/icons/icon-32x32.png" sizes="32x32" type="image/png">
+<link rel="icon" href="/images/icons/icon-16x16.png" sizes="16x16" type="image/png">
+<link rel="icon" href="/images/icons/favicon.ico">
+<link rel="manifest" href="/manifest.json">
+<meta name="keywords" content="" />
+<meta name="description" content="" /><meta itemprop="name" content="ClassLoader（一）- 介绍">
+<meta itemprop="description" content=""><meta itemprop="datePublished" content="2019-01-24T20:25:52+08:00" />
+<meta itemprop="dateModified" content="2019-01-24T20:25:52+08:00" />
+<meta itemprop="wordCount" content="3555">
+<meta itemprop="keywords" content="ClassLoader,JVM,ARTS,ARTS-T," /><meta property="og:title" content="ClassLoader（一）- 介绍" />
+<meta property="og:description" content="" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="/post/jvm/classloader/1-intro/" /><meta property="article:section" content="post" />
+<meta property="article:published_time" content="2019-01-24T20:25:52+08:00" />
+<meta property="article:modified_time" content="2019-01-24T20:25:52+08:00" /><meta property="og:site_name" content="颇忒脱的技术博客" />
 
-    <title>ClassLoader（一）- 介绍 | 颇忒脱的技术博客</title>
-    
-    <link rel="apple-touch-icon" sizes="180x180" href="https://chanjarster.github.io/apple-touch-icon.png">
-    <link rel="icon" type="image/png" sizes="32x32" href="https://chanjarster.github.io/favicon-32x32.png">
-    <link rel="icon" type="image/png" sizes="16x16" href="https://chanjarster.github.io/favicon-16x16.png">
-    <link rel="manifest" href="https://chanjarster.github.io/manifest.json">
-    <link rel="mask-icon" href="https://chanjarster.github.io/safari-pinned-tab.svg" color="#FF3DB4">
-    <meta name="theme-color" content="#ffffff">
-
-    
-    
-    
-    <link rel="stylesheet" href="https://chanjarster.github.io/css/main.min.fb0741ac272e7c9bef84b235a2f86925ce49db17e728cfc0e73fa00ec39c73ee.css"/>
-
-    
-    
-    
-
-    
-    
- 
-    </head>
-
-    <body>
-        
-<nav>
-  <header>
-    <div class="site-title">
-        <a href="https://chanjarster.github.io/">颇忒脱的技术博客</a>
-    </div>  
-</header>
-
-  <div class="nav-menu">
-  
-    <a class="color-link nav-link" href="https://chanjarster.github.io/">Home</a>
-  
-    <a class="color-link nav-link" href="https://chanjarster.github.io/tags/%E6%94%B6%E8%97%8F%E5%A4%B9/">Bookmarks</a>
-  
-    <a class="color-link nav-link" href="https://chanjarster.github.io/post/jvm/index-page">JVM</a>
-  
-    <a class="color-link nav-link" href="https://chanjarster.github.io/post/concurrent-programming/index-page">并发编程</a>
-  
-    <a class="color-link nav-link" href="https://chanjarster.github.io/post/mysql/index-page">MySQL</a>
-  
-    <a class="color-link nav-link" href="https://chanjarster.github.io/tags/go/">Go</a>
-  
-    <a class="color-link nav-link" href="https://chanjarster.github.io/tags/gc/">GC</a>
-  
-    <a class="color-link nav-link" href="https://chanjarster.github.io/tags/kernel/">Kernel</a>
-  
-    <a class="color-link nav-link" href="https://chanjarster.github.io/tags/cheatsheet/">Cheatsheet</a>
-  
-    <a class="color-link nav-link" href="https://chanjarster.github.io/tags/troubleshooting/">排障实战记录</a>
-  
-    <a class="color-link nav-link" href="https://github.com/chanjarster">Works</a>
-  
-    <a class="color-link nav-link" href="https://chanjarster.github.io/tags/">Tags</a>
-  
-  <a class="color-link nav-link" href="https://chanjarster.github.io/index.xml" target="_blank" rel="noopener" type="application/rss+xml">RSS</a>
-</div>
-<footer class="footer">
-	<div class="social-icons">
-        
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-    
-    
-    <a class="social-icon" href="chanjarster" target="_blank" rel="noopener" title="GitHub">
-        <svg width="28px" height="28px" viewBox="0 0 28 28" version="1.1" fill="#ABABAB" xmlns="https://www.w3.org/2000/svg" xmlns:xlink="https://www.w3.org/1999/xlink">
-            <path d="M13.9988029,1.32087331 C6.82105037,1.32087331 1,7.14112562 1,14.3212723 C1,20.0649109 4.72454649,24.9370678 9.89038951,26.6560892 C10.5408085,26.7757983 10.7778323,26.374374 10.7778323,26.0296121 C10.7778323,25.7215609 10.7666595,24.9035493 10.760275,23.8189856 C7.14426471,24.6042767 6.38131925,22.0760223 6.38131925,22.0760223 C5.78995672,20.5740732 4.93762853,20.1742451 4.93762853,20.1742451 C3.75729765,19.3682044 5.02701126,19.3841656 5.02701126,19.3841656 C6.33183953,19.4759425 7.01817121,20.7241085 7.01817121,20.7241085 C8.17775254,22.7104801 10.0611744,22.1366749 10.8017741,21.8038838 C10.919887,20.9643246 11.2558703,20.3913175 11.6269683,20.066507 C8.74038491,19.7385043 5.70536235,18.6228163 5.70536235,13.6413251 C5.70536235,12.2223743 6.21213051,11.0611968 7.04370914,10.1530044 C6.90963504,9.82420367 6.46351945,8.50181809 7.17139875,6.71256734 C7.17139875,6.71256734 8.26234691,6.36301702 10.7459099,8.04532771 C11.78259,7.75642995 12.8950858,7.61277914 14.000399,7.60719272 C15.1049142,7.61277914 16.2166119,7.75642995 17.2548881,8.04532771 C19.736855,6.36301702 20.8262071,6.71256734 20.8262071,6.71256734 C21.5356825,8.50181809 21.0895669,9.82420367 20.9562909,10.1530044 C21.7894656,11.0611968 22.2922435,12.2223743 22.2922435,13.6413251 C22.2922435,18.6355852 19.2524325,19.734514 16.3570705,20.0561322 C16.8231376,20.4575564 17.2389269,21.2508282 17.2389269,22.4638795 C17.2389269,24.2012564 17.2229657,25.603448 17.2229657,26.0296121 C17.2229657,26.3775663 17.4575954,26.7821827 18.116793,26.6552912 C23.2786458,24.9322794 27,20.0633148 27,14.3212723 C27,7.14112562 21.1789496,1.32087331 13.9988029,1.32087331"></path>
-        </svg>
+<meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="ClassLoader（一）- 介绍"/>
+<meta name="twitter:description" content=""/>
+<meta name="robots" content="index, follow" /><link rel="stylesheet" href="/css/main.min.b7a6eda8d46e39a549f182cf72a9ff4f4c1d4d82c31ecc3ede0b7f4d5b26f32b.css" integrity="sha256-t6btqNRuOaVJ8YLPcqn/T0wdTYLDHsw&#43;3gt/TVsm8ys=" crossorigin="anonymous"><link rel="stylesheet" href="/css/viewer.min.3d228794bcedbbfa0412beb8fbc1ec6973202945e42af7004f742a4d7bd620ab.css" integrity="sha256-PSKHlLztu/oEEr64&#43;8HsaXMgKUXkKvcAT3QqTXvWIKs=" crossorigin="anonymous"></head>
+  <body><script>const items=['mode','palette'];items.forEach(function(a){const b=localStorage.getItem('hbs-'+a);b&&document.body.parentElement.setAttribute('data-'+a,b)})</script><header><nav class="navbar top-app-bar top-app-bar-expand-lg fixed-top">
+  <div class="container">
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent"
+      aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <i class="fas fa-bars"></i>
+    </button><a class="navbar-brand flex-grow-1 flex-lg-grow-0 text-center text-lg-start mx-auto me-lg-3" href="/"><img class="logo" alt="Logo" src="/images/avatar.jpg" loading="lazy"
+   width="455" height="455"
+   />颇忒脱的技术博客
     </a>
     
+    <button class="navbar-settings" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvasSettings"
+  aria-controls="offcanvasSettings" aria-label="Toggle settings">
+  <i class="fas fa-ellipsis-v"></i>
+</button>
 
-    
-    
-    
+<div class="offcanvas offcanvas-end surface h-100" tabindex="-1" id="offcanvasSettings" aria-labelledby="offcanvasSettings">
+  <div class="offcanvas-header">
+    <h3 class="offcanvas-title">设置</h3>
+    <button type="button" class="btn btn-sm btn-outline-primary" data-bs-dismiss="offcanvas" aria-label="Close">
+      <i class="fas fa-times"></i>
+    </button>
+  </div>
+  <div class="offcanvas-body d-flex flex-column">
 
-    
+<section class="setting">
+  <form class="row">
+    <div class="col-auto">
+      <label><i class="fas fa-fw fa-adjust"></i> 模式</label>
+    </div>
+    <div class="col-auto ms-auto">
+      <div class="form-check form-switch">
+        <input class="form-check-input" type="checkbox" id="modeSwitcher">
+      </div>
+    </div>
+  </form>
+</section>
 
-    
+<section class="setting">
+  <form class="font-size-switcher-form row">
+    <div class="col-auto">
+      <label for="fontSize" class="form-label"><i class="fas fa-fw fa-font"></i> 字体大小</label>
+    </div>
+    <div class="col-auto ms-auto">
+      <input type="range" class="form-range" min="-2" max="2" id="fontSize">
+    </div>
+  </form>
+</section>
 
-    
 
-    
-
-    
-
-    
-
-    
+<section class="setting palettes">
+  <form class="row">
+    <div class="col-auto">
+      <label><i class="fas fa-fw fa-palette"></i> 配色</label>
+    </div>
+    <div class="col-auto ms-auto">
+      <a id="btnPalette" class="btn btn-sm btn-outline-primary" role="button" aria-label="palettePicker">
+        <i class="fas fa-eye-dropper"></i>
+      </a>
+    </div>
+  </form>
+  <div class="mt-2 d-flex justify-content-between visually-hidden" id="palettePicker"><button type="button" id="palette-blue" aria-label="蓝色"
+        class="btn btn-sm w-100 palette" data-palette="blue">
+      </button><button type="button" id="palette-blue-gray" aria-label="蓝灰色"
+        class="btn btn-sm w-100 palette" data-palette="blue-gray">
+      </button><button type="button" id="palette-brown" aria-label="棕色"
+        class="btn btn-sm w-100 palette" data-palette="brown">
+      </button><button type="button" id="palette-cyan" aria-label="青色"
+        class="btn btn-sm w-100 palette" data-palette="cyan">
+      </button><button type="button" id="palette-green" aria-label="绿色"
+        class="btn btn-sm w-100 palette" data-palette="green">
+      </button><button type="button" id="palette-indigo" aria-label="靛青色"
+        class="btn btn-sm w-100 palette" data-palette="indigo">
+      </button><button type="button" id="palette-orange" aria-label="橙色"
+        class="btn btn-sm w-100 palette" data-palette="orange">
+      </button><button type="button" id="palette-pink" aria-label="粉色"
+        class="btn btn-sm w-100 palette" data-palette="pink">
+      </button><button type="button" id="palette-purple" aria-label="紫色"
+        class="btn btn-sm w-100 palette" data-palette="purple">
+      </button><button type="button" id="palette-red" aria-label="红色"
+        class="btn btn-sm w-100 palette" data-palette="red">
+      </button><button type="button" id="palette-teal" aria-label="蓝绿色"
+        class="btn btn-sm w-100 palette" data-palette="teal">
+      </button><button type="button" id="palette-yellow" aria-label="黄色"
+        class="btn btn-sm w-100 palette" data-palette="yellow">
+      </button></div>
+</section>
+<section class="setting actions d-flex justify-content-around mt-auto overflow-auto">
+  <a role="button" class="action action-go-back" href="javascript: window.history.back();">
+    <span class="action-icon"><i class="fas fa-2x fa-arrow-left"></i></span> 返回
+  </a>
+  <a role="button" class="action action-reload-page">
+    <span class="action-icon"><i class="fas fa-2x fa-redo-alt"></i></span> 刷新
+  </a>
+  <a role="button" class="action action-copy-url">
+    <span class="action-icon"><i class="fas fa-2x fa-link"></i></span> 复制链接
+  </a></section>
 
 </div>
+</div>
 
-
-
-
-    <p><a href="https://github.com/kimcc/hugo-theme-noteworthy" target="_blank" rel="noopener">Noteworthy theme</a></p>
-    <p><a href="https://gohugo.io" target="_blank" rel="noopener">Built with Hugo</a></p>
-
-	<script src="https://chanjarster.github.io/js/main.min.fa5c2b23e07b5d9bfad267a52b4b24fdb053e6fb7524993383594926a3ac270c.js" integrity="sha256-+lwrI+B7XZv60melK0sk/bBT5vt1JJkzg1lJJqOsJww=" crossorigin="anonymous"></script>
-</footer>
-
+    <div class="collapse navbar-collapse" tabindex="-1" id="navbarSupportedContent" aria-labelledby="navbarSupportedContent">
+      <form class="search-bar my-1" action="/search">
+  <div class="input-group input-group-sm">
+    <span class="btn btn-search disabled position-absolute left-0"><i class="fas fa-fw fa-search"></i></span>
+    <input class="form-control rounded-pill" name="q" type="search" aria-label="Search">
+  </div>
+</form>
+      <ul class="navbar-nav ms-auto"><li class="nav-item">
+          <a class="nav-link" href="/series/">
+            <i class="fas fa-fw fa-columns"></i>专栏
+          </a>
+        </li><li class="nav-item dropdown">
+          <a class="nav-link" id="navbarDropdownIndex" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+            <i class="fas fa-fw fa-chevron-circle-down"></i>快速索引
+          </a>
+          <ul class="dropdown-menu" aria-labelledby="navbarDropdownIndex"><li>
+              <a class="dropdown-item"
+                href="/tags/go">
+                Go
+              </a>
+            </li><li>
+              <a class="dropdown-item"
+                href="/tags/gc">
+                GC
+              </a>
+            </li><li>
+              <a class="dropdown-item"
+                href="/tags/kernel">
+                Kernel
+              </a>
+            </li><li>
+              <a class="dropdown-item"
+                href="/tags/cheatsheet">
+                Cheatsheet
+              </a>
+            </li><li>
+              <a class="dropdown-item"
+                href="/tags/troubleshooting">
+                排障实战记录
+              </a>
+            </li></ul>
+        </li><li class="nav-item">
+          <a class="nav-link" href="/tags/">
+            <i class="fas fa-fw fa-tags"></i>标签
+          </a>
+        </li><li class="nav-item">
+          <a class="nav-link" href="/archives/">
+            <i class="fas fa-fw fa-file-archive"></i>归档
+          </a>
+        </li></ul>
+    </div>
+  </div>
 </nav>
-
-        <div id="content" class="content-container">
-        
-
-<h1 class="post-title">ClassLoader（一）- 介绍</h1>
+</header>
+<main role="main" class="container">
+      <div class="row content">
+<div class="col-lg-8">
+  <div class="container"><nav class="row card component" aria-label="breadcrumb">
+  <div class="card-body">
+    <ol class="breadcrumb "><li class="breadcrumb-item"><a href="/">主页</a></li><li class="breadcrumb-item"><a href="/post/">文章</a></li><li class="breadcrumb-item active">ClassLoader（一）- 介绍</li></ol>
+  </div>
+</nav><div class="post-panel-wrapper">
+  <div class="d-flex flex-column component rounded post-panel">
     
-    <time>January 24, 2019</time>
+    <a class="action action-panel-toggler" role="button" title="Panel toggler">
+      <i class="fas fa-fw fa-chevron-circle-down"></i>
+    </a>
+    <a id="sidebarToggler" class="action d-none d-lg-block" role="button" title="Sidebar toggler">
+  <i class="fas fa-fw fa-expand-alt" data-fa-transform="rotate-45"></i>
+</a>
+
     
-    <div>
-        <p>
-        <p>本文源代码在<a href="https://github.com/chanjarster/java-relearn/tree/master/classloader">Github</a>。</p>
-<h2 id="什么是classloader">什么是ClassLoader</h2>
-<p><a href="https://docs.oracle.com/javase/7/docs/api/java/lang/ClassLoader.html">javadoc ClassLoader</a>：</p>
+
+    
+    <a class="action" href="#post-copyright" role="button" aria-label="Copyright" title="Copyright">
+  <i class="fas fa-fw fa-copyright"></i>
+</a>
+    <a class="action" href="#post-comments" role="button" aria-label="Comments" title="Comments">
+  <i class="fas fa-fw fa-comments"></i>
+</a>
+    <a class="action" href="#postTOC" aria-controls="Table of contents" role="button" title="Table of contents">
+  <i class="fas fa-fw fa-list-alt"></i>
+</a>
+    
+  </div>
+</div>
+<article class="row card component mb-4 post">
+  <div class="card-header ">
+    <h1 class="card-title post-title">ClassLoader（一）- 介绍
+</h1>
+  </div>
+  <div class="card-body"><div class="post-meta">
+  <span class="post-date" title="创建于 2019-01-24 20:25:52 &#43;0800 CST。">
+    2019-01-24
+  </span><span class="post-reading-time">
+    8 分钟阅读
+  </span><span class="post-taxonomies"><a href="/tags/classloader/" class="badge post-taxonomy">ClassLoader</a><a href="/tags/jvm/" class="badge post-taxonomy">jvm</a><a href="/tags/arts/" class="badge post-taxonomy">ARTS</a><a href="/tags/arts-t/" class="badge post-taxonomy">ARTS-T</a></span>
+</div>
+<div class="post-content mb-3"><p>本文源代码在<a href="https://github.com/chanjarster/java-relearn/tree/master/classloader" target="_blank" rel="noopener noreferrer">Github</a>
+。</p>
+<h2 id="什么是classloader">什么是ClassLoader<a class="anchor ms-1" href="#什么是classloader"><i class="fas fa-link"></i></a></h2>
+<p><a href="https://docs.oracle.com/javase/7/docs/api/java/lang/ClassLoader.html" target="_blank" rel="noopener noreferrer">javadoc ClassLoader</a>
+：</p>
 <blockquote>
 <p>A class loader is an object that is responsible for loading classes.
 &hellip;
@@ -170,37 +239,40 @@ A typical strategy is to transform the name into a file name and then read a &ld
 <li>给ClassLoader一个类名（需符合Java语言规范），那么它就应该尝试<strong>定位</strong>，或者<strong>生成</strong>包含该类定义的数据。</li>
 <li>一个典型的定位策略是把类名转换成class文件名，然后从文件系统里读取这个class文件。</li>
 </ol>
-<h3 id="三种classloader实现">三种ClassLoader实现</h3>
+<h3 id="三种classloader实现">三种ClassLoader实现<a class="anchor ms-1" href="#三种classloader实现"><i class="fas fa-link"></i></a></h3>
 <p>讲到bootstrap class loader就不得不说三种常见的ClassLoader实现。</p>
 <p>执行下面代码会看到三种类型的ClassLoader实现：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#f92672">import</span> com.sun.javafx.util.Logging<span style="color:#f92672">;</span>
-<span style="color:#f92672">import</span> java.util.ArrayList<span style="color:#f92672">;</span>
-<span style="color:#66d9ef">public</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">PrintClassLoader</span> <span style="color:#f92672">{</span>
-  <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">static</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">main</span><span style="color:#f92672">(</span>String<span style="color:#f92672">[]</span> args<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
-    System<span style="color:#f92672">.</span><span style="color:#a6e22e">out</span><span style="color:#f92672">.</span><span style="color:#a6e22e">println</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34;Classloader for ArrayList: &#34;</span> <span style="color:#f92672">+</span> ArrayList<span style="color:#f92672">.</span><span style="color:#a6e22e">class</span><span style="color:#f92672">.</span><span style="color:#a6e22e">getClassLoader</span><span style="color:#f92672">());</span>
-    System<span style="color:#f92672">.</span><span style="color:#a6e22e">out</span><span style="color:#f92672">.</span><span style="color:#a6e22e">println</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34;Classloader for Logging: &#34;</span> <span style="color:#f92672">+</span> Logging<span style="color:#f92672">.</span><span style="color:#a6e22e">class</span><span style="color:#f92672">.</span><span style="color:#a6e22e">getClassLoader</span><span style="color:#f92672">());</span>
-    System<span style="color:#f92672">.</span><span style="color:#a6e22e">out</span><span style="color:#f92672">.</span><span style="color:#a6e22e">println</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34;Classloader for this class: &#34;</span> <span style="color:#f92672">+</span> PrintClassLoader<span style="color:#f92672">.</span><span style="color:#a6e22e">class</span><span style="color:#f92672">.</span><span style="color:#a6e22e">getClassLoader</span><span style="color:#f92672">());</span>
-  <span style="color:#f92672">}</span>
-<span style="color:#f92672">}</span>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln">1</span><span class="kn">import</span> <span class="nn">com.sun.javafx.util.Logging</span><span class="o">;</span>
+<span class="ln">2</span><span class="kn">import</span> <span class="nn">java.util.ArrayList</span><span class="o">;</span>
+<span class="ln">3</span><span class="kd">public</span> <span class="kd">class</span> <span class="nc">PrintClassLoader</span> <span class="o">{</span>
+<span class="ln">4</span>  <span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">main</span><span class="o">(</span><span class="n">String</span><span class="o">[]</span> <span class="n">args</span><span class="o">)</span> <span class="o">{</span>
+<span class="ln">5</span>    <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">&#34;Classloader for ArrayList: &#34;</span> <span class="o">+</span> <span class="n">ArrayList</span><span class="o">.</span><span class="na">class</span><span class="o">.</span><span class="na">getClassLoader</span><span class="o">());</span>
+<span class="ln">6</span>    <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">&#34;Classloader for Logging: &#34;</span> <span class="o">+</span> <span class="n">Logging</span><span class="o">.</span><span class="na">class</span><span class="o">.</span><span class="na">getClassLoader</span><span class="o">());</span>
+<span class="ln">7</span>    <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">&#34;Classloader for this class: &#34;</span> <span class="o">+</span> <span class="n">PrintClassLoader</span><span class="o">.</span><span class="na">class</span><span class="o">.</span><span class="na">getClassLoader</span><span class="o">());</span>
+<span class="ln">8</span>  <span class="o">}</span>
+<span class="ln">9</span><span class="o">}</span>
 </code></pre></div><p>结果如下：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-txt" data-lang="txt">Classloader for ArrayList: null
-Classloader for Logging: sun.misc.Launcher$ExtClassLoader@5e2de80c
-Classloader for this class: sun.misc.Launcher$AppClassLoader@18b4aac2
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln">1</span>Classloader for ArrayList: null
+<span class="ln">2</span>Classloader for Logging: sun.misc.Launcher$ExtClassLoader@5e2de80c
+<span class="ln">3</span>Classloader for this class: sun.misc.Launcher$AppClassLoader@18b4aac2
 </code></pre></div><ul>
 <li>Bootstrap class loader。bootstrap class loader是native code写的。它是所有ClassLoader的祖先，它是顶级ClassLoader。它负责加载JDK的内部类型，一般来说就是位于<code>$JAVA_HOME/jre/lib</code>下的核心库和<code>rt.jar</code>。</li>
-<li>Extension class loader。即Extension class loader，负责加载Java核心类的扩展，加载<code>$JAVA_HOME/lib/ext</code>目录和System Property <code>java.ext.dirs</code>所指定目录下的类（见<a href="https://docs.oracle.com/javase/6/docs/technotes/guides/extensions/spec.htm">Java Extension Mechanism Architecture</a>）。</li>
+<li>Extension class loader。即Extension class loader，负责加载Java核心类的扩展，加载<code>$JAVA_HOME/lib/ext</code>目录和System Property <code>java.ext.dirs</code>所指定目录下的类（见<a href="https://docs.oracle.com/javase/6/docs/technotes/guides/extensions/spec.htm" target="_blank" rel="noopener noreferrer">Java Extension Mechanism Architecture</a>
+）。</li>
 <li>System class loader，又称Application class loader。它的parent class loader是extension class loader（可以从<code>sun.misc.Launcher</code>的构造函数里看到），负责加载<code>CLASSPATH</code>环境变量、<code>-classpath/-cp</code>启动参数指定路径下的类。</li>
 </ul>
-<h3 id="类的classloader">类的ClassLoader</h3>
-<p>每个Class对象引用了当初加载自己的ClassLoader（<a href="https://docs.oracle.com/javase/7/docs/api/java/lang/ClassLoader.html">javadoc ClassLoader</a>）：</p>
+<h3 id="类的classloader">类的ClassLoader<a class="anchor ms-1" href="#类的classloader"><i class="fas fa-link"></i></a></h3>
+<p>每个Class对象引用了当初加载自己的ClassLoader（<a href="https://docs.oracle.com/javase/7/docs/api/java/lang/ClassLoader.html" target="_blank" rel="noopener noreferrer">javadoc ClassLoader</a>
+）：</p>
 <blockquote>
 <p>Every Class object contains a reference to the ClassLoader that defined it.</p>
 </blockquote>
-<p>其实Class对象的<code>getClassLoader()</code>方法就能够得到这个ClassLoader，并且说了如果该方法返回空，则说明此Class对象是被bootstrap class loader加载的，见<a href="https://docs.oracle.com/javase/7/docs/api/java/lang/Class.html#getClassLoader()">getClassLoader() javadoc</a>：</p>
+<p>其实Class对象的<code>getClassLoader()</code>方法就能够得到这个ClassLoader，并且说了如果该方法返回空，则说明此Class对象是被bootstrap class loader加载的，见<a href="https://docs.oracle.com/javase/7/docs/api/java/lang/Class.html#getClassLoader%28%29" target="_blank" rel="noopener noreferrer">getClassLoader() javadoc</a>
+：</p>
 <blockquote>
 <p>Returns the class loader for the class. Some implementations may use null to represent the bootstrap class loader. This method will return null in such implementations if this class was loaded by the bootstrap class loader.</p>
 </blockquote>
-<h3 id="数组类的classloader">数组类的ClassLoader</h3>
+<h3 id="数组类的classloader">数组类的ClassLoader<a class="anchor ms-1" href="#数组类的classloader"><i class="fas fa-link"></i></a></h3>
 <blockquote>
 <p>Class objects for array classes are not created by class loaders, but are created automatically as required by the Java runtime. The class loader for an array class, as returned by Class.getClassLoader() is the same as the class loader for its element type; if the element type is a primitive type, then the array class has no class loader.</p>
 </blockquote>
@@ -211,65 +283,66 @@ Classloader for this class: sun.misc.Launcher$AppClassLoader@18b4aac2
 <li>如果元素是基础类型，则数组类没有ClassLoader</li>
 </ol>
 <p>下面是一段实验代码：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#f92672">import</span> com.sun.javafx.util.Logging<span style="color:#f92672">;</span>
-<span style="color:#66d9ef">public</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">PrintArrayClassLoader</span> <span style="color:#f92672">{</span>
-  <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">static</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">main</span><span style="color:#f92672">(</span>String<span style="color:#f92672">[]</span> args<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
-    System<span style="color:#f92672">.</span><span style="color:#a6e22e">out</span><span style="color:#f92672">.</span><span style="color:#a6e22e">println</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34;ClassLoader for int[]: &#34;</span> <span style="color:#f92672">+</span> <span style="color:#66d9ef">new</span> <span style="color:#66d9ef">int</span><span style="color:#f92672">[</span>0<span style="color:#f92672">].</span><span style="color:#a6e22e">getClass</span><span style="color:#f92672">().</span><span style="color:#a6e22e">getClassLoader</span><span style="color:#f92672">());</span>
-    System<span style="color:#f92672">.</span><span style="color:#a6e22e">out</span><span style="color:#f92672">.</span><span style="color:#a6e22e">println</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34;ClassLoader for string[]: &#34;</span> <span style="color:#f92672">+</span> <span style="color:#66d9ef">new</span> String<span style="color:#f92672">[</span>0<span style="color:#f92672">].</span><span style="color:#a6e22e">getClass</span><span style="color:#f92672">().</span><span style="color:#a6e22e">getClassLoader</span><span style="color:#f92672">());</span>
-    System<span style="color:#f92672">.</span><span style="color:#a6e22e">out</span><span style="color:#f92672">.</span><span style="color:#a6e22e">println</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34;ClassLoader for Logging[]: &#34;</span> <span style="color:#f92672">+</span> <span style="color:#66d9ef">new</span> Logging<span style="color:#f92672">[</span>0<span style="color:#f92672">].</span><span style="color:#a6e22e">getClass</span><span style="color:#f92672">().</span><span style="color:#a6e22e">getClassLoader</span><span style="color:#f92672">());</span>
-    System<span style="color:#f92672">.</span><span style="color:#a6e22e">out</span><span style="color:#f92672">.</span><span style="color:#a6e22e">println</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34;ClassLoader for this class[]: &#34;</span> <span style="color:#f92672">+</span> <span style="color:#66d9ef">new</span> PrintArrayClassLoader<span style="color:#f92672">[</span>0<span style="color:#f92672">].</span><span style="color:#a6e22e">getClass</span><span style="color:#f92672">().</span><span style="color:#a6e22e">getClassLoader</span><span style="color:#f92672">());</span>
-  <span style="color:#f92672">}</span>
-<span style="color:#f92672">}</span>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln">1</span><span class="kn">import</span> <span class="nn">com.sun.javafx.util.Logging</span><span class="o">;</span>
+<span class="ln">2</span><span class="kd">public</span> <span class="kd">class</span> <span class="nc">PrintArrayClassLoader</span> <span class="o">{</span>
+<span class="ln">3</span>  <span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">main</span><span class="o">(</span><span class="n">String</span><span class="o">[]</span> <span class="n">args</span><span class="o">)</span> <span class="o">{</span>
+<span class="ln">4</span>    <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">&#34;ClassLoader for int[]: &#34;</span> <span class="o">+</span> <span class="k">new</span> <span class="kt">int</span><span class="o">[</span><span class="n">0</span><span class="o">].</span><span class="na">getClass</span><span class="o">().</span><span class="na">getClassLoader</span><span class="o">());</span>
+<span class="ln">5</span>    <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">&#34;ClassLoader for string[]: &#34;</span> <span class="o">+</span> <span class="k">new</span> <span class="n">String</span><span class="o">[</span><span class="n">0</span><span class="o">].</span><span class="na">getClass</span><span class="o">().</span><span class="na">getClassLoader</span><span class="o">());</span>
+<span class="ln">6</span>    <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">&#34;ClassLoader for Logging[]: &#34;</span> <span class="o">+</span> <span class="k">new</span> <span class="n">Logging</span><span class="o">[</span><span class="n">0</span><span class="o">].</span><span class="na">getClass</span><span class="o">().</span><span class="na">getClassLoader</span><span class="o">());</span>
+<span class="ln">7</span>    <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">&#34;ClassLoader for this class[]: &#34;</span> <span class="o">+</span> <span class="k">new</span> <span class="n">PrintArrayClassLoader</span><span class="o">[</span><span class="n">0</span><span class="o">].</span><span class="na">getClass</span><span class="o">().</span><span class="na">getClassLoader</span><span class="o">());</span>
+<span class="ln">8</span>  <span class="o">}</span>
+<span class="ln">9</span><span class="o">}</span>
 </code></pre></div><p>得到的结果如下，符合上面的说法：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-txt" data-lang="txt">ClassLoader for int[]: null
-ClassLoader for string[]: null
-ClassLoader for Logging[]: sun.misc.Launcher$ExtClassLoader@5e2de80c
-ClassLoader for this class[]: sun.misc.Launcher$AppClassLoader@18b4aac2
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln">1</span>ClassLoader for int[]: null
+<span class="ln">2</span>ClassLoader for string[]: null
+<span class="ln">3</span>ClassLoader for Logging[]: sun.misc.Launcher$ExtClassLoader@5e2de80c
+<span class="ln">4</span>ClassLoader for this class[]: sun.misc.Launcher$AppClassLoader@18b4aac2
 </code></pre></div><p>那如果是二维数组会怎样呢？下面是实验代码：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#f92672">import</span> com.sun.javafx.util.Logging<span style="color:#f92672">;</span>
-<span style="color:#66d9ef">public</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">PrintArrayArrayClassLoader</span> <span style="color:#f92672">{</span>
-  <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">static</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">main</span><span style="color:#f92672">(</span>String<span style="color:#f92672">[]</span> args<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
-    System<span style="color:#f92672">.</span><span style="color:#a6e22e">out</span><span style="color:#f92672">.</span><span style="color:#a6e22e">println</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34;ClassLoader for int[][]: &#34;</span> <span style="color:#f92672">+</span> <span style="color:#66d9ef">new</span> <span style="color:#66d9ef">int</span><span style="color:#f92672">[</span>0<span style="color:#f92672">][].</span><span style="color:#a6e22e">getClass</span><span style="color:#f92672">().</span><span style="color:#a6e22e">getClassLoader</span><span style="color:#f92672">());</span>
-    System<span style="color:#f92672">.</span><span style="color:#a6e22e">out</span><span style="color:#f92672">.</span><span style="color:#a6e22e">println</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34;ClassLoader for string[][]: &#34;</span> <span style="color:#f92672">+</span> <span style="color:#66d9ef">new</span> String<span style="color:#f92672">[</span>0<span style="color:#f92672">][].</span><span style="color:#a6e22e">getClass</span><span style="color:#f92672">().</span><span style="color:#a6e22e">getClassLoader</span><span style="color:#f92672">());</span>
-    System<span style="color:#f92672">.</span><span style="color:#a6e22e">out</span><span style="color:#f92672">.</span><span style="color:#a6e22e">println</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34;ClassLoader for Logging[][]: &#34;</span> <span style="color:#f92672">+</span> <span style="color:#66d9ef">new</span> Logging<span style="color:#f92672">[</span>0<span style="color:#f92672">][].</span><span style="color:#a6e22e">getClass</span><span style="color:#f92672">().</span><span style="color:#a6e22e">getClassLoader</span><span style="color:#f92672">());</span>
-    System<span style="color:#f92672">.</span><span style="color:#a6e22e">out</span><span style="color:#f92672">.</span><span style="color:#a6e22e">println</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34;ClassLoader for this class[][]: &#34;</span> <span style="color:#f92672">+</span> <span style="color:#66d9ef">new</span> PrintArrayClassLoader<span style="color:#f92672">[</span>0<span style="color:#f92672">][].</span><span style="color:#a6e22e">getClass</span><span style="color:#f92672">().</span><span style="color:#a6e22e">getClassLoader</span><span style="color:#f92672">());</span>
-    System<span style="color:#f92672">.</span><span style="color:#a6e22e">out</span><span style="color:#f92672">.</span><span style="color:#a6e22e">println</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34;ClassLoader for this Object[][] of this class[]: &#34;</span> <span style="color:#f92672">+</span> <span style="color:#66d9ef">new</span> Object<span style="color:#f92672">[][]{</span><span style="color:#66d9ef">new</span> PrintArrayArrayClassLoader<span style="color:#f92672">[</span>0<span style="color:#f92672">]}.</span><span style="color:#a6e22e">getClass</span><span style="color:#f92672">().</span><span style="color:#a6e22e">getClassLoader</span><span style="color:#f92672">());</span>
-  <span style="color:#f92672">}</span>
-<span style="color:#f92672">}</span>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln"> 1</span><span class="kn">import</span> <span class="nn">com.sun.javafx.util.Logging</span><span class="o">;</span>
+<span class="ln"> 2</span><span class="kd">public</span> <span class="kd">class</span> <span class="nc">PrintArrayArrayClassLoader</span> <span class="o">{</span>
+<span class="ln"> 3</span>  <span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">main</span><span class="o">(</span><span class="n">String</span><span class="o">[]</span> <span class="n">args</span><span class="o">)</span> <span class="o">{</span>
+<span class="ln"> 4</span>    <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">&#34;ClassLoader for int[][]: &#34;</span> <span class="o">+</span> <span class="k">new</span> <span class="kt">int</span><span class="o">[</span><span class="n">0</span><span class="o">][].</span><span class="na">getClass</span><span class="o">().</span><span class="na">getClassLoader</span><span class="o">());</span>
+<span class="ln"> 5</span>    <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">&#34;ClassLoader for string[][]: &#34;</span> <span class="o">+</span> <span class="k">new</span> <span class="n">String</span><span class="o">[</span><span class="n">0</span><span class="o">][].</span><span class="na">getClass</span><span class="o">().</span><span class="na">getClassLoader</span><span class="o">());</span>
+<span class="ln"> 6</span>    <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">&#34;ClassLoader for Logging[][]: &#34;</span> <span class="o">+</span> <span class="k">new</span> <span class="n">Logging</span><span class="o">[</span><span class="n">0</span><span class="o">][].</span><span class="na">getClass</span><span class="o">().</span><span class="na">getClassLoader</span><span class="o">());</span>
+<span class="ln"> 7</span>    <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">&#34;ClassLoader for this class[][]: &#34;</span> <span class="o">+</span> <span class="k">new</span> <span class="n">PrintArrayClassLoader</span><span class="o">[</span><span class="n">0</span><span class="o">][].</span><span class="na">getClass</span><span class="o">().</span><span class="na">getClassLoader</span><span class="o">());</span>
+<span class="ln"> 8</span>    <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">&#34;ClassLoader for this Object[][] of this class[]: &#34;</span> <span class="o">+</span> <span class="k">new</span> <span class="n">Object</span><span class="o">[][]{</span><span class="k">new</span> <span class="n">PrintArrayArrayClassLoader</span><span class="o">[</span><span class="n">0</span><span class="o">]}.</span><span class="na">getClass</span><span class="o">().</span><span class="na">getClassLoader</span><span class="o">());</span>
+<span class="ln"> 9</span>  <span class="o">}</span>
+<span class="ln">10</span><span class="o">}</span>
 </code></pre></div><p>结果是：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-txt" data-lang="txt">ClassLoader for int[][]: null
-ClassLoader for string[][]: null
-ClassLoader for Logging[][]: sun.misc.Launcher$ExtClassLoader@5e2de80c
-ClassLoader for this class[][]: sun.misc.Launcher$AppClassLoader@18b4aac2
-ClassLoader for this Object[][] of this class[]: null
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln">1</span>ClassLoader for int[][]: null
+<span class="ln">2</span>ClassLoader for string[][]: null
+<span class="ln">3</span>ClassLoader for Logging[][]: sun.misc.Launcher$ExtClassLoader@5e2de80c
+<span class="ln">4</span>ClassLoader for this class[][]: sun.misc.Launcher$AppClassLoader@18b4aac2
+<span class="ln">5</span>ClassLoader for this Object[][] of this class[]: null
 </code></pre></div><p>注意第四行的结果，我们构建了一个<code>Object[][]</code>，里面放的是<code>PrintArrayArrayClassLoader[]</code>，但结果依然是null。所以：</p>
 <ol>
 <li>二维数组的ClassLoader和其定义的类型（元素类型）的ClassLoader相同。</li>
 <li>与其实际内部存放的类型无关。</li>
 </ol>
-<h3 id="classloader类的classloader">ClassLoader类的ClassLoader</h3>
+<h3 id="classloader类的classloader">ClassLoader类的ClassLoader<a class="anchor ms-1" href="#classloader类的classloader"><i class="fas fa-link"></i></a></h3>
 <p>ClassLoader本身也是类，那么是谁加载它们的呢？实际上ClassLoader类的ClassLoader就是bootstrap class loader。下面是实验代码：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#f92672">import</span> com.sun.javafx.util.Logging<span style="color:#f92672">;</span>
-<span style="color:#66d9ef">public</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">PrintClassLoaderClassLoader</span> <span style="color:#f92672">{</span>
-  <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">static</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">main</span><span style="color:#f92672">(</span>String<span style="color:#f92672">[]</span> args<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
-    <span style="color:#75715e">// Launcher$ExtClassLoader
-</span><span style="color:#75715e"></span>    System<span style="color:#f92672">.</span><span style="color:#a6e22e">out</span><span style="color:#f92672">.</span><span style="color:#a6e22e">println</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34;ClassLoader for Logging&#39;s ClassLoader: &#34;</span> <span style="color:#f92672">+</span> Logging<span style="color:#f92672">.</span><span style="color:#a6e22e">class</span><span style="color:#f92672">.</span><span style="color:#a6e22e">getClassLoader</span><span style="color:#f92672">().</span><span style="color:#a6e22e">getClass</span><span style="color:#f92672">().</span><span style="color:#a6e22e">getClassLoader</span><span style="color:#f92672">());</span>
-    <span style="color:#75715e">// Launcher$AppClassLoader
-</span><span style="color:#75715e"></span>    System<span style="color:#f92672">.</span><span style="color:#a6e22e">out</span><span style="color:#f92672">.</span><span style="color:#a6e22e">println</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34;ClassLoader for this class&#39;s ClassLoader: &#34;</span> <span style="color:#f92672">+</span> PrintClassLoaderClassLoader<span style="color:#f92672">.</span><span style="color:#a6e22e">class</span><span style="color:#f92672">.</span><span style="color:#a6e22e">getClassLoader</span><span style="color:#f92672">().</span><span style="color:#a6e22e">getClass</span><span style="color:#f92672">().</span><span style="color:#a6e22e">getClassLoader</span><span style="color:#f92672">());</span>
-    <span style="color:#75715e">// 自定义ClassLoader
-</span><span style="color:#75715e"></span>    System<span style="color:#f92672">.</span><span style="color:#a6e22e">out</span><span style="color:#f92672">.</span><span style="color:#a6e22e">println</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34;ClassLoader for custom ClassLoader: &#34;</span> <span style="color:#f92672">+</span> DummyClassLoader<span style="color:#f92672">.</span><span style="color:#a6e22e">class</span><span style="color:#f92672">.</span><span style="color:#a6e22e">getClassLoader</span><span style="color:#f92672">().</span><span style="color:#a6e22e">getClass</span><span style="color:#f92672">().</span><span style="color:#a6e22e">getClassLoader</span><span style="color:#f92672">());</span>
-  <span style="color:#f92672">}</span>
-  <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">static</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">DummyClassLoader</span> <span style="color:#66d9ef">extends</span> ClassLoader <span style="color:#f92672">{</span>
-  <span style="color:#f92672">}</span>
-<span style="color:#f92672">}</span>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln"> 1</span><span class="kn">import</span> <span class="nn">com.sun.javafx.util.Logging</span><span class="o">;</span>
+<span class="ln"> 2</span><span class="kd">public</span> <span class="kd">class</span> <span class="nc">PrintClassLoaderClassLoader</span> <span class="o">{</span>
+<span class="ln"> 3</span>  <span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">main</span><span class="o">(</span><span class="n">String</span><span class="o">[]</span> <span class="n">args</span><span class="o">)</span> <span class="o">{</span>
+<span class="ln"> 4</span>    <span class="c1">// Launcher$ExtClassLoader
+</span><span class="ln"> 5</span><span class="c1"></span>    <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">&#34;ClassLoader for Logging&#39;s ClassLoader: &#34;</span> <span class="o">+</span> <span class="n">Logging</span><span class="o">.</span><span class="na">class</span><span class="o">.</span><span class="na">getClassLoader</span><span class="o">().</span><span class="na">getClass</span><span class="o">().</span><span class="na">getClassLoader</span><span class="o">());</span>
+<span class="ln"> 6</span>    <span class="c1">// Launcher$AppClassLoader
+</span><span class="ln"> 7</span><span class="c1"></span>    <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">&#34;ClassLoader for this class&#39;s ClassLoader: &#34;</span> <span class="o">+</span> <span class="n">PrintClassLoaderClassLoader</span><span class="o">.</span><span class="na">class</span><span class="o">.</span><span class="na">getClassLoader</span><span class="o">().</span><span class="na">getClass</span><span class="o">().</span><span class="na">getClassLoader</span><span class="o">());</span>
+<span class="ln"> 8</span>    <span class="c1">// 自定义ClassLoader
+</span><span class="ln"> 9</span><span class="c1"></span>    <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">&#34;ClassLoader for custom ClassLoader: &#34;</span> <span class="o">+</span> <span class="n">DummyClassLoader</span><span class="o">.</span><span class="na">class</span><span class="o">.</span><span class="na">getClassLoader</span><span class="o">().</span><span class="na">getClass</span><span class="o">().</span><span class="na">getClassLoader</span><span class="o">());</span>
+<span class="ln">10</span>  <span class="o">}</span>
+<span class="ln">11</span>  <span class="kd">public</span> <span class="kd">static</span> <span class="kd">class</span> <span class="nc">DummyClassLoader</span> <span class="kd">extends</span> <span class="n">ClassLoader</span> <span class="o">{</span>
+<span class="ln">12</span>  <span class="o">}</span>
+<span class="ln">13</span><span class="o">}</span>
 </code></pre></div><p>结果是：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-txt" data-lang="txt">ClassLoader for Logging&#39;s ClassLoader: null
-ClassLoader for this class&#39;s ClassLoader: null
-ClassLoader for custom ClassLoader: null
-</code></pre></div><h2 id="classloader解决了什么问题">ClassLoader解决了什么问题</h2>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln">1</span>ClassLoader for Logging&#39;s ClassLoader: null
+<span class="ln">2</span>ClassLoader for this class&#39;s ClassLoader: null
+<span class="ln">3</span>ClassLoader for custom ClassLoader: null
+</code></pre></div><h2 id="classloader解决了什么问题">ClassLoader解决了什么问题<a class="anchor ms-1" href="#classloader解决了什么问题"><i class="fas fa-link"></i></a></h2>
 <p>简单来说ClassLoader就是解决类加载问题的，当然这是一句废话。JDK里的ClassLoader是一个抽象类，这样做的目的是能够让应用开发者定制自己的ClassLoader实现（比如添加解密/加密）、动态插入字节码等，我认为这才是ClassLoader存在的最大意义。</p>
-<h2 id="classloader的工作原理">ClassLoader的工作原理</h2>
-<p>还是看<a href="https://docs.oracle.com/javase/7/docs/api/java/lang/ClassLoader.html">javadoc的说法</a>：</p>
+<h2 id="classloader的工作原理">ClassLoader的工作原理<a class="anchor ms-1" href="#classloader的工作原理"><i class="fas fa-link"></i></a></h2>
+<p>还是看<a href="https://docs.oracle.com/javase/7/docs/api/java/lang/ClassLoader.html" target="_blank" rel="noopener noreferrer">javadoc的说法</a>
+：</p>
 <blockquote>
 <p>The ClassLoader class uses a delegation model to search for classes and resources. Each instance of ClassLoader has an associated parent class loader. When requested to find a class or resource, a ClassLoader instance will delegate the search for the class or resource to its parent class loader before attempting to find the class or resource itself. The virtual machine&rsquo;s built-in class loader, called the &ldquo;bootstrap class loader&rdquo;, does not itself have a parent but may serve as the parent of a ClassLoader instance.</p>
 </blockquote>
@@ -280,7 +353,7 @@ ClassLoader for custom ClassLoader: null
 <li>当要查找Class或者Resource的时候，递归委托给parent，如果parent找不到，才会自己找。举例说明：如果ClassLoader层级关系是这样A-&gt;B-&gt;C，如果被查找Class只能被A找到，那么过程是A-delegate-&gt;B-delegate-&gt;C(not found)-&gt;B(not found)-&gt;A(found)。</li>
 <li>JVM有一个内置的顶级ClassLoader，叫做bootstrap class loader，它没有parent，它是老祖宗。</li>
 </ol>
-<h2 id="contextclassloader">ContextClassLoader</h2>
+<h2 id="contextclassloader">ContextClassLoader<a class="anchor ms-1" href="#contextclassloader"><i class="fas fa-link"></i></a></h2>
 <p>ClassLoader的委托模型存在这么一个问题：子ClassLoader能够看见父ClassLoader所加载的类，而父ClassLoader看不到子ClassLoader所加载的类。</p>
 <p>这个问题出现在Java提供的SPI上，简单举例说明：</p>
 <ol>
@@ -291,61 +364,61 @@ ClassLoader for custom ClassLoader: null
 <p>这是因为B一般都是在Classpath中的，它是被System class loader加载的，而SPI A是在核心库里的，它是被bootstrap class loader加载的，而bootstrap class loader是顶级ClassLoader，它不能向下委托给System class loader，所以SPI A是找不到实现B的。</p>
 <p>这个时候可以通过<code>java.lang.Thread#getContextClassLoader()</code>和<code>java.lang.Thread#setContextClassLoader</code>来让SPI A加载到B。</p>
 <p>为何SPI A不直接使用System class loader来加载呢？我想这是因为如果写死了System class loader那就缺少灵活性的关系吧。</p>
-<h2 id="class的唯一性">Class的唯一性</h2>
+<h2 id="class的唯一性">Class的唯一性<a class="anchor ms-1" href="#class的唯一性"><i class="fas fa-link"></i></a></h2>
 <p>如果一个类被一个ClassLoader加载两次，那么两次的结果应该是一致的，并且这个加载过程是线程安全的，见ClassLoader.java源码：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#66d9ef">protected</span> Class<span style="color:#f92672">&lt;?&gt;</span> loadClass<span style="color:#f92672">(</span>String name<span style="color:#f92672">,</span> <span style="color:#66d9ef">boolean</span> resolve<span style="color:#f92672">)</span>
-      <span style="color:#66d9ef">throws</span> ClassNotFoundException
-<span style="color:#f92672">{</span>
-  <span style="color:#66d9ef">synchronized</span> <span style="color:#f92672">(</span>getClassLoadingLock<span style="color:#f92672">(</span>name<span style="color:#f92672">))</span> <span style="color:#f92672">{</span>
-    <span style="color:#75715e">// First, check if the class has already been loaded
-</span><span style="color:#75715e"></span>    Class<span style="color:#f92672">&lt;?&gt;</span> c <span style="color:#f92672">=</span> findLoadedClass<span style="color:#f92672">(</span>name<span style="color:#f92672">);</span>
-    <span style="color:#66d9ef">if</span> <span style="color:#f92672">(</span>c <span style="color:#f92672">==</span> <span style="color:#66d9ef">null</span><span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
-      <span style="color:#75715e">// ...
-</span><span style="color:#75715e"></span>      <span style="color:#66d9ef">try</span> <span style="color:#f92672">{</span>
-        <span style="color:#66d9ef">if</span> <span style="color:#f92672">(</span>parent <span style="color:#f92672">!=</span> <span style="color:#66d9ef">null</span><span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
-            c <span style="color:#f92672">=</span> parent<span style="color:#f92672">.</span><span style="color:#a6e22e">loadClass</span><span style="color:#f92672">(</span>name<span style="color:#f92672">,</span> <span style="color:#66d9ef">false</span><span style="color:#f92672">);</span>
-        <span style="color:#f92672">}</span> <span style="color:#66d9ef">else</span> <span style="color:#f92672">{</span>
-            c <span style="color:#f92672">=</span> findBootstrapClassOrNull<span style="color:#f92672">(</span>name<span style="color:#f92672">);</span>
-        <span style="color:#f92672">}</span>
-      <span style="color:#f92672">}</span> <span style="color:#66d9ef">catch</span> <span style="color:#f92672">(</span>ClassNotFoundException e<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
-        <span style="color:#75715e">// ClassNotFoundException thrown if class not found
-</span><span style="color:#75715e"></span>        <span style="color:#75715e">// from the non-null parent class loader
-</span><span style="color:#75715e"></span>      <span style="color:#f92672">}</span>
-
-      <span style="color:#66d9ef">if</span> <span style="color:#f92672">(</span>c <span style="color:#f92672">==</span> <span style="color:#66d9ef">null</span><span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
-        <span style="color:#75715e">// If still not found, then invoke findClass in order
-</span><span style="color:#75715e"></span>        <span style="color:#75715e">// to find the class.
-</span><span style="color:#75715e"></span>        <span style="color:#75715e">// ...
-</span><span style="color:#75715e"></span>        c <span style="color:#f92672">=</span> findClass<span style="color:#f92672">(</span>name<span style="color:#f92672">);</span>
-
-        <span style="color:#75715e">// ...
-</span><span style="color:#75715e"></span>      <span style="color:#f92672">}</span>
-    <span style="color:#f92672">}</span>
-    <span style="color:#75715e">// ...
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">return</span> c<span style="color:#f92672">;</span>
-  <span style="color:#f92672">}</span>
-<span style="color:#f92672">}</span>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln"> 1</span><span class="kd">protected</span> <span class="n">Class</span><span class="o">&lt;?&gt;</span> <span class="n">loadClass</span><span class="o">(</span><span class="n">String</span> <span class="n">name</span><span class="o">,</span> <span class="kt">boolean</span> <span class="n">resolve</span><span class="o">)</span>
+<span class="ln"> 2</span>      <span class="kd">throws</span> <span class="n">ClassNotFoundException</span>
+<span class="ln"> 3</span><span class="o">{</span>
+<span class="ln"> 4</span>  <span class="kd">synchronized</span> <span class="o">(</span><span class="n">getClassLoadingLock</span><span class="o">(</span><span class="n">name</span><span class="o">))</span> <span class="o">{</span>
+<span class="ln"> 5</span>    <span class="c1">// First, check if the class has already been loaded
+</span><span class="ln"> 6</span><span class="c1"></span>    <span class="n">Class</span><span class="o">&lt;?&gt;</span> <span class="n">c</span> <span class="o">=</span> <span class="n">findLoadedClass</span><span class="o">(</span><span class="n">name</span><span class="o">);</span>
+<span class="ln"> 7</span>    <span class="k">if</span> <span class="o">(</span><span class="n">c</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
+<span class="ln"> 8</span>      <span class="c1">// ...
+</span><span class="ln"> 9</span><span class="c1"></span>      <span class="k">try</span> <span class="o">{</span>
+<span class="ln">10</span>        <span class="k">if</span> <span class="o">(</span><span class="n">parent</span> <span class="o">!=</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
+<span class="ln">11</span>            <span class="n">c</span> <span class="o">=</span> <span class="n">parent</span><span class="o">.</span><span class="na">loadClass</span><span class="o">(</span><span class="n">name</span><span class="o">,</span> <span class="kc">false</span><span class="o">);</span>
+<span class="ln">12</span>        <span class="o">}</span> <span class="k">else</span> <span class="o">{</span>
+<span class="ln">13</span>            <span class="n">c</span> <span class="o">=</span> <span class="n">findBootstrapClassOrNull</span><span class="o">(</span><span class="n">name</span><span class="o">);</span>
+<span class="ln">14</span>        <span class="o">}</span>
+<span class="ln">15</span>      <span class="o">}</span> <span class="k">catch</span> <span class="o">(</span><span class="n">ClassNotFoundException</span> <span class="n">e</span><span class="o">)</span> <span class="o">{</span>
+<span class="ln">16</span>        <span class="c1">// ClassNotFoundException thrown if class not found
+</span><span class="ln">17</span><span class="c1"></span>        <span class="c1">// from the non-null parent class loader
+</span><span class="ln">18</span><span class="c1"></span>      <span class="o">}</span>
+<span class="ln">19</span>
+<span class="ln">20</span>      <span class="k">if</span> <span class="o">(</span><span class="n">c</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
+<span class="ln">21</span>        <span class="c1">// If still not found, then invoke findClass in order
+</span><span class="ln">22</span><span class="c1"></span>        <span class="c1">// to find the class.
+</span><span class="ln">23</span><span class="c1"></span>        <span class="c1">// ...
+</span><span class="ln">24</span><span class="c1"></span>        <span class="n">c</span> <span class="o">=</span> <span class="n">findClass</span><span class="o">(</span><span class="n">name</span><span class="o">);</span>
+<span class="ln">25</span>
+<span class="ln">26</span>        <span class="c1">// ...
+</span><span class="ln">27</span><span class="c1"></span>      <span class="o">}</span>
+<span class="ln">28</span>    <span class="o">}</span>
+<span class="ln">29</span>    <span class="c1">// ...
+</span><span class="ln">30</span><span class="c1"></span>    <span class="k">return</span> <span class="n">c</span><span class="o">;</span>
+<span class="ln">31</span>  <span class="o">}</span>
+<span class="ln">32</span><span class="o">}</span>
 </code></pre></div><p>如果一个类被两个不同的ClassLoader加载会怎样呢？看下面代码：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#75715e">// 把这个项目打包然后放到/tmp目录下
-</span><span style="color:#75715e"></span><span style="color:#66d9ef">public</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">ClassUniqueness</span> <span style="color:#f92672">{</span>
-
-  <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">static</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">main</span><span style="color:#f92672">(</span>String<span style="color:#f92672">[]</span> args<span style="color:#f92672">)</span> <span style="color:#66d9ef">throws</span> Exception <span style="color:#f92672">{</span>
-    Class<span style="color:#f92672">&lt;?&gt;</span> fooClass1 <span style="color:#f92672">=</span> Class<span style="color:#f92672">.</span><span style="color:#a6e22e">forName</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34;me.chanjar.javarelearn.classloader.ClassUniqueness&#34;</span><span style="color:#f92672">);</span>
-    System<span style="color:#f92672">.</span><span style="color:#a6e22e">out</span><span style="color:#f92672">.</span><span style="color:#a6e22e">println</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34;1st ClassUniqueness&#39;s ClassLoader: &#34;</span> <span style="color:#f92672">+</span> fooClass1<span style="color:#f92672">.</span><span style="color:#a6e22e">getClassLoader</span><span style="color:#f92672">());</span>
-
-    <span style="color:#75715e">// 故意将parent class loader设置为null，否则就是SystemClassLoader（即ApplicationClassLoader）
-</span><span style="color:#75715e"></span>    URLClassLoader ucl <span style="color:#f92672">=</span> <span style="color:#66d9ef">new</span> URLClassLoader<span style="color:#f92672">(</span><span style="color:#66d9ef">new</span> URL<span style="color:#f92672">[]</span> <span style="color:#f92672">{</span> <span style="color:#66d9ef">new</span> URL<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;file:///tmp/classloader.jar&#34;</span><span style="color:#f92672">)</span> <span style="color:#f92672">},</span> <span style="color:#66d9ef">null</span><span style="color:#f92672">);</span>
-    Class<span style="color:#f92672">&lt;?&gt;</span> fooClass2 <span style="color:#f92672">=</span> ucl<span style="color:#f92672">.</span><span style="color:#a6e22e">loadClass</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34;me.chanjar.javarelearn.classloader.ClassUniqueness&#34;</span><span style="color:#f92672">);</span>
-    System<span style="color:#f92672">.</span><span style="color:#a6e22e">out</span><span style="color:#f92672">.</span><span style="color:#a6e22e">println</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34;2nd ClassUniqueness&#39;s ClassLoader: &#34;</span> <span style="color:#f92672">+</span> fooClass2<span style="color:#f92672">.</span><span style="color:#a6e22e">getClassLoader</span><span style="color:#f92672">());</span>
-
-    System<span style="color:#f92672">.</span><span style="color:#a6e22e">out</span><span style="color:#f92672">.</span><span style="color:#a6e22e">println</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34;Two ClassUniqueness class equals? &#34;</span> <span style="color:#f92672">+</span> fooClass1<span style="color:#f92672">.</span><span style="color:#a6e22e">equals</span><span style="color:#f92672">(</span>fooClass2<span style="color:#f92672">));</span>
-  <span style="color:#f92672">}</span>
-
-<span style="color:#f92672">}</span>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln"> 1</span><span class="c1">// 把这个项目打包然后放到/tmp目录下
+</span><span class="ln"> 2</span><span class="c1"></span><span class="kd">public</span> <span class="kd">class</span> <span class="nc">ClassUniqueness</span> <span class="o">{</span>
+<span class="ln"> 3</span>
+<span class="ln"> 4</span>  <span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">main</span><span class="o">(</span><span class="n">String</span><span class="o">[]</span> <span class="n">args</span><span class="o">)</span> <span class="kd">throws</span> <span class="n">Exception</span> <span class="o">{</span>
+<span class="ln"> 5</span>    <span class="n">Class</span><span class="o">&lt;?&gt;</span> <span class="n">fooClass1</span> <span class="o">=</span> <span class="n">Class</span><span class="o">.</span><span class="na">forName</span><span class="o">(</span><span class="s">&#34;me.chanjar.javarelearn.classloader.ClassUniqueness&#34;</span><span class="o">);</span>
+<span class="ln"> 6</span>    <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">&#34;1st ClassUniqueness&#39;s ClassLoader: &#34;</span> <span class="o">+</span> <span class="n">fooClass1</span><span class="o">.</span><span class="na">getClassLoader</span><span class="o">());</span>
+<span class="ln"> 7</span>
+<span class="ln"> 8</span>    <span class="c1">// 故意将parent class loader设置为null，否则就是SystemClassLoader（即ApplicationClassLoader）
+</span><span class="ln"> 9</span><span class="c1"></span>    <span class="n">URLClassLoader</span> <span class="n">ucl</span> <span class="o">=</span> <span class="k">new</span> <span class="n">URLClassLoader</span><span class="o">(</span><span class="k">new</span> <span class="n">URL</span><span class="o">[]</span> <span class="o">{</span> <span class="k">new</span> <span class="n">URL</span><span class="o">(</span><span class="s">&#34;file:///tmp/classloader.jar&#34;</span><span class="o">)</span> <span class="o">},</span> <span class="kc">null</span><span class="o">);</span>
+<span class="ln">10</span>    <span class="n">Class</span><span class="o">&lt;?&gt;</span> <span class="n">fooClass2</span> <span class="o">=</span> <span class="n">ucl</span><span class="o">.</span><span class="na">loadClass</span><span class="o">(</span><span class="s">&#34;me.chanjar.javarelearn.classloader.ClassUniqueness&#34;</span><span class="o">);</span>
+<span class="ln">11</span>    <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">&#34;2nd ClassUniqueness&#39;s ClassLoader: &#34;</span> <span class="o">+</span> <span class="n">fooClass2</span><span class="o">.</span><span class="na">getClassLoader</span><span class="o">());</span>
+<span class="ln">12</span>
+<span class="ln">13</span>    <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">&#34;Two ClassUniqueness class equals? &#34;</span> <span class="o">+</span> <span class="n">fooClass1</span><span class="o">.</span><span class="na">equals</span><span class="o">(</span><span class="n">fooClass2</span><span class="o">));</span>
+<span class="ln">14</span>  <span class="o">}</span>
+<span class="ln">15</span>
+<span class="ln">16</span><span class="o">}</span>
 </code></pre></div><p>运行结果是：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-txt" data-lang="txt">1st ClassUniqueness&#39;s ClassLoader: sun.misc.Launcher$AppClassLoader@18b4aac2
-2nd ClassUniqueness&#39;s ClassLoader: java.net.URLClassLoader@66d3c617
-Two ClassUniqueness class equals? false```
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln">1</span>1st ClassUniqueness&#39;s ClassLoader: sun.misc.Launcher$AppClassLoader@18b4aac2
+<span class="ln">2</span>2nd ClassUniqueness&#39;s ClassLoader: java.net.URLClassLoader@66d3c617
+<span class="ln">3</span>Two ClassUniqueness class equals? false```
 </code></pre></div><p>观察到两点：</p>
 <ol>
 <li>虽然是同一个类，但是加载它们的ClassLoader不同。</li>
@@ -353,119 +426,270 @@ Two ClassUniqueness class equals? false```
 </ol>
 <p>由此可以得出结论：一个Class的唯一性不仅仅是其全限定名（Fully-qualified-name），而是由【加载其的ClassLoader + 其全限定名】联合保证唯一。</p>
 <p>这种机制对于解决诸如类冲突问题非常有用，类冲突问题就是在运行时存在同一个类的两个不同版本，同时代码里又都需要使用这两个不同版本的类。解决这个问题的思路就是使用不同的ClassLoader加载这两个版本的类。事实上OSGi或者Web容器就是这样做的（它们不是严格遵照委托模型，而是先自己找，找不到了再委托给parent ClassLoader）。</p>
-<h2 id="参考文档">参考文档</h2>
+<h2 id="参考文档">参考文档<a class="anchor ms-1" href="#参考文档"><i class="fas fa-link"></i></a></h2>
 <ul>
-<li><a href="https://docs.oracle.com/javase/7/docs/api/java/lang/ClassLoader.html">JDK Javadoc - ClassLoader</a></li>
-<li><a href="https://docs.oracle.com/javase/7/docs/api/java/lang/Class.html#getClassLoader()">JDK Javadoc - Class</a></li>
-<li><a href="https://time.geekbang.org/column/article/11523">Java虚拟机是如何加载Java类的?</a>（极客时间专栏，需付费购买）</li>
-<li><a href="https://www.baeldung.com/java-classloaders">Class Loaders in Java</a></li>
-<li><a href="https://www.ibm.com/developerworks/cn/java/j-lo-classloader/index.html">深入探讨Java类加载器</a></li>
-<li><a href="https://docs.oracle.com/javase/specs/jls/se8/html/jls-12.html">Java Language Specification - Chapter 12. Execution</a></li>
-<li><a href="https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-5.html">Java Virtual Machine Specification - Chapter 5. Loading, Linking, and Initializing</a></li>
-</ul>
-        </p>
+<li><a href="https://docs.oracle.com/javase/7/docs/api/java/lang/ClassLoader.html" target="_blank" rel="noopener noreferrer">JDK Javadoc - ClassLoader</a>
+</li>
+<li><a href="https://docs.oracle.com/javase/7/docs/api/java/lang/Class.html#getClassLoader%28%29" target="_blank" rel="noopener noreferrer">JDK Javadoc - Class</a>
+</li>
+<li><a href="https://time.geekbang.org/column/article/11523" target="_blank" rel="noopener noreferrer">Java虚拟机是如何加载Java类的?</a>
+（极客时间专栏，需付费购买）</li>
+<li><a href="https://www.baeldung.com/java-classloaders" target="_blank" rel="noopener noreferrer">Class Loaders in Java</a>
+</li>
+<li><a href="https://www.ibm.com/developerworks/cn/java/j-lo-classloader/index.html" target="_blank" rel="noopener noreferrer">深入探讨Java类加载器</a>
+</li>
+<li><a href="https://docs.oracle.com/javase/specs/jls/se8/html/jls-12.html" target="_blank" rel="noopener noreferrer">Java Language Specification - Chapter 12. Execution</a>
+</li>
+<li><a href="https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-5.html" target="_blank" rel="noopener noreferrer">Java Virtual Machine Specification - Chapter 5. Loading, Linking, and Initializing</a>
+</li>
+</ul></div></div>
+  <div class="card-footer"><div class="post-navs d-flex justify-content-evenly">
+  <div class="post-nav post-prev"><i class="fas fa-fw fa-chevron-left"></i>
+    <a href="/post/bookmarks/bookmarks-blog/">收藏夹 - 博客
+</a>
+  </div><div class="post-nav post-next">
+    <a href="/post/jvm/classloader/2-steps/">ClassLoader（二）- 加载过程
+</a>
+    <i class="fas fa-fw fa-chevron-right"></i>
+  </div></div></div>
+</article>
+<div class="post-copyright mb-3 row card component" id="post-copyright">
+    <div class="card-header">
+        <h2 class="card-title">版权</h2>
     </div>
-    
+    <div class="card-body"><a class="d-flex align-items-center flex-column" target="_blank" rel="license noopener noreferrer" href="https://creativecommons.org/licenses/by-nc-nd/4.0/deed.zh">
+  <span><i class="fab fa-fw fa-2x fa-creative-commons"></i><i class="fab fa-fw fa-2x fa-creative-commons-by"></i><i class="fab fa-fw fa-2x fa-creative-commons-nc"></i><i class="fab fa-fw fa-2x fa-creative-commons-nd"></i></span>
+  CC BY-NC-ND 4.0 
+</a>
 
-    
 
-    <div class="page-footer">
-        
-        <hr class="footer-divider">
-        
-            <a class="tag" href="https://chanjarster.github.io/tags/classloader">#ClassLoader</a>
-        
-            <a class="tag" href="https://chanjarster.github.io/tags/jvm">#JVM</a>
-        
-            <a class="tag" href="https://chanjarster.github.io/tags/arts">#ARTS</a>
-        
-            <a class="tag" href="https://chanjarster.github.io/tags/arts-t">#ARTS-T</a>
-        
-      
     </div>
-
-
-        
-        </div>
-        <footer class="footer-mobile">
-	<div class="social-icons">
-        
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-    
-    
-    <a class="social-icon" href="chanjarster" target="_blank" rel="noopener" title="GitHub">
-        <svg width="28px" height="28px" viewBox="0 0 28 28" version="1.1" fill="#ABABAB" xmlns="https://www.w3.org/2000/svg" xmlns:xlink="https://www.w3.org/1999/xlink">
-            <path d="M13.9988029,1.32087331 C6.82105037,1.32087331 1,7.14112562 1,14.3212723 C1,20.0649109 4.72454649,24.9370678 9.89038951,26.6560892 C10.5408085,26.7757983 10.7778323,26.374374 10.7778323,26.0296121 C10.7778323,25.7215609 10.7666595,24.9035493 10.760275,23.8189856 C7.14426471,24.6042767 6.38131925,22.0760223 6.38131925,22.0760223 C5.78995672,20.5740732 4.93762853,20.1742451 4.93762853,20.1742451 C3.75729765,19.3682044 5.02701126,19.3841656 5.02701126,19.3841656 C6.33183953,19.4759425 7.01817121,20.7241085 7.01817121,20.7241085 C8.17775254,22.7104801 10.0611744,22.1366749 10.8017741,21.8038838 C10.919887,20.9643246 11.2558703,20.3913175 11.6269683,20.066507 C8.74038491,19.7385043 5.70536235,18.6228163 5.70536235,13.6413251 C5.70536235,12.2223743 6.21213051,11.0611968 7.04370914,10.1530044 C6.90963504,9.82420367 6.46351945,8.50181809 7.17139875,6.71256734 C7.17139875,6.71256734 8.26234691,6.36301702 10.7459099,8.04532771 C11.78259,7.75642995 12.8950858,7.61277914 14.000399,7.60719272 C15.1049142,7.61277914 16.2166119,7.75642995 17.2548881,8.04532771 C19.736855,6.36301702 20.8262071,6.71256734 20.8262071,6.71256734 C21.5356825,8.50181809 21.0895669,9.82420367 20.9562909,10.1530044 C21.7894656,11.0611968 22.2922435,12.2223743 22.2922435,13.6413251 C22.2922435,18.6355852 19.2524325,19.734514 16.3570705,20.0561322 C16.8231376,20.4575564 17.2389269,21.2508282 17.2389269,22.4638795 C17.2389269,24.2012564 17.2229657,25.603448 17.2229657,26.0296121 C17.2229657,26.3775663 17.4575954,26.7821827 18.116793,26.6552912 C23.2786458,24.9322794 27,20.0633148 27,14.3212723 C27,7.14112562 21.1789496,1.32087331 13.9988029,1.32087331"></path>
-        </svg>
-    </a>
-    
-
-    
-    
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
 </div>
-
-
-
-
-	<div class="footer-mobile-links">
-        <p><a href="https://github.com/kimcc/hugo-theme-noteworthy" target="_blank" rel="noopener">Noteworthy theme</a></p>
-		<span class="divider-bar">|</span>
-        <p><a href="https://gohugo.io" target="_blank" rel="noopener">Built with Hugo</a></p>
-	</div>
-
-	<script src="https://chanjarster.github.io/js/main.min.fa5c2b23e07b5d9bfad267a52b4b24fdb053e6fb7524993383594926a3ac270c.js" integrity="sha256-+lwrI+B7XZv60melK0sk/bBT5vt1JJkzg1lJJqOsJww=" crossorigin="anonymous"></script>
+<section class="related-posts row card component">
+    <div class="card-header">
+      <h2 class="card-title">相关文章</h2>
+    </div>
+    <div class="card-body">
+      <ul class="post-list"><li>
+          <a href="/post/bookmarks/bookmarks-blog/">收藏夹 - 博客
+</a>
+          <span class="float-end post-date">2019-01-24
+</span>
+        </li><li>
+          <a href="/post/collect-docker-log-by-fluentd/">使用Fluentd收集Docker容器日志
+</a>
+          <span class="float-end post-date">2019-01-24
+</span>
+        </li><li>
+          <a href="/post/docker-overlay-network-mtu-subnet/">Docker Overlay网络的MTU和子网
+</a>
+          <span class="float-end post-date">2019-01-11
+</span>
+        </li><li>
+          <a href="/post/docker-daemon-prod/">Docker Daemon生产环境配置
+</a>
+          <span class="float-end post-date">2019-01-11
+</span>
+        </li><li>
+          <a href="/post/p8s-scrape-container-in-docker-swarm-overlay-network/">Prometehus监控Docker Swarm Overlay网络中的容器
+</a>
+          <span class="float-end post-date">2019-01-09
+</span>
+        </li></ul>
+    </div>
+  </section><div class="card component row post-comments" id="post-comments">
+  <div class="card-header">
+    <h2 class="card-title">评论</h2>
+  </div>
+  <div class="card-body"></div>
+</div></div>
+</div><aside class="col-lg-4 sidebar d-flex">
+  <div class="container d-flex flex-column">
+    
+    <section class="card row text-center profile component">
+  <div class="card-body">
+    <div class="col-12 d-flex align-items-center justify-content-center"><img class="profile-avatar rounded-circle" alt="颇忒脱" src="/images/avatar.jpg" loading="lazy"
+   width="455" height="455"
+   /></div>
+    <div class="col-12 profile-meta"><div class="profile-name">颇忒脱</div><nav class="social-links nav justify-content-center"><a class="nav-link social-link" target="_blank" href="https://github.com/chanjarster" title="GitHub" rel="noopener noreferrer">
+        <i class="fa-fw fa-2x fab fa-github"></i>
+      </a></nav>
+</div>
+  </div>
+</section>
+  <div class="post-toc row mb-4 card component" id="postTOC">
+  <div class="card-header">
+    <h2 class="card-title">目录</h2>
+  </div>
+  <div class="card-body">
+    <nav id="TableOfContents">
+  <ul>
+    <li><a href="#什么是classloader">什么是ClassLoader</a>
+      <ul>
+        <li><a href="#三种classloader实现">三种ClassLoader实现</a></li>
+        <li><a href="#类的classloader">类的ClassLoader</a></li>
+        <li><a href="#数组类的classloader">数组类的ClassLoader</a></li>
+        <li><a href="#classloader类的classloader">ClassLoader类的ClassLoader</a></li>
+      </ul>
+    </li>
+    <li><a href="#classloader解决了什么问题">ClassLoader解决了什么问题</a></li>
+    <li><a href="#classloader的工作原理">ClassLoader的工作原理</a></li>
+    <li><a href="#contextclassloader">ContextClassLoader</a></li>
+    <li><a href="#class的唯一性">Class的唯一性</a></li>
+    <li><a href="#参考文档">参考文档</a></li>
+  </ul>
+</nav>
+  </div>
+</div><section class="featured-posts row card component">
+    <div class="card-header">
+      <h2 class="card-title">精选文章</h2>
+    </div>
+    <div class="card-body">
+      <ul class="post-list"><li>
+          <a href="/post/mysql/index-page/">MySQL系列
+</a>
+        </li><li>
+          <a href="/post/concurrent-programming/index-page/">并发编程系列
+</a>
+        </li><li>
+          <a href="/post/jvm/index-page/">JVM系列
+</a>
+        </li></ul>
+    </div>
+  </section><section class="recent-posts row card component">
+  <div class="card-header">
+    <h2 class="card-title">最近文章</h2>
+  </div>
+  <div class="card-body">
+    <ul class="post-list"><li>
+        <a href="/post/jvm/gc-log-options/">JVM - GC日志参数
+</a>
+      </li><li>
+        <a href="/post/redis/redis-cluster-solutions-compare/">Redis集群方案对比
+</a>
+      </li><li>
+        <a href="/post/linux/namespace/">Linux命名空间一些笔记
+</a>
+      </li><li>
+        <a href="/post/jvm-tools/">Jps Jstat Jstack...的工作原理
+</a>
+      </li><li>
+        <a href="/post/mysql/opt-big-transaction-lock/">SQL优化:大事务中的行锁获取超时
+</a>
+      </li></ul>
+  </div>
+</section><section class="tags-taxonomies row card component">
+      <div class="card-header">
+        <h2 class="card-title">
+          <a href="/tags">标签</a>
+        </h2>
+      </div>
+      <div class="card-body">
+        <div class="py-2"><a href="/tags/arts/" class="badge rounded post-taxonomy" title="ARTS">
+            ARTS<span class="badge badge-sm text-white bg-accent ms-1">193</span></a><a href="/tags/arts-a/" class="badge rounded post-taxonomy" title="ARTS-A">
+            ARTS-A<span class="badge badge-sm text-white bg-accent ms-1">125</span></a><a href="/tags/arts-t/" class="badge rounded post-taxonomy" title="ARTS-T">
+            ARTS-T<span class="badge badge-sm text-white bg-accent ms-1">59</span></a><a href="/tags/jvm/" class="badge rounded post-taxonomy" title="jvm">
+            jvm<span class="badge badge-sm text-white bg-accent ms-1">35</span></a><a href="/tags/k8s/" class="badge rounded post-taxonomy" title="k8s">
+            k8s<span class="badge badge-sm text-white bg-accent ms-1">34</span></a><a href="/tags/mysql/" class="badge rounded post-taxonomy" title="mysql">
+            mysql<span class="badge badge-sm text-white bg-accent ms-1">22</span></a><a href="/tags/troubleshooting/" class="badge rounded post-taxonomy" title="troubleshooting">
+            troubleshooting<span class="badge badge-sm text-white bg-accent ms-1">21</span></a><a href="/tags/docker/" class="badge rounded post-taxonomy" title="docker">
+            docker<span class="badge badge-sm text-white bg-accent ms-1">20</span></a><a href="/tags/%E5%B9%B6%E5%8F%91%E7%BC%96%E7%A8%8B/" class="badge rounded post-taxonomy" title="并发编程&#34;">
+            并发编程&#34;<span class="badge badge-sm text-white bg-accent ms-1">20</span></a><a href="/tags/cheatsheet/" class="badge rounded post-taxonomy" title="cheatsheet">
+            cheatsheet<span class="badge badge-sm text-white bg-accent ms-1">16</span></a><a href="/tags/java/" class="badge rounded post-taxonomy" title="java">
+            java<span class="badge badge-sm text-white bg-accent ms-1">14</span></a><a href="/tags/kernel/" class="badge rounded post-taxonomy" title="kernel">
+            kernel<span class="badge badge-sm text-white bg-accent ms-1">13</span></a><a href="/tags/%E6%80%A7%E8%83%BD%E8%B0%83%E4%BC%98/" class="badge rounded post-taxonomy" title="性能调优">
+            性能调优<span class="badge badge-sm text-white bg-accent ms-1">11</span></a><a href="/tags/%E5%BE%AE%E6%9C%8D%E5%8A%A1/" class="badge rounded post-taxonomy" title="微服务">
+            微服务<span class="badge badge-sm text-white bg-accent ms-1">10</span></a><a href="/tags/arts-r/" class="badge rounded post-taxonomy" title="ARTS-R">
+            ARTS-R<span class="badge badge-sm text-white bg-accent ms-1">9</span></a><a href="/tags/prometheus/" class="badge rounded post-taxonomy" title="prometheus">
+            prometheus<span class="badge badge-sm text-white bg-accent ms-1">9</span></a><a href="/tags/go/" class="badge rounded post-taxonomy" title="go">
+            go<span class="badge badge-sm text-white bg-accent ms-1">8</span></a><a href="/tags/linux/" class="badge rounded post-taxonomy" title="linux">
+            linux<span class="badge badge-sm text-white bg-accent ms-1">7</span></a><a href="/tags/redis/" class="badge rounded post-taxonomy" title="redis">
+            redis<span class="badge badge-sm text-white bg-accent ms-1">7</span></a><a href="/tags/gc/" class="badge rounded post-taxonomy" title="gc">
+            gc<span class="badge badge-sm text-white bg-accent ms-1">6</span></a><a href="/tags/%E8%BF%90%E7%BB%B4/" class="badge rounded post-taxonomy" title="运维">
+            运维<span class="badge badge-sm text-white bg-accent ms-1">6</span></a><a href="/tags/ci_cd/" class="badge rounded post-taxonomy" title="CI_CD">
+            CI_CD<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/debug/" class="badge rounded post-taxonomy" title="debug">
+            debug<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/interview/" class="badge rounded post-taxonomy" title="interview">
+            interview<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/jmx/" class="badge rounded post-taxonomy" title="jmx">
+            jmx<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/%E5%88%86%E5%B8%83%E5%BC%8F%E4%BA%8B%E5%8A%A1/" class="badge rounded post-taxonomy" title="分布式事务">
+            分布式事务<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/%E5%88%86%E5%B8%83%E5%BC%8F%E7%AE%97%E6%B3%95/" class="badge rounded post-taxonomy" title="分布式算法">
+            分布式算法<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/%E6%94%B6%E8%97%8F%E5%A4%B9/" class="badge rounded post-taxonomy" title="收藏夹">
+            收藏夹<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/openssl/" class="badge rounded post-taxonomy" title="openssl">
+            openssl<span class="badge badge-sm text-white bg-accent ms-1">4</span></a><a href="/tags/rancher/" class="badge rounded post-taxonomy" title="rancher">
+            rancher<span class="badge badge-sm text-white bg-accent ms-1">4</span></a><a href="/tags/tls/" class="badge rounded post-taxonomy" title="tls">
+            tls<span class="badge badge-sm text-white bg-accent ms-1">4</span></a><a href="/tags/visualvm/" class="badge rounded post-taxonomy" title="visualvm">
+            visualvm<span class="badge badge-sm text-white bg-accent ms-1">4</span></a><a href="/tags/%E6%97%A5%E5%BF%97/" class="badge rounded post-taxonomy" title="日志">
+            日志<span class="badge badge-sm text-white bg-accent ms-1">4</span></a><a href="/tags/classloader/" class="badge rounded post-taxonomy" title="ClassLoader">
+            ClassLoader<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/ingress/" class="badge rounded post-taxonomy" title="ingress">
+            ingress<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/jenkins/" class="badge rounded post-taxonomy" title="Jenkins">
+            Jenkins<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/network/" class="badge rounded post-taxonomy" title="network">
+            network<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/scheduling/" class="badge rounded post-taxonomy" title="scheduling">
+            scheduling<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/thread/" class="badge rounded post-taxonomy" title="thread">
+            thread<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/%E5%88%86%E5%B8%83%E5%BC%8F%E6%9E%B6%E6%9E%84/" class="badge rounded post-taxonomy" title="分布式架构">
+            分布式架构<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/%E9%AB%98%E5%B9%B6%E5%8F%91/" class="badge rounded post-taxonomy" title="高并发">
+            高并发<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/grafana/" class="badge rounded post-taxonomy" title="grafana">
+            grafana<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/jdbc/" class="badge rounded post-taxonomy" title="JDBC">
+            JDBC<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/nginx/" class="badge rounded post-taxonomy" title="nginx">
+            nginx<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/%E6%95%B0%E6%8D%AE%E5%BA%93%E6%97%B6%E5%8C%BA%E9%82%A3%E4%BA%9B%E4%BA%8B%E5%84%BF/" class="badge rounded post-taxonomy" title="数据库时区那些事儿">
+            数据库时区那些事儿<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/%E7%9B%91%E6%8E%A7/" class="badge rounded post-taxonomy" title="监控">
+            监控<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/%E9%99%90%E6%B5%81/" class="badge rounded post-taxonomy" title="限流">
+            限流<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/akka/" class="badge rounded post-taxonomy" title="Akka">
+            Akka<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/alertmanager/" class="badge rounded post-taxonomy" title="alertmanager">
+            alertmanager<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/chrome/" class="badge rounded post-taxonomy" title="chrome">
+            chrome<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/elasticsearch/" class="badge rounded post-taxonomy" title="elasticsearch">
+            elasticsearch<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/etcd/" class="badge rounded post-taxonomy" title="etcd">
+            etcd<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/fluentd/" class="badge rounded post-taxonomy" title="fluentd">
+            fluentd<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/harbor/" class="badge rounded post-taxonomy" title="harbor">
+            harbor<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/helm/" class="badge rounded post-taxonomy" title="helm">
+            helm<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/hystrix/" class="badge rounded post-taxonomy" title="hystrix">
+            hystrix<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/io/" class="badge rounded post-taxonomy" title="io">
+            io<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/jdpa/" class="badge rounded post-taxonomy" title="jdpa">
+            jdpa<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/jwt/" class="badge rounded post-taxonomy" title="jwt">
+            jwt<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/kafka/" class="badge rounded post-taxonomy" title="kafka">
+            kafka<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/kibana/" class="badge rounded post-taxonomy" title="kibana">
+            kibana<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/mq/" class="badge rounded post-taxonomy" title="MQ">
+            MQ<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/oauth/" class="badge rounded post-taxonomy" title="oauth">
+            oauth<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/oracle/" class="badge rounded post-taxonomy" title="Oracle">
+            Oracle<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/reactor/" class="badge rounded post-taxonomy" title="reactor">
+            reactor<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/spring-boot/" class="badge rounded post-taxonomy" title="spring-boot">
+            spring-boot<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/spring-cloud/" class="badge rounded post-taxonomy" title="Spring Cloud">
+            Spring Cloud<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/ssl/" class="badge rounded post-taxonomy" title="ssl">
+            ssl<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/tiller/" class="badge rounded post-taxonomy" title="tiller">
+            tiller<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/vtable/" class="badge rounded post-taxonomy" title="vtable">
+            vtable<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/%E6%95%B0%E7%A0%81/" class="badge rounded post-taxonomy" title="数码">
+            数码<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/%E6%B6%88%E6%81%AF%E9%98%9F%E5%88%97/" class="badge rounded post-taxonomy" title="消息队列">
+            消息队列<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/%E7%BC%93%E5%AD%98/" class="badge rounded post-taxonomy" title="缓存">
+            缓存<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/%E8%B0%83%E7%94%A8%E9%93%BE%E8%BF%BD%E8%B8%AA/" class="badge rounded post-taxonomy" title="调用链追踪">
+            调用链追踪<span class="badge badge-sm text-white bg-accent ms-1">1</span></a></div>
+      </div>
+    </section>
+    
+  </div>
+</aside>
+</div>
+    </main><footer class="footer mt-auto py-3 text-center container"><nav class="social-links nav justify-content-center mb-2"><a class="nav-link social-link" target="_blank" href="https://github.com/chanjarster" title="GitHub" rel="noopener noreferrer">
+        <i class="fa-fw fa-2x fab fa-github"></i>
+      </a></nav>
+<div class="copyright mb-2">
+  Copyright © 2016-2022 Razon Yang. All Rights Reserved.
+</div>
+<div class="powered-by mb-2">
+  Powered by <a href="https://gohugo.io" target="_blank" rel="noopener noreferrer">Hugo</a> and the <a href="https://github.com/razonyang/hugo-theme-bootstrap" target="_blank" rel="noopener noreferrer">Bootstrap</a> theme.
+</div>
+<a href="https://www.netlify.com" target="_blank" rel="noopener noreferrer">
+    <img src="https://www.netlify.com/img/global/badges/netlify-color-accent.svg" alt="Deploys by Netlify" width="114" height="51" />
+</a>
 </footer>
-
-    </body>
+<script src="/js/main.cbf2ace5d5fcb68b11b93647393ec41735869f18f31091c0941a01dfdf417dfc.js" integrity="sha256-y/Ks5dX8tosRuTZHOT7EFzWGnxjzEJHAlBoB399Bffw=" crossorigin="anonymous" defer></script><script src="/js/icons.min.a35670f2f90c398e5ee5c8e509b428fae75aa2746854cee10b60794633076859.js" integrity="sha256-o1Zw8vkMOY5e5cjlCbQo&#43;udaonRoVM7hC2B5RjMHaFk=" crossorigin="anonymous" defer></script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('\/service-worker.js').then(function(reg) {
+      console.log('Successfully registered service worker', reg);
+    }).catch(function(err) {
+      console.warn('Error whilst registering service worker', err);
+    });
+  });
+}
+</script><script src="/js/viewer.min.4dba52a0a790f909408b7385316651299158381686401d50ff1f04dda6476473.js" integrity="sha256-TbpSoKeQ&#43;QlAi3OFMWZRKZFYOBaGQB1Q/x8E3aZHZHM=" crossorigin="anonymous" defer></script>
+</body>
 </html>

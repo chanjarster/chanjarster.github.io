@@ -1,175 +1,252 @@
-<!DOCTYPE html>
-
-<html lang="zh-cn">
-    <head>
+<!doctype html><html lang="zh-cn" data-palette="blue"
+  >
+  <head>
     <meta charset="utf-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="format-detection" content="telephone=no"/>
+    <title>What every programmer should know about memory, Part 2: CPU caches - 颇忒脱的技术博客</title><link rel="apple-touch-icon" href="/images/icons/icon-180x180.png" sizes="180x180">
+<link rel="icon" href="/images/icons/icon-32x32.png" sizes="32x32" type="image/png">
+<link rel="icon" href="/images/icons/icon-16x16.png" sizes="16x16" type="image/png">
+<link rel="icon" href="/images/icons/favicon.ico">
+<link rel="manifest" href="/manifest.json">
+<meta name="keywords" content="" />
+<meta name="description" content="" /><meta itemprop="name" content="What every programmer should know about memory, Part 2: CPU caches">
+<meta itemprop="description" content=""><meta itemprop="datePublished" content="2019-03-05T21:22:12+08:00" />
+<meta itemprop="dateModified" content="2019-03-05T21:22:12+08:00" />
+<meta itemprop="wordCount" content="13342">
+<meta itemprop="keywords" content="ARTS,ARTS-T,kernel," /><meta property="og:title" content="What every programmer should know about memory, Part 2: CPU caches" />
+<meta property="og:description" content="" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="/post/kernel/know-memory-cpu-cache/" /><meta property="article:section" content="post" />
+<meta property="article:published_time" content="2019-03-05T21:22:12+08:00" />
+<meta property="article:modified_time" content="2019-03-05T21:22:12+08:00" /><meta property="og:site_name" content="颇忒脱的技术博客" />
 
-    <title>What every programmer should know about memory, Part 2: CPU caches | 颇忒脱的技术博客</title>
-    
-    <link rel="apple-touch-icon" sizes="180x180" href="https://chanjarster.github.io/apple-touch-icon.png">
-    <link rel="icon" type="image/png" sizes="32x32" href="https://chanjarster.github.io/favicon-32x32.png">
-    <link rel="icon" type="image/png" sizes="16x16" href="https://chanjarster.github.io/favicon-16x16.png">
-    <link rel="manifest" href="https://chanjarster.github.io/manifest.json">
-    <link rel="mask-icon" href="https://chanjarster.github.io/safari-pinned-tab.svg" color="#FF3DB4">
-    <meta name="theme-color" content="#ffffff">
-
-    
-    
-    
-    <link rel="stylesheet" href="https://chanjarster.github.io/css/main.min.fb0741ac272e7c9bef84b235a2f86925ce49db17e728cfc0e73fa00ec39c73ee.css"/>
-
-    
-    
-    
-
-    
-    
- 
-    </head>
-
-    <body>
-        
-<nav>
-  <header>
-    <div class="site-title">
-        <a href="https://chanjarster.github.io/">颇忒脱的技术博客</a>
-    </div>  
-</header>
-
-  <div class="nav-menu">
-  
-    <a class="color-link nav-link" href="https://chanjarster.github.io/">Home</a>
-  
-    <a class="color-link nav-link" href="https://chanjarster.github.io/tags/%E6%94%B6%E8%97%8F%E5%A4%B9/">Bookmarks</a>
-  
-    <a class="color-link nav-link" href="https://chanjarster.github.io/post/jvm/index-page">JVM</a>
-  
-    <a class="color-link nav-link" href="https://chanjarster.github.io/post/concurrent-programming/index-page">并发编程</a>
-  
-    <a class="color-link nav-link" href="https://chanjarster.github.io/post/mysql/index-page">MySQL</a>
-  
-    <a class="color-link nav-link" href="https://chanjarster.github.io/tags/go/">Go</a>
-  
-    <a class="color-link nav-link" href="https://chanjarster.github.io/tags/gc/">GC</a>
-  
-    <a class="color-link nav-link" href="https://chanjarster.github.io/tags/kernel/">Kernel</a>
-  
-    <a class="color-link nav-link" href="https://chanjarster.github.io/tags/cheatsheet/">Cheatsheet</a>
-  
-    <a class="color-link nav-link" href="https://chanjarster.github.io/tags/troubleshooting/">排障实战记录</a>
-  
-    <a class="color-link nav-link" href="https://github.com/chanjarster">Works</a>
-  
-    <a class="color-link nav-link" href="https://chanjarster.github.io/tags/">Tags</a>
-  
-  <a class="color-link nav-link" href="https://chanjarster.github.io/index.xml" target="_blank" rel="noopener" type="application/rss+xml">RSS</a>
-</div>
-<footer class="footer">
-	<div class="social-icons">
-        
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-    
-    
-    <a class="social-icon" href="chanjarster" target="_blank" rel="noopener" title="GitHub">
-        <svg width="28px" height="28px" viewBox="0 0 28 28" version="1.1" fill="#ABABAB" xmlns="https://www.w3.org/2000/svg" xmlns:xlink="https://www.w3.org/1999/xlink">
-            <path d="M13.9988029,1.32087331 C6.82105037,1.32087331 1,7.14112562 1,14.3212723 C1,20.0649109 4.72454649,24.9370678 9.89038951,26.6560892 C10.5408085,26.7757983 10.7778323,26.374374 10.7778323,26.0296121 C10.7778323,25.7215609 10.7666595,24.9035493 10.760275,23.8189856 C7.14426471,24.6042767 6.38131925,22.0760223 6.38131925,22.0760223 C5.78995672,20.5740732 4.93762853,20.1742451 4.93762853,20.1742451 C3.75729765,19.3682044 5.02701126,19.3841656 5.02701126,19.3841656 C6.33183953,19.4759425 7.01817121,20.7241085 7.01817121,20.7241085 C8.17775254,22.7104801 10.0611744,22.1366749 10.8017741,21.8038838 C10.919887,20.9643246 11.2558703,20.3913175 11.6269683,20.066507 C8.74038491,19.7385043 5.70536235,18.6228163 5.70536235,13.6413251 C5.70536235,12.2223743 6.21213051,11.0611968 7.04370914,10.1530044 C6.90963504,9.82420367 6.46351945,8.50181809 7.17139875,6.71256734 C7.17139875,6.71256734 8.26234691,6.36301702 10.7459099,8.04532771 C11.78259,7.75642995 12.8950858,7.61277914 14.000399,7.60719272 C15.1049142,7.61277914 16.2166119,7.75642995 17.2548881,8.04532771 C19.736855,6.36301702 20.8262071,6.71256734 20.8262071,6.71256734 C21.5356825,8.50181809 21.0895669,9.82420367 20.9562909,10.1530044 C21.7894656,11.0611968 22.2922435,12.2223743 22.2922435,13.6413251 C22.2922435,18.6355852 19.2524325,19.734514 16.3570705,20.0561322 C16.8231376,20.4575564 17.2389269,21.2508282 17.2389269,22.4638795 C17.2389269,24.2012564 17.2229657,25.603448 17.2229657,26.0296121 C17.2229657,26.3775663 17.4575954,26.7821827 18.116793,26.6552912 C23.2786458,24.9322794 27,20.0633148 27,14.3212723 C27,7.14112562 21.1789496,1.32087331 13.9988029,1.32087331"></path>
-        </svg>
+<meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="What every programmer should know about memory, Part 2: CPU caches"/>
+<meta name="twitter:description" content=""/>
+<meta name="robots" content="index, follow" /><link rel="stylesheet" href="/css/main.min.b7a6eda8d46e39a549f182cf72a9ff4f4c1d4d82c31ecc3ede0b7f4d5b26f32b.css" integrity="sha256-t6btqNRuOaVJ8YLPcqn/T0wdTYLDHsw&#43;3gt/TVsm8ys=" crossorigin="anonymous"><link rel="stylesheet" href="/css/viewer.min.3d228794bcedbbfa0412beb8fbc1ec6973202945e42af7004f742a4d7bd620ab.css" integrity="sha256-PSKHlLztu/oEEr64&#43;8HsaXMgKUXkKvcAT3QqTXvWIKs=" crossorigin="anonymous"></head>
+  <body><script>const items=['mode','palette'];items.forEach(function(a){const b=localStorage.getItem('hbs-'+a);b&&document.body.parentElement.setAttribute('data-'+a,b)})</script><header><nav class="navbar top-app-bar top-app-bar-expand-lg fixed-top">
+  <div class="container">
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent"
+      aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <i class="fas fa-bars"></i>
+    </button><a class="navbar-brand flex-grow-1 flex-lg-grow-0 text-center text-lg-start mx-auto me-lg-3" href="/"><img class="logo" alt="Logo" src="/images/avatar.jpg" loading="lazy"
+   width="455" height="455"
+   />颇忒脱的技术博客
     </a>
     
+    <button class="navbar-settings" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvasSettings"
+  aria-controls="offcanvasSettings" aria-label="Toggle settings">
+  <i class="fas fa-ellipsis-v"></i>
+</button>
 
-    
-    
-    
+<div class="offcanvas offcanvas-end surface h-100" tabindex="-1" id="offcanvasSettings" aria-labelledby="offcanvasSettings">
+  <div class="offcanvas-header">
+    <h3 class="offcanvas-title">设置</h3>
+    <button type="button" class="btn btn-sm btn-outline-primary" data-bs-dismiss="offcanvas" aria-label="Close">
+      <i class="fas fa-times"></i>
+    </button>
+  </div>
+  <div class="offcanvas-body d-flex flex-column">
 
-    
+<section class="setting">
+  <form class="row">
+    <div class="col-auto">
+      <label><i class="fas fa-fw fa-adjust"></i> 模式</label>
+    </div>
+    <div class="col-auto ms-auto">
+      <div class="form-check form-switch">
+        <input class="form-check-input" type="checkbox" id="modeSwitcher">
+      </div>
+    </div>
+  </form>
+</section>
 
-    
+<section class="setting">
+  <form class="font-size-switcher-form row">
+    <div class="col-auto">
+      <label for="fontSize" class="form-label"><i class="fas fa-fw fa-font"></i> 字体大小</label>
+    </div>
+    <div class="col-auto ms-auto">
+      <input type="range" class="form-range" min="-2" max="2" id="fontSize">
+    </div>
+  </form>
+</section>
 
-    
 
-    
-
-    
-
-    
-
-    
+<section class="setting palettes">
+  <form class="row">
+    <div class="col-auto">
+      <label><i class="fas fa-fw fa-palette"></i> 配色</label>
+    </div>
+    <div class="col-auto ms-auto">
+      <a id="btnPalette" class="btn btn-sm btn-outline-primary" role="button" aria-label="palettePicker">
+        <i class="fas fa-eye-dropper"></i>
+      </a>
+    </div>
+  </form>
+  <div class="mt-2 d-flex justify-content-between visually-hidden" id="palettePicker"><button type="button" id="palette-blue" aria-label="蓝色"
+        class="btn btn-sm w-100 palette" data-palette="blue">
+      </button><button type="button" id="palette-blue-gray" aria-label="蓝灰色"
+        class="btn btn-sm w-100 palette" data-palette="blue-gray">
+      </button><button type="button" id="palette-brown" aria-label="棕色"
+        class="btn btn-sm w-100 palette" data-palette="brown">
+      </button><button type="button" id="palette-cyan" aria-label="青色"
+        class="btn btn-sm w-100 palette" data-palette="cyan">
+      </button><button type="button" id="palette-green" aria-label="绿色"
+        class="btn btn-sm w-100 palette" data-palette="green">
+      </button><button type="button" id="palette-indigo" aria-label="靛青色"
+        class="btn btn-sm w-100 palette" data-palette="indigo">
+      </button><button type="button" id="palette-orange" aria-label="橙色"
+        class="btn btn-sm w-100 palette" data-palette="orange">
+      </button><button type="button" id="palette-pink" aria-label="粉色"
+        class="btn btn-sm w-100 palette" data-palette="pink">
+      </button><button type="button" id="palette-purple" aria-label="紫色"
+        class="btn btn-sm w-100 palette" data-palette="purple">
+      </button><button type="button" id="palette-red" aria-label="红色"
+        class="btn btn-sm w-100 palette" data-palette="red">
+      </button><button type="button" id="palette-teal" aria-label="蓝绿色"
+        class="btn btn-sm w-100 palette" data-palette="teal">
+      </button><button type="button" id="palette-yellow" aria-label="黄色"
+        class="btn btn-sm w-100 palette" data-palette="yellow">
+      </button></div>
+</section>
+<section class="setting actions d-flex justify-content-around mt-auto overflow-auto">
+  <a role="button" class="action action-go-back" href="javascript: window.history.back();">
+    <span class="action-icon"><i class="fas fa-2x fa-arrow-left"></i></span> 返回
+  </a>
+  <a role="button" class="action action-reload-page">
+    <span class="action-icon"><i class="fas fa-2x fa-redo-alt"></i></span> 刷新
+  </a>
+  <a role="button" class="action action-copy-url">
+    <span class="action-icon"><i class="fas fa-2x fa-link"></i></span> 复制链接
+  </a></section>
 
 </div>
+</div>
 
-
-
-
-    <p><a href="https://github.com/kimcc/hugo-theme-noteworthy" target="_blank" rel="noopener">Noteworthy theme</a></p>
-    <p><a href="https://gohugo.io" target="_blank" rel="noopener">Built with Hugo</a></p>
-
-	<script src="https://chanjarster.github.io/js/main.min.fa5c2b23e07b5d9bfad267a52b4b24fdb053e6fb7524993383594926a3ac270c.js" integrity="sha256-+lwrI+B7XZv60melK0sk/bBT5vt1JJkzg1lJJqOsJww=" crossorigin="anonymous"></script>
-</footer>
-
+    <div class="collapse navbar-collapse" tabindex="-1" id="navbarSupportedContent" aria-labelledby="navbarSupportedContent">
+      <form class="search-bar my-1" action="/search">
+  <div class="input-group input-group-sm">
+    <span class="btn btn-search disabled position-absolute left-0"><i class="fas fa-fw fa-search"></i></span>
+    <input class="form-control rounded-pill" name="q" type="search" aria-label="Search">
+  </div>
+</form>
+      <ul class="navbar-nav ms-auto"><li class="nav-item">
+          <a class="nav-link" href="/series/">
+            <i class="fas fa-fw fa-columns"></i>专栏
+          </a>
+        </li><li class="nav-item dropdown">
+          <a class="nav-link" id="navbarDropdownIndex" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+            <i class="fas fa-fw fa-chevron-circle-down"></i>快速索引
+          </a>
+          <ul class="dropdown-menu" aria-labelledby="navbarDropdownIndex"><li>
+              <a class="dropdown-item"
+                href="/tags/go">
+                Go
+              </a>
+            </li><li>
+              <a class="dropdown-item"
+                href="/tags/gc">
+                GC
+              </a>
+            </li><li>
+              <a class="dropdown-item"
+                href="/tags/kernel">
+                Kernel
+              </a>
+            </li><li>
+              <a class="dropdown-item"
+                href="/tags/cheatsheet">
+                Cheatsheet
+              </a>
+            </li><li>
+              <a class="dropdown-item"
+                href="/tags/troubleshooting">
+                排障实战记录
+              </a>
+            </li></ul>
+        </li><li class="nav-item">
+          <a class="nav-link" href="/tags/">
+            <i class="fas fa-fw fa-tags"></i>标签
+          </a>
+        </li><li class="nav-item">
+          <a class="nav-link" href="/archives/">
+            <i class="fas fa-fw fa-file-archive"></i>归档
+          </a>
+        </li></ul>
+    </div>
+  </div>
 </nav>
-
-        <div id="content" class="content-container">
-        
-
-<h1 class="post-title">What every programmer should know about memory, Part 2: CPU caches</h1>
+</header>
+<main role="main" class="container">
+      <div class="row content">
+<div class="col-lg-8">
+  <div class="container"><nav class="row card component" aria-label="breadcrumb">
+  <div class="card-body">
+    <ol class="breadcrumb "><li class="breadcrumb-item"><a href="/">主页</a></li><li class="breadcrumb-item"><a href="/post/">文章</a></li><li class="breadcrumb-item active">What Every Programmer Should Know About Memory, Part 2: CPU Caches</li></ol>
+  </div>
+</nav><div class="post-panel-wrapper">
+  <div class="d-flex flex-column component rounded post-panel">
     
-    <time>March 5, 2019</time>
+    <a class="action action-panel-toggler" role="button" title="Panel toggler">
+      <i class="fas fa-fw fa-chevron-circle-down"></i>
+    </a>
+    <a id="sidebarToggler" class="action d-none d-lg-block" role="button" title="Sidebar toggler">
+  <i class="fas fa-fw fa-expand-alt" data-fa-transform="rotate-45"></i>
+</a>
+
     
-    <div>
-        <p>
-        <p>原文：<a href="https://lwn.net/Articles/252125/">What every programmer should know about memory, Part 2: CPU caches</a></p>
+
+    
+    <a class="action" href="#post-copyright" role="button" aria-label="Copyright" title="Copyright">
+  <i class="fas fa-fw fa-copyright"></i>
+</a>
+    <a class="action" href="#post-comments" role="button" aria-label="Comments" title="Comments">
+  <i class="fas fa-fw fa-comments"></i>
+</a>
+    <a class="action" href="#postTOC" aria-controls="Table of contents" role="button" title="Table of contents">
+  <i class="fas fa-fw fa-list-alt"></i>
+</a>
+    
+  </div>
+</div>
+<article class="row card component mb-4 post">
+  <div class="card-header ">
+    <h1 class="card-title post-title">What Every Programmer Should Know About Memory, Part 2: CPU Caches
+</h1>
+  </div>
+  <div class="card-body"><div class="post-meta">
+  <span class="post-date" title="创建于 2019-03-05 21:22:12 &#43;0800 CST。">
+    2019-03-05
+  </span><span class="post-reading-time">
+    27 分钟阅读
+  </span><span class="post-taxonomies"><a href="/tags/arts/" class="badge post-taxonomy">ARTS</a><a href="/tags/arts-t/" class="badge post-taxonomy">ARTS-T</a><a href="/tags/kernel/" class="badge post-taxonomy">kernel</a></span>
+</div>
+<div class="post-content mb-3"><p>原文：<a href="https://lwn.net/Articles/252125/" target="_blank" rel="noopener noreferrer">What every programmer should know about memory, Part 2: CPU caches</a>
+</p>
 <p>关键词：Cache prefetching、TLB cache missing、MESI protocol、Cache types（L1d、L1i、L2、L3）</p>
-<h2 id="31-cpu-caches-in-the-big-picture">3.1 CPU Caches in the Big Picture</h2>
+<h2 id="31-cpu-caches-in-the-big-picture">3.1 CPU Caches in the Big Picture<a class="anchor ms-1" href="#31-cpu-caches-in-the-big-picture"><i class="fas fa-link"></i></a></h2>
 <p>内存很慢，这就是为何CPU cache存在的原因，CPU cache内置在CPU内部，SRAM。
 CPU cache尺寸不大。</p>
-<p><img src="https://static.lwn.net/images/cpumemory/cpumemory.1.png" alt=""></p>
+<p><img class="img-fluid" alt="" src="https://static.lwn.net/images/cpumemory/cpumemory.1.png" loading="lazy"
+  
+   />
+</p>
 <p>CPU cache处于CPU和内存之间，默认情况下CPU所读写的数据都存在cache中。</p>
 <p>Intel将CPU cache分为data cache和code cache，这样会有性能提升。</p>
 <p>随着CPU cache和内存的速度差异增大，在两者之间增加了更大但是更慢的CPU cache，为何不扩大原CPU cache的尺寸？答案是不经济。</p>
 <p>现代CPU core拥有三级缓存。</p>
-<p><img src="https://static.lwn.net/images/cpumemory/cpumemory.2.png" alt=""></p>
+<p><img class="img-fluid" alt="" src="https://static.lwn.net/images/cpumemory/cpumemory.2.png" loading="lazy"
+  
+   />
+</p>
 <p>L1d是data cache，L1i是instruction cache（code cache）。上图只是概要，现实中从CPU core到内存的数据流一路上可以通过、也可以不通过各个高层cache，这取决于CPU的设计者，这部分对于程序员是不可见的。</p>
 <p>每个处理器拥有多个core，每个core几乎拥有所有硬件资源的copy，每个core可以独立运行，除非它们用到了相同的资源。
 每个core有用多个thread，每个thread共享其所属处理器的所有资源，Intel的thread仅对reigster做分离，甚至这个也是有限制的，有些register依然是共享的。</p>
-<p><img src="https://static.lwn.net/images/cpumemory/cpumemory.3.png" alt=""></p>
+<p><img class="img-fluid" alt="" src="https://static.lwn.net/images/cpumemory/cpumemory.3.png" loading="lazy"
+  
+   />
+</p>
 <p>上面这张图：</p>
 <ol>
 <li>两个处理器，processors，大的灰色矩形</li>
@@ -178,8 +255,9 @@ CPU cache尺寸不大。</p>
 <li>每个core有一个L1d cache和L1i cache（两个浅绿色矩形）</li>
 <li>每个core有两个thread，红色矩形，同一个processor的所有core都共享相同的L2/L3 cache</li>
 </ol>
-<h2 id="32-cache-operation-at-high-level">3.2 Cache Operation at High Level</h2>
-<p>插播概念<a href="https://en.wikipedia.org/wiki/Word_(computer_architecture)">word</a>：</p>
+<h2 id="32-cache-operation-at-high-level">3.2 Cache Operation at High Level<a class="anchor ms-1" href="#32-cache-operation-at-high-level"><i class="fas fa-link"></i></a></h2>
+<p>插播概念<a href="https://en.wikipedia.org/wiki/Word_%28computer_architecture%29" target="_blank" rel="noopener noreferrer">word</a>
+：</p>
 <blockquote>
 <p><strong>Word</strong>，数据的自然单位，CPU指令集所能处理的数据单位。在x86-64架构中，word size=64 bits=8 bytes。</p>
 </blockquote>
@@ -223,7 +301,10 @@ CPU cache尺寸不大。</p>
 </tbody>
 </table>
 <p>下图是写不同尺寸数据下的性能表现：</p>
-<p><img src="https://static.lwn.net/images/cpumemory/cpumemory.21.png" alt=""></p>
+<p><img class="img-fluid" alt="" src="https://static.lwn.net/images/cpumemory/cpumemory.21.png" loading="lazy"
+  
+   />
+</p>
 <p>根据经验可以推测出L1d size=2^12=4K，L2 size=2^20=1M。当数据&lt;=4K时，正好能够放进L1d中，操作的CPU周期&lt;10个。当数据&gt;4K and &lt;=1M时，会利用到L2，操作的CPU周期&lt;75。当数据&gt;1M时，CPU操作周期&gt;400，则说明没有L3，此时是直接访问内存了。</p>
 <p><strong>非常重要：下面的例子里CPU访问数据是按照以下逻辑：</strong></p>
 <ul>
@@ -232,16 +313,16 @@ CPU cache尺寸不大。</p>
 <li>如果L2没有数据，则得先从main memory（RAM）加载数据</li>
 </ul>
 <p>也就是说如果这个数据一开始在L1d、L2都不存在，那么就得先从main memory加载到L2，然后从L2加载到L1d，最后CPU才可以访问。</p>
-<h2 id="33-cpu-cache-implementation-details">3.3 CPU Cache Implementation Details</h2>
-<h3 id="331-associativity">3.3.1 Associativity</h3>
+<h2 id="33-cpu-cache-implementation-details">3.3 CPU Cache Implementation Details<a class="anchor ms-1" href="#33-cpu-cache-implementation-details"><i class="fas fa-link"></i></a></h2>
+<h3 id="331-associativity">3.3.1 Associativity<a class="anchor ms-1" href="#331-associativity"><i class="fas fa-link"></i></a></h3>
 <p>没看懂。略。</p>
-<h3 id="332-measurements-of-cache-effects">3.3.2 Measurements of Cache Effects</h3>
+<h3 id="332-measurements-of-cache-effects">3.3.2 Measurements of Cache Effects<a class="anchor ms-1" href="#332-measurements-of-cache-effects"><i class="fas fa-link"></i></a></h3>
 <p>keyword：cache prefetching、TLB cache miss</p>
 <p>测试方法是顺序读一个<code>l</code>的数组：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#66d9ef">struct</span> l {
-  <span style="color:#66d9ef">struct</span> l <span style="color:#f92672">*</span>n;
-  <span style="color:#66d9ef">long</span> <span style="color:#66d9ef">int</span> pad[NPAD];
-};
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-c" data-lang="c"><span class="ln">1</span><span class="k">struct</span> <span class="n">l</span> <span class="p">{</span>
+<span class="ln">2</span>  <span class="k">struct</span> <span class="n">l</span> <span class="o">*</span><span class="n">n</span><span class="p">;</span>
+<span class="ln">3</span>  <span class="kt">long</span> <span class="kt">int</span> <span class="n">pad</span><span class="p">[</span><span class="n">NPAD</span><span class="p">];</span>
+<span class="ln">4</span><span class="p">};</span>
 </code></pre></div><p>根据NPAD不同，元素的大小也不同：</p>
 <ul>
 <li>NPAD=0，element size=8 bytes，element间隔 0 bytes</li>
@@ -250,10 +331,13 @@ CPU cache尺寸不大。</p>
 <li>NPAD=31，element size=256 bytes，element间隔 248 bytes</li>
 </ul>
 <p>被测CPU L1d cache=16K、L2 cache=1M、cache line=64 bytes。</p>
-<h4 id="single-threaded-sequential-access">Single Threaded Sequential Access</h4>
-<h5 id="case-1-element-size8-bytes">case 1: element size=8 bytes</h5>
+<h4 id="single-threaded-sequential-access">Single Threaded Sequential Access<a class="anchor ms-1" href="#single-threaded-sequential-access"><i class="fas fa-link"></i></a></h4>
+<h5 id="case-1-element-size8-bytes">case 1: element size=8 bytes<a class="anchor ms-1" href="#case-1-element-size8-bytes"><i class="fas fa-link"></i></a></h5>
 <p>下面是NPAD=0（element size=8 bytes，element间隔0 bytes），read 单个 element的平均时钟周期：</p>
-<p><img src="https://static.lwn.net/images/cpumemory/cpumemory.22.png" alt=""></p>
+<p><img class="img-fluid" alt="" src="https://static.lwn.net/images/cpumemory/cpumemory.22.png" loading="lazy"
+  
+   />
+</p>
 <p><strong>Figure 3.10: Sequential Read Access, NPAD=0</strong></p>
 <p>上面的Working set size是指数组的总尺寸（bytes）。</p>
 <p>可以看到就算数据尺寸超过了16K（L1d size），对每个元素的读的CPU周期也没有到达14，甚至当数据尺寸超过1M（L2 size）时也是这样，这就是因为<strong>cache prefetching</strong>的功劳：</p>
@@ -263,14 +347,17 @@ CPU cache尺寸不大。</p>
 </ul>
 <p>Cache prefetching是一项重要的优化手段，在使用连续的内存区域的时候，处理器会将后续数据预先加载到cache line中，也就是说当在访问当前cache line的时候，下一个cache line的数据已经在半路上了。</p>
 <p>Prefetching发生既会发生在L1中也会发生在L2中。</p>
-<h5 id="case-2-element-size--cache-line-总尺寸--l2">case 2: element size &gt;= cache line, 总尺寸 &lt;= L2</h5>
+<h5 id="case-2-element-size--cache-line-总尺寸--l2">case 2: element size >= cache line, 总尺寸 <= L2<a class="anchor ms-1" href="#case-2-element-size--cache-line-总尺寸--l2"><i class="fas fa-link"></i></a></h5>
 <p>各个尺寸element的情况：</p>
 <ul>
 <li>NPAD=7（element size=64 bytes，element间隔56 bytes）</li>
 <li>NPAD=15，element size=128 bytes，element间隔 120 bytes</li>
 <li>NPAD=31，element size=256 bytes，element间隔 248 bytes</li>
 </ul>
-<p><img src="https://static.lwn.net/images/cpumemory/cpumemory.23.png" alt=""></p>
+<p><img class="img-fluid" alt="" src="https://static.lwn.net/images/cpumemory/cpumemory.23.png" loading="lazy"
+  
+   />
+</p>
 <p><strong>Figure 3.11: Sequential Read for Several Sizes</strong></p>
 <p>观察working set size &lt;= L2，看（2<sup>10</sup>～2<sup>19</sup>区段）：</p>
 <ul>
@@ -284,30 +371,37 @@ CPU cache尺寸不大。</p>
 <li>当NPAD=0时，element size=8，就意味着你要read多次才会用光cache line，那么prefetching可以穿插在read之间进行，将next cache line准备好</li>
 <li>当NPAD=7,15,31时，element size&gt;=cache line，那么就意味着每次read都把一条cache line用完，没有留给prefetching的时钟周期了，下一次read的时候就只能老实从L2加载，所以时钟周期在28左右。</li>
 </ul>
-<h5 id="case-3-selement-size--cache-line-总尺寸--l2">case 3: selement size &gt;= cache line, 总尺寸 &gt; L2</h5>
+<h5 id="case-3-selement-size--cache-line-总尺寸--l2">case 3: selement size >= cache line, 总尺寸 > L2<a class="anchor ms-1" href="#case-3-selement-size--cache-line-总尺寸--l2"><i class="fas fa-link"></i></a></h5>
 <p>还是看各个尺寸element的情况：</p>
 <ul>
 <li>NPAD=7（element size=64 bytes，element间隔56 bytes）</li>
 <li>NPAD=15，element size=128 bytes，element间隔 120 bytes</li>
 <li>NPAD=31，element size=256 bytes，element间隔 248 bytes</li>
 </ul>
-<p><img src="https://static.lwn.net/images/cpumemory/cpumemory.23.png" alt=""></p>
+<p><img class="img-fluid" alt="" src="https://static.lwn.net/images/cpumemory/cpumemory.23.png" loading="lazy"
+  
+   />
+</p>
 <p><strong>Figure 3.11: Sequential Read for Several Sizes</strong></p>
 <p>观察working set size &gt; L2，看（2<sup>19</sup>之后的区段）：</p>
 <ul>
 <li>NPAD=7（element size=64），依然有prefetching的迹象</li>
 <li>NPAD=15（element size=128）、NPAD=31（element size=256）则没有prefetching的迹象</li>
 </ul>
-<p>这是因为处理器从<a href="https://en.wikipedia.org/wiki/Stride_of_an_array">size of the strides</a>判断NPAD=15和31，小于prefetching window（具体后面会讲），因此没有启用prefetching。而元素大小妨碍prefetching的硬件上的原因是：prefetching无法跨过page boundaries。</p>
+<p>这是因为处理器从<a href="https://en.wikipedia.org/wiki/Stride_of_an_array" target="_blank" rel="noopener noreferrer">size of the strides</a>
+判断NPAD=15和31，小于prefetching window（具体后面会讲），因此没有启用prefetching。而元素大小妨碍prefetching的硬件上的原因是：prefetching无法跨过page boundaries。</p>
 <p>而NPAD=15与31的差别很大则是因为<strong>TLB cache miss</strong>。</p>
-<h5 id="测量tlb效果">测量TLB效果</h5>
+<h5 id="测量tlb效果">测量TLB效果<a class="anchor ms-1" href="#测量tlb效果"><i class="fas fa-link"></i></a></h5>
 <p>TLB是用来存放virtual memory address到physical memory address的计算结果的（虚拟内存地址和物理内存地址在后面会讲）。</p>
 <p>测试NPAD=7（element size=64），每个元素按照下列两种方式排列的性能表现：</p>
 <ul>
 <li>On cache line，数组中的每个元素连续。也就是每次迭代需要新的cache line，每64个元素需要一个新page。</li>
 <li>On page，数组中的每个元素在独立的Page中。每次迭代需要新的cache line。</li>
 </ul>
-<p><img src="https://static.lwn.net/images/cpumemory/cpumemory.59.png" alt=""></p>
+<p><img class="img-fluid" alt="" src="https://static.lwn.net/images/cpumemory/cpumemory.59.png" loading="lazy"
+  
+   />
+</p>
 <p><strong>Figure 3.12: TLB Influence for Sequential Read</strong></p>
 <ul>
 <li>蓝色曲线看到，当数据量超过2<sup>12</sup> bytes（4K），曲线开始飙升。因此可以推测TLB的大小为4K。</li>
@@ -317,14 +411,17 @@ CPU cache尺寸不大。</p>
 <li>可以看到越大的NPAD就越会降低TLB cache的效率。换句话说，越大的元素尺寸就越会降低TLB cache的效率。</li>
 <li>所以address translation（地址翻译）的惩罚会叠加到内存访问上，所以Figure 3.11的NPAD=31（element size=256）周期数会比其他更高，而且也比理论上访问RAM的周期高。</li>
 </ul>
-<h5 id="case-4-sequential-read-and-write-npad1">case 4: Sequential Read and Write, NPAD=1</h5>
+<h5 id="case-4-sequential-read-and-write-npad1">case 4: Sequential Read and Write, NPAD=1<a class="anchor ms-1" href="#case-4-sequential-read-and-write-npad1"><i class="fas fa-link"></i></a></h5>
 <p>测试NPAD=1，element size=16 bytes，顺序读与写：</p>
 <ul>
 <li>Follow，和之前一样是顺序读的测试结果，作为baseline</li>
 <li>Inc，每次迭代对pad[0]++</li>
 <li>Addnext0，每次迭代读取下一个元素的pad[0]，把值加到自己的pad[0]上</li>
 </ul>
-<p><img src="https://static.lwn.net/images/cpumemory/cpumemory.24.png" alt=""></p>
+<p><img class="img-fluid" alt="" src="https://static.lwn.net/images/cpumemory/cpumemory.24.png" loading="lazy"
+  
+   />
+</p>
 <p><strong>Figure 3.13: Sequential Read and Write, NPAD=1</strong></p>
 <p>按照常理来说，Addnext0应该比较慢因为它做的工组比较多，然而在某些working set size下反而比Inc要好，这是因为：</p>
 <ul>
@@ -335,9 +432,12 @@ CPU cache尺寸不大。</p>
 <blockquote>
 <p>The “Addnext0” test runs out of L2 faster than the “Inc” test, though. It needs more data loaded from main memory. This is why the “Addnext0” test reaches the 28 cycles level for a working set size of 2<sup>21</sup> bytes. The 28 cycles level is twice as high as the 14 cycles level the “Follow” test reaches. This is easy to explain, too. Since the other two tests modify memory an L2 cache eviction to make room for new cache lines cannot simply discard the data. Instead it has to be written to memory. This means the available bandwidth on the FSB is cut in half, hence doubling the time it takes to transfer the data from main memory to L2.</p>
 </blockquote>
-<h5 id="case-4-sequential-read-on-larger-l2l3">case 4: Sequential Read on larger L2/L3</h5>
+<h5 id="case-4-sequential-read-on-larger-l2l3">case 4: Sequential Read on larger L2/L3<a class="anchor ms-1" href="#case-4-sequential-read-on-larger-l2l3"><i class="fas fa-link"></i></a></h5>
 <p>测试NPAD=15，element size=128 bytes。</p>
-<p><img src="https://static.lwn.net/images/cpumemory/cpumemory.25.png" alt=""></p>
+<p><img class="img-fluid" alt="" src="https://static.lwn.net/images/cpumemory/cpumemory.25.png" loading="lazy"
+  
+   />
+</p>
 <p><strong>Figure 3.14: Advantage of Larger L2/L3 Caches</strong></p>
 <ul>
 <li>最后一级cache越大，则曲线逗留于L2访问开销对应的低等级的时间越长</li>
@@ -345,13 +445,16 @@ CPU cache尺寸不大。</p>
 <li>第三个处理器表现的更好则是因为它的4M L2</li>
 </ul>
 <p>所以缓存越大越能得到性能上的提升。</p>
-<h4 id="single-threaded-random-access-measurements">Single Threaded Random Access Measurements</h4>
+<h4 id="single-threaded-random-access-measurements">Single Threaded Random Access Measurements<a class="anchor ms-1" href="#single-threaded-random-access-measurements"><i class="fas fa-link"></i></a></h4>
 <p>之前已经看到处理器通过prefetching cache line到L2和L1d的方法，可以隐藏main memory的访问开销，甚至L2的访问开销。但是，只有在内存访问可预测的情况下，这才能工作良好。</p>
 <p>下图是顺序访问和随机访问的对比：</p>
-<p><img src="https://static.lwn.net/images/cpumemory/cpumemory.26.png" alt=""></p>
+<p><img class="img-fluid" alt="" src="https://static.lwn.net/images/cpumemory/cpumemory.26.png" loading="lazy"
+  
+   />
+</p>
 <p><strong>Figure 3.15: Sequential vs Random Read, NPAD=0</strong></p>
 <p>后面的没有看懂。</p>
-<h3 id="333-write-behavior">3.3.3 Write behavior</h3>
+<h3 id="333-write-behavior">3.3.3 Write behavior<a class="anchor ms-1" href="#333-write-behavior"><i class="fas fa-link"></i></a></h3>
 <p>cache应该是coherent的，cache的coherency对于userlevel 代码应该是完全透明的，内核代码除外。</p>
 <p>如果一个cache line被修改了，那么自此时间点之后的系统的结果和压根没有cache并且main memory被修改的结果是一样。有两个实现策略：</p>
 <p><strong>Write-through：</strong></p>
@@ -373,7 +476,8 @@ CPU cache尺寸不大。</p>
 <ul>
 <li>Write-combining是一种首先的cache优化策略，更多的用于设备的RAM上，比如显卡。</li>
 <li>传输数据到设备的开销比访问本地RAM要大得多，所以要尽可能避免传输次数太多。</li>
-<li>如果仅因为cache line的一个<a href="https://en.wikipedia.org/wiki/Word_(computer_architecture)">word</a>的修改而要把整个cache line都传输太浪费。</li>
+<li>如果仅因为cache line的一个<a href="https://en.wikipedia.org/wiki/Word_%28computer_architecture%29" target="_blank" rel="noopener noreferrer">word</a>
+的修改而要把整个cache line都传输太浪费。</li>
 <li>因此，write-combining把多个写访问合并在一起，然后再把cache line写出去。</li>
 <li>这可以加速访问设备RAM的速度。</li>
 </ul>
@@ -387,12 +491,12 @@ CPU cache尺寸不大。</p>
 <li>在商业机器上，一般来说这些地址会被翻译成访问card和连接到某个总线的设备（PCIe）。</li>
 <li>这些内存不应该被缓存。</li>
 </ul>
-<h3 id="334-multi-processor-support">3.3.4 Multi-processor support</h3>
+<h3 id="334-multi-processor-support">3.3.4 Multi-processor support<a class="anchor ms-1" href="#334-multi-processor-support"><i class="fas fa-link"></i></a></h3>
 <p>在多处理器系统和多核处理器中，对于所有不共享的cache，都会存在cache内容不一致的问题。两个处理器之间不会共享L1d、L1i、L2、L3，同一处理器的两个核之间至少不会共享L1d。</p>
 <p>提供一条能从A处理器直接访问B处理器的cache的通道是不切实际的，因为速度不够快。所以比较实际的做法是将cache内容传输到其他处理器以备不时之需。对于多核处理器也采用这种做法。</p>
 <p>那什么时候传输呢？当一个处理器需要一条cache line做读/写，但是它在其他处理器里是dirty时。</p>
 <p>那么一个处理器是如何决定一条cache line在另外一个处理器里是否dirty呢？通常来说内存访问是读，而读不会把一个cache line变成dirty。处理器每次对cache line的写访问之后都把cache line信息广播出去是不切实际的。</p>
-<h4 id="mesi-cache-coherency-protocol">MESI cache coherency protocol</h4>
+<h4 id="mesi-cache-coherency-protocol">MESI cache coherency protocol<a class="anchor ms-1" href="#mesi-cache-coherency-protocol"><i class="fas fa-link"></i></a></h4>
 <p>开发了MESI缓存协同协议（MESI cache coherency protocol），规定了一条cache line的状态有四种：Modified、Exclusive、Shared、Invalid。</p>
 <ul>
 <li><em><strong>Modified</strong></em>: 本地处理器刚修改cache line，也意味着它是所有cache中的唯一copy。</li>
@@ -404,7 +508,10 @@ CPU cache尺寸不大。</p>
 <p>MESI所解决的问题和分布式缓存中数据同步的问题是一致的，好好看看，这能够带来一些启发</p>
 </blockquote>
 <p>使用这四个状态有可能有效率地实现write-back策略，同时支持多处理器并发使用read-only数据。</p>
-<p><img src="https://static.lwn.net/images/cpumemory/cpumemory.13.png" alt=""></p>
+<p><img class="img-fluid" alt="" src="https://static.lwn.net/images/cpumemory/cpumemory.13.png" loading="lazy"
+  
+   />
+</p>
 <p><strong>Figure 3.18: MESI Protocol Transitions</strong></p>
 <p>下面是四种状态变化的解读：</p>
 <p><strong>Invalid</strong>：</p>
@@ -491,25 +598,34 @@ CPU cache尺寸不大。</p>
 <p>程序应该最小化从不同处理器、不同核访问同一块内存区域的操作。</p>
 </li>
 </ul>
-<h4 id="multi-threaded-measurements">Multi Threaded Measurements</h4>
+<h4 id="multi-threaded-measurements">Multi Threaded Measurements<a class="anchor ms-1" href="#multi-threaded-measurements"><i class="fas fa-link"></i></a></h4>
 <p>用之前相同的程序测试多线程的表现，采用用例中最快的线程的数据。所有的处理器共享同一个bus到memory controller，并且只有一条到memory modules的bus。</p>
-<h5 id="case-1-sequential-read-access-multiple-threads">case 1: Sequential Read Access, Multiple Threads</h5>
-<p><img src="https://static.lwn.net/images/cpumemory/cpumemory.30.png" alt="Figure 3.19: Sequential Read Access, Multiple Threads"></p>
+<h5 id="case-1-sequential-read-access-multiple-threads">case 1: Sequential Read Access, Multiple Threads<a class="anchor ms-1" href="#case-1-sequential-read-access-multiple-threads"><i class="fas fa-link"></i></a></h5>
+<p><img class="img-fluid" alt="Figure 3.19: Sequential Read Access, Multiple Threads" src="https://static.lwn.net/images/cpumemory/cpumemory.30.png" loading="lazy"
+  
+   />
+</p>
 <p><strong>Figure 3.19: Sequential Read Access, Multiple Threads</strong></p>
 <p>这个测试里没有修改数据，所有cache line都是shared，没有发生RFO。但是即便如此2线程的时候有18%的性能损失，在4线程的时候则是34%。那么可能的原因就只可能是一个或两个瓶颈所造成的：处理器到memory controller的bus、memory controller到memory modules的bus。一旦working set超过L3尺寸之后，就要从main memory prefetch数据了，带宽就不够用了</p>
-<h5 id="case-2-sequential-increment-multiple-threads">case 2: Sequential Increment, Multiple Threads</h5>
+<h5 id="case-2-sequential-increment-multiple-threads">case 2: Sequential Increment, Multiple Threads<a class="anchor ms-1" href="#case-2-sequential-increment-multiple-threads"><i class="fas fa-link"></i></a></h5>
 <p>这个测试用的是 “Sequential Read and Write, NPAD=1，Inc”，会修改内存。</p>
-<p><img src="https://static.lwn.net/images/cpumemory/cpumemory.29.png" alt="Figure 3.20: Sequential Increment, Multiple Threads"></p>
+<p><img class="img-fluid" alt="Figure 3.20: Sequential Increment, Multiple Threads" src="https://static.lwn.net/images/cpumemory/cpumemory.29.png" loading="lazy"
+  
+   />
+</p>
 <p><strong>Figure 3.20: Sequential Increment, Multiple Threads</strong></p>
 <p>注意图中的Y轴不是线性增加的，所以看上去很小的差异实际上差别很大。</p>
 <p>2线程依然有18%的性能损失，而4线程则有93%的性能损失，这意味4线程的时候prefetch流量核write-back流量饱和了bus。</p>
 <p>图中也可以发现只要有多个线程，L1d基本上就很低效了。</p>
 <p>L2倒不像L1d，似乎没有什么影响。这个测试修改了内存，我们预期会有很多RFO消息，但是并没有看见2、4线程相比单线程有什么性能损失。这是因为测试程序的关系。</p>
-<h5 id="case-3-random-addnextlast-multiple-threads">case 3: Random Addnextlast, Multiple Threads</h5>
+<h5 id="case-3-random-addnextlast-multiple-threads">case 3: Random Addnextlast, Multiple Threads<a class="anchor ms-1" href="#case-3-random-addnextlast-multiple-threads"><i class="fas fa-link"></i></a></h5>
 <p>下面这张图主要是为了展现令人吃惊的高数字，在极端情况下处理list中的单个元素居然要花费1500个周期。</p>
-<p><img src="https://static.lwn.net/images/cpumemory/cpumemory.31.png" alt=""></p>
+<p><img class="img-fluid" alt="" src="https://static.lwn.net/images/cpumemory/cpumemory.31.png" loading="lazy"
+  
+   />
+</p>
 <p><strong>Figure 3.21: Random Addnextlast, Multiple Threads</strong></p>
-<h5 id="总结case-123">总结case 1、2、3</h5>
+<h5 id="总结case-123">总结case 1、2、3<a class="anchor ms-1" href="#总结case-123"><i class="fas fa-link"></i></a></h5>
 <p>把case 1、2、3中的最大working set size的值总结出多线程效率：</p>
 <table>
 <thead>
@@ -538,11 +654,14 @@ CPU cache尺寸不大。</p>
 <p><strong>Table 3.3: Efficiency for Multiple Threads</strong></p>
 <p>这个表显示了在最大working set size，使用多线程能获得的可能的最好的加速。理论上2线程应该加速2，4线程应该加速4。好好观察这个表里的数字和理论值的差异。</p>
 <p>下面这张图显示了Rand Add测试，在不同working set size下，多线程的加速效果：</p>
-<p><img src="https://static.lwn.net/images/cpumemory/cpumemory.28.png" alt=""></p>
+<p><img class="img-fluid" alt="" src="https://static.lwn.net/images/cpumemory/cpumemory.28.png" loading="lazy"
+  
+   />
+</p>
 <p><strong>Figure 3.22: Speed-Up Through Parallelism</strong></p>
 <p>L1d尺寸的测试结果，在L2和L3范围内，加速效果基本上是线性的，一旦当尺寸超过L3时，数字开始下坠，并且2线程和4线程的数字下坠到同一点上。这也就是为什么很难看到大于4个处理器的系统使用同一个memory controller，这些系统必须采用不同的构造。</p>
 <p>不同情况下上图的数字是不一样的，这个取决于程序到底是怎么写的。在某些情况下，就算working set size能套进最后一级cache，也无法获得线性加速。但是另一方面依然有可能在大于两个线程、更大working set size的情况下获得线性加速。这个需要程序员做一些考量，后面会讲。</p>
-<h4 id="special-case-hyper-threads">special case: hyper-threads</h4>
+<h4 id="special-case-hyper-threads">special case: hyper-threads<a class="anchor ms-1" href="#special-case-hyper-threads"><i class="fas fa-link"></i></a></h4>
 <p>Hyper-Threads(有时候也被称为Symmetric Multi-Threading, SMT)，是CPU实现的一项技术，同时也是一个特殊情况，因为各个线程并不能够真正的同时运行。超线程共享了CPU的所有资源除了register。各个core和CPU依然是并行运行的，但是hyper-threads不是。CPU负责hyper-threads的分时复用（time-multiplexing），当当前运行的hyper-thread发生延迟的时候，就调度令一个hyper-thread运行，而发生延迟的原因大部分都是因内存访问导致的。</p>
 <p>当程序的运行2线程在一个hyper-thread核的时候，只有在以下情况才会比单线程更有效率：2个线程的<em>运行时间之和</em>低于单线程版本的运行时间。这是因为当一个线程在等待内存的时候可以安排另一个线程工作，而原本这个是串形的。</p>
 <p>一个程序的运行时间大致可以用下面这个简单模型+单级cache来计算：</p>
@@ -557,13 +676,16 @@ CPU cache尺寸不大。</p>
 <li>T<sub>exe</sub>   = Execution time for program. 程序的执行时间</li>
 </ul>
 <p>为了使用两个线程有​​意义，两个线程中每个线程的执行时间必须至多是单线程代码的一半。如果把单线程和双线程放到等式的两遍，那么唯一的变量就是cache命中率。不使线程执行速度降低50%或更多（降低超过50%就比单线程慢了），然后计算所需的最小cache命中率，得到下面这张图：</p>
-<p><img src="https://static.lwn.net/images/cpumemory/cpumemory.14.png" alt=""></p>
+<p><img class="img-fluid" alt="" src="https://static.lwn.net/images/cpumemory/cpumemory.14.png" loading="lazy"
+  
+   />
+</p>
 <p><strong>Figure 3.23: Minimum Cache Hit Rate For Speed-Up</strong></p>
 <p>X轴代表了单线程代码的G<sub>hit</sub>，Y代表了双线程代码所需的G<sub>hit</sub>，双线程的值永远不能比单线程高，否则的话就意味着单线程可以用同样的方法改进代码了。单线程G<sub>hit</sub> &lt; 55%的时候，程序总是能够从多线程得到好处。</p>
 <p>绿色代表的是目标区域，如果一个线程的降速低于50%且每个线程的工作量减半，那么运行时间是有可能低于单线程的运行时间的。看上图，单线程G<sub>hit</sub>=60%时，如果要得到好处，双线程程序必须在10%以上。如果单线程G<sub>hit</sub>=95%，多线程则必须在80%以上，这就难了。特别地，这个问题是关于hyper-threads本身的，实际上给每个hyper-thread的cache尺寸是减半的（L1d、L2、L3都是）。两个hyper-thread使用相同的cache来加载数据。如果两个线程的工作集不重叠，那么原95%也可能减半，那么就远低于要求的80%。</p>
 <p>所以Hyper-threads只在有限范围的场景下有用。单线程下的cache命中率必须足够低，而且就算减半cache大小新的cache命中率在等式中依然能够达到目标。也只有这样使用Hyper-thread才有意义。在实践中是否能够更快取决于处理器是否能够充分交叠一个线程的等待和另一个线程的执行。而代码为了并行处理所引入的其他开销也是要考虑进去的。</p>
 <p>所以很明白的就是，如果两个hyper-threads运行的是两个完全不同的代码，那么肯定不会带来什么好处的，除非cache足够大到能够抵消因cache减半导致的cache miss率的提高。除非操作系统的工作负载由一堆在设计上真正能够从hyper-thread获益的进程组成，可能还是在BIOS里关掉hyper-thread比较好。</p>
-<h3 id="335-other-details">3.3.5 Other Details</h3>
+<h3 id="335-other-details">3.3.5 Other Details<a class="anchor ms-1" href="#335-other-details"><i class="fas fa-link"></i></a></h3>
 <p>现代处理器提供给进程的虚拟地址空间（virtual address space），也就是说有两种地址：虚拟的和物理的。</p>
 <p>虚拟地址不是唯一的：</p>
 <ul>
@@ -579,7 +701,7 @@ CPU cache尺寸不大。</p>
 <li>完全使用逻辑内存页（logical memory pages）</li>
 <li>使用尽可能大的页面大小来尽可能多样化物理地址</li>
 </ul>
-<h2 id="34-instruction-cache">3.4 Instruction Cache</h2>
+<h2 id="34-instruction-cache">3.4 Instruction Cache<a class="anchor ms-1" href="#34-instruction-cache"><i class="fas fa-link"></i></a></h2>
 <p>指令cache比数据cache问题更少，原因是：</p>
 <ul>
 <li>被执行的代码量取决于所需代码的大小，而代码大小通常取决于问题复杂度，而问题复杂度是固定的。</li>
@@ -589,15 +711,18 @@ CPU cache尺寸不大。</p>
 </ul>
 <p>CPU核心和cache（甚至第一级cache）的速度差异在增加。CPU已被流水线化，所谓流水线指一条指令的执行是分阶段的。首先指令被解码，参数被准备，最后被执行。有时候这个pipeline会很长，长pipeline就意味着如果pipeline停止（比如一条指令的执行被中断了），那它得花一些时间才能重新找回速度。pipeline停止总是会发生的，比如无法正确预测下一条指令，或者花太长时间加载下一条指令（比如从内存里加载）。</p>
 <p>现代CPU设计师花费了大量时间和芯片资产在分支预测上，为了尽可能不频繁的发生pipeline停止。</p>
-<h3 id="341-self-modifying-code">3.4.1 Self Modifying Code</h3>
+<h3 id="341-self-modifying-code">3.4.1 Self Modifying Code<a class="anchor ms-1" href="#341-self-modifying-code"><i class="fas fa-link"></i></a></h3>
 <p>早些时候为了降低内存使用（内存那个时候很贵），人们使用一种叫做Self Modifing Code（SMC）的技术来减少程序数据的尺寸。</p>
 <p>不过现在应该避免SMC，因为如果处理器加载一条指令到流水线中，而这条指令在却又被修改了，那么整个工作就要从头来过。</p>
 <p>所以现在到处理器假设code pages是不可变的，所以L1i没有使用MESI，而是使用更简单的SI</p>
-<h2 id="35-cache-miss-factors">3.5 Cache Miss Factors</h2>
+<h2 id="35-cache-miss-factors">3.5 Cache Miss Factors<a class="anchor ms-1" href="#35-cache-miss-factors"><i class="fas fa-link"></i></a></h2>
 <p>我们已经看到内存访问cache miss导致的开销极具增大，但是有时候这个问题是无法避免的，所以理解实际的开销以及如何缓解这个问题是很重要的。</p>
-<h3 id="351-cache-and-memory-bandwidth">3.5.1 Cache and Memory Bandwidth</h3>
+<h3 id="351-cache-and-memory-bandwidth">3.5.1 Cache and Memory Bandwidth<a class="anchor ms-1" href="#351-cache-and-memory-bandwidth"><i class="fas fa-link"></i></a></h3>
 <p>测试程序使用x86和x86-64处理器的SSE指令每次加载16 bytes，working set size从1K到512M，测试的是每个周期能够加载/存储多少个bytes。</p>
-<p><img src="https://static.lwn.net/images/cpumemory/cpumemory.60.png" alt=""></p>
+<p><img class="img-fluid" alt="" src="https://static.lwn.net/images/cpumemory/cpumemory.60.png" loading="lazy"
+  
+   />
+</p>
 <p><strong>Figure 3.24: Pentium 4 Bandwidth</strong></p>
 <p>这个图是64-bit Intel Netburst处理器的测试结果。</p>
 <p>先看读的测试可以看到：</p>
@@ -614,132 +739,301 @@ CPU cache尺寸不大。</p>
 <li>当L2不够用的时候，下降到0.5 bytes/cycle。</li>
 </ul>
 <p>下面是两个线程分别钉在同一核心的两个Hyper-thread上的测试情况：</p>
-<p><img src="https://static.lwn.net/images/cpumemory/cpumemory.61.png" alt=""></p>
+<p><img class="img-fluid" alt="" src="https://static.lwn.net/images/cpumemory/cpumemory.61.png" loading="lazy"
+  
+   />
+</p>
 <p><strong>Figure 3.25: P4 Bandwidth with 2 Hyper-Threads</strong></p>
 <p>这个结果符合预期，因为Hyper-thread除了不共享register之外，其他资源都是共享的，cache和带宽都被减半了。这意味着就算一个线程在在等待内存的时候可以让另一个线程执行，但是另一个线程实际上也在等待，所以并没有什么区别。</p>
 <p>下图是Intel Core2处理器的测试结果（对比Figure 3.24）：</p>
-<p><img src="https://static.lwn.net/images/cpumemory/cpumemory.62.png" alt=""></p>
+<p><img class="img-fluid" alt="" src="https://static.lwn.net/images/cpumemory/cpumemory.62.png" loading="lazy"
+  
+   />
+</p>
 <p><strong>Figure 3.26: Core 2 Bandwidth</strong></p>
 <p>Core 2 L2是P4 L2的四倍。这延迟了write和copy测试的性能下跌。read测试在所有的working set size里都维持在16 bytes/cycle左右，在2<sup>20</sup>处下跌了一点点是因为DTLB放不下working set。能够有这么好的性能表现不仅意味着处理器能够及时地prefetching和传输数据，也意味着数据是被prefetch到L1d的。</p>
 <p>看write和copy的表现，Core 2处理器的L1d cache没有采用Write-through策略，只有当必要的时候L1d才会evict，所以能够获得和read接近的表现。当L1d不够用的时候，性能开始下降。当L2不够用的时候再下跌很多。</p>
 <p>下图是Intel Core2处理器双线程跑在两个核心上：</p>
-<p><img src="https://static.lwn.net/images/cpumemory/cpumemory.63.png" alt=""></p>
+<p><img class="img-fluid" alt="" src="https://static.lwn.net/images/cpumemory/cpumemory.63.png" loading="lazy"
+  
+   />
+</p>
 <p><strong>Figure 3.27: Core 2 Bandwidth with 2 Threads</strong></p>
 <p>这个测试两个线程分别跑在两个核心上，两个线程访问相同的内存，没有完美地同步。read性能和Figure 3.26没有什么差别。</p>
 <p>看write和copy的表现，有意思的是在working set能够放进L1d的表现和直接从main memory读取的表现一样。两个线程访问相同的内存区域，针对cache line的RFO消息肯定会被发出。这里可以看到一个问题，RFO的处理速度没有L2快。当L1d不够用的时候，会将修改的cache line flush到共享的L2，这是性能有显著提升是因为L1d中的数据被flush到L2，那就没有RFO了。而且因为两个核心共享FSB，每个核心只拥有一半的FSB带宽，意味着每个线程的性能大约是单线程的一半。</p>
 <p>厂商的不同版本CPU和不同厂商的CPU的表现都是不同的。原文里后面比较了AMD Opteron处理器，这里就不写了。</p>
-<h3 id="325-critical-word-load">3.2.5 Critical Word Load</h3>
+<h3 id="325-critical-word-load">3.2.5 Critical Word Load<a class="anchor ms-1" href="#325-critical-word-load"><i class="fas fa-link"></i></a></h3>
 <p>数据是一block为单位从main memory传输到cache line的，一个block大小为64 bits（记得前面说的word也是64 bits），一条cache line的大小是64/128 bytes，所以填满一个cache line要传输8/16次。</p>
 <p>后面没有看懂，大致意思是Critical word是cache line中的关键word，程序要读到它之后才能继续运行，但是如果critical word不是cache line的第一个，那么就得等前面的word都加载完了之后才行。blah blah blah，不过这个理解可能也是不对的。</p>
-<h3 id="353-cache-placement">3.5.3 Cache Placement</h3>
+<h3 id="353-cache-placement">3.5.3 Cache Placement<a class="anchor ms-1" href="#353-cache-placement"><i class="fas fa-link"></i></a></h3>
 <p>cache和hyper-thread、core、处理器的关系是程序员无法控制的，但是程序员可以决定线程在哪里执行，所以cache和CPU是如何关联的就显得重要了。</p>
 <p>后面没仔细看，大致讲了由于不同的CPU架构，决定如何调度线程是比较复杂的。</p>
-<h3 id="354-fsb-influence">3.5.4 FSB Influence</h3>
+<h3 id="354-fsb-influence">3.5.4 FSB Influence<a class="anchor ms-1" href="#354-fsb-influence"><i class="fas fa-link"></i></a></h3>
 <p>不细讲了，对比了667MHz DDR2和800 MHz DDR2（20%的提升），测试下来性能有18%的提升接近理论值（20%）。</p>
-<p><img src="https://static.lwn.net/images/cpumemory/cpumemory.27.png" alt=""></p>
+<p><img class="img-fluid" alt="" src="https://static.lwn.net/images/cpumemory/cpumemory.27.png" loading="lazy"
+  
+   />
+</p>
 <p><strong>Figure 3.32: Influence of FSB Speed</strong></p>
-<p>所以更快的FSB的确能够带来好处。要注意CPU可能支持更高的FSB，但是主板/北桥可能不支持的情况。</p>
-        </p>
+<p>所以更快的FSB的确能够带来好处。要注意CPU可能支持更高的FSB，但是主板/北桥可能不支持的情况。</p></div></div>
+  <div class="card-footer"><div class="post-navs d-flex justify-content-evenly">
+  <div class="post-nav post-prev"><i class="fas fa-fw fa-chevron-left"></i>
+    <a href="/post/kernel/know-memory-ram/">What Every Programmer Should Know About Memory, Part 1, RAM
+</a>
+  </div><div class="post-nav post-next">
+    <a href="/post/kernel/know-memory-cpu-virtual-memory/">What Every Programmer Should Know About Memory, Part 3: Virtual Memory
+</a>
+    <i class="fas fa-fw fa-chevron-right"></i>
+  </div></div></div>
+</article>
+<div class="post-copyright mb-3 row card component" id="post-copyright">
+    <div class="card-header">
+        <h2 class="card-title">版权</h2>
     </div>
-    
+    <div class="card-body"><a class="d-flex align-items-center flex-column" target="_blank" rel="license noopener noreferrer" href="https://creativecommons.org/licenses/by-nc-nd/4.0/deed.zh">
+  <span><i class="fab fa-fw fa-2x fa-creative-commons"></i><i class="fab fa-fw fa-2x fa-creative-commons-by"></i><i class="fab fa-fw fa-2x fa-creative-commons-nc"></i><i class="fab fa-fw fa-2x fa-creative-commons-nd"></i></span>
+  CC BY-NC-ND 4.0 
+</a>
 
-    
 
-    <div class="page-footer">
-        
-        <hr class="footer-divider">
-        
-            <a class="tag" href="https://chanjarster.github.io/tags/arts">#ARTS</a>
-        
-            <a class="tag" href="https://chanjarster.github.io/tags/arts-t">#ARTS-T</a>
-        
-            <a class="tag" href="https://chanjarster.github.io/tags/kernel">#kernel</a>
-        
-      
     </div>
-
-
-        
-        </div>
-        <footer class="footer-mobile">
-	<div class="social-icons">
-        
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-    
-    
-    <a class="social-icon" href="chanjarster" target="_blank" rel="noopener" title="GitHub">
-        <svg width="28px" height="28px" viewBox="0 0 28 28" version="1.1" fill="#ABABAB" xmlns="https://www.w3.org/2000/svg" xmlns:xlink="https://www.w3.org/1999/xlink">
-            <path d="M13.9988029,1.32087331 C6.82105037,1.32087331 1,7.14112562 1,14.3212723 C1,20.0649109 4.72454649,24.9370678 9.89038951,26.6560892 C10.5408085,26.7757983 10.7778323,26.374374 10.7778323,26.0296121 C10.7778323,25.7215609 10.7666595,24.9035493 10.760275,23.8189856 C7.14426471,24.6042767 6.38131925,22.0760223 6.38131925,22.0760223 C5.78995672,20.5740732 4.93762853,20.1742451 4.93762853,20.1742451 C3.75729765,19.3682044 5.02701126,19.3841656 5.02701126,19.3841656 C6.33183953,19.4759425 7.01817121,20.7241085 7.01817121,20.7241085 C8.17775254,22.7104801 10.0611744,22.1366749 10.8017741,21.8038838 C10.919887,20.9643246 11.2558703,20.3913175 11.6269683,20.066507 C8.74038491,19.7385043 5.70536235,18.6228163 5.70536235,13.6413251 C5.70536235,12.2223743 6.21213051,11.0611968 7.04370914,10.1530044 C6.90963504,9.82420367 6.46351945,8.50181809 7.17139875,6.71256734 C7.17139875,6.71256734 8.26234691,6.36301702 10.7459099,8.04532771 C11.78259,7.75642995 12.8950858,7.61277914 14.000399,7.60719272 C15.1049142,7.61277914 16.2166119,7.75642995 17.2548881,8.04532771 C19.736855,6.36301702 20.8262071,6.71256734 20.8262071,6.71256734 C21.5356825,8.50181809 21.0895669,9.82420367 20.9562909,10.1530044 C21.7894656,11.0611968 22.2922435,12.2223743 22.2922435,13.6413251 C22.2922435,18.6355852 19.2524325,19.734514 16.3570705,20.0561322 C16.8231376,20.4575564 17.2389269,21.2508282 17.2389269,22.4638795 C17.2389269,24.2012564 17.2229657,25.603448 17.2229657,26.0296121 C17.2229657,26.3775663 17.4575954,26.7821827 18.116793,26.6552912 C23.2786458,24.9322794 27,20.0633148 27,14.3212723 C27,7.14112562 21.1789496,1.32087331 13.9988029,1.32087331"></path>
-        </svg>
-    </a>
-    
-
-    
-    
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
 </div>
-
-
-
-
-	<div class="footer-mobile-links">
-        <p><a href="https://github.com/kimcc/hugo-theme-noteworthy" target="_blank" rel="noopener">Noteworthy theme</a></p>
-		<span class="divider-bar">|</span>
-        <p><a href="https://gohugo.io" target="_blank" rel="noopener">Built with Hugo</a></p>
-	</div>
-
-	<script src="https://chanjarster.github.io/js/main.min.fa5c2b23e07b5d9bfad267a52b4b24fdb053e6fb7524993383594926a3ac270c.js" integrity="sha256-+lwrI+B7XZv60melK0sk/bBT5vt1JJkzg1lJJqOsJww=" crossorigin="anonymous"></script>
+<section class="related-posts row card component">
+    <div class="card-header">
+      <h2 class="card-title">相关文章</h2>
+    </div>
+    <div class="card-body">
+      <ul class="post-list"><li>
+          <a href="/post/kernel/know-memory-ram/">What Every Programmer Should Know About Memory, Part 1, RAM
+</a>
+          <span class="float-end post-date">2019-03-03
+</span>
+        </li><li>
+          <a href="/post/kernel/cpu-kernel-mode-user-mode/">操作系统Kernel Mode和User Mode
+</a>
+          <span class="float-end post-date">2019-02-27
+</span>
+        </li><li>
+          <a href="/post/docker-image-build-strategy-for-different-version-type/">稳定与非稳定版本软件的Docker Image构建策略
+</a>
+          <span class="float-end post-date">2019-02-27
+</span>
+        </li><li>
+          <a href="/post/vtable/">虚函数表（vtable/Virtual Table/Virtual Method Table）
+</a>
+          <span class="float-end post-date">2019-02-25
+</span>
+        </li><li>
+          <a href="/post/jvm/string-interning/">JVM - String Interning
+</a>
+          <span class="float-end post-date">2019-02-24
+</span>
+        </li></ul>
+    </div>
+  </section><div class="card component row post-comments" id="post-comments">
+  <div class="card-header">
+    <h2 class="card-title">评论</h2>
+  </div>
+  <div class="card-body"></div>
+</div></div>
+</div><aside class="col-lg-4 sidebar d-flex">
+  <div class="container d-flex flex-column">
+    
+    <section class="card row text-center profile component">
+  <div class="card-body">
+    <div class="col-12 d-flex align-items-center justify-content-center"><img class="profile-avatar rounded-circle" alt="颇忒脱" src="/images/avatar.jpg" loading="lazy"
+   width="455" height="455"
+   /></div>
+    <div class="col-12 profile-meta"><div class="profile-name">颇忒脱</div><nav class="social-links nav justify-content-center"><a class="nav-link social-link" target="_blank" href="https://github.com/chanjarster" title="GitHub" rel="noopener noreferrer">
+        <i class="fa-fw fa-2x fab fa-github"></i>
+      </a></nav>
+</div>
+  </div>
+</section>
+  <div class="post-toc row mb-4 card component" id="postTOC">
+  <div class="card-header">
+    <h2 class="card-title">目录</h2>
+  </div>
+  <div class="card-body">
+    <nav id="TableOfContents">
+  <ul>
+    <li><a href="#31-cpu-caches-in-the-big-picture">3.1 CPU Caches in the Big Picture</a></li>
+    <li><a href="#32-cache-operation-at-high-level">3.2 Cache Operation at High Level</a></li>
+    <li><a href="#33-cpu-cache-implementation-details">3.3 CPU Cache Implementation Details</a>
+      <ul>
+        <li><a href="#331-associativity">3.3.1 Associativity</a></li>
+        <li><a href="#332-measurements-of-cache-effects">3.3.2 Measurements of Cache Effects</a></li>
+        <li><a href="#333-write-behavior">3.3.3 Write behavior</a></li>
+        <li><a href="#334-multi-processor-support">3.3.4 Multi-processor support</a></li>
+        <li><a href="#335-other-details">3.3.5 Other Details</a></li>
+      </ul>
+    </li>
+    <li><a href="#34-instruction-cache">3.4 Instruction Cache</a>
+      <ul>
+        <li><a href="#341-self-modifying-code">3.4.1 Self Modifying Code</a></li>
+      </ul>
+    </li>
+    <li><a href="#35-cache-miss-factors">3.5 Cache Miss Factors</a>
+      <ul>
+        <li><a href="#351-cache-and-memory-bandwidth">3.5.1 Cache and Memory Bandwidth</a></li>
+        <li><a href="#325-critical-word-load">3.2.5 Critical Word Load</a></li>
+        <li><a href="#353-cache-placement">3.5.3 Cache Placement</a></li>
+        <li><a href="#354-fsb-influence">3.5.4 FSB Influence</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+  </div>
+</div><section class="featured-posts row card component">
+    <div class="card-header">
+      <h2 class="card-title">精选文章</h2>
+    </div>
+    <div class="card-body">
+      <ul class="post-list"><li>
+          <a href="/post/mysql/index-page/">MySQL系列
+</a>
+        </li><li>
+          <a href="/post/concurrent-programming/index-page/">并发编程系列
+</a>
+        </li><li>
+          <a href="/post/jvm/index-page/">JVM系列
+</a>
+        </li></ul>
+    </div>
+  </section><section class="recent-posts row card component">
+  <div class="card-header">
+    <h2 class="card-title">最近文章</h2>
+  </div>
+  <div class="card-body">
+    <ul class="post-list"><li>
+        <a href="/post/jvm/gc-log-options/">JVM - GC日志参数
+</a>
+      </li><li>
+        <a href="/post/redis/redis-cluster-solutions-compare/">Redis集群方案对比
+</a>
+      </li><li>
+        <a href="/post/linux/namespace/">Linux命名空间一些笔记
+</a>
+      </li><li>
+        <a href="/post/jvm-tools/">Jps Jstat Jstack...的工作原理
+</a>
+      </li><li>
+        <a href="/post/mysql/opt-big-transaction-lock/">SQL优化:大事务中的行锁获取超时
+</a>
+      </li></ul>
+  </div>
+</section><section class="tags-taxonomies row card component">
+      <div class="card-header">
+        <h2 class="card-title">
+          <a href="/tags">标签</a>
+        </h2>
+      </div>
+      <div class="card-body">
+        <div class="py-2"><a href="/tags/arts/" class="badge rounded post-taxonomy" title="ARTS">
+            ARTS<span class="badge badge-sm text-white bg-accent ms-1">193</span></a><a href="/tags/arts-a/" class="badge rounded post-taxonomy" title="ARTS-A">
+            ARTS-A<span class="badge badge-sm text-white bg-accent ms-1">125</span></a><a href="/tags/arts-t/" class="badge rounded post-taxonomy" title="ARTS-T">
+            ARTS-T<span class="badge badge-sm text-white bg-accent ms-1">59</span></a><a href="/tags/jvm/" class="badge rounded post-taxonomy" title="jvm">
+            jvm<span class="badge badge-sm text-white bg-accent ms-1">35</span></a><a href="/tags/k8s/" class="badge rounded post-taxonomy" title="k8s">
+            k8s<span class="badge badge-sm text-white bg-accent ms-1">34</span></a><a href="/tags/mysql/" class="badge rounded post-taxonomy" title="mysql">
+            mysql<span class="badge badge-sm text-white bg-accent ms-1">22</span></a><a href="/tags/troubleshooting/" class="badge rounded post-taxonomy" title="troubleshooting">
+            troubleshooting<span class="badge badge-sm text-white bg-accent ms-1">21</span></a><a href="/tags/docker/" class="badge rounded post-taxonomy" title="docker">
+            docker<span class="badge badge-sm text-white bg-accent ms-1">20</span></a><a href="/tags/%E5%B9%B6%E5%8F%91%E7%BC%96%E7%A8%8B/" class="badge rounded post-taxonomy" title="并发编程&#34;">
+            并发编程&#34;<span class="badge badge-sm text-white bg-accent ms-1">20</span></a><a href="/tags/cheatsheet/" class="badge rounded post-taxonomy" title="cheatsheet">
+            cheatsheet<span class="badge badge-sm text-white bg-accent ms-1">16</span></a><a href="/tags/java/" class="badge rounded post-taxonomy" title="java">
+            java<span class="badge badge-sm text-white bg-accent ms-1">14</span></a><a href="/tags/kernel/" class="badge rounded post-taxonomy" title="kernel">
+            kernel<span class="badge badge-sm text-white bg-accent ms-1">13</span></a><a href="/tags/%E6%80%A7%E8%83%BD%E8%B0%83%E4%BC%98/" class="badge rounded post-taxonomy" title="性能调优">
+            性能调优<span class="badge badge-sm text-white bg-accent ms-1">11</span></a><a href="/tags/%E5%BE%AE%E6%9C%8D%E5%8A%A1/" class="badge rounded post-taxonomy" title="微服务">
+            微服务<span class="badge badge-sm text-white bg-accent ms-1">10</span></a><a href="/tags/arts-r/" class="badge rounded post-taxonomy" title="ARTS-R">
+            ARTS-R<span class="badge badge-sm text-white bg-accent ms-1">9</span></a><a href="/tags/prometheus/" class="badge rounded post-taxonomy" title="prometheus">
+            prometheus<span class="badge badge-sm text-white bg-accent ms-1">9</span></a><a href="/tags/go/" class="badge rounded post-taxonomy" title="go">
+            go<span class="badge badge-sm text-white bg-accent ms-1">8</span></a><a href="/tags/linux/" class="badge rounded post-taxonomy" title="linux">
+            linux<span class="badge badge-sm text-white bg-accent ms-1">7</span></a><a href="/tags/redis/" class="badge rounded post-taxonomy" title="redis">
+            redis<span class="badge badge-sm text-white bg-accent ms-1">7</span></a><a href="/tags/gc/" class="badge rounded post-taxonomy" title="gc">
+            gc<span class="badge badge-sm text-white bg-accent ms-1">6</span></a><a href="/tags/%E8%BF%90%E7%BB%B4/" class="badge rounded post-taxonomy" title="运维">
+            运维<span class="badge badge-sm text-white bg-accent ms-1">6</span></a><a href="/tags/ci_cd/" class="badge rounded post-taxonomy" title="CI_CD">
+            CI_CD<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/debug/" class="badge rounded post-taxonomy" title="debug">
+            debug<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/interview/" class="badge rounded post-taxonomy" title="interview">
+            interview<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/jmx/" class="badge rounded post-taxonomy" title="jmx">
+            jmx<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/%E5%88%86%E5%B8%83%E5%BC%8F%E4%BA%8B%E5%8A%A1/" class="badge rounded post-taxonomy" title="分布式事务">
+            分布式事务<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/%E5%88%86%E5%B8%83%E5%BC%8F%E7%AE%97%E6%B3%95/" class="badge rounded post-taxonomy" title="分布式算法">
+            分布式算法<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/%E6%94%B6%E8%97%8F%E5%A4%B9/" class="badge rounded post-taxonomy" title="收藏夹">
+            收藏夹<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/openssl/" class="badge rounded post-taxonomy" title="openssl">
+            openssl<span class="badge badge-sm text-white bg-accent ms-1">4</span></a><a href="/tags/rancher/" class="badge rounded post-taxonomy" title="rancher">
+            rancher<span class="badge badge-sm text-white bg-accent ms-1">4</span></a><a href="/tags/tls/" class="badge rounded post-taxonomy" title="tls">
+            tls<span class="badge badge-sm text-white bg-accent ms-1">4</span></a><a href="/tags/visualvm/" class="badge rounded post-taxonomy" title="visualvm">
+            visualvm<span class="badge badge-sm text-white bg-accent ms-1">4</span></a><a href="/tags/%E6%97%A5%E5%BF%97/" class="badge rounded post-taxonomy" title="日志">
+            日志<span class="badge badge-sm text-white bg-accent ms-1">4</span></a><a href="/tags/classloader/" class="badge rounded post-taxonomy" title="ClassLoader">
+            ClassLoader<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/ingress/" class="badge rounded post-taxonomy" title="ingress">
+            ingress<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/jenkins/" class="badge rounded post-taxonomy" title="Jenkins">
+            Jenkins<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/network/" class="badge rounded post-taxonomy" title="network">
+            network<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/scheduling/" class="badge rounded post-taxonomy" title="scheduling">
+            scheduling<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/thread/" class="badge rounded post-taxonomy" title="thread">
+            thread<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/%E5%88%86%E5%B8%83%E5%BC%8F%E6%9E%B6%E6%9E%84/" class="badge rounded post-taxonomy" title="分布式架构">
+            分布式架构<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/%E9%AB%98%E5%B9%B6%E5%8F%91/" class="badge rounded post-taxonomy" title="高并发">
+            高并发<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/grafana/" class="badge rounded post-taxonomy" title="grafana">
+            grafana<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/jdbc/" class="badge rounded post-taxonomy" title="JDBC">
+            JDBC<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/nginx/" class="badge rounded post-taxonomy" title="nginx">
+            nginx<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/%E6%95%B0%E6%8D%AE%E5%BA%93%E6%97%B6%E5%8C%BA%E9%82%A3%E4%BA%9B%E4%BA%8B%E5%84%BF/" class="badge rounded post-taxonomy" title="数据库时区那些事儿">
+            数据库时区那些事儿<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/%E7%9B%91%E6%8E%A7/" class="badge rounded post-taxonomy" title="监控">
+            监控<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/%E9%99%90%E6%B5%81/" class="badge rounded post-taxonomy" title="限流">
+            限流<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/akka/" class="badge rounded post-taxonomy" title="Akka">
+            Akka<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/alertmanager/" class="badge rounded post-taxonomy" title="alertmanager">
+            alertmanager<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/chrome/" class="badge rounded post-taxonomy" title="chrome">
+            chrome<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/elasticsearch/" class="badge rounded post-taxonomy" title="elasticsearch">
+            elasticsearch<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/etcd/" class="badge rounded post-taxonomy" title="etcd">
+            etcd<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/fluentd/" class="badge rounded post-taxonomy" title="fluentd">
+            fluentd<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/harbor/" class="badge rounded post-taxonomy" title="harbor">
+            harbor<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/helm/" class="badge rounded post-taxonomy" title="helm">
+            helm<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/hystrix/" class="badge rounded post-taxonomy" title="hystrix">
+            hystrix<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/io/" class="badge rounded post-taxonomy" title="io">
+            io<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/jdpa/" class="badge rounded post-taxonomy" title="jdpa">
+            jdpa<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/jwt/" class="badge rounded post-taxonomy" title="jwt">
+            jwt<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/kafka/" class="badge rounded post-taxonomy" title="kafka">
+            kafka<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/kibana/" class="badge rounded post-taxonomy" title="kibana">
+            kibana<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/mq/" class="badge rounded post-taxonomy" title="MQ">
+            MQ<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/oauth/" class="badge rounded post-taxonomy" title="oauth">
+            oauth<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/oracle/" class="badge rounded post-taxonomy" title="Oracle">
+            Oracle<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/reactor/" class="badge rounded post-taxonomy" title="reactor">
+            reactor<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/spring-boot/" class="badge rounded post-taxonomy" title="spring-boot">
+            spring-boot<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/spring-cloud/" class="badge rounded post-taxonomy" title="Spring Cloud">
+            Spring Cloud<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/ssl/" class="badge rounded post-taxonomy" title="ssl">
+            ssl<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/tiller/" class="badge rounded post-taxonomy" title="tiller">
+            tiller<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/vtable/" class="badge rounded post-taxonomy" title="vtable">
+            vtable<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/%E6%95%B0%E7%A0%81/" class="badge rounded post-taxonomy" title="数码">
+            数码<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/%E6%B6%88%E6%81%AF%E9%98%9F%E5%88%97/" class="badge rounded post-taxonomy" title="消息队列">
+            消息队列<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/%E7%BC%93%E5%AD%98/" class="badge rounded post-taxonomy" title="缓存">
+            缓存<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/%E8%B0%83%E7%94%A8%E9%93%BE%E8%BF%BD%E8%B8%AA/" class="badge rounded post-taxonomy" title="调用链追踪">
+            调用链追踪<span class="badge badge-sm text-white bg-accent ms-1">1</span></a></div>
+      </div>
+    </section>
+    
+  </div>
+</aside>
+</div>
+    </main><footer class="footer mt-auto py-3 text-center container"><nav class="social-links nav justify-content-center mb-2"><a class="nav-link social-link" target="_blank" href="https://github.com/chanjarster" title="GitHub" rel="noopener noreferrer">
+        <i class="fa-fw fa-2x fab fa-github"></i>
+      </a></nav>
+<div class="copyright mb-2">
+  Copyright © 2016-2022 Razon Yang. All Rights Reserved.
+</div>
+<div class="powered-by mb-2">
+  Powered by <a href="https://gohugo.io" target="_blank" rel="noopener noreferrer">Hugo</a> and the <a href="https://github.com/razonyang/hugo-theme-bootstrap" target="_blank" rel="noopener noreferrer">Bootstrap</a> theme.
+</div>
+<a href="https://www.netlify.com" target="_blank" rel="noopener noreferrer">
+    <img src="https://www.netlify.com/img/global/badges/netlify-color-accent.svg" alt="Deploys by Netlify" width="114" height="51" />
+</a>
 </footer>
-
-    </body>
+<script src="/js/main.cbf2ace5d5fcb68b11b93647393ec41735869f18f31091c0941a01dfdf417dfc.js" integrity="sha256-y/Ks5dX8tosRuTZHOT7EFzWGnxjzEJHAlBoB399Bffw=" crossorigin="anonymous" defer></script><script src="/js/icons.min.a35670f2f90c398e5ee5c8e509b428fae75aa2746854cee10b60794633076859.js" integrity="sha256-o1Zw8vkMOY5e5cjlCbQo&#43;udaonRoVM7hC2B5RjMHaFk=" crossorigin="anonymous" defer></script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('\/service-worker.js').then(function(reg) {
+      console.log('Successfully registered service worker', reg);
+    }).catch(function(err) {
+      console.warn('Error whilst registering service worker', err);
+    });
+  });
+}
+</script><script src="/js/viewer.min.4dba52a0a790f909408b7385316651299158381686401d50ff1f04dda6476473.js" integrity="sha256-TbpSoKeQ&#43;QlAi3OFMWZRKZFYOBaGQB1Q/x8E3aZHZHM=" crossorigin="anonymous" defer></script>
+</body>
 </html>
