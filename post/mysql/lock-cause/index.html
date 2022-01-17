@@ -31,7 +31,8 @@
       <i class="fas fa-bars"></i>
     </button><a class="navbar-brand flex-grow-1 flex-lg-grow-0 text-center text-lg-start mx-auto me-lg-3" href="/"><img class="logo" alt="Logo" src="/images/avatar.jpg" loading="lazy"
    width="455" height="455"
-   />颇忒脱的技术博客
+   />
+颇忒脱的技术博客
     </a>
     
     <button class="navbar-settings" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvasSettings"
@@ -227,8 +228,9 @@
 <div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="ln">1</span><span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">t</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">id</span><span class="o">=</span><span class="mi">1</span><span class="p">;</span><span class="w">
 </span></code></pre></div><p>先用<code>show processlist</code>查看：</p>
 <p><img class="img-fluid" alt="" src="/post/mysql/lock-cause/mdl-1.webp" loading="lazy"
-   width="1312" height="213"
+  
    />
+
 </p>
 <p>可以看到<code>Waiting for table metadata lock</code>，但是没法看到另一个线程在干什么，值看到Command是Sleep。</p>
 <p>MySQL启动时设置performance_schema=on，相比于设置为 off 会有 10% 左右的性能损失，然后：</p>
@@ -239,8 +241,9 @@
 <div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="ln">1</span><span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">t</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">id</span><span class="o">=</span><span class="mi">1</span><span class="p">;</span><span class="w">
 </span></code></pre></div><p>用<code>select * from information_schema.processlist where id=?;</code>查看：</p>
 <p><img class="img-fluid" alt="" src="/post/mysql/lock-cause/flush-wait.webp" loading="lazy"
-   width="1221" height="147"
+  
    />
+
 </p>
 <p>看到状态是<code>Waiting for table flush</code>，表示的是现在有一个线程<strong>正要</strong>对表 t 做 flush 操作。MySQL 里面对表做 flush 操作的用法，一般有以下两个：</p>
 <div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="ln">1</span><span class="n">flush</span><span class="w"> </span><span class="n">tables</span><span class="w"> </span><span class="n">t</span><span class="w"> </span><span class="k">with</span><span class="w"> </span><span class="k">read</span><span class="w"> </span><span class="k">lock</span><span class="p">;</span><span class="w">
@@ -248,8 +251,9 @@
 </span></code></pre></div><p>注意，这都是读锁，应该是不会阻塞我们的SQL的，除非它们也被别的线程堵住了。</p>
 <p>我们用<code>show processlist</code>查看：</p>
 <p><img class="img-fluid" alt="" src="/post/mysql/lock-cause/flush-wait-2.webp" loading="lazy"
-   width="1224" height="212"
+  
    />
+
 </p>
 <p><code>select sleep(1) from t</code>把表t打开，但是<code>flush table ...</code>需要把表t关闭，于是就这么阻塞了。</p>
 <h2 id="等行锁">等行锁<a class="anchor ms-1" href="#等行锁"><i class="fas fa-link"></i></a></h2>
@@ -257,20 +261,23 @@
 <div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="ln">1</span><span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">t</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">id</span><span class="o">=</span><span class="mi">1</span><span class="w"> </span><span class="k">lock</span><span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="k">share</span><span class="w"> </span><span class="k">mode</span><span class="p">;</span><span class="w"> 
 </span></code></pre></div><p>如果此时这行记录上已经持有了一个写锁，这条sql就会阻塞，比如：</p>
 <p><img class="img-fluid" alt="" src="/post/mysql/lock-cause/row-wait-1.webp" loading="lazy"
-   width="920" height="173"
+  
    />
+
 </p>
 <p>但是<code>show processlist</code>看不出来：</p>
 <p><img class="img-fluid" alt="" src="/post/mysql/lock-cause/row-wait-2.webp" loading="lazy"
-   width="1285" height="223"
+  
    />
+
 </p>
 <p>所以要通过<code>sys.innodb_lock_waits</code>查询谁占着写锁：</p>
 <div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="ln">1</span><span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">sys</span><span class="p">.</span><span class="n">innodb_lock_waits</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">locked_table</span><span class="o">=</span><span class="s1">&#39;`test`.`t`&#39;</span><span class="p">;</span><span class="w">
 </span></code></pre></div><p>得到结果：</p>
 <p><img class="img-fluid" alt="" src="/post/mysql/lock-cause/row-wait-3.webp" loading="lazy"
-   width="864" height="669"
+  
    />
+
 </p>
 <p>可以看到，4 号线程是造成堵塞的罪魁祸首，干掉它的方式 KILL QUERY 4 或 KILL 4。</p>
 <p>其实KILL QUERY 4是不对的，因为<code>update</code>语句已经执行完毕了，只是事务没有提交，这也是为什么blocking_query: NULL的原因。</p>
@@ -278,8 +285,9 @@
 <div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="ln">1</span><span class="k">show</span><span class="w"> </span><span class="n">engine</span><span class="w"> </span><span class="n">innodb</span><span class="w"> </span><span class="n">status</span><span class="w">
 </span></code></pre></div><p>看LATESTDETECTED DEADLOCK小节，就是记录的最后一次死锁信息：</p>
 <p><img class="img-fluid" alt="" src="/post/mysql/lock-cause/deadlock.webp" loading="lazy"
-   width="1288" height="825"
+  
    />
+
 </p>
 <p>我们来看看这图中的几个关键信息：</p>
 <ol>
@@ -354,8 +362,7 @@
 </a>
     <i class="fas fa-fw fa-chevron-right"></i>
   </div></div></div>
-</article>
-<div class="post-copyright mb-3 row card component" id="post-copyright">
+</article><div class="post-copyright mb-3 row card component" id="post-copyright">
     <div class="card-header">
         <h2 class="card-title">版权</h2>
     </div>
@@ -366,8 +373,7 @@
 
 
     </div>
-</div>
-<section class="related-posts row card component">
+</div><section class="related-posts row card component">
     <div class="card-header">
       <h2 class="card-title">相关文章</h2>
     </div>
@@ -412,7 +418,8 @@
   <div class="card-body">
     <div class="col-12 d-flex align-items-center justify-content-center"><img class="profile-avatar rounded-circle" alt="颇忒脱" src="/images/avatar.jpg" loading="lazy"
    width="455" height="455"
-   /></div>
+   />
+</div>
     <div class="col-12 profile-meta"><div class="profile-name">颇忒脱</div><nav class="social-links nav justify-content-center"><a class="nav-link social-link" target="_blank" href="https://github.com/chanjarster" title="GitHub" rel="noopener noreferrer">
         <i class="fa-fw fa-2x fab fa-github"></i>
       </a></nav>

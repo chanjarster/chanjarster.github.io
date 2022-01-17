@@ -31,7 +31,8 @@
       <i class="fas fa-bars"></i>
     </button><a class="navbar-brand flex-grow-1 flex-lg-grow-0 text-center text-lg-start mx-auto me-lg-3" href="/"><img class="logo" alt="Logo" src="/images/avatar.jpg" loading="lazy"
    width="455" height="455"
-   />颇忒脱的技术博客
+   />
+颇忒脱的技术博客
     </a>
     
     <button class="navbar-settings" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvasSettings"
@@ -266,23 +267,26 @@
 </span><span class="ln"> 9</span><span class="w"></span><span class="k">insert</span><span class="w"> </span><span class="k">into</span><span class="w"> </span><span class="n">t</span><span class="w"> </span><span class="k">values</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">),(</span><span class="mi">5</span><span class="p">,</span><span class="mi">5</span><span class="p">,</span><span class="mi">5</span><span class="p">),</span><span class="w">
 </span><span class="ln">10</span><span class="w"></span><span class="p">(</span><span class="mi">10</span><span class="p">,</span><span class="mi">10</span><span class="p">,</span><span class="mi">10</span><span class="p">),(</span><span class="mi">15</span><span class="p">,</span><span class="mi">15</span><span class="p">,</span><span class="mi">15</span><span class="p">),(</span><span class="mi">20</span><span class="p">,</span><span class="mi">20</span><span class="p">,</span><span class="mi">20</span><span class="p">),(</span><span class="mi">25</span><span class="p">,</span><span class="mi">25</span><span class="p">,</span><span class="mi">25</span><span class="p">);</span><span class="w">
 </span></code></pre></div><p><img class="img-fluid" alt="" src="/post/mysql/gap-lock-next-key-lock/gap.webp" loading="lazy"
-   width="1142" height="550"
+  
    />
+
 </p>
 <p>间隙锁就是把索引的间隙给锁住，防止往中间插入新行。</p>
 <p>所以下面语句在扫描全表的过程中，除了把6个已有行（主键索引）加了锁，也把主键索引的7个间隙加上锁：</p>
 <div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="ln">1</span><span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">t</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">d</span><span class="o">=</span><span class="mi">5</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="k">update</span><span class="w">
 </span></code></pre></div><p>和行锁有冲突的关系的是“另外一个行锁”，但是<strong>跟间隙锁存在冲突关系的，是“往这个间隙中插入一个记录”这个操作</strong>。所以下面的session B不会被阻塞：</p>
 <p><img class="img-fluid" alt="" src="/post/mysql/gap-lock-next-key-lock/gap-2.webp" loading="lazy"
-   width="946" height="210"
+  
    />
+
 </p>
 <p>因为表 t 里并没有 c=7 这个记录，因此 session A 加的是间隙锁 (5,10)，而 session B 也是在这个间隙加的间隙锁，它们都是保护这个间隙，不允许插入值，他们之间不冲突。</p>
 <h3 id="间隙锁造成的死锁">间隙锁造成的死锁<a class="anchor ms-1" href="#间隙锁造成的死锁"><i class="fas fa-link"></i></a></h3>
 <p>间隙锁的引入会使同样的语句锁住更大的范围，这其实是影响并发度的，有时候还会更容易造成死锁，看下面场景：</p>
 <p><img class="img-fluid" alt="" src="/post/mysql/gap-lock-next-key-lock/dead-lock.webp" loading="lazy"
-   width="944" height="360"
+  
    />
+
 </p>
 <p>分析一下：</p>
 <ol>
@@ -298,8 +302,9 @@
 ，每个 next-key lock 是前开后闭区间。也就是说，我们的表 t 初始化以后，如果用 <code>select * from t for update</code> 要把整个表所有记录锁起来，就形成了 7 个 next-key lock，分别是 (-∞,0]、(0,5]、(5,10]、(10,15]、(15,20]、(20, 25]、(25, +supremum]（supremum只是为了保证开闭区间的一致性，可以理解为无穷大）。</p>
 <p>next-key lock的加锁过程是先加间隙锁再加行锁，这不是一个原子性操作，因此会出现只加了间隙锁但加行锁被阻塞的情况，比如下面这个情况：</p>
 <p><img class="img-fluid" alt="" src="/post/mysql/gap-lock-next-key-lock/next-key-lock-half.webp" loading="lazy"
-   width="1106" height="650"
+  
    />
+
 </p>
 <p>分析一下过程：</p>
 <ol>
@@ -342,8 +347,7 @@
 </a>
     <i class="fas fa-fw fa-chevron-right"></i>
   </div></div></div>
-</article>
-<div class="post-copyright mb-3 row card component" id="post-copyright">
+</article><div class="post-copyright mb-3 row card component" id="post-copyright">
     <div class="card-header">
         <h2 class="card-title">版权</h2>
     </div>
@@ -354,8 +358,7 @@
 
 
     </div>
-</div>
-<section class="related-posts row card component">
+</div><section class="related-posts row card component">
     <div class="card-header">
       <h2 class="card-title">相关文章</h2>
     </div>
@@ -400,7 +403,8 @@
   <div class="card-body">
     <div class="col-12 d-flex align-items-center justify-content-center"><img class="profile-avatar rounded-circle" alt="颇忒脱" src="/images/avatar.jpg" loading="lazy"
    width="455" height="455"
-   /></div>
+   />
+</div>
     <div class="col-12 profile-meta"><div class="profile-name">颇忒脱</div><nav class="social-links nav justify-content-center"><a class="nav-link social-link" target="_blank" href="https://github.com/chanjarster" title="GitHub" rel="noopener noreferrer">
         <i class="fa-fw fa-2x fab fa-github"></i>
       </a></nav>

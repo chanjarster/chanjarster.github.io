@@ -31,7 +31,8 @@
       <i class="fas fa-bars"></i>
     </button><a class="navbar-brand flex-grow-1 flex-lg-grow-0 text-center text-lg-start mx-auto me-lg-3" href="/"><img class="logo" alt="Logo" src="/images/avatar.jpg" loading="lazy"
    width="455" height="455"
-   />颇忒脱的技术博客
+   />
+颇忒脱的技术博客
     </a>
     
     <button class="navbar-settings" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvasSettings"
@@ -225,49 +226,57 @@
 <div class="post-content mb-3"><h2 id="现象">现象<a class="anchor ms-1" href="#现象"><i class="fas fa-link"></i></a></h2>
 <p>在公司自己研发的网关上观察到在每天的某段时间内API调用失败量剧增，之后又缓慢恢复的情况。</p>
 <p><img class="img-fluid" alt="" src="/post/lack-connection-pool-api-bad/1.png" loading="lazy"
-   width="830" height="302"
+  
    />
+
 </p>
 <h2 id="观察网关日志">观察网关日志<a class="anchor ms-1" href="#观察网关日志"><i class="fas fa-link"></i></a></h2>
 <p>查阅日志发现，在同一时间段内，得到503 service unavailable的错误：</p>
 <p><img class="img-fluid" alt="" src="/post/lack-connection-pool-api-bad/2.png" loading="lazy"
-   width="830" height="300"
+  
    />
+
 </p>
 <p>注意到在大量503出现之前，有少量502：</p>
 <p><img class="img-fluid" alt="" src="/post/lack-connection-pool-api-bad/3.png" loading="lazy"
-   width="830" height="300"
+  
    />
+
 </p>
 <p>收集到的对应API调用则是：</p>
 <p><img class="img-fluid" alt="" src="/post/lack-connection-pool-api-bad/4.png" loading="lazy"
-   width="830" height="300"
+  
    />
+
 </p>
 <p>而网关的逻辑是如果对API提供方（本例中是用户API）连续调用失败超过一定次数（目前设置是50次），那么就会对API进行熔断，直接返回503。</p>
 <p>可以推断出在这段时间里，用户API处于不可用状态。</p>
 <h2 id="观察poa-控制台日志">观察POA 控制台日志<a class="anchor ms-1" href="#观察poa-控制台日志"><i class="fas fa-link"></i></a></h2>
 <p>的确能够看到和用户服务的通信错误：</p>
 <p><img class="img-fluid" alt="" src="/post/lack-connection-pool-api-bad/5.png" loading="lazy"
-   width="830" height="482"
+  
    />
+
 </p>
 <p>且这种错误出现了600多次，集中在00:02 前后：</p>
 <p><img class="img-fluid" alt="" src="/post/lack-connection-pool-api-bad/6.png" loading="lazy"
-   width="830" height="188"
+  
    />
+
 </p>
 <p>印证了上面的推断。</p>
 <h2 id="观察用户api的日志">观察用户API的日志<a class="anchor ms-1" href="#观察用户api的日志"><i class="fas fa-link"></i></a></h2>
 <p>出现大量从数据库连接池获取连接超时的异常：</p>
 <p><img class="img-fluid" alt="" src="/post/lack-connection-pool-api-bad/7.png" loading="lazy"
-   width="830" height="292"
+  
    />
+
 </p>
 <p>总共1293多次，时间在00:01:20 ～ 00:02:30</p>
 <p><img class="img-fluid" alt="" src="/post/lack-connection-pool-api-bad/8.png" loading="lazy"
-   width="830" height="172"
+  
    />
+
 </p>
 <p>可以看到用户API的数据库连接池配置的小了，从日志可以看到只配置了50，可以适当加大。</p>
 <p><strong>但是</strong>，用户API数据库连接获取不到的异常只会让请求响应500一类的错误，并不会造成 <code>dialing to the given TCP address timed out</code> 或者 <code>connect: no route to host</code> 的问题。需要进一步排查。</p>
@@ -282,8 +291,9 @@
 <h3 id="排查readinessprobe探测失败的原因">排查readinessProbe探测失败的原因<a class="anchor ms-1" href="#排查readinessprobe探测失败的原因"><i class="fas fa-link"></i></a></h3>
 <p>目前的readinessProbe的配置如下：</p>
 <p><img class="img-fluid" alt="" src="/post/lack-connection-pool-api-bad/9.png" loading="lazy"
-   width="460" height="418"
+  
    />
+
 </p>
 <p>一个很典型的spring boot应用的配置。</p>
 <p>但是很诡异的是，在K8S中，没有记录下Pod的readinessProbe探测失败的事件。</p>
@@ -291,8 +301,9 @@
 <div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>docker logs --since <span class="s1">&#39;2021-04-21T23:55:00&#39;</span> --until <span class="s1">&#39;2021-04-22T00:20:00&#39;</span> kubelet 2&gt;<span class="p">&amp;</span><span class="m">1</span> <span class="p">|</span> grep user-data-service
 </code></pre></div><p>得到了相应的日志：</p>
 <p><img class="img-fluid" alt="" src="/post/lack-connection-pool-api-bad/10.png" loading="lazy"
-   width="830" height="212"
+  
    />
+
 </p>
 <p>接下来找为何会探测失败，猜测两个原因：</p>
 <ol>
@@ -302,14 +313,16 @@
 <h3 id="排查tomcat的http连接池">排查tomcat的http连接池<a class="anchor ms-1" href="#排查tomcat的http连接池"><i class="fas fa-link"></i></a></h3>
 <p>配置的线程数是800，在最高峰链接倏才只有&lt;300，因此这个可能性排除。</p>
 <p><img class="img-fluid" alt="" src="/post/lack-connection-pool-api-bad/11.png" loading="lazy"
-   width="830" height="378"
+  
    />
+
 </p>
 <h3 id="排查tomcat的gc情况">排查tomcat的gc情况<a class="anchor ms-1" href="#排查tomcat的gc情况"><i class="fas fa-link"></i></a></h3>
 <p>发现内存使用情况正常，也没有触发过FullGC</p>
 <p><img class="img-fluid" alt="" src="/post/lack-connection-pool-api-bad/12.png" loading="lazy"
-   width="830" height="336"
+  
    />
+
 </p>
 <h3 id="思考一下">思考一下<a class="anchor ms-1" href="#思考一下"><i class="fas fa-link"></i></a></h3>
 <p>tomcat的http连接池够用，内存也够用，那么为何会产生readinessProbe探测失败呢？从下面起走了弯路。</p>
@@ -318,8 +331,9 @@
 <div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>journalctl --since<span class="o">=</span><span class="s1">&#39;2021-04-21 23:55:00&#39;</span> --until<span class="o">=</span><span class="s1">&#39;2021-04-22 00:20:00&#39;</span>
 </code></pre></div><p>服务器1上没有问题，服务器2（因为总共有2个Pod，分别在不同服务器上）上有些貌似可疑的日志：</p>
 <p><img class="img-fluid" alt="" src="/post/lack-connection-pool-api-bad/13.png" loading="lazy"
-   width="830" height="262"
+  
    />
+
 </p>
 <p>关键内容是：</p>
 <div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln">1</span>slab_out_of_memory: 4225 callbacks suppressed
@@ -347,8 +361,7 @@
 </a>
     <i class="fas fa-fw fa-chevron-right"></i>
   </div></div></div>
-</article>
-<div class="post-copyright mb-3 row card component" id="post-copyright">
+</article><div class="post-copyright mb-3 row card component" id="post-copyright">
     <div class="card-header">
         <h2 class="card-title">版权</h2>
     </div>
@@ -359,8 +372,7 @@
 
 
     </div>
-</div>
-<section class="related-posts row card component">
+</div><section class="related-posts row card component">
     <div class="card-header">
       <h2 class="card-title">相关文章</h2>
     </div>
@@ -405,7 +417,8 @@
   <div class="card-body">
     <div class="col-12 d-flex align-items-center justify-content-center"><img class="profile-avatar rounded-circle" alt="颇忒脱" src="/images/avatar.jpg" loading="lazy"
    width="455" height="455"
-   /></div>
+   />
+</div>
     <div class="col-12 profile-meta"><div class="profile-name">颇忒脱</div><nav class="social-links nav justify-content-center"><a class="nav-link social-link" target="_blank" href="https://github.com/chanjarster" title="GitHub" rel="noopener noreferrer">
         <i class="fa-fw fa-2x fab fa-github"></i>
       </a></nav>

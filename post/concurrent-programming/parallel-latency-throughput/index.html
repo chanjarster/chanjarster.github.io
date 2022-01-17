@@ -31,7 +31,8 @@
       <i class="fas fa-bars"></i>
     </button><a class="navbar-brand flex-grow-1 flex-lg-grow-0 text-center text-lg-start mx-auto me-lg-3" href="/"><img class="logo" alt="Logo" src="/images/avatar.jpg" loading="lazy"
    width="455" height="455"
-   />颇忒脱的技术博客
+   />
+颇忒脱的技术博客
     </a>
     
     <button class="navbar-settings" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvasSettings"
@@ -235,37 +236,43 @@
 </ul>
 <p>先来看看task不被拆分时的执行情况：</p>
 <p><img class="img-fluid" alt="Figure 1.1 no split" src="/post/concurrent-programming/parallel-latency-throughput/no-split.png" loading="lazy"
-   width="389" height="301"
+  
    />
+
 </p>
 <p>图中例举的当工作集尺寸=10时，每个task的执行时间情况。每一条线都是一个task，橘黄色部分是真正的执行时间，蓝色虚线是等待所花费的时间。这些task被同时提交到线程池中，所以起点相同。因为线程池大小为6，因此前6个task没有等待时间，从第7个task则必须等前面的task执行结束后才能开始执行，它需要等待2秒（单个task的执行时长为2秒）。</p>
 <p>下面是task被拆分成2个subtask的执行情况：</p>
 <p><img class="img-fluid" alt="Figure 1.2 2 subtasks" src="/post/concurrent-programming/parallel-latency-throughput/2-subtasks.png" loading="lazy"
-   width="388" height="381"
+  
    />
+
 </p>
 <p>可以看到task被拆分成2个subtask，每个task所需要的线程也变成了2，总的时间减半变成1秒。和前一个图一样当线程池用满的时候，新的task/subtask必须等待。</p>
 <p>下面是task被拆分成4个subtask的执行情况：</p>
 <p><img class="img-fluid" alt="Figure 1.3 4 subtasks" src="/post/concurrent-programming/parallel-latency-throughput/4-subtasks.png" loading="lazy"
-   width="402" height="642"
+  
    />
+
 </p>
 <p>下面是task被拆分成6个subtask的执行情况（注意时间单位不同了），图里的1根线条代表2个subtask：</p>
 <p><img class="img-fluid" alt="Figure 1.4 6 subtasks" src="/post/concurrent-programming/parallel-latency-throughput/6-subtasks.png" loading="lazy"
-   width="571" height="638"
+  
    />
+
 </p>
 <p>这个是task被拆分成8个subtask的执行情况（注意时间单位不同了），图里的1根线条代表2个subtask：</p>
 <p><img class="img-fluid" alt="Figure 1.5 8 subtasks" src="/post/concurrent-programming/parallel-latency-throughput/8-subtasks.png" loading="lazy"
-   width="722" height="642"
+  
    />
+
 </p>
 <h2 id="吞吐量对比">吞吐量对比<a class="anchor ms-1" href="#吞吐量对比"><i class="fas fa-link"></i></a></h2>
 <p>吞吐量的计算公式：吞吐量 = task数量 / 最慢的task所花费的时间。</p>
 <p>下面是吞吐量对比图：</p>
 <p><img class="img-fluid" alt="Figure 2.1 throughput" src="/post/concurrent-programming/parallel-latency-throughput/compare-throughput.png" loading="lazy"
-   width="476" height="323"
+  
    />
+
 </p>
 <p>图中吞吐量线条的锯齿不用在意，因为这和是否用足了线程池中的线程有关。拿不拆分task举例，当工作集=1时，吞吐量 = 1 / 2 = 0.5 tasks/sec，当工作集=6时 吞吐量 = 6 / 2 = 3 tasks/sec。当工作集=7时 吞吐量 = 7 / 4 = 1.75 tasks/sec，下降了，这是因为有5个线程空闲着没有工作，第7个task拖了后腿。所以我们只需要看吞吐量峰值就行了。而且不出意外可以看到，当subtask数量为6是，吞吐量稳定在3 tasks/sec，这是因为总是会用足线程池中的线程。</p>
 <p>可以看到不论是task如何拆分，吞吐量的峰值都是3 task/sec。在<a href="../throughput-and-thread-pool-size/">如何估算吞吐量以及线程池大小</a>
@@ -277,51 +284,62 @@
 <h2 id="延迟对比">延迟对比<a class="anchor ms-1" href="#延迟对比"><i class="fas fa-link"></i></a></h2>
 <p>下面是延迟平均数、延迟中位数、延迟95%位数、延迟99%位数、延迟100%位数（最大延迟数）的对比图。</p>
 <p><img class="img-fluid" alt="Figure 3.1 avg" src="/post/concurrent-programming/parallel-latency-throughput/compare-avg-latency.png" loading="lazy"
-   width="477" height="318"
+  
    />
+
 </p>
 <p><img class="img-fluid" alt="Figure 3.2 median" src="/post/concurrent-programming/parallel-latency-throughput/compare-median-latency.png" loading="lazy"
-   width="518" height="360"
+  
    />
+
 </p>
 <p><img class="img-fluid" alt="Figure 3.1 95%" src="/post/concurrent-programming/parallel-latency-throughput/compare-p95-latency.png" loading="lazy"
-   width="471" height="319"
+  
    />
+
 </p>
 <p><img class="img-fluid" alt="Figure 3.1 99%" src="/post/concurrent-programming/parallel-latency-throughput/compare-p99-latency.png" loading="lazy"
-   width="473" height="318"
+  
    />
+
 </p>
 <p><img class="img-fluid" alt="Figure 3.1 100%" src="/post/concurrent-programming/parallel-latency-throughput/compare-p100-latency.png" loading="lazy"
-   width="472" height="322"
+  
    />
+
 </p>
 <p>不出所料，当并行程度越高的时候延迟就越低，但是要注意的是，并行程度的增高所带来的延迟降低的边际效益是递减的。</p>
 <h2 id="当subtask--6时">当subtask > 6时<a class="anchor ms-1" href="#当subtask--6时"><i class="fas fa-link"></i></a></h2>
 <p>那么当subtask数量 &gt; 6 时会发生什么？下面是subtask分别为8、10时候的吞吐量、延迟数据。</p>
 <p><img class="img-fluid" alt="Figure 4.1 avg" src="/post/concurrent-programming/parallel-latency-throughput/over-throughput.png" loading="lazy"
-   width="528" height="370"
+  
    />
+
 </p>
 <p><img class="img-fluid" alt="Figure 4.2 avg" src="/post/concurrent-programming/parallel-latency-throughput/over-avg-latency.png" loading="lazy"
-   width="522" height="368"
+  
    />
+
 </p>
 <p><img class="img-fluid" alt="Figure 4.3 median" src="/post/concurrent-programming/parallel-latency-throughput/over-median-latency.png" loading="lazy"
-   width="470" height="317"
+  
    />
+
 </p>
 <p><img class="img-fluid" alt="Figure 4.4 95%" src="/post/concurrent-programming/parallel-latency-throughput/over-p95-latency.png" loading="lazy"
-   width="520" height="363"
+  
    />
+
 </p>
 <p><img class="img-fluid" alt="Figure 4.5 99%" src="/post/concurrent-programming/parallel-latency-throughput/over-p99-latency.png" loading="lazy"
-   width="520" height="360"
+  
    />
+
 </p>
 <p><img class="img-fluid" alt="Figure 4.6 100%" src="/post/concurrent-programming/parallel-latency-throughput/over-p100-latency.png" loading="lazy"
-   width="521" height="364"
+  
    />
+
 </p>
 <p>可以看到吞吐量峰值保持不变，依然是3 tasks/sec。延迟比subtask=6时略有增加。上图只是理论值，实际情况中考虑到线程频繁调度等开销，结果会更糟。</p>
 <p>数据excel可以在<a href="data.xlsx">这里</a>
@@ -335,8 +353,7 @@
 </a>
     <i class="fas fa-fw fa-chevron-right"></i>
   </div></div></div>
-</article>
-<div class="post-copyright mb-3 row card component" id="post-copyright">
+</article><div class="post-copyright mb-3 row card component" id="post-copyright">
     <div class="card-header">
         <h2 class="card-title">版权</h2>
     </div>
@@ -347,8 +364,7 @@
 
 
     </div>
-</div>
-<section class="related-posts row card component">
+</div><section class="related-posts row card component">
     <div class="card-header">
       <h2 class="card-title">相关文章</h2>
     </div>
@@ -393,7 +409,8 @@
   <div class="card-body">
     <div class="col-12 d-flex align-items-center justify-content-center"><img class="profile-avatar rounded-circle" alt="颇忒脱" src="/images/avatar.jpg" loading="lazy"
    width="455" height="455"
-   /></div>
+   />
+</div>
     <div class="col-12 profile-meta"><div class="profile-name">颇忒脱</div><nav class="social-links nav justify-content-center"><a class="nav-link social-link" target="_blank" href="https://github.com/chanjarster" title="GitHub" rel="noopener noreferrer">
         <i class="fa-fw fa-2x fab fa-github"></i>
       </a></nav>
