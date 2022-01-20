@@ -12,7 +12,7 @@
 <meta name="description" content="" /><meta itemprop="name" content="Cracking Coding Interview - 8.12 Eight Queens">
 <meta itemprop="description" content=""><meta itemprop="datePublished" content="2019-08-27T10:15:11+08:00" />
 <meta itemprop="dateModified" content="2019-08-27T10:15:11+08:00" />
-<meta itemprop="wordCount" content="1116">
+<meta itemprop="wordCount" content="1129">
 <meta itemprop="keywords" content="ARTS-A," /><meta property="og:title" content="Cracking Coding Interview - 8.12 Eight Queens" />
 <meta property="og:description" content="" />
 <meta property="og:type" content="article" />
@@ -233,127 +233,256 @@
 </ol>
 <p>根据皇后的吃子规则可知，每行只能有一个皇后，我们可以先在第一行放一个皇后，然后在下一行放一皇后。那么下一行放的皇后的位置必定不能在其左下一格、下方一格、右下一格，其他列都可以放。当放到第8行的时候就知道结束了。</p>
 <p>代码：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln"> 1</span><span class="kd">public</span> <span class="n">List</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">[][]&gt;</span> <span class="nf">queens8</span><span class="o">()</span> <span class="o">{</span>
-<span class="ln"> 2</span>  <span class="n">List</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">[][]&gt;</span> <span class="n">result</span> <span class="o">=</span> <span class="k">new</span> <span class="n">ArrayList</span><span class="o">&lt;&gt;();</span>
-<span class="ln"> 3</span>  <span class="kt">int</span><span class="o">[][]</span> <span class="n">board</span> <span class="o">=</span> <span class="k">new</span> <span class="kt">int</span><span class="o">[</span><span class="n">8</span><span class="o">][</span><span class="n">8</span><span class="o">];</span>
-<span class="ln"> 4</span>  <span class="n">queens8</span><span class="o">(</span><span class="n">board</span><span class="o">,</span> <span class="kt">int</span> <span class="n">row</span><span class="o">,</span> <span class="kt">int</span> <span class="n">col</span><span class="o">,</span> <span class="n">result</span><span class="o">)</span>
-<span class="ln"> 5</span>  <span class="k">return</span> <span class="n">result</span><span class="o">;</span>
-<span class="ln"> 6</span><span class="o">}</span>
-<span class="ln"> 7</span>
-<span class="ln"> 8</span><span class="kd">public</span> <span class="kt">void</span> <span class="nf">queens8</span><span class="o">(</span><span class="kt">int</span><span class="o">[][]</span> <span class="n">board</span><span class="o">,</span> <span class="kt">int</span> <span class="n">row</span><span class="o">,</span> <span class="kt">int</span> <span class="n">col</span><span class="o">,</span> <span class="n">List</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">[][]&gt;</span> <span class="n">result</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 9</span>  <span class="k">if</span> <span class="o">(</span><span class="n">row</span> <span class="o">&gt;</span> <span class="n">7</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">10</span>    <span class="c1">// 出界
-</span><span class="ln">11</span><span class="c1"></span>    <span class="k">return</span><span class="o">;</span>
-<span class="ln">12</span>  <span class="o">}</span>
-<span class="ln">13</span>  <span class="k">if</span> <span class="o">(</span><span class="n">isConflict</span><span class="o">(</span><span class="n">board</span><span class="o">,</span> <span class="n">row</span><span class="o">,</span> <span class="n">col</span><span class="o">))</span> <span class="o">{</span>
-<span class="ln">14</span>    <span class="c1">// 和其他皇后冲突
-</span><span class="ln">15</span><span class="c1"></span>    <span class="k">return</span><span class="o">;</span>
-<span class="ln">16</span>  <span class="o">}</span>
-<span class="ln">17</span>  <span class="k">if</span> <span class="o">(</span><span class="n">row</span> <span class="o">==</span> <span class="n">7</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">18</span>    <span class="c1">// 不冲突不出界，最后一个
-</span><span class="ln">19</span><span class="c1"></span>    <span class="n">board</span><span class="o">[</span><span class="n">row</span><span class="o">][</span><span class="n">col</span><span class="o">]</span> <span class="o">=</span> <span class="n">1</span><span class="o">;</span>
-<span class="ln">20</span>    <span class="n">result</span><span class="o">.</span><span class="na">add</span><span class="o">(</span><span class="n">clone</span><span class="o">(</span><span class="n">board</span><span class="o">));</span>
-<span class="ln">21</span>    <span class="k">return</span><span class="o">;</span>
-<span class="ln">22</span>  <span class="o">}</span>
-<span class="ln">23</span>  <span class="n">board</span><span class="o">[</span><span class="n">row</span><span class="o">][</span><span class="n">col</span><span class="o">]</span> <span class="o">=</span> <span class="n">1</span><span class="o">;</span> <span class="c1">// 放皇后
-</span><span class="ln">24</span><span class="c1"></span>  <span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">8</span><span class="o">;</span> <span class="n">i</span><span class="o">++)</span> <span class="o">{</span>
-<span class="ln">25</span>    <span class="k">if</span> <span class="o">(</span><span class="n">i</span> <span class="o">==</span> <span class="n">col</span> <span class="o">-</span> <span class="n">1</span> <span class="o">||</span> <span class="n">i</span> <span class="o">==</span> <span class="n">col</span> <span class="o">||</span> <span class="n">i</span> <span class="o">==</span> <span class="n">col</span> <span class="o">+</span> <span class="n">1</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">26</span>      <span class="c1">// 不在下一行的左下、下、右下放皇后
-</span><span class="ln">27</span><span class="c1"></span>      <span class="k">continue</span><span class="o">;</span>
-<span class="ln">28</span>    <span class="o">}</span>
-<span class="ln">29</span>    <span class="n">queens8</span><span class="o">(</span><span class="n">board</span><span class="o">,</span> <span class="n">row</span> <span class="o">+</span> <span class="n">1</span><span class="o">,</span> <span class="n">i</span><span class="o">,</span> <span class="n">result</span><span class="o">);</span> <span class="c1">// 右马步    
-</span><span class="ln">30</span><span class="c1"></span>  <span class="o">}</span>
-<span class="ln">31</span>  <span class="n">board</span><span class="o">[</span><span class="n">row</span><span class="o">][</span><span class="n">col</span><span class="o">]</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span> <span class="c1">// 不论是否成功、失败都把皇后清掉
-</span><span class="ln">32</span><span class="c1"></span><span class="o">}</span>
-<span class="ln">33</span>
-<span class="ln">34</span><span class="kd">public</span> <span class="kt">boolean</span> <span class="nf">isConflict</span><span class="o">(</span><span class="kt">int</span><span class="o">[][]</span> <span class="n">board</span><span class="o">,</span> <span class="kt">int</span> <span class="n">row</span><span class="o">,</span> <span class="kt">int</span> <span class="n">col</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">35</span>  <span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">8</span><span class="o">;</span> <span class="n">i</span><span class="o">++)</span> <span class="o">{</span>
-<span class="ln">36</span>    <span class="k">if</span> <span class="o">(</span><span class="n">board</span><span class="o">[</span><span class="n">row</span><span class="o">][</span><span class="n">i</span><span class="o">]</span> <span class="o">==</span> <span class="n">1</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">37</span>      <span class="c1">// 行冲突
-</span><span class="ln">38</span><span class="c1"></span>      <span class="k">return</span> <span class="kc">true</span><span class="o">;</span>
-<span class="ln">39</span>    <span class="o">}</span>
-<span class="ln">40</span>    <span class="k">if</span> <span class="o">(</span><span class="n">board</span><span class="o">[</span><span class="n">i</span><span class="o">][</span><span class="n">col</span><span class="o">]</span> <span class="o">==</span> <span class="n">1</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">41</span>      <span class="c1">// 列冲突
-</span><span class="ln">42</span><span class="c1"></span>      <span class="k">return</span> <span class="kc">true</span><span class="o">;</span>
-<span class="ln">43</span>    <span class="o">}</span>
-<span class="ln">44</span>  <span class="o">}</span>
-<span class="ln">45</span>
-<span class="ln">46</span>  <span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="n">1</span><span class="o">;</span> <span class="n">i</span> <span class="o">&lt;=</span> <span class="n">8</span><span class="o">;</span> <span class="n">i</span><span class="o">++)</span> <span class="o">{</span>
-<span class="ln">47</span>    <span class="kt">int</span> <span class="n">upperRightRow</span> <span class="o">=</span> <span class="n">row</span> <span class="o">-</span> <span class="n">i</span><span class="o">;</span>
-<span class="ln">48</span>    <span class="kt">int</span> <span class="n">upperRightCol</span> <span class="o">=</span> <span class="n">col</span> <span class="o">+</span> <span class="n">i</span><span class="o">;</span>
-<span class="ln">49</span>    <span class="kt">int</span> <span class="n">upperLeftRow</span> <span class="o">=</span> <span class="n">row</span> <span class="o">-</span> <span class="n">i</span><span class="o">;</span>
-<span class="ln">50</span>    <span class="kt">int</span> <span class="n">upperLeftCol</span> <span class="o">=</span> <span class="n">col</span> <span class="o">-</span> <span class="n">i</span><span class="o">;</span>
-<span class="ln">51</span>    <span class="kt">int</span> <span class="n">lowerRightRow</span> <span class="o">=</span> <span class="n">row</span> <span class="o">+</span> <span class="n">i</span><span class="o">;</span>
-<span class="ln">52</span>    <span class="kt">int</span> <span class="n">lowerRightCol</span> <span class="o">=</span> <span class="n">col</span> <span class="o">+</span> <span class="n">i</span><span class="o">;</span>
-<span class="ln">53</span>    <span class="kt">int</span> <span class="n">lowerLeftRow</span> <span class="o">=</span> <span class="n">row</span> <span class="o">+</span> <span class="n">i</span><span class="o">;</span>
-<span class="ln">54</span>    <span class="kt">int</span> <span class="n">lowerLeftCol</span> <span class="o">=</span> <span class="n">col</span> <span class="o">-</span> <span class="n">i</span><span class="o">;</span>
-<span class="ln">55</span>    
-<span class="ln">56</span>    <span class="k">if</span> <span class="o">(</span><span class="n">upperRightRow</span> <span class="o">&lt;</span> <span class="n">8</span> <span class="o">&amp;&amp;</span> <span class="n">upperRightCol</span> <span class="o">&lt;</span> <span class="n">8</span> 
-<span class="ln">57</span>        <span class="o">&amp;&amp;</span> <span class="n">board</span><span class="o">[</span><span class="n">upperRightRow</span><span class="o">][</span><span class="n">upperRightCol</span><span class="o">]</span> <span class="o">==</span> <span class="n">1</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">58</span>      <span class="c1">// 和右上斜线皇后冲突
-</span><span class="ln">59</span><span class="c1"></span>      <span class="k">return</span> <span class="kc">true</span><span class="o">;</span>
-<span class="ln">60</span>    <span class="o">}</span>
-<span class="ln">61</span>    <span class="k">if</span> <span class="o">(</span><span class="n">upperLeftRow</span> <span class="o">&lt;</span> <span class="n">8</span> <span class="o">&amp;&amp;</span> <span class="n">upperLeftCol</span> <span class="o">&lt;</span> <span class="n">8</span> 
-<span class="ln">62</span>        <span class="o">&amp;&amp;</span> <span class="n">board</span><span class="o">[</span><span class="n">upperLeftRow</span><span class="o">][</span><span class="n">upperLeftCol</span><span class="o">]</span> <span class="o">==</span> <span class="n">1</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">63</span>      <span class="c1">// 和左上斜线皇后冲突
-</span><span class="ln">64</span><span class="c1"></span>      <span class="k">return</span> <span class="kc">true</span><span class="o">;</span>
-<span class="ln">65</span>    <span class="o">}</span>
-<span class="ln">66</span>    <span class="k">if</span> <span class="o">(</span><span class="n">lowerRightRow</span> <span class="o">&lt;</span> <span class="n">8</span> <span class="o">&amp;&amp;</span> <span class="n">lowerRightCol</span> <span class="o">&lt;</span> <span class="n">8</span> 
-<span class="ln">67</span>        <span class="o">&amp;&amp;</span> <span class="n">board</span><span class="o">[</span><span class="n">lowerRightRow</span><span class="o">][</span><span class="n">lowerRightCol</span><span class="o">]</span> <span class="o">==</span> <span class="n">1</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">68</span>      <span class="c1">// 和右下斜线皇后冲突
-</span><span class="ln">69</span><span class="c1"></span>      <span class="k">return</span> <span class="kc">true</span><span class="o">;</span>
-<span class="ln">70</span>    <span class="o">}</span>
-<span class="ln">71</span>    <span class="k">if</span> <span class="o">(</span><span class="n">lowerLeftRow</span> <span class="o">&lt;</span> <span class="n">8</span> <span class="o">&amp;&amp;</span> <span class="n">lowerLeftCol</span> <span class="o">&lt;</span> <span class="n">8</span> 
-<span class="ln">72</span>        <span class="o">&amp;&amp;</span> <span class="n">board</span><span class="o">[</span><span class="n">lowerLeftRow</span><span class="o">][</span><span class="n">lowerLeftCol</span><span class="o">]</span> <span class="o">==</span> <span class="n">1</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">73</span>      <span class="c1">// 和左下斜线皇后冲突
-</span><span class="ln">74</span><span class="c1"></span>      <span class="k">return</span> <span class="kc">true</span><span class="o">;</span>
-<span class="ln">75</span>    <span class="o">}</span>
-<span class="ln">76</span>  <span class="o">}</span>
-<span class="ln">77</span>  <span class="k">return</span> <span class="kc">false</span><span class="o">;</span>
-<span class="ln">78</span><span class="o">}</span>
-</code></pre></div><p>可能可以做的优化：对于一种8皇后解法来说，它的镜像肯定也是一个解，那么是否是说只第一行只需要尝试1-4列就行了呢？</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span><span class="lnt">46
+</span><span class="lnt">47
+</span><span class="lnt">48
+</span><span class="lnt">49
+</span><span class="lnt">50
+</span><span class="lnt">51
+</span><span class="lnt">52
+</span><span class="lnt">53
+</span><span class="lnt">54
+</span><span class="lnt">55
+</span><span class="lnt">56
+</span><span class="lnt">57
+</span><span class="lnt">58
+</span><span class="lnt">59
+</span><span class="lnt">60
+</span><span class="lnt">61
+</span><span class="lnt">62
+</span><span class="lnt">63
+</span><span class="lnt">64
+</span><span class="lnt">65
+</span><span class="lnt">66
+</span><span class="lnt">67
+</span><span class="lnt">68
+</span><span class="lnt">69
+</span><span class="lnt">70
+</span><span class="lnt">71
+</span><span class="lnt">72
+</span><span class="lnt">73
+</span><span class="lnt">74
+</span><span class="lnt">75
+</span><span class="lnt">76
+</span><span class="lnt">77
+</span><span class="lnt">78
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="kd">public</span> <span class="n">List</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">[][]&gt;</span> <span class="nf">queens8</span><span class="o">()</span> <span class="o">{</span>
+  <span class="n">List</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">[][]&gt;</span> <span class="n">result</span> <span class="o">=</span> <span class="k">new</span> <span class="n">ArrayList</span><span class="o">&lt;&gt;();</span>
+  <span class="kt">int</span><span class="o">[][]</span> <span class="n">board</span> <span class="o">=</span> <span class="k">new</span> <span class="kt">int</span><span class="o">[</span><span class="n">8</span><span class="o">][</span><span class="n">8</span><span class="o">];</span>
+  <span class="n">queens8</span><span class="o">(</span><span class="n">board</span><span class="o">,</span> <span class="kt">int</span> <span class="n">row</span><span class="o">,</span> <span class="kt">int</span> <span class="n">col</span><span class="o">,</span> <span class="n">result</span><span class="o">)</span>
+  <span class="k">return</span> <span class="n">result</span><span class="o">;</span>
+<span class="o">}</span>
+
+<span class="kd">public</span> <span class="kt">void</span> <span class="nf">queens8</span><span class="o">(</span><span class="kt">int</span><span class="o">[][]</span> <span class="n">board</span><span class="o">,</span> <span class="kt">int</span> <span class="n">row</span><span class="o">,</span> <span class="kt">int</span> <span class="n">col</span><span class="o">,</span> <span class="n">List</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">[][]&gt;</span> <span class="n">result</span><span class="o">)</span> <span class="o">{</span>
+  <span class="k">if</span> <span class="o">(</span><span class="n">row</span> <span class="o">&gt;</span> <span class="n">7</span><span class="o">)</span> <span class="o">{</span>
+    <span class="c1">// 出界
+</span><span class="c1"></span>    <span class="k">return</span><span class="o">;</span>
+  <span class="o">}</span>
+  <span class="k">if</span> <span class="o">(</span><span class="n">isConflict</span><span class="o">(</span><span class="n">board</span><span class="o">,</span> <span class="n">row</span><span class="o">,</span> <span class="n">col</span><span class="o">))</span> <span class="o">{</span>
+    <span class="c1">// 和其他皇后冲突
+</span><span class="c1"></span>    <span class="k">return</span><span class="o">;</span>
+  <span class="o">}</span>
+  <span class="k">if</span> <span class="o">(</span><span class="n">row</span> <span class="o">==</span> <span class="n">7</span><span class="o">)</span> <span class="o">{</span>
+    <span class="c1">// 不冲突不出界，最后一个
+</span><span class="c1"></span>    <span class="n">board</span><span class="o">[</span><span class="n">row</span><span class="o">][</span><span class="n">col</span><span class="o">]</span> <span class="o">=</span> <span class="n">1</span><span class="o">;</span>
+    <span class="n">result</span><span class="o">.</span><span class="na">add</span><span class="o">(</span><span class="n">clone</span><span class="o">(</span><span class="n">board</span><span class="o">));</span>
+    <span class="k">return</span><span class="o">;</span>
+  <span class="o">}</span>
+  <span class="n">board</span><span class="o">[</span><span class="n">row</span><span class="o">][</span><span class="n">col</span><span class="o">]</span> <span class="o">=</span> <span class="n">1</span><span class="o">;</span> <span class="c1">// 放皇后
+</span><span class="c1"></span>  <span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">8</span><span class="o">;</span> <span class="n">i</span><span class="o">++)</span> <span class="o">{</span>
+    <span class="k">if</span> <span class="o">(</span><span class="n">i</span> <span class="o">==</span> <span class="n">col</span> <span class="o">-</span> <span class="n">1</span> <span class="o">||</span> <span class="n">i</span> <span class="o">==</span> <span class="n">col</span> <span class="o">||</span> <span class="n">i</span> <span class="o">==</span> <span class="n">col</span> <span class="o">+</span> <span class="n">1</span><span class="o">)</span> <span class="o">{</span>
+      <span class="c1">// 不在下一行的左下、下、右下放皇后
+</span><span class="c1"></span>      <span class="k">continue</span><span class="o">;</span>
+    <span class="o">}</span>
+    <span class="n">queens8</span><span class="o">(</span><span class="n">board</span><span class="o">,</span> <span class="n">row</span> <span class="o">+</span> <span class="n">1</span><span class="o">,</span> <span class="n">i</span><span class="o">,</span> <span class="n">result</span><span class="o">);</span> <span class="c1">// 右马步    
+</span><span class="c1"></span>  <span class="o">}</span>
+  <span class="n">board</span><span class="o">[</span><span class="n">row</span><span class="o">][</span><span class="n">col</span><span class="o">]</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span> <span class="c1">// 不论是否成功、失败都把皇后清掉
+</span><span class="c1"></span><span class="o">}</span>
+
+<span class="kd">public</span> <span class="kt">boolean</span> <span class="nf">isConflict</span><span class="o">(</span><span class="kt">int</span><span class="o">[][]</span> <span class="n">board</span><span class="o">,</span> <span class="kt">int</span> <span class="n">row</span><span class="o">,</span> <span class="kt">int</span> <span class="n">col</span><span class="o">)</span> <span class="o">{</span>
+  <span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">8</span><span class="o">;</span> <span class="n">i</span><span class="o">++)</span> <span class="o">{</span>
+    <span class="k">if</span> <span class="o">(</span><span class="n">board</span><span class="o">[</span><span class="n">row</span><span class="o">][</span><span class="n">i</span><span class="o">]</span> <span class="o">==</span> <span class="n">1</span><span class="o">)</span> <span class="o">{</span>
+      <span class="c1">// 行冲突
+</span><span class="c1"></span>      <span class="k">return</span> <span class="kc">true</span><span class="o">;</span>
+    <span class="o">}</span>
+    <span class="k">if</span> <span class="o">(</span><span class="n">board</span><span class="o">[</span><span class="n">i</span><span class="o">][</span><span class="n">col</span><span class="o">]</span> <span class="o">==</span> <span class="n">1</span><span class="o">)</span> <span class="o">{</span>
+      <span class="c1">// 列冲突
+</span><span class="c1"></span>      <span class="k">return</span> <span class="kc">true</span><span class="o">;</span>
+    <span class="o">}</span>
+  <span class="o">}</span>
+
+  <span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="n">1</span><span class="o">;</span> <span class="n">i</span> <span class="o">&lt;=</span> <span class="n">8</span><span class="o">;</span> <span class="n">i</span><span class="o">++)</span> <span class="o">{</span>
+    <span class="kt">int</span> <span class="n">upperRightRow</span> <span class="o">=</span> <span class="n">row</span> <span class="o">-</span> <span class="n">i</span><span class="o">;</span>
+    <span class="kt">int</span> <span class="n">upperRightCol</span> <span class="o">=</span> <span class="n">col</span> <span class="o">+</span> <span class="n">i</span><span class="o">;</span>
+    <span class="kt">int</span> <span class="n">upperLeftRow</span> <span class="o">=</span> <span class="n">row</span> <span class="o">-</span> <span class="n">i</span><span class="o">;</span>
+    <span class="kt">int</span> <span class="n">upperLeftCol</span> <span class="o">=</span> <span class="n">col</span> <span class="o">-</span> <span class="n">i</span><span class="o">;</span>
+    <span class="kt">int</span> <span class="n">lowerRightRow</span> <span class="o">=</span> <span class="n">row</span> <span class="o">+</span> <span class="n">i</span><span class="o">;</span>
+    <span class="kt">int</span> <span class="n">lowerRightCol</span> <span class="o">=</span> <span class="n">col</span> <span class="o">+</span> <span class="n">i</span><span class="o">;</span>
+    <span class="kt">int</span> <span class="n">lowerLeftRow</span> <span class="o">=</span> <span class="n">row</span> <span class="o">+</span> <span class="n">i</span><span class="o">;</span>
+    <span class="kt">int</span> <span class="n">lowerLeftCol</span> <span class="o">=</span> <span class="n">col</span> <span class="o">-</span> <span class="n">i</span><span class="o">;</span>
+    
+    <span class="k">if</span> <span class="o">(</span><span class="n">upperRightRow</span> <span class="o">&lt;</span> <span class="n">8</span> <span class="o">&amp;&amp;</span> <span class="n">upperRightCol</span> <span class="o">&lt;</span> <span class="n">8</span> 
+        <span class="o">&amp;&amp;</span> <span class="n">board</span><span class="o">[</span><span class="n">upperRightRow</span><span class="o">][</span><span class="n">upperRightCol</span><span class="o">]</span> <span class="o">==</span> <span class="n">1</span><span class="o">)</span> <span class="o">{</span>
+      <span class="c1">// 和右上斜线皇后冲突
+</span><span class="c1"></span>      <span class="k">return</span> <span class="kc">true</span><span class="o">;</span>
+    <span class="o">}</span>
+    <span class="k">if</span> <span class="o">(</span><span class="n">upperLeftRow</span> <span class="o">&lt;</span> <span class="n">8</span> <span class="o">&amp;&amp;</span> <span class="n">upperLeftCol</span> <span class="o">&lt;</span> <span class="n">8</span> 
+        <span class="o">&amp;&amp;</span> <span class="n">board</span><span class="o">[</span><span class="n">upperLeftRow</span><span class="o">][</span><span class="n">upperLeftCol</span><span class="o">]</span> <span class="o">==</span> <span class="n">1</span><span class="o">)</span> <span class="o">{</span>
+      <span class="c1">// 和左上斜线皇后冲突
+</span><span class="c1"></span>      <span class="k">return</span> <span class="kc">true</span><span class="o">;</span>
+    <span class="o">}</span>
+    <span class="k">if</span> <span class="o">(</span><span class="n">lowerRightRow</span> <span class="o">&lt;</span> <span class="n">8</span> <span class="o">&amp;&amp;</span> <span class="n">lowerRightCol</span> <span class="o">&lt;</span> <span class="n">8</span> 
+        <span class="o">&amp;&amp;</span> <span class="n">board</span><span class="o">[</span><span class="n">lowerRightRow</span><span class="o">][</span><span class="n">lowerRightCol</span><span class="o">]</span> <span class="o">==</span> <span class="n">1</span><span class="o">)</span> <span class="o">{</span>
+      <span class="c1">// 和右下斜线皇后冲突
+</span><span class="c1"></span>      <span class="k">return</span> <span class="kc">true</span><span class="o">;</span>
+    <span class="o">}</span>
+    <span class="k">if</span> <span class="o">(</span><span class="n">lowerLeftRow</span> <span class="o">&lt;</span> <span class="n">8</span> <span class="o">&amp;&amp;</span> <span class="n">lowerLeftCol</span> <span class="o">&lt;</span> <span class="n">8</span> 
+        <span class="o">&amp;&amp;</span> <span class="n">board</span><span class="o">[</span><span class="n">lowerLeftRow</span><span class="o">][</span><span class="n">lowerLeftCol</span><span class="o">]</span> <span class="o">==</span> <span class="n">1</span><span class="o">)</span> <span class="o">{</span>
+      <span class="c1">// 和左下斜线皇后冲突
+</span><span class="c1"></span>      <span class="k">return</span> <span class="kc">true</span><span class="o">;</span>
+    <span class="o">}</span>
+  <span class="o">}</span>
+  <span class="k">return</span> <span class="kc">false</span><span class="o">;</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>可能可以做的优化：对于一种8皇后解法来说，它的镜像肯定也是一个解，那么是否是说只第一行只需要尝试1-4列就行了呢？</p>
 <h2 id="解法2更好">解法2（更好）<a class="anchor ms-1" href="#解法2更好"><i class="fas fa-link"></i></a></h2>
 <p>因为每行放一个皇后，所以不需要<code>int[][] borad</code>来记录位置，只需要<code>int[] cols</code>就行了。比如<code>cols[0]</code>就是第一行皇后所处的列。</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln"> 1</span><span class="kd">public</span> <span class="n">List</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">[]&gt;</span> <span class="nf">queens8</span><span class="o">()</span> <span class="o">{</span>
-<span class="ln"> 2</span>  <span class="kt">int</span><span class="o">[]</span> <span class="n">cols</span> <span class="o">=</span> <span class="k">new</span> <span class="kt">int</span><span class="o">[]</span> <span class="o">{-</span><span class="n">1</span><span class="o">,</span> <span class="o">-</span><span class="n">1</span><span class="o">,</span> <span class="o">-</span><span class="n">1</span><span class="o">,</span> <span class="o">-</span><span class="n">1</span><span class="o">,</span> <span class="o">-</span><span class="n">1</span><span class="o">,</span> <span class="o">-</span><span class="n">1</span><span class="o">,</span> <span class="o">-</span><span class="n">1</span><span class="o">,</span> <span class="o">-</span><span class="n">1</span><span class="o">};</span>
-<span class="ln"> 3</span>  <span class="n">List</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">[]&gt;</span> <span class="n">result</span> <span class="o">=</span> <span class="k">new</span> <span class="n">ArrayList</span><span class="o">&lt;&gt;();</span>
-<span class="ln"> 4</span>  <span class="n">queens8</span><span class="o">(</span><span class="n">cols</span><span class="o">,</span> <span class="n">0</span><span class="o">,</span> <span class="n">result</span><span class="o">);</span>
-<span class="ln"> 5</span>  <span class="k">return</span> <span class="n">result</span><span class="o">;</span>
-<span class="ln"> 6</span><span class="o">}</span>
-<span class="ln"> 7</span><span class="kd">public</span> <span class="kt">void</span> <span class="nf">queens8</span><span class="o">(</span><span class="kt">int</span><span class="o">[]</span> <span class="n">cols</span><span class="o">,</span> <span class="kt">int</span> <span class="n">row</span><span class="o">,</span> <span class="n">List</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">[]&gt;</span> <span class="n">result</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 8</span>  <span class="k">if</span> <span class="o">(</span><span class="n">row</span> <span class="o">==</span> <span class="n">8</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 9</span>    <span class="n">result</span><span class="o">.</span><span class="na">add</span><span class="o">(</span><span class="n">cols</span><span class="o">.</span><span class="na">clone</span><span class="o">());</span>
-<span class="ln">10</span>    <span class="k">return</span><span class="o">;</span>
-<span class="ln">11</span>  <span class="o">}</span>
-<span class="ln">12</span>  <span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">col</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span> <span class="n">col</span> <span class="o">&lt;</span> <span class="n">8</span><span class="o">;</span> <span class="n">i</span><span class="o">++)</span> <span class="o">{</span>
-<span class="ln">13</span>    <span class="k">if</span> <span class="o">(!</span><span class="n">isConflict</span><span class="o">(</span><span class="n">row</span><span class="o">,</span> <span class="n">col</span><span class="o">,</span> <span class="n">cols</span><span class="o">))</span> <span class="o">{</span>
-<span class="ln">14</span>      <span class="n">cols</span><span class="o">[</span><span class="n">row</span><span class="o">]</span> <span class="o">=</span> <span class="n">col</span><span class="o">;</span>
-<span class="ln">15</span>      <span class="n">queens8</span><span class="o">(</span><span class="n">cols</span><span class="o">,</span> <span class="n">row</span> <span class="o">+</span> <span class="n">1</span><span class="o">,</span> <span class="n">result</span><span class="o">);</span>
-<span class="ln">16</span>    <span class="o">}</span>
-<span class="ln">17</span>  <span class="o">}</span>
-<span class="ln">18</span><span class="o">}</span>
-<span class="ln">19</span>
-<span class="ln">20</span><span class="c1">// 判断本
-</span><span class="ln">21</span><span class="c1"></span><span class="kd">private</span> <span class="kt">boolean</span> <span class="nf">isConflict</span><span class="o">(</span><span class="kt">int</span> <span class="n">row</span><span class="o">,</span> <span class="kt">int</span> <span class="n">col</span><span class="o">,</span> <span class="kt">int</span><span class="o">[]</span> <span class="n">cols</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">22</span>  <span class="c1">// 只和前面的行比较
-</span><span class="ln">23</span><span class="c1"></span>  <span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">row</span><span class="o">;</span> <span class="n">i</span><span class="o">++)</span> <span class="o">{</span>
-<span class="ln">24</span>    <span class="c1">// 判断和前面的皇后是否处于相同列
-</span><span class="ln">25</span><span class="c1"></span>    <span class="k">if</span> <span class="o">(</span><span class="n">col</span><span class="o">[</span><span class="n">i</span><span class="o">]</span> <span class="o">==</span> <span class="n">col</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">26</span>      <span class="k">return</span> <span class="kc">true</span><span class="o">;</span>
-<span class="ln">27</span>    <span class="o">}</span>
-<span class="ln">28</span>    <span class="c1">// 判断是否处于前面皇后的斜线上    
-</span><span class="ln">29</span><span class="c1"></span>    <span class="kt">int</span> <span class="n">rightDownCol</span> <span class="o">=</span> <span class="n">col</span><span class="o">[</span><span class="n">i</span><span class="o">]</span> <span class="o">+</span> <span class="o">(</span><span class="n">row</span> <span class="o">-</span> <span class="n">i</span><span class="o">);</span> <span class="c1">// 右下方斜线在本行的列数
-</span><span class="ln">30</span><span class="c1"></span>    <span class="k">if</span> <span class="o">(</span><span class="n">col</span> <span class="o">==</span> <span class="n">rightDownCol</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">31</span>      <span class="k">return</span> <span class="kc">true</span><span class="o">;</span>
-<span class="ln">32</span>    <span class="o">}</span>
-<span class="ln">33</span>    <span class="kt">int</span> <span class="n">leftDownCol</span> <span class="o">=</span> <span class="n">col</span><span class="o">[</span><span class="n">i</span><span class="o">]</span> <span class="o">-</span> <span class="o">(</span><span class="n">row</span> <span class="o">-</span> <span class="n">i</span><span class="o">);</span> <span class="c1">// 左下方斜线在本行的列数
-</span><span class="ln">34</span><span class="c1"></span>    <span class="k">if</span> <span class="o">(</span><span class="n">col</span> <span class="o">==</span> <span class="n">leftDownCol</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">35</span>      <span class="k">return</span> <span class="kc">true</span><span class="o">;</span>
-<span class="ln">36</span>    <span class="o">}</span>
-<span class="ln">37</span>  <span class="o">}</span>
-<span class="ln">38</span>  <span class="k">return</span> <span class="kc">false</span><span class="o">;</span>
-<span class="ln">39</span><span class="o">}</span>
-</code></pre></div></div></div>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="kd">public</span> <span class="n">List</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">[]&gt;</span> <span class="nf">queens8</span><span class="o">()</span> <span class="o">{</span>
+  <span class="kt">int</span><span class="o">[]</span> <span class="n">cols</span> <span class="o">=</span> <span class="k">new</span> <span class="kt">int</span><span class="o">[]</span> <span class="o">{-</span><span class="n">1</span><span class="o">,</span> <span class="o">-</span><span class="n">1</span><span class="o">,</span> <span class="o">-</span><span class="n">1</span><span class="o">,</span> <span class="o">-</span><span class="n">1</span><span class="o">,</span> <span class="o">-</span><span class="n">1</span><span class="o">,</span> <span class="o">-</span><span class="n">1</span><span class="o">,</span> <span class="o">-</span><span class="n">1</span><span class="o">,</span> <span class="o">-</span><span class="n">1</span><span class="o">};</span>
+  <span class="n">List</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">[]&gt;</span> <span class="n">result</span> <span class="o">=</span> <span class="k">new</span> <span class="n">ArrayList</span><span class="o">&lt;&gt;();</span>
+  <span class="n">queens8</span><span class="o">(</span><span class="n">cols</span><span class="o">,</span> <span class="n">0</span><span class="o">,</span> <span class="n">result</span><span class="o">);</span>
+  <span class="k">return</span> <span class="n">result</span><span class="o">;</span>
+<span class="o">}</span>
+<span class="kd">public</span> <span class="kt">void</span> <span class="nf">queens8</span><span class="o">(</span><span class="kt">int</span><span class="o">[]</span> <span class="n">cols</span><span class="o">,</span> <span class="kt">int</span> <span class="n">row</span><span class="o">,</span> <span class="n">List</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">[]&gt;</span> <span class="n">result</span><span class="o">)</span> <span class="o">{</span>
+  <span class="k">if</span> <span class="o">(</span><span class="n">row</span> <span class="o">==</span> <span class="n">8</span><span class="o">)</span> <span class="o">{</span>
+    <span class="n">result</span><span class="o">.</span><span class="na">add</span><span class="o">(</span><span class="n">cols</span><span class="o">.</span><span class="na">clone</span><span class="o">());</span>
+    <span class="k">return</span><span class="o">;</span>
+  <span class="o">}</span>
+  <span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">col</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span> <span class="n">col</span> <span class="o">&lt;</span> <span class="n">8</span><span class="o">;</span> <span class="n">i</span><span class="o">++)</span> <span class="o">{</span>
+    <span class="k">if</span> <span class="o">(!</span><span class="n">isConflict</span><span class="o">(</span><span class="n">row</span><span class="o">,</span> <span class="n">col</span><span class="o">,</span> <span class="n">cols</span><span class="o">))</span> <span class="o">{</span>
+      <span class="n">cols</span><span class="o">[</span><span class="n">row</span><span class="o">]</span> <span class="o">=</span> <span class="n">col</span><span class="o">;</span>
+      <span class="n">queens8</span><span class="o">(</span><span class="n">cols</span><span class="o">,</span> <span class="n">row</span> <span class="o">+</span> <span class="n">1</span><span class="o">,</span> <span class="n">result</span><span class="o">);</span>
+    <span class="o">}</span>
+  <span class="o">}</span>
+<span class="o">}</span>
+
+<span class="c1">// 判断本
+</span><span class="c1"></span><span class="kd">private</span> <span class="kt">boolean</span> <span class="nf">isConflict</span><span class="o">(</span><span class="kt">int</span> <span class="n">row</span><span class="o">,</span> <span class="kt">int</span> <span class="n">col</span><span class="o">,</span> <span class="kt">int</span><span class="o">[]</span> <span class="n">cols</span><span class="o">)</span> <span class="o">{</span>
+  <span class="c1">// 只和前面的行比较
+</span><span class="c1"></span>  <span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">row</span><span class="o">;</span> <span class="n">i</span><span class="o">++)</span> <span class="o">{</span>
+    <span class="c1">// 判断和前面的皇后是否处于相同列
+</span><span class="c1"></span>    <span class="k">if</span> <span class="o">(</span><span class="n">col</span><span class="o">[</span><span class="n">i</span><span class="o">]</span> <span class="o">==</span> <span class="n">col</span><span class="o">)</span> <span class="o">{</span>
+      <span class="k">return</span> <span class="kc">true</span><span class="o">;</span>
+    <span class="o">}</span>
+    <span class="c1">// 判断是否处于前面皇后的斜线上    
+</span><span class="c1"></span>    <span class="kt">int</span> <span class="n">rightDownCol</span> <span class="o">=</span> <span class="n">col</span><span class="o">[</span><span class="n">i</span><span class="o">]</span> <span class="o">+</span> <span class="o">(</span><span class="n">row</span> <span class="o">-</span> <span class="n">i</span><span class="o">);</span> <span class="c1">// 右下方斜线在本行的列数
+</span><span class="c1"></span>    <span class="k">if</span> <span class="o">(</span><span class="n">col</span> <span class="o">==</span> <span class="n">rightDownCol</span><span class="o">)</span> <span class="o">{</span>
+      <span class="k">return</span> <span class="kc">true</span><span class="o">;</span>
+    <span class="o">}</span>
+    <span class="kt">int</span> <span class="n">leftDownCol</span> <span class="o">=</span> <span class="n">col</span><span class="o">[</span><span class="n">i</span><span class="o">]</span> <span class="o">-</span> <span class="o">(</span><span class="n">row</span> <span class="o">-</span> <span class="n">i</span><span class="o">);</span> <span class="c1">// 左下方斜线在本行的列数
+</span><span class="c1"></span>    <span class="k">if</span> <span class="o">(</span><span class="n">col</span> <span class="o">==</span> <span class="n">leftDownCol</span><span class="o">)</span> <span class="o">{</span>
+      <span class="k">return</span> <span class="kc">true</span><span class="o">;</span>
+    <span class="o">}</span>
+  <span class="o">}</span>
+  <span class="k">return</span> <span class="kc">false</span><span class="o">;</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div></div></div>
   <div class="card-footer"><div class="post-navs d-flex justify-content-evenly">
   <div class="post-nav post-prev"><i class="fas fa-fw fa-chevron-left"></i>
     <a href="/post/cracking-coding-interview/8.11-coins/">Cracking Coding Interview - 8.11 Coins

@@ -12,7 +12,7 @@
 <meta name="description" content="" /><meta itemprop="name" content="Kublet PLEG不健康问题排障">
 <meta itemprop="description" content=""><meta itemprop="datePublished" content="2019-02-18T09:30:06+08:00" />
 <meta itemprop="dateModified" content="2019-02-18T09:30:06+08:00" />
-<meta itemprop="wordCount" content="475">
+<meta itemprop="wordCount" content="478">
 <meta itemprop="keywords" content="k8s,troubleshooting," /><meta property="og:title" content="Kublet PLEG不健康问题排障" />
 <meta property="og:description" content="" />
 <meta property="og:type" content="article" />
@@ -228,10 +228,19 @@
 <li><code>kubectl get pods --all-namespaces</code> 发现有一个<code>istio-ingressgateway-6bbdd58f8c-nlgnd</code>一直处于Terminating状态，也就是说杀不死。</li>
 <li>到Node上<code>docker logs --tail 100 kubelet</code>也看到这个Pod的状态异常：</li>
 </ol>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln">1</span>I0218 01:21:17.383650   10311 kubelet.go:1775] skipping pod synchronization - [PLEG is not healthy: pleg was last seen active 3m46.752815514s ago; threshold is 3m0s]
-<span class="ln">2</span>...
-<span class="ln">3</span>E0218 01:21:30.654433   10311 generic.go:271] PLEG: pod istio-ingressgateway-6bbdd58f8c-nlgnd/istio-system failed reinspection: rpc error: code = DeadlineExceeded desc = context deadline exceeded
-</code></pre></div><ol>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt">I0218 01:21:17.383650   10311 kubelet.go:1775] skipping pod synchronization - [PLEG is not healthy: pleg was last seen active 3m46.752815514s ago; threshold is 3m0s]
+...
+E0218 01:21:30.654433   10311 generic.go:271] PLEG: pod istio-ingressgateway-6bbdd58f8c-nlgnd/istio-system failed reinspection: rpc error: code = DeadlineExceeded desc = context deadline exceeded
+</code></pre></td></tr></table>
+</div>
+</div><ol>
 <li>用<code>kubelet delete pod</code>尝试删除，命令挂住。</li>
 <li>用<code>kubectl delete pod --force --grace-period=0</code>，强制删除Pod。</li>
 <li>再到Node上检查这个容器是否真的被停止，<code>docker ps -a| grep ingressgateway-6bbdd58f8c-nlgnd</code>，看到容器处于Exited状态。</li>

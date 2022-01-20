@@ -12,7 +12,7 @@
 <meta name="description" content="" /><meta itemprop="name" content="Cracking Coding Interview - 10.5 Sparse Search">
 <meta itemprop="description" content=""><meta itemprop="datePublished" content="2019-08-28T16:10:11+08:00" />
 <meta itemprop="dateModified" content="2019-08-28T16:10:11+08:00" />
-<meta itemprop="wordCount" content="360">
+<meta itemprop="wordCount" content="370">
 <meta itemprop="keywords" content="ARTS-A," /><meta property="og:title" content="Cracking Coding Interview - 10.5 Sparse Search" />
 <meta property="og:description" content="" />
 <meta property="og:type" content="article" />
@@ -225,62 +225,125 @@
 </div>
 <div class="post-content mb-3"><p><strong>Sparse Search</strong>: Given a sorted array of strings that is interspersed with empty strings, write a method to find the location of a given string.</p>
 <p>Example</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln">1</span>Input:  ball, {&#34;at&#34;, &#34;&#34;, &#34;&#34;, &#34;&#34;, &#34;ball&#34;, &#34;&#34;, &#34;&#34;, &#34;car&#34;, &#34;&#34;, &#34;&#34;, &#34;dad&#34;, &#34;&#34;, &#34;&#34;}
-<span class="ln">2</span>Output: 4
-</code></pre></div><p>Hints: #256</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt">Input:  ball, {&#34;at&#34;, &#34;&#34;, &#34;&#34;, &#34;&#34;, &#34;ball&#34;, &#34;&#34;, &#34;&#34;, &#34;car&#34;, &#34;&#34;, &#34;&#34;, &#34;dad&#34;, &#34;&#34;, &#34;&#34;}
+Output: 4
+</code></pre></td></tr></table>
+</div>
+</div><p>Hints: #256</p>
 <h2 id="解法1">解法1<a class="anchor ms-1" href="#解法1"><i class="fas fa-link"></i></a></h2>
 <p>不能直接用二分法，因为mid可能是<code>&quot;&quot;</code>，那么你就不知道下一步应该到左边找还是右边找了。</p>
 <p>能够想到的简单办法是如果mid是空串，那么就往左找非空串作为mid。如果左边找不到那么就往右边找mid。</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln"> 1</span><span class="kd">public</span> <span class="kt">int</span> <span class="nf">sparseSearch</span><span class="o">(</span><span class="n">String</span><span class="o">[]</span> <span class="n">array</span><span class="o">,</span> <span class="n">String</span> <span class="n">str</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 2</span>  <span class="k">return</span> <span class="n">sparseSearch</span><span class="o">(</span><span class="n">array</span><span class="o">,</span> <span class="n">str</span><span class="o">,</span> <span class="n">0</span><span class="o">,</span> <span class="n">array</span><span class="o">.</span><span class="na">length</span><span class="o">);</span>
-<span class="ln"> 3</span><span class="o">}</span>
-<span class="ln"> 4</span>
-<span class="ln"> 5</span><span class="kd">private</span> <span class="kt">int</span> <span class="nf">sparseSearch</span><span class="o">(</span><span class="n">String</span><span class="o">[]</span> <span class="n">array</span><span class="o">,</span> <span class="n">String</span> <span class="n">str</span><span class="o">,</span> <span class="kt">int</span> <span class="n">start</span><span class="o">,</span> <span class="kt">int</span> <span class="n">end</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 6</span>  <span class="k">if</span> <span class="o">(</span><span class="n">start</span> <span class="o">&gt;</span> <span class="n">end</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 7</span>    <span class="k">return</span> <span class="o">-</span><span class="n">1</span><span class="o">;</span>
-<span class="ln"> 8</span>  <span class="o">}</span>
-<span class="ln"> 9</span>  <span class="kt">int</span> <span class="n">mid</span> <span class="o">=</span> <span class="o">(</span><span class="n">start</span> <span class="o">+</span> <span class="n">end</span><span class="o">)</span> <span class="o">/</span> <span class="n">2</span><span class="o">;</span>
-<span class="ln">10</span>  <span class="k">if</span> <span class="o">(</span><span class="n">array</span><span class="o">[</span><span class="n">mid</span><span class="o">]</span> <span class="o">==</span> <span class="s">&#34;&#34;</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">11</span>    <span class="kt">int</span> <span class="n">newMid</span> <span class="o">=</span> <span class="n">leftNonEmpty</span><span class="o">(</span><span class="n">array</span><span class="o">,</span> <span class="n">mid</span><span class="o">);</span>
-<span class="ln">12</span>    <span class="k">if</span> <span class="o">(</span><span class="n">newMid</span> <span class="o">==</span> <span class="o">-</span><span class="n">1</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">13</span>      <span class="n">newMid</span> <span class="o">=</span> <span class="n">rightNonEmpty</span><span class="o">(</span><span class="n">array</span><span class="o">,</span> <span class="n">mid</span><span class="o">);</span>    
-<span class="ln">14</span>    <span class="o">}</span>
-<span class="ln">15</span>    <span class="k">if</span> <span class="o">(</span><span class="n">newMid</span> <span class="o">==</span> <span class="o">-</span><span class="n">1</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">16</span>      <span class="c1">// 说明左右两边都是空串
-</span><span class="ln">17</span><span class="c1"></span>      <span class="k">return</span> <span class="o">-</span><span class="n">1</span><span class="o">;</span>
-<span class="ln">18</span>    <span class="o">}</span>
-<span class="ln">19</span>    <span class="n">mid</span> <span class="o">=</span> <span class="n">newMid</span><span class="o">;</span>
-<span class="ln">20</span>  <span class="o">}</span>
-<span class="ln">21</span>  
-<span class="ln">22</span>  <span class="k">if</span> <span class="o">(</span><span class="n">array</span><span class="o">[</span><span class="n">mid</span><span class="o">]</span> <span class="o">==</span> <span class="n">str</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">23</span>    <span class="k">return</span> <span class="n">mid</span><span class="o">;</span>
-<span class="ln">24</span>  <span class="o">}</span>
-<span class="ln">25</span>  <span class="k">if</span> <span class="o">(</span><span class="n">array</span><span class="o">[</span><span class="n">mid</span><span class="o">]</span> <span class="o">&lt;</span> <span class="n">str</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">26</span>    <span class="k">return</span> <span class="n">sparseSearch</span><span class="o">(</span><span class="n">array</span><span class="o">,</span> <span class="n">str</span><span class="o">,</span> <span class="n">mid</span> <span class="o">+</span> <span class="n">1</span><span class="o">,</span> <span class="n">end</span><span class="o">);</span>
-<span class="ln">27</span>  <span class="o">}</span>
-<span class="ln">28</span>  <span class="k">return</span> <span class="n">sparseSearch</span><span class="o">(</span><span class="n">array</span><span class="o">,</span> <span class="n">str</span><span class="o">,</span> <span class="n">start</span><span class="o">,</span> <span class="n">mid</span> <span class="o">-</span> <span class="n">1</span><span class="o">);</span>
-<span class="ln">29</span><span class="o">}</span>
-<span class="ln">30</span>
-<span class="ln">31</span><span class="kd">private</span> <span class="kt">int</span> <span class="nf">leftNonEmpty</span><span class="o">(</span><span class="n">String</span><span class="o">[]</span> <span class="n">array</span><span class="o">,</span> <span class="kt">int</span> <span class="n">mid</span><span class="o">,</span> <span class="kt">int</span> <span class="n">start</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">32</span>  <span class="k">while</span> <span class="o">(</span><span class="n">mid</span> <span class="o">&gt;=</span> <span class="n">start</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">33</span>    <span class="k">if</span> <span class="o">(</span><span class="n">array</span><span class="o">[</span><span class="n">mid</span><span class="o">]</span> <span class="o">!=</span> <span class="s">&#34;&#34;</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">34</span>      <span class="k">return</span> <span class="n">mid</span><span class="o">;</span>
-<span class="ln">35</span>    <span class="o">}</span>
-<span class="ln">36</span>    <span class="n">mid</span><span class="o">--;</span>
-<span class="ln">37</span>  <span class="o">}</span>
-<span class="ln">38</span>  <span class="k">return</span> <span class="o">-</span><span class="n">1</span><span class="o">;</span>
-<span class="ln">39</span><span class="o">}</span>
-<span class="ln">40</span>
-<span class="ln">41</span><span class="kd">private</span> <span class="kt">int</span> <span class="nf">rightNonEmpty</span><span class="o">(</span><span class="n">String</span><span class="o">[]</span> <span class="n">array</span><span class="o">,</span> <span class="kt">int</span> <span class="n">mid</span><span class="o">,</span> <span class="kt">int</span> <span class="n">end</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">42</span>  <span class="k">while</span> <span class="o">(</span><span class="n">mid</span> <span class="o">&lt;=</span> <span class="n">end</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">43</span>    <span class="k">if</span> <span class="o">(</span><span class="n">array</span><span class="o">[</span><span class="n">mid</span><span class="o">]</span> <span class="o">!=</span> <span class="s">&#34;&#34;</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">44</span>      <span class="k">return</span> <span class="n">mid</span><span class="o">;</span>
-<span class="ln">45</span>    <span class="o">}</span>
-<span class="ln">46</span>    <span class="n">mid</span><span class="o">++;</span>
-<span class="ln">47</span>  <span class="o">}</span>
-<span class="ln">48</span>  <span class="k">return</span> <span class="o">-</span><span class="n">1</span><span class="o">;</span>
-<span class="ln">49</span><span class="o">}</span>
-</code></pre></div></div></div>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span><span class="lnt">46
+</span><span class="lnt">47
+</span><span class="lnt">48
+</span><span class="lnt">49
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="kd">public</span> <span class="kt">int</span> <span class="nf">sparseSearch</span><span class="o">(</span><span class="n">String</span><span class="o">[]</span> <span class="n">array</span><span class="o">,</span> <span class="n">String</span> <span class="n">str</span><span class="o">)</span> <span class="o">{</span>
+  <span class="k">return</span> <span class="n">sparseSearch</span><span class="o">(</span><span class="n">array</span><span class="o">,</span> <span class="n">str</span><span class="o">,</span> <span class="n">0</span><span class="o">,</span> <span class="n">array</span><span class="o">.</span><span class="na">length</span><span class="o">);</span>
+<span class="o">}</span>
+
+<span class="kd">private</span> <span class="kt">int</span> <span class="nf">sparseSearch</span><span class="o">(</span><span class="n">String</span><span class="o">[]</span> <span class="n">array</span><span class="o">,</span> <span class="n">String</span> <span class="n">str</span><span class="o">,</span> <span class="kt">int</span> <span class="n">start</span><span class="o">,</span> <span class="kt">int</span> <span class="n">end</span><span class="o">)</span> <span class="o">{</span>
+  <span class="k">if</span> <span class="o">(</span><span class="n">start</span> <span class="o">&gt;</span> <span class="n">end</span><span class="o">)</span> <span class="o">{</span>
+    <span class="k">return</span> <span class="o">-</span><span class="n">1</span><span class="o">;</span>
+  <span class="o">}</span>
+  <span class="kt">int</span> <span class="n">mid</span> <span class="o">=</span> <span class="o">(</span><span class="n">start</span> <span class="o">+</span> <span class="n">end</span><span class="o">)</span> <span class="o">/</span> <span class="n">2</span><span class="o">;</span>
+  <span class="k">if</span> <span class="o">(</span><span class="n">array</span><span class="o">[</span><span class="n">mid</span><span class="o">]</span> <span class="o">==</span> <span class="s">&#34;&#34;</span><span class="o">)</span> <span class="o">{</span>
+    <span class="kt">int</span> <span class="n">newMid</span> <span class="o">=</span> <span class="n">leftNonEmpty</span><span class="o">(</span><span class="n">array</span><span class="o">,</span> <span class="n">mid</span><span class="o">);</span>
+    <span class="k">if</span> <span class="o">(</span><span class="n">newMid</span> <span class="o">==</span> <span class="o">-</span><span class="n">1</span><span class="o">)</span> <span class="o">{</span>
+      <span class="n">newMid</span> <span class="o">=</span> <span class="n">rightNonEmpty</span><span class="o">(</span><span class="n">array</span><span class="o">,</span> <span class="n">mid</span><span class="o">);</span>    
+    <span class="o">}</span>
+    <span class="k">if</span> <span class="o">(</span><span class="n">newMid</span> <span class="o">==</span> <span class="o">-</span><span class="n">1</span><span class="o">)</span> <span class="o">{</span>
+      <span class="c1">// 说明左右两边都是空串
+</span><span class="c1"></span>      <span class="k">return</span> <span class="o">-</span><span class="n">1</span><span class="o">;</span>
+    <span class="o">}</span>
+    <span class="n">mid</span> <span class="o">=</span> <span class="n">newMid</span><span class="o">;</span>
+  <span class="o">}</span>
+  
+  <span class="k">if</span> <span class="o">(</span><span class="n">array</span><span class="o">[</span><span class="n">mid</span><span class="o">]</span> <span class="o">==</span> <span class="n">str</span><span class="o">)</span> <span class="o">{</span>
+    <span class="k">return</span> <span class="n">mid</span><span class="o">;</span>
+  <span class="o">}</span>
+  <span class="k">if</span> <span class="o">(</span><span class="n">array</span><span class="o">[</span><span class="n">mid</span><span class="o">]</span> <span class="o">&lt;</span> <span class="n">str</span><span class="o">)</span> <span class="o">{</span>
+    <span class="k">return</span> <span class="n">sparseSearch</span><span class="o">(</span><span class="n">array</span><span class="o">,</span> <span class="n">str</span><span class="o">,</span> <span class="n">mid</span> <span class="o">+</span> <span class="n">1</span><span class="o">,</span> <span class="n">end</span><span class="o">);</span>
+  <span class="o">}</span>
+  <span class="k">return</span> <span class="n">sparseSearch</span><span class="o">(</span><span class="n">array</span><span class="o">,</span> <span class="n">str</span><span class="o">,</span> <span class="n">start</span><span class="o">,</span> <span class="n">mid</span> <span class="o">-</span> <span class="n">1</span><span class="o">);</span>
+<span class="o">}</span>
+
+<span class="kd">private</span> <span class="kt">int</span> <span class="nf">leftNonEmpty</span><span class="o">(</span><span class="n">String</span><span class="o">[]</span> <span class="n">array</span><span class="o">,</span> <span class="kt">int</span> <span class="n">mid</span><span class="o">,</span> <span class="kt">int</span> <span class="n">start</span><span class="o">)</span> <span class="o">{</span>
+  <span class="k">while</span> <span class="o">(</span><span class="n">mid</span> <span class="o">&gt;=</span> <span class="n">start</span><span class="o">)</span> <span class="o">{</span>
+    <span class="k">if</span> <span class="o">(</span><span class="n">array</span><span class="o">[</span><span class="n">mid</span><span class="o">]</span> <span class="o">!=</span> <span class="s">&#34;&#34;</span><span class="o">)</span> <span class="o">{</span>
+      <span class="k">return</span> <span class="n">mid</span><span class="o">;</span>
+    <span class="o">}</span>
+    <span class="n">mid</span><span class="o">--;</span>
+  <span class="o">}</span>
+  <span class="k">return</span> <span class="o">-</span><span class="n">1</span><span class="o">;</span>
+<span class="o">}</span>
+
+<span class="kd">private</span> <span class="kt">int</span> <span class="nf">rightNonEmpty</span><span class="o">(</span><span class="n">String</span><span class="o">[]</span> <span class="n">array</span><span class="o">,</span> <span class="kt">int</span> <span class="n">mid</span><span class="o">,</span> <span class="kt">int</span> <span class="n">end</span><span class="o">)</span> <span class="o">{</span>
+  <span class="k">while</span> <span class="o">(</span><span class="n">mid</span> <span class="o">&lt;=</span> <span class="n">end</span><span class="o">)</span> <span class="o">{</span>
+    <span class="k">if</span> <span class="o">(</span><span class="n">array</span><span class="o">[</span><span class="n">mid</span><span class="o">]</span> <span class="o">!=</span> <span class="s">&#34;&#34;</span><span class="o">)</span> <span class="o">{</span>
+      <span class="k">return</span> <span class="n">mid</span><span class="o">;</span>
+    <span class="o">}</span>
+    <span class="n">mid</span><span class="o">++;</span>
+  <span class="o">}</span>
+  <span class="k">return</span> <span class="o">-</span><span class="n">1</span><span class="o">;</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div></div></div>
   <div class="card-footer"><div class="post-navs d-flex justify-content-evenly">
   <div class="post-nav post-prev"><i class="fas fa-fw fa-chevron-left"></i>
     <a href="/post/cracking-coding-interview/10.4-sorted-search-no-size/">Cracking Coding Interview - 10.4 Sorted Search, No Size

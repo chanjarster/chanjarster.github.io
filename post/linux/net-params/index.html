@@ -12,7 +12,7 @@
 <meta name="description" content="" /><meta itemprop="name" content="常用网络内核参数优化">
 <meta itemprop="description" content=""><meta itemprop="datePublished" content="2021-09-08T14:33:22+08:00" />
 <meta itemprop="dateModified" content="2021-09-08T14:33:22+08:00" />
-<meta itemprop="wordCount" content="307">
+<meta itemprop="wordCount" content="337">
 <meta itemprop="keywords" content="linux,cheatsheet,network,性能调优," /><meta property="og:title" content="常用网络内核参数优化" />
 <meta property="og:description" content="" />
 <meta property="og:type" content="article" />
@@ -227,43 +227,85 @@
 ，根据<a href="../limits">Linux调整内核参数</a>
 的方法调整以下参数值。</p>
 <h2 id="tcp参数">tcp参数<a class="anchor ms-1" href="#tcp参数"><i class="fas fa-link"></i></a></h2>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln"> 1</span><span class="c1"># 增大处于 TIME_WAIT 状态的连接数量</span>
-<span class="ln"> 2</span>net.ipv4.tcp_max_tw_buckets<span class="o">=</span><span class="m">1048576</span>
-<span class="ln"> 3</span><span class="c1"># 增大跟踪连接表大小</span>
-<span class="ln"> 4</span>net.netfilter.nf_conntrack_max<span class="o">=</span><span class="m">1048576</span>
-<span class="ln"> 5</span>
-<span class="ln"> 6</span><span class="c1"># 缩短处于 TIME_WAIT 状态的超时时间</span>
-<span class="ln"> 7</span>net.ipv4.tcp_fin_timeout<span class="o">=</span><span class="m">15</span>
-<span class="ln"> 8</span><span class="c1"># 缩短跟踪连接表中处于 TIME_WAIT 状态连接的超时时间</span>
-<span class="ln"> 9</span>net.netfilter.nf_conntrack_tcp_timeout_time_wait<span class="o">=</span><span class="m">30</span>
-<span class="ln">10</span>
-<span class="ln">11</span><span class="c1"># 允许 TIME_WAIT 状态占用的端口还可以用到新建的连接中</span>
-<span class="ln">12</span>net.ipv4.tcp_tw_reuse<span class="o">=</span><span class="m">1</span>
-<span class="ln">13</span><span class="c1"># 开上一个必须要开这个</span>
-<span class="ln">14</span>net.ipv4.tcp_timestamps<span class="o">=</span><span class="m">1</span>
-<span class="ln">15</span>
-<span class="ln">16</span><span class="c1"># 增大本地端口号的范围</span>
-<span class="ln">17</span>net.ipv4.ip_local_port_range<span class="o">=</span><span class="m">10000</span> <span class="m">65000</span>
-<span class="ln">18</span>
-<span class="ln">19</span><span class="c1"># 增大进程的最大文件描述符数</span>
-<span class="ln">20</span>fs.nr_open<span class="o">=</span><span class="m">1048576</span>
-<span class="ln">21</span><span class="c1"># 系统的最大文件描述符数</span>
-<span class="ln">22</span>fs.file-max<span class="o">=</span><span class="m">1048576</span>
-<span class="ln">23</span>
-<span class="ln">24</span><span class="c1"># 增加半连接的最大数量</span>
-<span class="ln">25</span>net.ipv4.tcp_max_syn_backlog<span class="o">=</span><span class="m">16384</span>
-<span class="ln">26</span><span class="c1"># 开启 SYN Cookies</span>
-<span class="ln">27</span>net.ipv4.tcp_syncookies<span class="o">=</span><span class="m">1</span>
-<span class="ln">28</span><span class="c1"># 减少 SYN_RECV 状态的连接重传 SYN+ACK 包的次数</span>
-<span class="ln">29</span>net.ipv4.tcp_synack_retries<span class="o">=</span><span class="m">1</span>
-<span class="ln">30</span>
-<span class="ln">31</span><span class="c1"># 缩短Keepalive探测包的间隔时间</span>
-<span class="ln">32</span>net.ipv4.tcp_keepalive_intvl<span class="o">=</span><span class="m">30</span>
-<span class="ln">33</span><span class="c1"># 缩短最后一次数据包到Keepalive探测包的间隔时间</span>
-<span class="ln">34</span>net.ipv4.tcp_keepalive_time<span class="o">=</span><span class="m">600</span>
-<span class="ln">35</span><span class="c1"># 减少Keepalive探测失败后通知应用程序前的重试次数</span>
-<span class="ln">36</span>net.ipv4.tcp_keepalive_probes<span class="o">=</span><span class="m">3</span>
-</code></pre></div></div></div>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="c1"># 增大处于 TIME_WAIT 状态的连接数量</span>
+net.ipv4.tcp_max_tw_buckets<span class="o">=</span><span class="m">1048576</span>
+<span class="c1"># 增大跟踪连接表大小</span>
+net.netfilter.nf_conntrack_max<span class="o">=</span><span class="m">1048576</span>
+
+<span class="c1"># 缩短处于 TIME_WAIT 状态的超时时间</span>
+net.ipv4.tcp_fin_timeout<span class="o">=</span><span class="m">15</span>
+<span class="c1"># 缩短跟踪连接表中处于 TIME_WAIT 状态连接的超时时间</span>
+net.netfilter.nf_conntrack_tcp_timeout_time_wait<span class="o">=</span><span class="m">30</span>
+
+<span class="c1"># 允许 TIME_WAIT 状态占用的端口还可以用到新建的连接中</span>
+net.ipv4.tcp_tw_reuse<span class="o">=</span><span class="m">1</span>
+<span class="c1"># 开上一个必须要开这个</span>
+net.ipv4.tcp_timestamps<span class="o">=</span><span class="m">1</span>
+
+<span class="c1"># 增大本地端口号的范围</span>
+net.ipv4.ip_local_port_range<span class="o">=</span><span class="m">10000</span> <span class="m">65000</span>
+
+<span class="c1"># 增大进程的最大文件描述符数</span>
+fs.nr_open<span class="o">=</span><span class="m">1048576</span>
+<span class="c1"># 系统的最大文件描述符数</span>
+fs.file-max<span class="o">=</span><span class="m">1048576</span>
+
+<span class="c1"># 增加半连接的最大数量</span>
+net.ipv4.tcp_max_syn_backlog<span class="o">=</span><span class="m">16384</span>
+<span class="c1"># 开启 SYN Cookies</span>
+net.ipv4.tcp_syncookies<span class="o">=</span><span class="m">1</span>
+<span class="c1"># 减少 SYN_RECV 状态的连接重传 SYN+ACK 包的次数</span>
+net.ipv4.tcp_synack_retries<span class="o">=</span><span class="m">1</span>
+
+<span class="c1"># 缩短Keepalive探测包的间隔时间</span>
+net.ipv4.tcp_keepalive_intvl<span class="o">=</span><span class="m">30</span>
+<span class="c1"># 缩短最后一次数据包到Keepalive探测包的间隔时间</span>
+net.ipv4.tcp_keepalive_time<span class="o">=</span><span class="m">600</span>
+<span class="c1"># 减少Keepalive探测失败后通知应用程序前的重试次数</span>
+net.ipv4.tcp_keepalive_probes<span class="o">=</span><span class="m">3</span>
+</code></pre></td></tr></table>
+</div>
+</div></div></div>
   <div class="card-footer"><div class="post-navs d-flex justify-content-evenly">
   <div class="post-nav post-prev"><i class="fas fa-fw fa-chevron-left"></i>
     <a href="/post/linux/too-many-time-wait-troubleshooting/">压测时大量TIME_WAIT问题排查

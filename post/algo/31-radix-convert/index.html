@@ -12,7 +12,7 @@
 <meta name="description" content="" /><meta itemprop="name" content="算法 - 进制转换">
 <meta itemprop="description" content=""><meta itemprop="datePublished" content="2020-05-12T20:46:10+08:00" />
 <meta itemprop="dateModified" content="2020-05-12T20:46:10+08:00" />
-<meta itemprop="wordCount" content="272">
+<meta itemprop="wordCount" content="278">
 <meta itemprop="keywords" content="ARTS-A," /><meta property="og:title" content="算法 - 进制转换" />
 <meta property="og:description" content="" />
 <meta property="og:type" content="article" />
@@ -223,40 +223,84 @@
 </div>
 <div class="post-content mb-3"><p>问题：把10进制转换成N进制，可以使用52个大小写英文字母+10个数字来表达新数字</p>
 <p>解法：把数字不停的除以N，得到的余数则是N进制的位，然后对商再除以N，如此反复，直到商为0位置，把这些余数串起来就是N进制的表现形式了。</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln"> 1</span>16 | 255
-<span class="ln"> 2</span>   -----
-<span class="ln"> 3</span>16  | 15  余数: 15 (f)
-<span class="ln"> 4</span>    ----
-<span class="ln"> 5</span>       0  余数: 15 (f)
-<span class="ln"> 6</span>
-<span class="ln"> 7</span>所以hex(255) = ff
-<span class="ln"> 8</span>
-<span class="ln"> 9</span>16 | 254
-<span class="ln">10</span>   -----
-<span class="ln">11</span>16  | 15  余数: 14 (e)
-<span class="ln">12</span>    ----
-<span class="ln">13</span>       0  余数: 15 (f)
-<span class="ln">14</span>
-<span class="ln">15</span>所以hex(254) = fe
-</code></pre></div><p>代码：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="ln"> 1</span><span class="kd">var</span> <span class="nx">ntab</span> <span class="p">=</span> <span class="p">[]</span><span class="nb">byte</span><span class="p">(</span><span class="s">&#34;0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ&#34;</span><span class="p">)</span>
-<span class="ln"> 2</span>
-<span class="ln"> 3</span><span class="kd">func</span> <span class="nf">convert</span><span class="p">(</span><span class="nx">num</span> <span class="kt">int</span><span class="p">,</span> <span class="nx">radix</span> <span class="kt">int</span><span class="p">)</span> <span class="kt">string</span> <span class="p">{</span>
-<span class="ln"> 4</span>	<span class="nx">r</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">([]</span><span class="kt">byte</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
-<span class="ln"> 5</span>	<span class="k">for</span> <span class="nx">num</span> <span class="o">!=</span> <span class="mi">0</span> <span class="p">{</span>
-<span class="ln"> 6</span>		<span class="nx">d</span> <span class="o">:=</span> <span class="nx">num</span> <span class="o">/</span> <span class="nx">radix</span>
-<span class="ln"> 7</span>		<span class="nx">m</span> <span class="o">:=</span> <span class="nx">num</span> <span class="o">%</span> <span class="nx">radix</span>
-<span class="ln"> 8</span>		<span class="nx">r</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">r</span><span class="p">,</span> <span class="nx">ntab</span><span class="p">[</span><span class="nx">m</span><span class="p">])</span>
-<span class="ln"> 9</span>		<span class="nx">num</span> <span class="p">=</span> <span class="nx">d</span>
-<span class="ln">10</span>	<span class="p">}</span>
-<span class="ln">11</span>	<span class="c1">// 把结果反转过来
-</span><span class="ln">12</span><span class="c1"></span>	<span class="k">for</span> <span class="nx">i</span> <span class="o">:=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">i</span> <span class="p">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="nx">r</span><span class="p">)</span><span class="o">/</span><span class="mi">2</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span> <span class="p">{</span>
-<span class="ln">13</span>		<span class="nx">oi</span> <span class="o">:=</span> <span class="nb">len</span><span class="p">(</span><span class="nx">r</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span> <span class="o">-</span> <span class="nx">i</span>
-<span class="ln">14</span>		<span class="nx">r</span><span class="p">[</span><span class="nx">i</span><span class="p">],</span> <span class="nx">r</span><span class="p">[</span><span class="nx">oi</span><span class="p">]</span> <span class="p">=</span> <span class="nx">r</span><span class="p">[</span><span class="nx">oi</span><span class="p">],</span> <span class="nx">r</span><span class="p">[</span><span class="nx">i</span><span class="p">]</span>
-<span class="ln">15</span>	<span class="p">}</span>
-<span class="ln">16</span>	<span class="k">return</span> <span class="nb">string</span><span class="p">(</span><span class="nx">r</span><span class="p">)</span>
-<span class="ln">17</span><span class="p">}</span>
-</code></pre></div><p>​</p></div></div>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt">16 | 255
+   -----
+16  | 15  余数: 15 (f)
+    ----
+       0  余数: 15 (f)
+
+所以hex(255) = ff
+
+16 | 254
+   -----
+16  | 15  余数: 14 (e)
+    ----
+       0  余数: 15 (f)
+
+所以hex(254) = fe
+</code></pre></td></tr></table>
+</div>
+</div><p>代码：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="kd">var</span> <span class="nx">ntab</span> <span class="p">=</span> <span class="p">[]</span><span class="nb">byte</span><span class="p">(</span><span class="s">&#34;0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ&#34;</span><span class="p">)</span>
+
+<span class="kd">func</span> <span class="nf">convert</span><span class="p">(</span><span class="nx">num</span> <span class="kt">int</span><span class="p">,</span> <span class="nx">radix</span> <span class="kt">int</span><span class="p">)</span> <span class="kt">string</span> <span class="p">{</span>
+	<span class="nx">r</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">([]</span><span class="kt">byte</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+	<span class="k">for</span> <span class="nx">num</span> <span class="o">!=</span> <span class="mi">0</span> <span class="p">{</span>
+		<span class="nx">d</span> <span class="o">:=</span> <span class="nx">num</span> <span class="o">/</span> <span class="nx">radix</span>
+		<span class="nx">m</span> <span class="o">:=</span> <span class="nx">num</span> <span class="o">%</span> <span class="nx">radix</span>
+		<span class="nx">r</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">r</span><span class="p">,</span> <span class="nx">ntab</span><span class="p">[</span><span class="nx">m</span><span class="p">])</span>
+		<span class="nx">num</span> <span class="p">=</span> <span class="nx">d</span>
+	<span class="p">}</span>
+	<span class="c1">// 把结果反转过来
+</span><span class="c1"></span>	<span class="k">for</span> <span class="nx">i</span> <span class="o">:=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">i</span> <span class="p">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="nx">r</span><span class="p">)</span><span class="o">/</span><span class="mi">2</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span> <span class="p">{</span>
+		<span class="nx">oi</span> <span class="o">:=</span> <span class="nb">len</span><span class="p">(</span><span class="nx">r</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span> <span class="o">-</span> <span class="nx">i</span>
+		<span class="nx">r</span><span class="p">[</span><span class="nx">i</span><span class="p">],</span> <span class="nx">r</span><span class="p">[</span><span class="nx">oi</span><span class="p">]</span> <span class="p">=</span> <span class="nx">r</span><span class="p">[</span><span class="nx">oi</span><span class="p">],</span> <span class="nx">r</span><span class="p">[</span><span class="nx">i</span><span class="p">]</span>
+	<span class="p">}</span>
+	<span class="k">return</span> <span class="nb">string</span><span class="p">(</span><span class="nx">r</span><span class="p">)</span>
+<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>​</p></div></div>
   <div class="card-footer"><div class="post-navs d-flex justify-content-evenly">
   <div class="post-nav post-prev"><i class="fas fa-fw fa-chevron-left"></i>
     <a href="/post/algo/30-shorturl/">算法 - 如何实现短网址服务

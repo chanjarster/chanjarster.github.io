@@ -12,7 +12,7 @@
 <meta name="description" content="" /><meta itemprop="name" content="Cracking Coding Interview - 5.2 Binary to String">
 <meta itemprop="description" content=""><meta itemprop="datePublished" content="2019-08-19T10:50:11+08:00" />
 <meta itemprop="dateModified" content="2019-08-19T10:50:11+08:00" />
-<meta itemprop="wordCount" content="487">
+<meta itemprop="wordCount" content="491">
 <meta itemprop="keywords" content="ARTS-A," /><meta property="og:title" content="Cracking Coding Interview - 5.2 Binary to String" />
 <meta property="og:description" content="" />
 <meta property="og:type" content="article" />
@@ -229,29 +229,61 @@
 <p>这个题是看了答案才知道什么意思的。</p>
 <p>给你一个数字<code>0.72</code>，让你求它的二进制，答案是是<code>0.1001</code>，实际上就是把后面的<code>72</code>算成二进制。</p>
 <p>怎么算出来呢？这个问题可以这么理解，<code>0.72</code>的二进制有一堆01组成，但是我们不知道，我们得挨个找出来。可以这么做，看<code>.</code>小数点后面的第1个数字是0还是1、再看第2个数字、再看第3个数字。但是我们的二进制操作只支持整形不只支持小数点咋整？我们可以把这个数字<code>* 2</code>让它进到整形部分再判断：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln">1</span>num     = 0.1001000     (0.72)
-<span class="ln">2</span>num * 2 = 1.001000
-</code></pre></div><p>结果是否&gt;=1，如果是则该bit为1，否则为0。这里通过 <code>* 2</code>可以进位的原理和十进制通过<code>* 10</code>进位是一样的。比如<code>0.72</code>可以看成是7 * 10<sup>-1</sup> + 2 * 10<sup>-2</sup>，而<code>0.1001</code>可以看成是 1 * 2<sup>-1</sup> + 0 * 2<sup>-2</sup> + 0 * 2<sup>-3</sup> + 1 * 2<sup>-4</sup> 。通过 <code>* 2</code>可以将第一个小数位进入到整数，从而判断其是否为1。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt">num     = 0.1001000     (0.72)
+num * 2 = 1.001000
+</code></pre></td></tr></table>
+</div>
+</div><p>结果是否&gt;=1，如果是则该bit为1，否则为0。这里通过 <code>* 2</code>可以进位的原理和十进制通过<code>* 10</code>进位是一样的。比如<code>0.72</code>可以看成是7 * 10<sup>-1</sup> + 2 * 10<sup>-2</sup>，而<code>0.1001</code>可以看成是 1 * 2<sup>-1</sup> + 0 * 2<sup>-2</sup> + 0 * 2<sup>-3</sup> + 1 * 2<sup>-4</sup> 。通过 <code>* 2</code>可以将第一个小数位进入到整数，从而判断其是否为1。</p>
 <p>代码：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln"> 1</span><span class="kd">public</span> <span class="n">String</span> <span class="nf">binToStr</span><span class="o">(</span><span class="kt">double</span> <span class="n">num</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 2</span>  <span class="n">StringBuilder</span> <span class="n">sb</span> <span class="o">=</span> <span class="k">new</span> <span class="n">StringBuilder</span><span class="o">();</span>
-<span class="ln"> 3</span>  <span class="n">sb</span><span class="o">.</span><span class="na">append</span><span class="o">(</span><span class="sc">&#39;.&#39;</span><span class="o">);</span>
-<span class="ln"> 4</span>  <span class="k">while</span> <span class="o">(</span><span class="n">num</span> <span class="o">&gt;</span> <span class="n">0</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 5</span>    <span class="k">if</span> <span class="o">(</span><span class="n">sb</span><span class="o">.</span><span class="na">length</span><span class="o">()</span> <span class="o">&gt;</span> <span class="n">32</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 6</span>      <span class="k">return</span> <span class="s">&#34;ERROR&#34;</span><span class="o">;</span>
-<span class="ln"> 7</span>    <span class="o">}</span>
-<span class="ln"> 8</span>    <span class="kt">double</span> <span class="n">r</span> <span class="o">=</span> <span class="n">num</span> <span class="o">*</span> <span class="n">2</span><span class="o">;</span>
-<span class="ln"> 9</span>    <span class="k">if</span> <span class="o">(</span><span class="n">r</span> <span class="o">&gt;=</span> <span class="n">1</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">10</span>      <span class="n">sb</span><span class="o">.</span><span class="na">append</span><span class="o">(</span><span class="sc">&#39;1&#39;</span><span class="o">);</span>
-<span class="ln">11</span>      <span class="n">num</span> <span class="o">=</span> <span class="n">r</span> <span class="o">-</span> <span class="n">1</span><span class="o">;</span> <span class="c1">// 减掉1，在下个迭代中处理剩余的小数
-</span><span class="ln">12</span><span class="c1"></span>    <span class="o">}</span> <span class="k">else</span> <span class="o">{</span>
-<span class="ln">13</span>      <span class="n">sb</span><span class="o">.</span><span class="na">append</span><span class="o">(</span><span class="sc">&#39;0&#39;</span><span class="o">);</span>
-<span class="ln">14</span>      <span class="n">num</span> <span class="o">=</span> <span class="n">r</span><span class="o">;</span>
-<span class="ln">15</span>    <span class="o">}</span>
-<span class="ln">16</span>  <span class="o">}</span>
-<span class="ln">17</span>  <span class="k">return</span> <span class="n">sb</span><span class="o">.</span><span class="na">toString</span><span class="o">();</span>
-<span class="ln">18</span><span class="o">}</span>
-</code></pre></div></div></div>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="kd">public</span> <span class="n">String</span> <span class="nf">binToStr</span><span class="o">(</span><span class="kt">double</span> <span class="n">num</span><span class="o">)</span> <span class="o">{</span>
+  <span class="n">StringBuilder</span> <span class="n">sb</span> <span class="o">=</span> <span class="k">new</span> <span class="n">StringBuilder</span><span class="o">();</span>
+  <span class="n">sb</span><span class="o">.</span><span class="na">append</span><span class="o">(</span><span class="sc">&#39;.&#39;</span><span class="o">);</span>
+  <span class="k">while</span> <span class="o">(</span><span class="n">num</span> <span class="o">&gt;</span> <span class="n">0</span><span class="o">)</span> <span class="o">{</span>
+    <span class="k">if</span> <span class="o">(</span><span class="n">sb</span><span class="o">.</span><span class="na">length</span><span class="o">()</span> <span class="o">&gt;</span> <span class="n">32</span><span class="o">)</span> <span class="o">{</span>
+      <span class="k">return</span> <span class="s">&#34;ERROR&#34;</span><span class="o">;</span>
+    <span class="o">}</span>
+    <span class="kt">double</span> <span class="n">r</span> <span class="o">=</span> <span class="n">num</span> <span class="o">*</span> <span class="n">2</span><span class="o">;</span>
+    <span class="k">if</span> <span class="o">(</span><span class="n">r</span> <span class="o">&gt;=</span> <span class="n">1</span><span class="o">)</span> <span class="o">{</span>
+      <span class="n">sb</span><span class="o">.</span><span class="na">append</span><span class="o">(</span><span class="sc">&#39;1&#39;</span><span class="o">);</span>
+      <span class="n">num</span> <span class="o">=</span> <span class="n">r</span> <span class="o">-</span> <span class="n">1</span><span class="o">;</span> <span class="c1">// 减掉1，在下个迭代中处理剩余的小数
+</span><span class="c1"></span>    <span class="o">}</span> <span class="k">else</span> <span class="o">{</span>
+      <span class="n">sb</span><span class="o">.</span><span class="na">append</span><span class="o">(</span><span class="sc">&#39;0&#39;</span><span class="o">);</span>
+      <span class="n">num</span> <span class="o">=</span> <span class="n">r</span><span class="o">;</span>
+    <span class="o">}</span>
+  <span class="o">}</span>
+  <span class="k">return</span> <span class="n">sb</span><span class="o">.</span><span class="na">toString</span><span class="o">();</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div></div></div>
   <div class="card-footer"><div class="post-navs d-flex justify-content-evenly">
   <div class="post-nav post-prev"><i class="fas fa-fw fa-chevron-left"></i>
     <a href="/post/cracking-coding-interview/5.1-insertion/">Cracking Coding Interview - 5.1 Insertion

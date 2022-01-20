@@ -12,7 +12,7 @@
 <meta name="description" content="" /><meta itemprop="name" content="MySQL Master Slave Docker部署例子">
 <meta itemprop="description" content=""><meta itemprop="datePublished" content="2019-06-18T17:33:31+08:00" />
 <meta itemprop="dateModified" content="2019-06-18T17:33:31+08:00" />
-<meta itemprop="wordCount" content="1535">
+<meta itemprop="wordCount" content="1582">
 <meta itemprop="keywords" content="docker,mysql," /><meta property="og:title" content="MySQL Master Slave Docker部署例子" />
 <meta property="og:description" content="" />
 <meta property="og:type" content="article" />
@@ -228,108 +228,251 @@
 <p>用Docker部署基于GTID的MySQL Master-Slave Replication例子。</p>
 <h2 id="启动master">启动Master<a class="anchor ms-1" href="#启动master"><i class="fas fa-link"></i></a></h2>
 <p>写一个文件<code>mysql-master.cnf</code>：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln">1</span>[mysqld]
-<span class="ln">2</span>server_id=1
-<span class="ln">3</span>binlog_format=ROW
-<span class="ln">4</span>gtid_mode=ON
-<span class="ln">5</span>enforce-gtid-consistency=true
-</code></pre></div><p>这个配置文件把Master的<code>server_id</code>设置为1，要注意在同一个Master-Slave集群里，<code>server_id</code>不能重复。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt">[mysqld]
+server_id=1
+binlog_format=ROW
+gtid_mode=ON
+enforce-gtid-consistency=true
+</code></pre></td></tr></table>
+</div>
+</div><p>这个配置文件把Master的<code>server_id</code>设置为1，要注意在同一个Master-Slave集群里，<code>server_id</code>不能重复。</p>
 <p>启动Master：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>docker run -d --name mysql-master <span class="se">\
-</span><span class="ln">2</span><span class="se"></span>  -e <span class="nv">MYSQL_USER</span><span class="o">=</span>my_user <span class="se">\
-</span><span class="ln">3</span><span class="se"></span>  -e <span class="nv">MYSQL_DATABASE</span><span class="o">=</span>my_database <span class="se">\
-</span><span class="ln">4</span><span class="se"></span>  -e <span class="nv">MYSQL_PASSWORD</span><span class="o">=</span>my_database_password <span class="se">\
-</span><span class="ln">5</span><span class="se"></span>  -e <span class="nv">MYSQL_ROOT_PASSWORD</span><span class="o">=</span>my_root_password <span class="se">\
-</span><span class="ln">6</span><span class="se"></span>  -p 3307:3306 <span class="se">\
-</span><span class="ln">7</span><span class="se"></span>  -v <span class="k">$(</span><span class="nb">pwd</span><span class="k">)</span>/mysql-master.cnf:/etc/mysql/conf.d/mysql-master.cnf <span class="se">\
-</span><span class="ln">8</span><span class="se"></span>  mysql:8.0 <span class="se">\
-</span><span class="ln">9</span><span class="se"></span>  --log-bin<span class="o">=</span>my
-</code></pre></div><h2 id="启动slave">启动Slave<a class="anchor ms-1" href="#启动slave"><i class="fas fa-link"></i></a></h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span><span class="lnt">9
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">docker run -d --name mysql-master <span class="se">\
+</span><span class="se"></span>  -e <span class="nv">MYSQL_USER</span><span class="o">=</span>my_user <span class="se">\
+</span><span class="se"></span>  -e <span class="nv">MYSQL_DATABASE</span><span class="o">=</span>my_database <span class="se">\
+</span><span class="se"></span>  -e <span class="nv">MYSQL_PASSWORD</span><span class="o">=</span>my_database_password <span class="se">\
+</span><span class="se"></span>  -e <span class="nv">MYSQL_ROOT_PASSWORD</span><span class="o">=</span>my_root_password <span class="se">\
+</span><span class="se"></span>  -p 3307:3306 <span class="se">\
+</span><span class="se"></span>  -v <span class="k">$(</span><span class="nb">pwd</span><span class="k">)</span>/mysql-master.cnf:/etc/mysql/conf.d/mysql-master.cnf <span class="se">\
+</span><span class="se"></span>  mysql:8.0 <span class="se">\
+</span><span class="se"></span>  --log-bin<span class="o">=</span>my
+</code></pre></td></tr></table>
+</div>
+</div><h2 id="启动slave">启动Slave<a class="anchor ms-1" href="#启动slave"><i class="fas fa-link"></i></a></h2>
 <p>写一个文件<code>mysql-slave-1.cnf</code>：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln">1</span>[mysqld]
-<span class="ln">2</span>server_id=2
-<span class="ln">3</span>binlog_format=ROW
-<span class="ln">4</span>gtid_mode=ON
-<span class="ln">5</span>enforce-gtid-consistency=true
-<span class="ln">6</span>read_only=ON
-</code></pre></div><p>这个文件把Slave的<code>server_id</code>设置为2，如果你有多个Slave，那么得分别设置不同的<code>server_id</code>。此外，将Slave设置为<code>read_only</code>模式（这样就不能在slave上执行写操作了）。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt">[mysqld]
+server_id=2
+binlog_format=ROW
+gtid_mode=ON
+enforce-gtid-consistency=true
+read_only=ON
+</code></pre></td></tr></table>
+</div>
+</div><p>这个文件把Slave的<code>server_id</code>设置为2，如果你有多个Slave，那么得分别设置不同的<code>server_id</code>。此外，将Slave设置为<code>read_only</code>模式（这样就不能在slave上执行写操作了）。</p>
 <p>启动Slave：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>docker run -d --name mysql-slave-1 <span class="se">\
-</span><span class="ln">2</span><span class="se"></span>  -e <span class="nv">MYSQL_ROOT_PASSWORD</span><span class="o">=</span>my_root_password <span class="se">\
-</span><span class="ln">3</span><span class="se"></span>  -p 3308:3306 <span class="se">\
-</span><span class="ln">4</span><span class="se"></span>  -v <span class="k">$(</span><span class="nb">pwd</span><span class="k">)</span>/mysql-slave-1.cnf:/etc/mysql/conf.d/mysql-slave-1.cnf <span class="se">\
-</span><span class="ln">5</span><span class="se"></span>  mysql:8.0 <span class="se">\
-</span><span class="ln">6</span><span class="se"></span>  --skip-log-bin <span class="se">\
-</span><span class="ln">7</span><span class="se"></span>  --skip-log-slave-updates <span class="se">\
-</span><span class="ln">8</span><span class="se"></span>  --skip-slave-start
-</code></pre></div><h2 id="创建replication用户">创建Replication用户<a class="anchor ms-1" href="#创建replication用户"><i class="fas fa-link"></i></a></h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">docker run -d --name mysql-slave-1 <span class="se">\
+</span><span class="se"></span>  -e <span class="nv">MYSQL_ROOT_PASSWORD</span><span class="o">=</span>my_root_password <span class="se">\
+</span><span class="se"></span>  -p 3308:3306 <span class="se">\
+</span><span class="se"></span>  -v <span class="k">$(</span><span class="nb">pwd</span><span class="k">)</span>/mysql-slave-1.cnf:/etc/mysql/conf.d/mysql-slave-1.cnf <span class="se">\
+</span><span class="se"></span>  mysql:8.0 <span class="se">\
+</span><span class="se"></span>  --skip-log-bin <span class="se">\
+</span><span class="se"></span>  --skip-log-slave-updates <span class="se">\
+</span><span class="se"></span>  --skip-slave-start
+</code></pre></td></tr></table>
+</div>
+</div><h2 id="创建replication用户">创建Replication用户<a class="anchor ms-1" href="#创建replication用户"><i class="fas fa-link"></i></a></h2>
 <p>到Master上创建Replication用户：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>$ docker <span class="nb">exec</span> -it mysql-master mysql -u root -p
-<span class="ln">2</span>Enter password: my_root_password
-<span class="ln">3</span>
-<span class="ln">4</span>mysql&gt; CREATE USER <span class="s1">&#39;repl&#39;</span>@<span class="s1">&#39;%&#39;</span> IDENTIFIED BY <span class="s1">&#39;password&#39;</span><span class="p">;</span>
-<span class="ln">5</span>mysql&gt; GRANT REPLICATION SLAVE ON *.* TO <span class="s1">&#39;repl&#39;</span>@<span class="s1">&#39;%&#39;</span><span class="p">;</span>
-</code></pre></div><h2 id="将slave和master关联">将Slave和Master关联<a class="anchor ms-1" href="#将slave和master关联"><i class="fas fa-link"></i></a></h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">$ docker <span class="nb">exec</span> -it mysql-master mysql -u root -p
+Enter password: my_root_password
+
+mysql&gt; CREATE USER <span class="s1">&#39;repl&#39;</span>@<span class="s1">&#39;%&#39;</span> IDENTIFIED BY <span class="s1">&#39;password&#39;</span><span class="p">;</span>
+mysql&gt; GRANT REPLICATION SLAVE ON *.* TO <span class="s1">&#39;repl&#39;</span>@<span class="s1">&#39;%&#39;</span><span class="p">;</span>
+</code></pre></td></tr></table>
+</div>
+</div><h2 id="将slave和master关联">将Slave和Master关联<a class="anchor ms-1" href="#将slave和master关联"><i class="fas fa-link"></i></a></h2>
 <p>到Slave上把自己和Master关联起来：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln"> 1</span>$ docker <span class="nb">exec</span> -it mysql-slave-1 mysql -u root -p
-<span class="ln"> 2</span>Enter password: my_root_password
-<span class="ln"> 3</span>
-<span class="ln"> 4</span>mysql&gt; CHANGE MASTER TO 
-<span class="ln"> 5</span>  <span class="nv">MASTER_HOST</span><span class="o">=</span><span class="s1">&#39;192.168.101.21&#39;</span>,
-<span class="ln"> 6</span>  <span class="nv">MASTER_PORT</span><span class="o">=</span>3307,
-<span class="ln"> 7</span>  <span class="nv">MASTER_USER</span><span class="o">=</span><span class="s1">&#39;repl&#39;</span>,
-<span class="ln"> 8</span>  <span class="nv">MASTER_PASSWORD</span><span class="o">=</span><span class="s1">&#39;password&#39;</span>,
-<span class="ln"> 9</span>  <span class="nv">GET_MASTER_PUBLIC_KEY</span><span class="o">=</span>1,
-<span class="ln">10</span>  <span class="nv">MASTER_AUTO_POSITION</span><span class="o">=</span>1<span class="p">;</span>
-</code></pre></div><p>注意<code>MASTER_HOST</code>写的是Master所在的Host的IP，<code>MASTER_PORT</code>写的是Master暴露在Host上的端口，<code>MASTER_USER</code>和<code>MASTER_PASSWORD</code>则是Replication用户的信息。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">$ docker <span class="nb">exec</span> -it mysql-slave-1 mysql -u root -p
+Enter password: my_root_password
+
+mysql&gt; CHANGE MASTER TO 
+  <span class="nv">MASTER_HOST</span><span class="o">=</span><span class="s1">&#39;192.168.101.21&#39;</span>,
+  <span class="nv">MASTER_PORT</span><span class="o">=</span>3307,
+  <span class="nv">MASTER_USER</span><span class="o">=</span><span class="s1">&#39;repl&#39;</span>,
+  <span class="nv">MASTER_PASSWORD</span><span class="o">=</span><span class="s1">&#39;password&#39;</span>,
+  <span class="nv">GET_MASTER_PUBLIC_KEY</span><span class="o">=</span>1,
+  <span class="nv">MASTER_AUTO_POSITION</span><span class="o">=</span>1<span class="p">;</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>注意<code>MASTER_HOST</code>写的是Master所在的Host的IP，<code>MASTER_PORT</code>写的是Master暴露在Host上的端口，<code>MASTER_USER</code>和<code>MASTER_PASSWORD</code>则是Replication用户的信息。</p>
 <p>最后正式启动Slave：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>mysql&gt; START SLAVE<span class="p">;</span>
-</code></pre></div><h2 id="验证">验证<a class="anchor ms-1" href="#验证"><i class="fas fa-link"></i></a></h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">mysql&gt; START SLAVE<span class="p">;</span>
+</code></pre></td></tr></table>
+</div>
+</div><h2 id="验证">验证<a class="anchor ms-1" href="#验证"><i class="fas fa-link"></i></a></h2>
 <p>到Slave上看看my_database是否存在：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln"> 1</span>$ docker <span class="nb">exec</span> -it mysql-slave-1 mysql -u root -p
-<span class="ln"> 2</span>Enter password: my_root_password
-<span class="ln"> 3</span>
-<span class="ln"> 4</span>mysql&gt; show databases<span class="p">;</span>
-<span class="ln"> 5</span>+--------------------+
-<span class="ln"> 6</span><span class="p">|</span> Database           <span class="p">|</span>
-<span class="ln"> 7</span>+--------------------+
-<span class="ln"> 8</span><span class="p">|</span> information_schema <span class="p">|</span>
-<span class="ln"> 9</span><span class="p">|</span> my_database        <span class="p">|</span>
-<span class="ln">10</span><span class="p">|</span> mysql              <span class="p">|</span>
-<span class="ln">11</span><span class="p">|</span> performance_schema <span class="p">|</span>
-<span class="ln">12</span><span class="p">|</span> sys                <span class="p">|</span>
-<span class="ln">13</span>+--------------------+
-<span class="ln">14</span><span class="m">5</span> rows in <span class="nb">set</span> <span class="o">(</span>0.01 sec<span class="o">)</span>
-</code></pre></div><p>如果有就说明my_database从Master复制到了Slave上。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">$ docker <span class="nb">exec</span> -it mysql-slave-1 mysql -u root -p
+Enter password: my_root_password
+
+mysql&gt; show databases<span class="p">;</span>
++--------------------+
+<span class="p">|</span> Database           <span class="p">|</span>
++--------------------+
+<span class="p">|</span> information_schema <span class="p">|</span>
+<span class="p">|</span> my_database        <span class="p">|</span>
+<span class="p">|</span> mysql              <span class="p">|</span>
+<span class="p">|</span> performance_schema <span class="p">|</span>
+<span class="p">|</span> sys                <span class="p">|</span>
++--------------------+
+<span class="m">5</span> rows in <span class="nb">set</span> <span class="o">(</span>0.01 sec<span class="o">)</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>如果有就说明my_database从Master复制到了Slave上。</p>
 <h2 id="docker-compose版本">docker-compose版本<a class="anchor ms-1" href="#docker-compose版本"><i class="fas fa-link"></i></a></h2>
 <p>在<a href="https://github.com/chanjarster/mysql-master-slave-docker-example" target="_blank" rel="noopener noreferrer">github</a>
 上也提供了docker-compose.yaml，操作过程和上述一致，只不过容器名字会有变化。</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span><span class="c1"># 拉起Master和Slave</span>
-<span class="ln">2</span>$ docker-compose -p mysql-repl up
-<span class="ln">3</span><span class="c1"># 连接Master</span>
-<span class="ln">4</span>$ docker <span class="nb">exec</span> -it mysql-repl_mysql-master_1 mysql -u root -p
-<span class="ln">5</span><span class="c1"># 连接Slave</span>
-<span class="ln">6</span>$ docker <span class="nb">exec</span> -it mysql-repl_mysql-slave_1 mysql -u root -p
-</code></pre></div><p>并且<code>CHANGE MASTER TO</code>语句有所不同，使用的是Master的Service Name以及容器内端口<code>3306</code>：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>CHANGE MASTER TO 
-<span class="ln">2</span>  <span class="nv">MASTER_HOST</span><span class="o">=</span><span class="s1">&#39;mysql-master&#39;</span>,
-<span class="ln">3</span>  <span class="nv">MASTER_PORT</span><span class="o">=</span>3306,
-<span class="ln">4</span>  <span class="nv">MASTER_USER</span><span class="o">=</span><span class="s1">&#39;repl&#39;</span>,
-<span class="ln">5</span>  <span class="nv">MASTER_PASSWORD</span><span class="o">=</span><span class="s1">&#39;password&#39;</span>,
-<span class="ln">6</span>  <span class="nv">GET_MASTER_PUBLIC_KEY</span><span class="o">=</span>1,
-<span class="ln">7</span>  <span class="nv">MASTER_AUTO_POSITION</span><span class="o">=</span>1<span class="p">;</span>
-</code></pre></div><h2 id="troubleshooting">Troubleshooting<a class="anchor ms-1" href="#troubleshooting"><i class="fas fa-link"></i></a></h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="c1"># 拉起Master和Slave</span>
+$ docker-compose -p mysql-repl up
+<span class="c1"># 连接Master</span>
+$ docker <span class="nb">exec</span> -it mysql-repl_mysql-master_1 mysql -u root -p
+<span class="c1"># 连接Slave</span>
+$ docker <span class="nb">exec</span> -it mysql-repl_mysql-slave_1 mysql -u root -p
+</code></pre></td></tr></table>
+</div>
+</div><p>并且<code>CHANGE MASTER TO</code>语句有所不同，使用的是Master的Service Name以及容器内端口<code>3306</code>：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">CHANGE MASTER TO 
+  <span class="nv">MASTER_HOST</span><span class="o">=</span><span class="s1">&#39;mysql-master&#39;</span>,
+  <span class="nv">MASTER_PORT</span><span class="o">=</span>3306,
+  <span class="nv">MASTER_USER</span><span class="o">=</span><span class="s1">&#39;repl&#39;</span>,
+  <span class="nv">MASTER_PASSWORD</span><span class="o">=</span><span class="s1">&#39;password&#39;</span>,
+  <span class="nv">GET_MASTER_PUBLIC_KEY</span><span class="o">=</span>1,
+  <span class="nv">MASTER_AUTO_POSITION</span><span class="o">=</span>1<span class="p">;</span>
+</code></pre></td></tr></table>
+</div>
+</div><h2 id="troubleshooting">Troubleshooting<a class="anchor ms-1" href="#troubleshooting"><i class="fas fa-link"></i></a></h2>
 <h3 id="docker-run版本在mac上无法工作">docker run版本在Mac上无法工作<a class="anchor ms-1" href="#docker-run版本在mac上无法工作"><i class="fas fa-link"></i></a></h3>
 <p>这个是因为Slave容器无法访问到Master的host。解决办法我也不知道。</p>
 <h3 id="关于get_master_public_key">关于GET_MASTER_PUBLIC_KEY<a class="anchor ms-1" href="#关于get_master_public_key"><i class="fas fa-link"></i></a></h3>
 <p>在做本例子时出现过Slave无法连接到Master的情况：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln">1</span>2019-06-19T01:34:24.361566Z 8 [System] [MY-010597] [Repl] &#39;CHANGE MASTER TO FOR CHANNEL &#39;&#39; executed&#39;. Previous state master_host=&#39;&#39;, master_port= 3306, master_log_file=&#39;&#39;, master_log_pos= 4, master_bind=&#39;&#39;. New state master_host=&#39;mysql-master&#39;, master_port= 3306, master_log_file=&#39;&#39;, master_log_pos= 4, master_bind=&#39;&#39;.
-<span class="ln">2</span>2019-06-19T01:34:28.274728Z 9 [Warning] [MY-010897] [Repl] Storing MySQL user name or password information in the master info repository is not secure and is therefore not recommended. Please consider using the USER and PASSWORD connection options for START SLAVE; see the &#39;START SLAVE Syntax&#39; in the MySQL Manual for more information.
-<span class="ln">3</span>2019-06-19T01:34:28.330825Z 9 [ERROR] [MY-010584] [Repl] Slave I/O for channel &#39;&#39;: error connecting to master &#39;repl@mysql-master:3306&#39; - retry-time: 60  retries: 1, Error_code: MY-002061
-<span class="ln">4</span>2019-06-19T01:35:28.333735Z 9 [ERROR] [MY-010584] [Repl] Slave I/O for channel &#39;&#39;: error connecting to master &#39;repl@mysql-master:3306&#39; - retry-time: 60  retries: 2, Error_code: MY-002061
-<span class="ln">5</span>2019-06-19T01:36:28.335525Z 9 [ERROR] [MY-010584] [Repl] Slave I/O for channel &#39;&#39;: error connecting to master &#39;repl@mysql-master:3306&#39; - retry-time: 60  retries: 3, Error_code: MY-002061
-<span class="ln">6</span>...
-</code></pre></div><p>详细细节可见这个<a href="https://github.com/docker-library/mysql/issues/572" target="_blank" rel="noopener noreferrer">issue</a>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt">2019-06-19T01:34:24.361566Z 8 [System] [MY-010597] [Repl] &#39;CHANGE MASTER TO FOR CHANNEL &#39;&#39; executed&#39;. Previous state master_host=&#39;&#39;, master_port= 3306, master_log_file=&#39;&#39;, master_log_pos= 4, master_bind=&#39;&#39;. New state master_host=&#39;mysql-master&#39;, master_port= 3306, master_log_file=&#39;&#39;, master_log_pos= 4, master_bind=&#39;&#39;.
+2019-06-19T01:34:28.274728Z 9 [Warning] [MY-010897] [Repl] Storing MySQL user name or password information in the master info repository is not secure and is therefore not recommended. Please consider using the USER and PASSWORD connection options for START SLAVE; see the &#39;START SLAVE Syntax&#39; in the MySQL Manual for more information.
+2019-06-19T01:34:28.330825Z 9 [ERROR] [MY-010584] [Repl] Slave I/O for channel &#39;&#39;: error connecting to master &#39;repl@mysql-master:3306&#39; - retry-time: 60  retries: 1, Error_code: MY-002061
+2019-06-19T01:35:28.333735Z 9 [ERROR] [MY-010584] [Repl] Slave I/O for channel &#39;&#39;: error connecting to master &#39;repl@mysql-master:3306&#39; - retry-time: 60  retries: 2, Error_code: MY-002061
+2019-06-19T01:36:28.335525Z 9 [ERROR] [MY-010584] [Repl] Slave I/O for channel &#39;&#39;: error connecting to master &#39;repl@mysql-master:3306&#39; - retry-time: 60  retries: 3, Error_code: MY-002061
+...
+</code></pre></td></tr></table>
+</div>
+</div><p>详细细节可见这个<a href="https://github.com/docker-library/mysql/issues/572" target="_blank" rel="noopener noreferrer">issue</a>
 ，这是因为MySQL 8默认启用了caching_sha2_password authentication plugin，issue中提到了一个办法：在启动Slave的时候添加<code>--default-auth=mysql_native_password</code>参数。不过我感觉这个不太好，查阅相关文档后发现可以在<code>CHANGE MASTER TO</code>添加<code>GET_MASTER_PUBLIC_KEY=1</code>参数来解决这个问题。</p>
 <p>更多详情参考<a href="https://dev.mysql.com/doc/refman/8.0/en/upgrading-from-previous-series.html#upgrade-caching-sha2-password-replication" target="_blank" rel="noopener noreferrer">caching_sha2_password and Replication</a>
 和<a href="https://dev.mysql.com/doc/refman/8.0/en/change-master-to.html" target="_blank" rel="noopener noreferrer">CHANGE MASTER TO Syntax</a>

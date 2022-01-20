@@ -12,7 +12,7 @@
 <meta name="description" content="" /><meta itemprop="name" content="Cracking Coding Interview - 2.8 Loop Detection">
 <meta itemprop="description" content=""><meta itemprop="datePublished" content="2019-08-12T16:29:12+08:00" />
 <meta itemprop="dateModified" content="2019-08-12T16:29:12+08:00" />
-<meta itemprop="wordCount" content="725">
+<meta itemprop="wordCount" content="730">
 <meta itemprop="keywords" content="ARTS-A," /><meta property="og:title" content="Cracking Coding Interview - 2.8 Loop Detection" />
 <meta property="og:description" content="" />
 <meta property="og:type" content="article" />
@@ -227,23 +227,44 @@
 <p>DEFINITION</p>
 <p>Circular linked list: A (corrupt) linked list in which a node&rsquo;s next pointer points to an earlier node, so as to make a loop in the linked list.</p>
 <p>EXAMPLE</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln">1</span>Input:  A -&gt; B -&gt; C -&gt; D -&gt; E -&gt; C [the same C as earlier]
-<span class="ln">2</span>Output: C
-</code></pre></div><h2 id="解答">解答<a class="anchor ms-1" href="#解答"><i class="fas fa-link"></i></a></h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt">Input:  A -&gt; B -&gt; C -&gt; D -&gt; E -&gt; C [the same C as earlier]
+Output: C
+</code></pre></td></tr></table>
+</div>
+</div><h2 id="解答">解答<a class="anchor ms-1" href="#解答"><i class="fas fa-link"></i></a></h2>
 <p>这个比较复杂，结论是：</p>
 <ul>
 <li>弄两指针，slow每次走一步，fast每次走两步。</li>
 <li>当slow和fast相遇的时候，这个node距离【循环起点】的距离和【链表头】距离【循环起点】的距离是一样的。</li>
 <li>这个时候再从相遇点和链表头同时走，走到相遇的时候就是【循环起点】</li>
 </ul>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln">1</span>o -&gt; o -&gt; o -&gt; o
-<span class="ln">2</span>             /   \
-<span class="ln">3</span>            o     o
-<span class="ln">4</span>            |     |
-<span class="ln">5</span>            o     o
-<span class="ln">6</span>             \   /
-<span class="ln">7</span>               o
-</code></pre></div><p>来看看是怎么推导出来的：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt">o -&gt; o -&gt; o -&gt; o
+             /   \
+            o     o
+            |     |
+            o     o
+             \   /
+               o
+</code></pre></td></tr></table>
+</div>
+</div><p>来看看是怎么推导出来的：</p>
 <ul>
 <li>假设【循环起点】到【链表头】的距离为K</li>
 <li>当slow走到【循环起点】的时候，说明它走了K，而fast则走了2K，也就是说fast已经进入【循环】走了K</li>
@@ -258,37 +279,73 @@
 <li>看前面所说的，【链表头】到【循环起点】的距离同样也是K。</li>
 <li>那也就是说如果此时同时从【链表头】和【交叉点】开始走，遇到第一个相同的node，这个node就是循环的起点。</li>
 </ul>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln"> 1</span><span class="kd">public</span> <span class="n">Node</span> <span class="nf">findLoopStart</span><span class="o">(</span><span class="n">Node</span> <span class="n">a</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 2</span>  <span class="n">Node</span> <span class="n">head</span> <span class="o">=</span> <span class="n">a</span><span class="o">;</span>
-<span class="ln"> 3</span>  <span class="n">Node</span> <span class="n">slow</span> <span class="o">=</span> <span class="n">a</span><span class="o">;</span>
-<span class="ln"> 4</span>  <span class="n">Node</span> <span class="n">fast</span> <span class="o">=</span> <span class="n">a</span><span class="o">;</span>
-<span class="ln"> 5</span>  <span class="k">while</span> <span class="o">(</span><span class="n">fast</span> <span class="o">!=</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 6</span>    <span class="n">slow</span> <span class="o">=</span> <span class="n">slow</span><span class="o">.</span><span class="na">next</span><span class="o">;</span>
-<span class="ln"> 7</span>    <span class="n">fast</span> <span class="o">=</span> <span class="n">fast</span><span class="o">.</span><span class="na">next</span><span class="o">;</span>
-<span class="ln"> 8</span>    <span class="k">if</span> <span class="o">(</span><span class="n">fast</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 9</span>      <span class="k">return</span> <span class="kc">null</span><span class="o">;</span>
-<span class="ln">10</span>    <span class="o">}</span>
-<span class="ln">11</span>    <span class="n">fast</span> <span class="o">=</span> <span class="n">fast</span><span class="o">.</span><span class="na">next</span><span class="o">;</span>
-<span class="ln">12</span>    <span class="k">if</span> <span class="o">(</span><span class="n">slow</span> <span class="o">==</span> <span class="n">fast</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">13</span>      <span class="c1">// 遇到交叉点
-</span><span class="ln">14</span><span class="c1"></span>      <span class="k">break</span><span class="o">;</span>
-<span class="ln">15</span>    <span class="o">}</span>
-<span class="ln">16</span>  <span class="o">}</span>
-<span class="ln">17</span>  <span class="k">if</span> <span class="o">(</span><span class="n">fast</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">18</span>    <span class="c1">// 没有交叉
-</span><span class="ln">19</span><span class="c1"></span>    <span class="k">return</span> <span class="kc">null</span><span class="o">;</span>
-<span class="ln">20</span>  <span class="o">}</span>
-<span class="ln">21</span>  <span class="k">while</span> <span class="o">(</span><span class="n">head</span> <span class="o">!=</span> <span class="kc">null</span> <span class="o">&amp;&amp;</span> <span class="n">slow</span> <span class="o">!=</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">22</span>    <span class="k">if</span> <span class="o">(</span><span class="n">head</span> <span class="o">==</span> <span class="n">slow</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">23</span>      <span class="c1">// 找到循环起点
-</span><span class="ln">24</span><span class="c1"></span>      <span class="k">return</span> <span class="n">head</span><span class="o">;</span>
-<span class="ln">25</span>    <span class="o">}</span>
-<span class="ln">26</span>    <span class="n">head</span> <span class="o">=</span> <span class="n">head</span><span class="o">.</span><span class="na">next</span><span class="o">;</span>
-<span class="ln">27</span>    <span class="n">slow</span> <span class="o">=</span> <span class="n">slow</span><span class="o">.</span><span class="na">next</span><span class="o">;</span>
-<span class="ln">28</span>  <span class="o">}</span>
-<span class="ln">29</span>  <span class="k">return</span> <span class="kc">null</span><span class="o">;</span>
-<span class="ln">30</span><span class="o">}</span>
-</code></pre></div></div></div>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="kd">public</span> <span class="n">Node</span> <span class="nf">findLoopStart</span><span class="o">(</span><span class="n">Node</span> <span class="n">a</span><span class="o">)</span> <span class="o">{</span>
+  <span class="n">Node</span> <span class="n">head</span> <span class="o">=</span> <span class="n">a</span><span class="o">;</span>
+  <span class="n">Node</span> <span class="n">slow</span> <span class="o">=</span> <span class="n">a</span><span class="o">;</span>
+  <span class="n">Node</span> <span class="n">fast</span> <span class="o">=</span> <span class="n">a</span><span class="o">;</span>
+  <span class="k">while</span> <span class="o">(</span><span class="n">fast</span> <span class="o">!=</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
+    <span class="n">slow</span> <span class="o">=</span> <span class="n">slow</span><span class="o">.</span><span class="na">next</span><span class="o">;</span>
+    <span class="n">fast</span> <span class="o">=</span> <span class="n">fast</span><span class="o">.</span><span class="na">next</span><span class="o">;</span>
+    <span class="k">if</span> <span class="o">(</span><span class="n">fast</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
+      <span class="k">return</span> <span class="kc">null</span><span class="o">;</span>
+    <span class="o">}</span>
+    <span class="n">fast</span> <span class="o">=</span> <span class="n">fast</span><span class="o">.</span><span class="na">next</span><span class="o">;</span>
+    <span class="k">if</span> <span class="o">(</span><span class="n">slow</span> <span class="o">==</span> <span class="n">fast</span><span class="o">)</span> <span class="o">{</span>
+      <span class="c1">// 遇到交叉点
+</span><span class="c1"></span>      <span class="k">break</span><span class="o">;</span>
+    <span class="o">}</span>
+  <span class="o">}</span>
+  <span class="k">if</span> <span class="o">(</span><span class="n">fast</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
+    <span class="c1">// 没有交叉
+</span><span class="c1"></span>    <span class="k">return</span> <span class="kc">null</span><span class="o">;</span>
+  <span class="o">}</span>
+  <span class="k">while</span> <span class="o">(</span><span class="n">head</span> <span class="o">!=</span> <span class="kc">null</span> <span class="o">&amp;&amp;</span> <span class="n">slow</span> <span class="o">!=</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
+    <span class="k">if</span> <span class="o">(</span><span class="n">head</span> <span class="o">==</span> <span class="n">slow</span><span class="o">)</span> <span class="o">{</span>
+      <span class="c1">// 找到循环起点
+</span><span class="c1"></span>      <span class="k">return</span> <span class="n">head</span><span class="o">;</span>
+    <span class="o">}</span>
+    <span class="n">head</span> <span class="o">=</span> <span class="n">head</span><span class="o">.</span><span class="na">next</span><span class="o">;</span>
+    <span class="n">slow</span> <span class="o">=</span> <span class="n">slow</span><span class="o">.</span><span class="na">next</span><span class="o">;</span>
+  <span class="o">}</span>
+  <span class="k">return</span> <span class="kc">null</span><span class="o">;</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div></div></div>
   <div class="card-footer"><div class="post-navs d-flex justify-content-evenly">
   <div class="post-nav post-prev"><i class="fas fa-fw fa-chevron-left"></i>
     <a href="/post/cracking-coding-interview/2.7-intersection/">Cracking Coding Interview - 2.7 Intersection

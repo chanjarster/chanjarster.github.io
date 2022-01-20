@@ -12,7 +12,7 @@
 <meta name="description" content="" /><meta itemprop="name" content="Kibana Alerting的实现分析">
 <meta itemprop="description" content=""><meta itemprop="datePublished" content="2021-01-27T09:14:35+08:00" />
 <meta itemprop="dateModified" content="2021-01-27T09:14:35+08:00" />
-<meta itemprop="wordCount" content="1723">
+<meta itemprop="wordCount" content="1746">
 <meta itemprop="keywords" content="elasticsearch,kibana," /><meta property="og:title" content="Kibana Alerting的实现分析" />
 <meta property="og:description" content="" />
 <meta property="og:type" content="article" />
@@ -262,18 +262,35 @@
 加上<a href="https://www.elastic.co/guide/en/elasticsearch/reference/7.10/common-options.html#date-math" target="_blank" rel="noopener noreferrer">date math</a>
 （注意不需要做rounding）：</li>
 </ul>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-json" data-lang="json"><span class="ln"> 1</span><span class="err">GET</span> <span class="err">/&lt;index&gt;/_search</span>
-<span class="ln"> 2</span><span class="p">{</span>
-<span class="ln"> 3</span>  <span class="nt">&#34;query&#34;</span><span class="p">:</span> <span class="p">{</span>
-<span class="ln"> 4</span>    <span class="nt">&#34;range&#34;</span><span class="p">:</span> <span class="p">{</span>
-<span class="ln"> 5</span>      <span class="nt">&#34;@timestamp&#34;</span><span class="p">:</span> <span class="p">{</span>
-<span class="ln"> 6</span>        <span class="nt">&#34;gte&#34;</span><span class="p">:</span> <span class="s2">&#34;now-1h&#34;</span><span class="p">,</span>
-<span class="ln"> 7</span>        <span class="nt">&#34;lt&#34;</span><span class="p">:</span> <span class="s2">&#34;now&#34;</span>
-<span class="ln"> 8</span>      <span class="p">}</span>
-<span class="ln"> 9</span>    <span class="p">}</span>
-<span class="ln">10</span>  <span class="p">}</span>
-<span class="ln">11</span><span class="p">}</span>
-</code></pre></div><h2 id="alerting配置的要点">Alerting配置的要点<a class="anchor ms-1" href="#alerting配置的要点"><i class="fas fa-link"></i></a></h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-json" data-lang="json"><span class="err">GET</span> <span class="err">/&lt;index&gt;/_search</span>
+<span class="p">{</span>
+  <span class="nt">&#34;query&#34;</span><span class="p">:</span> <span class="p">{</span>
+    <span class="nt">&#34;range&#34;</span><span class="p">:</span> <span class="p">{</span>
+      <span class="nt">&#34;@timestamp&#34;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="nt">&#34;gte&#34;</span><span class="p">:</span> <span class="s2">&#34;now-1h&#34;</span><span class="p">,</span>
+        <span class="nt">&#34;lt&#34;</span><span class="p">:</span> <span class="s2">&#34;now&#34;</span>
+      <span class="p">}</span>
+    <span class="p">}</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><h2 id="alerting配置的要点">Alerting配置的要点<a class="anchor ms-1" href="#alerting配置的要点"><i class="fas fa-link"></i></a></h2>
 <ul>
 <li>不是所有Index都支持配置Alerting，必须得有<a href="https://www.elastic.co/guide/en/elasticsearch/reference/7.10/date.html" target="_blank" rel="noopener noreferrer">date类型</a>
 字段才行。</li>
@@ -289,110 +306,234 @@
 </ul>
 <h3 id="不分组不聚合">不分组，不聚合<a class="anchor ms-1" href="#不分组不聚合"><i class="fas fa-link"></i></a></h3>
 <p>count是唯一不聚合的查询，就是取返回结果的total count，对应的ES Query DSL：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-json" data-lang="json"><span class="ln"> 1</span><span class="err">GET</span> <span class="err">/&lt;index&gt;/_search</span>
-<span class="ln"> 2</span><span class="p">{</span>
-<span class="ln"> 3</span>  <span class="nt">&#34;query&#34;</span><span class="p">:</span> <span class="p">{</span>
-<span class="ln"> 4</span>    <span class="nt">&#34;range&#34;</span><span class="p">:</span> <span class="p">{</span>
-<span class="ln"> 5</span>      <span class="nt">&#34;@timestamp&#34;</span><span class="p">:</span> <span class="p">{</span>
-<span class="ln"> 6</span>        <span class="nt">&#34;gte&#34;</span><span class="p">:</span> <span class="s2">&#34;now-1h&#34;</span><span class="p">,</span>
-<span class="ln"> 7</span>        <span class="nt">&#34;lt&#34;</span><span class="p">:</span> <span class="s2">&#34;now&#34;</span>
-<span class="ln"> 8</span>      <span class="p">}</span>
-<span class="ln"> 9</span>    <span class="p">}</span>
-<span class="ln">10</span>  <span class="p">},</span>
-<span class="ln">11</span>  <span class="nt">&#34;size&#34;</span><span class="p">:</span> <span class="mi">0</span>
-<span class="ln">12</span><span class="p">}</span>
-</code></pre></div><p>因为我们只对total count感兴趣不需要具体的doc，所以设置<code>&quot;size&quot;: 0</code>。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-json" data-lang="json"><span class="err">GET</span> <span class="err">/&lt;index&gt;/_search</span>
+<span class="p">{</span>
+  <span class="nt">&#34;query&#34;</span><span class="p">:</span> <span class="p">{</span>
+    <span class="nt">&#34;range&#34;</span><span class="p">:</span> <span class="p">{</span>
+      <span class="nt">&#34;@timestamp&#34;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="nt">&#34;gte&#34;</span><span class="p">:</span> <span class="s2">&#34;now-1h&#34;</span><span class="p">,</span>
+        <span class="nt">&#34;lt&#34;</span><span class="p">:</span> <span class="s2">&#34;now&#34;</span>
+      <span class="p">}</span>
+    <span class="p">}</span>
+  <span class="p">},</span>
+  <span class="nt">&#34;size&#34;</span><span class="p">:</span> <span class="mi">0</span>
+<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>因为我们只对total count感兴趣不需要具体的doc，所以设置<code>&quot;size&quot;: 0</code>。</p>
 <p>返回的结果，注意看<code>hits.total.value</code>字段，同时<code>hits.hits</code>数组是空的，因为我们设置了<code>size=0</code>：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-json" data-lang="json"><span class="ln"> 1</span><span class="p">{</span>
-<span class="ln"> 2</span>  <span class="err">...</span>
-<span class="ln"> 3</span>  <span class="nt">&#34;hits&#34;</span> <span class="p">:</span> <span class="p">{</span>
-<span class="ln"> 4</span>    <span class="nt">&#34;total&#34;</span> <span class="p">:</span> <span class="p">{</span>
-<span class="ln"> 5</span>      <span class="nt">&#34;value&#34;</span> <span class="p">:</span> <span class="mi">9339</span><span class="p">,</span>
-<span class="ln"> 6</span>      <span class="nt">&#34;relation&#34;</span> <span class="p">:</span> <span class="s2">&#34;eq&#34;</span>
-<span class="ln"> 7</span>    <span class="p">},</span>
-<span class="ln"> 8</span>    <span class="nt">&#34;hits&#34;</span> <span class="p">:</span> <span class="p">[</span> <span class="p">],</span>
-<span class="ln"> 9</span>    <span class="err">...</span>
-<span class="ln">10</span>  <span class="p">}</span>
-<span class="ln">11</span><span class="p">}</span>
-</code></pre></div><h3 id="不分组聚合">不分组，聚合<a class="anchor ms-1" href="#不分组聚合"><i class="fas fa-link"></i></a></h3>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-json" data-lang="json"><span class="p">{</span>
+  <span class="err">...</span>
+  <span class="nt">&#34;hits&#34;</span> <span class="p">:</span> <span class="p">{</span>
+    <span class="nt">&#34;total&#34;</span> <span class="p">:</span> <span class="p">{</span>
+      <span class="nt">&#34;value&#34;</span> <span class="p">:</span> <span class="mi">9339</span><span class="p">,</span>
+      <span class="nt">&#34;relation&#34;</span> <span class="p">:</span> <span class="s2">&#34;eq&#34;</span>
+    <span class="p">},</span>
+    <span class="nt">&#34;hits&#34;</span> <span class="p">:</span> <span class="p">[</span> <span class="p">],</span>
+    <span class="err">...</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><h3 id="不分组聚合">不分组，聚合<a class="anchor ms-1" href="#不分组聚合"><i class="fas fa-link"></i></a></h3>
 <p><a href="https://www.elastic.co/guide/en/elasticsearch/reference/7.10/search-aggregations-metrics-avg-aggregation.html" target="_blank" rel="noopener noreferrer">average</a>
 、<a href="https://www.elastic.co/guide/en/elasticsearch/reference/7.10/search-aggregations-metrics-sum-aggregation.html" target="_blank" rel="noopener noreferrer">sum</a>
 、<a href="https://www.elastic.co/guide/en/elasticsearch/reference/7.10/search-aggregations-metrics-min-aggregation.html" target="_blank" rel="noopener noreferrer">min</a>
 、<a href="https://www.elastic.co/guide/en/elasticsearch/reference/7.10/search-aggregations-metrics-max-aggregation.html" target="_blank" rel="noopener noreferrer">max</a>
 都是聚合查询，需要配置聚合字段，字段必须是<a href="https://www.elastic.co/guide/en/elasticsearch/reference/7.10/keyword.html" target="_blank" rel="noopener noreferrer">keyword mapping</a>
 的，比如：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-json" data-lang="json"><span class="ln"> 1</span><span class="err">GET</span> <span class="err">/&lt;index&gt;/_search</span>
-<span class="ln"> 2</span><span class="p">{</span>
-<span class="ln"> 3</span>  <span class="nt">&#34;query&#34;</span><span class="p">:</span> <span class="p">{</span>
-<span class="ln"> 4</span>    <span class="nt">&#34;range&#34;</span><span class="p">:</span> <span class="p">{</span>
-<span class="ln"> 5</span>      <span class="nt">&#34;@timestamp&#34;</span><span class="p">:</span> <span class="p">{</span>
-<span class="ln"> 6</span>        <span class="nt">&#34;gte&#34;</span><span class="p">:</span> <span class="s2">&#34;now-1h&#34;</span><span class="p">,</span>
-<span class="ln"> 7</span>        <span class="nt">&#34;lt&#34;</span><span class="p">:</span> <span class="s2">&#34;now&#34;</span>
-<span class="ln"> 8</span>      <span class="p">}</span>
-<span class="ln"> 9</span>    <span class="p">}</span>
-<span class="ln">10</span>  <span class="p">},</span>
-<span class="ln">11</span>  <span class="nt">&#34;size&#34;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
-<span class="ln">12</span>  <span class="nt">&#34;aggs&#34;</span><span class="p">:</span> <span class="p">{</span>
-<span class="ln">13</span>    <span class="nt">&#34;avg_timeElapse&#34;</span><span class="p">:</span> <span class="p">{</span>
-<span class="ln">14</span>       <span class="nt">&#34;avg&#34;</span><span class="p">:</span> <span class="p">{</span> <span class="nt">&#34;field&#34;</span><span class="p">:</span> <span class="s2">&#34;api_call.timeElapse&#34;</span> <span class="p">}</span>
-<span class="ln">15</span>    <span class="p">}</span>
-<span class="ln">16</span>  <span class="p">}</span>
-<span class="ln">17</span><span class="p">}</span>
-</code></pre></div><p>响应结果，我们不需要看<code>hits</code>字段，只要看<code>aggregations.avg_timeElapse.value</code>字段就行了：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-json" data-lang="json"><span class="ln">1</span><span class="p">{</span>
-<span class="ln">2</span>  <span class="err">...</span>
-<span class="ln">3</span>  <span class="nt">&#34;aggregations&#34;</span> <span class="p">:</span> <span class="p">{</span>
-<span class="ln">4</span>    <span class="nt">&#34;avg_timeElapse&#34;</span> <span class="p">:</span> <span class="p">{</span>
-<span class="ln">5</span>      <span class="nt">&#34;value&#34;</span> <span class="p">:</span> <span class="mf">240.7022207635926</span>
-<span class="ln">6</span>    <span class="p">}</span>
-<span class="ln">7</span>  <span class="p">}</span>
-<span class="ln">8</span><span class="p">}</span>
-</code></pre></div><h3 id="分组不聚合">分组，不聚合<a class="anchor ms-1" href="#分组不聚合"><i class="fas fa-link"></i></a></h3>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-json" data-lang="json"><span class="err">GET</span> <span class="err">/&lt;index&gt;/_search</span>
+<span class="p">{</span>
+  <span class="nt">&#34;query&#34;</span><span class="p">:</span> <span class="p">{</span>
+    <span class="nt">&#34;range&#34;</span><span class="p">:</span> <span class="p">{</span>
+      <span class="nt">&#34;@timestamp&#34;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="nt">&#34;gte&#34;</span><span class="p">:</span> <span class="s2">&#34;now-1h&#34;</span><span class="p">,</span>
+        <span class="nt">&#34;lt&#34;</span><span class="p">:</span> <span class="s2">&#34;now&#34;</span>
+      <span class="p">}</span>
+    <span class="p">}</span>
+  <span class="p">},</span>
+  <span class="nt">&#34;size&#34;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+  <span class="nt">&#34;aggs&#34;</span><span class="p">:</span> <span class="p">{</span>
+    <span class="nt">&#34;avg_timeElapse&#34;</span><span class="p">:</span> <span class="p">{</span>
+       <span class="nt">&#34;avg&#34;</span><span class="p">:</span> <span class="p">{</span> <span class="nt">&#34;field&#34;</span><span class="p">:</span> <span class="s2">&#34;api_call.timeElapse&#34;</span> <span class="p">}</span>
+    <span class="p">}</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>响应结果，我们不需要看<code>hits</code>字段，只要看<code>aggregations.avg_timeElapse.value</code>字段就行了：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-json" data-lang="json"><span class="p">{</span>
+  <span class="err">...</span>
+  <span class="nt">&#34;aggregations&#34;</span> <span class="p">:</span> <span class="p">{</span>
+    <span class="nt">&#34;avg_timeElapse&#34;</span> <span class="p">:</span> <span class="p">{</span>
+      <span class="nt">&#34;value&#34;</span> <span class="p">:</span> <span class="mf">240.7022207635926</span>
+    <span class="p">}</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><h3 id="分组不聚合">分组，不聚合<a class="anchor ms-1" href="#分组不聚合"><i class="fas fa-link"></i></a></h3>
 <p>因为count不是聚合查询，所以只需要用<a href="https://www.elastic.co/guide/en/elasticsearch/reference/7.10/search-aggregations-bucket-terms-aggregation.html" target="_blank" rel="noopener noreferrer">terms agg</a>
 分组，同样分组的字段必须是<a href="https://www.elastic.co/guide/en/elasticsearch/reference/7.10/keyword.html" target="_blank" rel="noopener noreferrer">keyword mapping</a>
 的，同时配置了<code>aggs.apiSvcPerOp_buck.terms.size=2</code>对应top <code>N</code>语义：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-json" data-lang="json"><span class="ln"> 1</span><span class="err">GET</span> <span class="err">/&lt;index&gt;/_search</span>
-<span class="ln"> 2</span><span class="p">{</span>
-<span class="ln"> 3</span>  <span class="nt">&#34;query&#34;</span><span class="p">:</span> <span class="p">{</span>
-<span class="ln"> 4</span>    <span class="nt">&#34;range&#34;</span><span class="p">:</span> <span class="p">{</span>
-<span class="ln"> 5</span>      <span class="nt">&#34;@timestamp&#34;</span><span class="p">:</span> <span class="p">{</span>
-<span class="ln"> 6</span>        <span class="nt">&#34;gte&#34;</span><span class="p">:</span> <span class="s2">&#34;now-1h&#34;</span><span class="p">,</span>
-<span class="ln"> 7</span>        <span class="nt">&#34;lt&#34;</span><span class="p">:</span> <span class="s2">&#34;now&#34;</span>
-<span class="ln"> 8</span>      <span class="p">}</span>
-<span class="ln"> 9</span>    <span class="p">}</span>
-<span class="ln">10</span>  <span class="p">},</span>
-<span class="ln">11</span>  <span class="nt">&#34;size&#34;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
-<span class="ln">12</span>  <span class="nt">&#34;aggs&#34;</span><span class="p">:</span> <span class="p">{</span>
-<span class="ln">13</span>    <span class="nt">&#34;apiSvcPerOp_buck&#34;</span><span class="p">:</span> <span class="p">{</span>
-<span class="ln">14</span>      <span class="nt">&#34;terms&#34;</span><span class="p">:</span> <span class="p">{</span>
-<span class="ln">15</span>        <span class="nt">&#34;field&#34;</span><span class="p">:</span> <span class="s2">&#34;api_call.apiSvcVerOp.keyword&#34;</span><span class="p">,</span>
-<span class="ln">16</span>        <span class="nt">&#34;size&#34;</span><span class="p">:</span> <span class="mi">2</span>
-<span class="ln">17</span>      <span class="p">}</span>
-<span class="ln">18</span>    <span class="p">}</span>
-<span class="ln">19</span>  <span class="p">}</span>
-<span class="ln">20</span><span class="p">}</span>
-<span class="ln">21</span>
-</code></pre></div><p>注意看结果的<code>aggregations.apiSvcPerOp_buck.buckets[].doc_count</code>，可以看到返回了各个keyword的<code>doc_count</code></p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-json" data-lang="json"><span class="ln"> 1</span><span class="p">{</span>
-<span class="ln"> 2</span>  <span class="err">...</span>
-<span class="ln"> 3</span>  <span class="nt">&#34;aggregations&#34;</span> <span class="p">:</span> <span class="p">{</span>
-<span class="ln"> 4</span>    <span class="nt">&#34;apiSvcPerOp_buck&#34;</span> <span class="p">:</span> <span class="p">{</span>
-<span class="ln"> 5</span>      <span class="nt">&#34;doc_count_error_upper_bound&#34;</span> <span class="p">:</span> <span class="mi">52</span><span class="p">,</span>
-<span class="ln"> 6</span>      <span class="nt">&#34;sum_other_doc_count&#34;</span> <span class="p">:</span> <span class="mi">4739</span><span class="p">,</span>
-<span class="ln"> 7</span>      <span class="nt">&#34;buckets&#34;</span> <span class="p">:</span> <span class="p">[</span>
-<span class="ln"> 8</span>        <span class="p">{</span>
-<span class="ln"> 9</span>          <span class="nt">&#34;key&#34;</span> <span class="p">:</span> <span class="s2">&#34;user_v1_loadUserInfoByAccountName&#34;</span><span class="p">,</span>
-<span class="ln">10</span>          <span class="nt">&#34;doc_count&#34;</span> <span class="p">:</span> <span class="mi">1829</span>
-<span class="ln">11</span>        <span class="p">},</span>
-<span class="ln">12</span>        <span class="p">{</span>
-<span class="ln">13</span>          <span class="nt">&#34;key&#34;</span> <span class="p">:</span> <span class="s2">&#34;user_v1_listAccountGroups&#34;</span><span class="p">,</span>
-<span class="ln">14</span>          <span class="nt">&#34;doc_count&#34;</span> <span class="p">:</span> <span class="mi">1297</span>
-<span class="ln">15</span>        <span class="p">}</span>
-<span class="ln">16</span>      <span class="p">]</span>
-<span class="ln">17</span>    <span class="p">}</span>
-<span class="ln">18</span>  <span class="p">}</span>
-<span class="ln">19</span><span class="p">}</span>
-</code></pre></div><h3 id="分组聚合">分组，聚合<a class="anchor ms-1" href="#分组聚合"><i class="fas fa-link"></i></a></h3>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-json" data-lang="json"><span class="err">GET</span> <span class="err">/&lt;index&gt;/_search</span>
+<span class="p">{</span>
+  <span class="nt">&#34;query&#34;</span><span class="p">:</span> <span class="p">{</span>
+    <span class="nt">&#34;range&#34;</span><span class="p">:</span> <span class="p">{</span>
+      <span class="nt">&#34;@timestamp&#34;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="nt">&#34;gte&#34;</span><span class="p">:</span> <span class="s2">&#34;now-1h&#34;</span><span class="p">,</span>
+        <span class="nt">&#34;lt&#34;</span><span class="p">:</span> <span class="s2">&#34;now&#34;</span>
+      <span class="p">}</span>
+    <span class="p">}</span>
+  <span class="p">},</span>
+  <span class="nt">&#34;size&#34;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+  <span class="nt">&#34;aggs&#34;</span><span class="p">:</span> <span class="p">{</span>
+    <span class="nt">&#34;apiSvcPerOp_buck&#34;</span><span class="p">:</span> <span class="p">{</span>
+      <span class="nt">&#34;terms&#34;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="nt">&#34;field&#34;</span><span class="p">:</span> <span class="s2">&#34;api_call.apiSvcVerOp.keyword&#34;</span><span class="p">,</span>
+        <span class="nt">&#34;size&#34;</span><span class="p">:</span> <span class="mi">2</span>
+      <span class="p">}</span>
+    <span class="p">}</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+
+</code></pre></td></tr></table>
+</div>
+</div><p>注意看结果的<code>aggregations.apiSvcPerOp_buck.buckets[].doc_count</code>，可以看到返回了各个keyword的<code>doc_count</code></p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-json" data-lang="json"><span class="p">{</span>
+  <span class="err">...</span>
+  <span class="nt">&#34;aggregations&#34;</span> <span class="p">:</span> <span class="p">{</span>
+    <span class="nt">&#34;apiSvcPerOp_buck&#34;</span> <span class="p">:</span> <span class="p">{</span>
+      <span class="nt">&#34;doc_count_error_upper_bound&#34;</span> <span class="p">:</span> <span class="mi">52</span><span class="p">,</span>
+      <span class="nt">&#34;sum_other_doc_count&#34;</span> <span class="p">:</span> <span class="mi">4739</span><span class="p">,</span>
+      <span class="nt">&#34;buckets&#34;</span> <span class="p">:</span> <span class="p">[</span>
+        <span class="p">{</span>
+          <span class="nt">&#34;key&#34;</span> <span class="p">:</span> <span class="s2">&#34;user_v1_loadUserInfoByAccountName&#34;</span><span class="p">,</span>
+          <span class="nt">&#34;doc_count&#34;</span> <span class="p">:</span> <span class="mi">1829</span>
+        <span class="p">},</span>
+        <span class="p">{</span>
+          <span class="nt">&#34;key&#34;</span> <span class="p">:</span> <span class="s2">&#34;user_v1_listAccountGroups&#34;</span><span class="p">,</span>
+          <span class="nt">&#34;doc_count&#34;</span> <span class="p">:</span> <span class="mi">1297</span>
+        <span class="p">}</span>
+      <span class="p">]</span>
+    <span class="p">}</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><h3 id="分组聚合">分组，聚合<a class="anchor ms-1" href="#分组聚合"><i class="fas fa-link"></i></a></h3>
 <p>针对<a href="https://www.elastic.co/guide/en/elasticsearch/reference/7.10/search-aggregations-metrics-avg-aggregation.html" target="_blank" rel="noopener noreferrer">average</a>
 、<a href="https://www.elastic.co/guide/en/elasticsearch/reference/7.10/search-aggregations-metrics-sum-aggregation.html" target="_blank" rel="noopener noreferrer">sum</a>
 、<a href="https://www.elastic.co/guide/en/elasticsearch/reference/7.10/search-aggregations-metrics-min-aggregation.html" target="_blank" rel="noopener noreferrer">min</a>
@@ -400,58 +541,120 @@
 的分组查询则是，先用<a href="https://www.elastic.co/guide/en/elasticsearch/reference/7.10/search-aggregations-bucket-terms-aggregation.html" target="_blank" rel="noopener noreferrer">terms agg</a>
 然后把avg等作为它的<a href="https://www.elastic.co/guide/en/elasticsearch/reference/7.10/search-aggregations.html#run-sub-aggs" target="_blank" rel="noopener noreferrer">sub aggregation</a>
 ：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-json" data-lang="json"><span class="ln"> 1</span><span class="err">GET</span> <span class="err">/&lt;index&gt;/_search</span>
-<span class="ln"> 2</span><span class="p">{</span>
-<span class="ln"> 3</span>  <span class="nt">&#34;query&#34;</span><span class="p">:</span> <span class="p">{</span>
-<span class="ln"> 4</span>    <span class="nt">&#34;range&#34;</span><span class="p">:</span> <span class="p">{</span>
-<span class="ln"> 5</span>      <span class="nt">&#34;@timestamp&#34;</span><span class="p">:</span> <span class="p">{</span>
-<span class="ln"> 6</span>        <span class="nt">&#34;gte&#34;</span><span class="p">:</span> <span class="s2">&#34;now-1h&#34;</span><span class="p">,</span>
-<span class="ln"> 7</span>        <span class="nt">&#34;lt&#34;</span><span class="p">:</span> <span class="s2">&#34;now&#34;</span>
-<span class="ln"> 8</span>      <span class="p">}</span>
-<span class="ln"> 9</span>    <span class="p">}</span>
-<span class="ln">10</span>  <span class="p">},</span>
-<span class="ln">11</span>  <span class="nt">&#34;size&#34;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
-<span class="ln">12</span>  <span class="nt">&#34;aggs&#34;</span><span class="p">:</span> <span class="p">{</span>
-<span class="ln">13</span>    <span class="nt">&#34;apiSvcPerOp_buck&#34;</span><span class="p">:</span> <span class="p">{</span>
-<span class="ln">14</span>      <span class="nt">&#34;terms&#34;</span><span class="p">:</span> <span class="p">{</span>
-<span class="ln">15</span>        <span class="nt">&#34;field&#34;</span><span class="p">:</span> <span class="s2">&#34;api_call.apiSvcVerOp.keyword&#34;</span><span class="p">,</span>
-<span class="ln">16</span>        <span class="nt">&#34;size&#34;</span><span class="p">:</span> <span class="mi">3</span>
-<span class="ln">17</span>      <span class="p">},</span>
-<span class="ln">18</span>      <span class="nt">&#34;aggs&#34;</span><span class="p">:</span> <span class="p">{</span>
-<span class="ln">19</span>        <span class="nt">&#34;avg_timeElapse&#34;</span><span class="p">:</span> <span class="p">{</span>
-<span class="ln">20</span>          <span class="nt">&#34;avg&#34;</span><span class="p">:</span> <span class="p">{</span> <span class="nt">&#34;field&#34;</span><span class="p">:</span> <span class="s2">&#34;api_call.timeElapse&#34;</span> <span class="p">}</span>
-<span class="ln">21</span>        <span class="p">}</span>  
-<span class="ln">22</span>      <span class="p">}</span>
-<span class="ln">23</span>    <span class="p">}</span>
-<span class="ln">24</span>  <span class="p">}</span>
-<span class="ln">25</span><span class="p">}</span>
-</code></pre></div><p>注意结果中的<code>aggregations.apiSvcPerOp_buck.buckets[*].avg_timeElapse.value</code>字段，就是每个分组的聚合结果：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-json" data-lang="json"><span class="ln"> 1</span><span class="p">{</span>
-<span class="ln"> 2</span>  <span class="err">...</span>
-<span class="ln"> 3</span>  <span class="nt">&#34;aggregations&#34;</span> <span class="p">:</span> <span class="p">{</span>
-<span class="ln"> 4</span>    <span class="nt">&#34;apiSvcPerOp_buck&#34;</span> <span class="p">:</span> <span class="p">{</span>
-<span class="ln"> 5</span>      <span class="nt">&#34;doc_count_error_upper_bound&#34;</span> <span class="p">:</span> <span class="mi">52</span><span class="p">,</span>
-<span class="ln"> 6</span>      <span class="nt">&#34;sum_other_doc_count&#34;</span> <span class="p">:</span> <span class="mi">4739</span><span class="p">,</span>
-<span class="ln"> 7</span>      <span class="nt">&#34;buckets&#34;</span> <span class="p">:</span> <span class="p">[</span>
-<span class="ln"> 8</span>        <span class="p">{</span>
-<span class="ln"> 9</span>          <span class="nt">&#34;key&#34;</span> <span class="p">:</span> <span class="s2">&#34;user_v1_loadUserInfoByAccountName&#34;</span><span class="p">,</span>
-<span class="ln">10</span>          <span class="nt">&#34;doc_count&#34;</span> <span class="p">:</span> <span class="mi">1829</span><span class="p">,</span>
-<span class="ln">11</span>          <span class="nt">&#34;avg_timeElapse&#34;</span> <span class="p">:</span> <span class="p">{</span>
-<span class="ln">12</span>            <span class="nt">&#34;value&#34;</span> <span class="p">:</span> <span class="mf">51.38928376161837</span>
-<span class="ln">13</span>          <span class="p">}</span>
-<span class="ln">14</span>        <span class="p">},</span>
-<span class="ln">15</span>        <span class="p">{</span>
-<span class="ln">16</span>          <span class="nt">&#34;key&#34;</span> <span class="p">:</span> <span class="s2">&#34;user_v1_listAccountGroups&#34;</span><span class="p">,</span>
-<span class="ln">17</span>          <span class="nt">&#34;doc_count&#34;</span> <span class="p">:</span> <span class="mi">1297</span><span class="p">,</span>
-<span class="ln">18</span>          <span class="nt">&#34;avg_timeElapse&#34;</span> <span class="p">:</span> <span class="p">{</span>
-<span class="ln">19</span>            <span class="nt">&#34;value&#34;</span> <span class="p">:</span> <span class="mf">445.27370855821124</span>
-<span class="ln">20</span>          <span class="p">}</span>
-<span class="ln">21</span>        <span class="p">}</span>
-<span class="ln">22</span>      <span class="p">]</span>
-<span class="ln">23</span>    <span class="p">}</span>
-<span class="ln">24</span>  <span class="p">}</span>
-<span class="ln">25</span><span class="p">}</span>
-</code></pre></div></div></div>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-json" data-lang="json"><span class="err">GET</span> <span class="err">/&lt;index&gt;/_search</span>
+<span class="p">{</span>
+  <span class="nt">&#34;query&#34;</span><span class="p">:</span> <span class="p">{</span>
+    <span class="nt">&#34;range&#34;</span><span class="p">:</span> <span class="p">{</span>
+      <span class="nt">&#34;@timestamp&#34;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="nt">&#34;gte&#34;</span><span class="p">:</span> <span class="s2">&#34;now-1h&#34;</span><span class="p">,</span>
+        <span class="nt">&#34;lt&#34;</span><span class="p">:</span> <span class="s2">&#34;now&#34;</span>
+      <span class="p">}</span>
+    <span class="p">}</span>
+  <span class="p">},</span>
+  <span class="nt">&#34;size&#34;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+  <span class="nt">&#34;aggs&#34;</span><span class="p">:</span> <span class="p">{</span>
+    <span class="nt">&#34;apiSvcPerOp_buck&#34;</span><span class="p">:</span> <span class="p">{</span>
+      <span class="nt">&#34;terms&#34;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="nt">&#34;field&#34;</span><span class="p">:</span> <span class="s2">&#34;api_call.apiSvcVerOp.keyword&#34;</span><span class="p">,</span>
+        <span class="nt">&#34;size&#34;</span><span class="p">:</span> <span class="mi">3</span>
+      <span class="p">},</span>
+      <span class="nt">&#34;aggs&#34;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="nt">&#34;avg_timeElapse&#34;</span><span class="p">:</span> <span class="p">{</span>
+          <span class="nt">&#34;avg&#34;</span><span class="p">:</span> <span class="p">{</span> <span class="nt">&#34;field&#34;</span><span class="p">:</span> <span class="s2">&#34;api_call.timeElapse&#34;</span> <span class="p">}</span>
+        <span class="p">}</span>  
+      <span class="p">}</span>
+    <span class="p">}</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>注意结果中的<code>aggregations.apiSvcPerOp_buck.buckets[*].avg_timeElapse.value</code>字段，就是每个分组的聚合结果：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-json" data-lang="json"><span class="p">{</span>
+  <span class="err">...</span>
+  <span class="nt">&#34;aggregations&#34;</span> <span class="p">:</span> <span class="p">{</span>
+    <span class="nt">&#34;apiSvcPerOp_buck&#34;</span> <span class="p">:</span> <span class="p">{</span>
+      <span class="nt">&#34;doc_count_error_upper_bound&#34;</span> <span class="p">:</span> <span class="mi">52</span><span class="p">,</span>
+      <span class="nt">&#34;sum_other_doc_count&#34;</span> <span class="p">:</span> <span class="mi">4739</span><span class="p">,</span>
+      <span class="nt">&#34;buckets&#34;</span> <span class="p">:</span> <span class="p">[</span>
+        <span class="p">{</span>
+          <span class="nt">&#34;key&#34;</span> <span class="p">:</span> <span class="s2">&#34;user_v1_loadUserInfoByAccountName&#34;</span><span class="p">,</span>
+          <span class="nt">&#34;doc_count&#34;</span> <span class="p">:</span> <span class="mi">1829</span><span class="p">,</span>
+          <span class="nt">&#34;avg_timeElapse&#34;</span> <span class="p">:</span> <span class="p">{</span>
+            <span class="nt">&#34;value&#34;</span> <span class="p">:</span> <span class="mf">51.38928376161837</span>
+          <span class="p">}</span>
+        <span class="p">},</span>
+        <span class="p">{</span>
+          <span class="nt">&#34;key&#34;</span> <span class="p">:</span> <span class="s2">&#34;user_v1_listAccountGroups&#34;</span><span class="p">,</span>
+          <span class="nt">&#34;doc_count&#34;</span> <span class="p">:</span> <span class="mi">1297</span><span class="p">,</span>
+          <span class="nt">&#34;avg_timeElapse&#34;</span> <span class="p">:</span> <span class="p">{</span>
+            <span class="nt">&#34;value&#34;</span> <span class="p">:</span> <span class="mf">445.27370855821124</span>
+          <span class="p">}</span>
+        <span class="p">}</span>
+      <span class="p">]</span>
+    <span class="p">}</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div></div></div>
   <div class="card-footer"><div class="post-navs d-flex justify-content-evenly">
   <div class="post-nav post-prev"><i class="fas fa-fw fa-chevron-left"></i>
     <a href="/post/docker/scripts/">Docker实用小脚本

@@ -12,7 +12,7 @@
 <meta name="description" content="" /><meta itemprop="name" content="Performance and scalability">
 <meta itemprop="description" content=""><meta itemprop="datePublished" content="2019-10-24T10:40:29+08:00" />
 <meta itemprop="dateModified" content="2019-10-24T10:40:29+08:00" />
-<meta itemprop="wordCount" content="456">
+<meta itemprop="wordCount" content="473">
 <meta itemprop="keywords" content="并发编程," /><meta property="og:title" content="Performance and scalability" />
 <meta property="og:description" content="" />
 <meta property="og:type" content="article" />
@@ -237,84 +237,194 @@
 </ol>
 </li>
 </ol>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln"> 1</span><span class="kd">public</span> <span class="kd">class</span> <span class="nc">WorkerThread</span> <span class="kd">extends</span> <span class="n">Thread</span> <span class="o">{</span>
-<span class="ln"> 2</span>  <span class="kd">private</span> <span class="kd">final</span> <span class="n">BlockingQueue</span><span class="o">&lt;</span><span class="n">Runnable</span><span class="o">&gt;</span> <span class="n">queue</span><span class="o">;</span>
-<span class="ln"> 3</span>  <span class="kd">public</span> <span class="kt">void</span> <span class="nf">run</span><span class="o">()</span> <span class="o">{</span>
-<span class="ln"> 4</span>    <span class="k">while</span> <span class="o">(</span><span class="kc">true</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 5</span>      <span class="k">try</span> <span class="o">{</span>
-<span class="ln"> 6</span>        <span class="n">Runnable</span> <span class="n">task</span> <span class="o">=</span> <span class="n">queue</span><span class="o">.</span><span class="na">take</span><span class="o">();</span> <span class="c1">// &lt;- serial点
-</span><span class="ln"> 7</span><span class="c1"></span>        <span class="n">task</span><span class="o">.</span><span class="na">run</span><span class="o">();</span>
-<span class="ln"> 8</span>      <span class="o">}</span> <span class="k">catch</span> <span class="o">(</span><span class="n">InterruptedException</span> <span class="n">e</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 9</span>        <span class="k">break</span><span class="o">;</span>
-<span class="ln">10</span>      <span class="o">}</span>
-<span class="ln">11</span>    <span class="o">}</span>  
-<span class="ln">12</span>  <span class="o">}</span>
-<span class="ln">13</span><span class="o">}</span>
-</code></pre></div><h2 id="线程的代价">线程的代价<a class="anchor ms-1" href="#线程的代价"><i class="fas fa-link"></i></a></h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="kd">public</span> <span class="kd">class</span> <span class="nc">WorkerThread</span> <span class="kd">extends</span> <span class="n">Thread</span> <span class="o">{</span>
+  <span class="kd">private</span> <span class="kd">final</span> <span class="n">BlockingQueue</span><span class="o">&lt;</span><span class="n">Runnable</span><span class="o">&gt;</span> <span class="n">queue</span><span class="o">;</span>
+  <span class="kd">public</span> <span class="kt">void</span> <span class="nf">run</span><span class="o">()</span> <span class="o">{</span>
+    <span class="k">while</span> <span class="o">(</span><span class="kc">true</span><span class="o">)</span> <span class="o">{</span>
+      <span class="k">try</span> <span class="o">{</span>
+        <span class="n">Runnable</span> <span class="n">task</span> <span class="o">=</span> <span class="n">queue</span><span class="o">.</span><span class="na">take</span><span class="o">();</span> <span class="c1">// &lt;- serial点
+</span><span class="c1"></span>        <span class="n">task</span><span class="o">.</span><span class="na">run</span><span class="o">();</span>
+      <span class="o">}</span> <span class="k">catch</span> <span class="o">(</span><span class="n">InterruptedException</span> <span class="n">e</span><span class="o">)</span> <span class="o">{</span>
+        <span class="k">break</span><span class="o">;</span>
+      <span class="o">}</span>
+    <span class="o">}</span>  
+  <span class="o">}</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><h2 id="线程的代价">线程的代价<a class="anchor ms-1" href="#线程的代价"><i class="fas fa-link"></i></a></h2>
 <img src="cost-of-thread.png" style="zoom:50%" />
 <h3 id="优化非竞争性锁">优化非竞争性锁<a class="anchor ms-1" href="#优化非竞争性锁"><i class="fas fa-link"></i></a></h3>
 <p>某个锁被证明不会发生竞争，JVM会优化掉它：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln">1</span><span class="kd">synchronized</span> <span class="o">(</span><span class="k">new</span> <span class="n">Object</span><span class="o">())</span> <span class="o">{</span>
-<span class="ln">2</span>  <span class="c1">// do something
-</span><span class="ln">3</span><span class="c1"></span><span class="o">}</span>
-</code></pre></div><p>通过逃逸分析发现对象从未跳出当前线程，JVM会优化掉它：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln">1</span><span class="kd">public</span> <span class="n">String</span> <span class="nf">getStoogeNames</span><span class="o">()</span> <span class="o">{</span>
-<span class="ln">2</span>  <span class="n">List</span><span class="o">&lt;</span><span class="n">String</span><span class="o">&gt;</span> <span class="n">stooges</span> <span class="o">=</span> <span class="k">new</span> <span class="n">Vector</span><span class="o">&lt;&gt;();</span>
-<span class="ln">3</span>  <span class="n">stooges</span><span class="o">.</span><span class="na">add</span><span class="o">(</span><span class="s">&#34;foo&#34;</span><span class="o">);</span>
-<span class="ln">4</span>  <span class="n">stooges</span><span class="o">.</span><span class="na">add</span><span class="o">(</span><span class="s">&#34;bar&#34;</span><span class="o">);</span>
-<span class="ln">5</span>  <span class="k">return</span> <span class="n">stooges</span><span class="o">.</span><span class="na">toString</span><span class="o">();</span>
-<span class="ln">6</span><span class="o">}</span>
-</code></pre></div><p>上述代码就算不用逃逸分析，编译器也会合并相邻的锁。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="kd">synchronized</span> <span class="o">(</span><span class="k">new</span> <span class="n">Object</span><span class="o">())</span> <span class="o">{</span>
+  <span class="c1">// do something
+</span><span class="c1"></span><span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>通过逃逸分析发现对象从未跳出当前线程，JVM会优化掉它：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="kd">public</span> <span class="n">String</span> <span class="nf">getStoogeNames</span><span class="o">()</span> <span class="o">{</span>
+  <span class="n">List</span><span class="o">&lt;</span><span class="n">String</span><span class="o">&gt;</span> <span class="n">stooges</span> <span class="o">=</span> <span class="k">new</span> <span class="n">Vector</span><span class="o">&lt;&gt;();</span>
+  <span class="n">stooges</span><span class="o">.</span><span class="na">add</span><span class="o">(</span><span class="s">&#34;foo&#34;</span><span class="o">);</span>
+  <span class="n">stooges</span><span class="o">.</span><span class="na">add</span><span class="o">(</span><span class="s">&#34;bar&#34;</span><span class="o">);</span>
+  <span class="k">return</span> <span class="n">stooges</span><span class="o">.</span><span class="na">toString</span><span class="o">();</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>上述代码就算不用逃逸分析，编译器也会合并相邻的锁。</p>
 <h2 id="优化竞争性锁">优化竞争性锁<a class="anchor ms-1" href="#优化竞争性锁"><i class="fas fa-link"></i></a></h2>
 <img src="reduce-locking-contention.png" style="zoom:50%" />
 <h3 id="缩小锁的范围">缩小锁的范围<a class="anchor ms-1" href="#缩小锁的范围"><i class="fas fa-link"></i></a></h3>
 <p>优化前：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln">1</span><span class="kd">private</span> <span class="n">HashMap</span><span class="o">&lt;</span><span class="n">String</span><span class="o">,</span> <span class="n">String</span><span class="o">&gt;</span> <span class="n">attributes</span><span class="o">;</span>
-<span class="ln">2</span><span class="kd">public</span> <span class="kd">synchronized</span> <span class="kt">boolean</span> <span class="nf">userLocationMatches</span><span class="o">(</span><span class="n">String</span> <span class="n">name</span><span class="o">,</span> <span class="n">String</span> <span class="n">regexp</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">3</span>  <span class="n">String</span> <span class="n">key</span> <span class="o">=</span> <span class="s">&#34;users.&#34;</span> <span class="o">+</span> <span class="n">name</span> <span class="o">+</span> <span class="s">&#34;.location&#34;</span><span class="o">;</span>
-<span class="ln">4</span>  <span class="n">String</span> <span class="n">location</span> <span class="o">=</span> <span class="n">attributes</span><span class="o">.</span><span class="na">get</span><span class="o">(</span><span class="n">key</span><span class="o">);</span>
-<span class="ln">5</span>  <span class="k">return</span> <span class="n">Pattern</span><span class="o">.</span><span class="na">matches</span><span class="o">(</span><span class="n">regexp</span><span class="o">,</span> <span class="n">location</span><span class="o">);</span>
-<span class="ln">6</span><span class="o">}</span>
-</code></pre></div><p>优化后：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln">1</span><span class="kd">private</span> <span class="n">HashMap</span><span class="o">&lt;</span><span class="n">String</span><span class="o">,</span> <span class="n">String</span><span class="o">&gt;</span> <span class="n">attributes</span><span class="o">;</span>
-<span class="ln">2</span><span class="kd">public</span> <span class="kt">boolean</span> <span class="nf">userLocationMatches</span><span class="o">(</span><span class="n">String</span> <span class="n">name</span><span class="o">,</span> <span class="n">String</span> <span class="n">regexp</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">3</span>  <span class="n">String</span> <span class="n">key</span> <span class="o">=</span> <span class="s">&#34;users.&#34;</span> <span class="o">+</span> <span class="n">name</span> <span class="o">+</span> <span class="s">&#34;.location&#34;</span><span class="o">;</span>
-<span class="ln">4</span>  <span class="n">String</span> <span class="n">location</span><span class="o">;</span>
-<span class="ln">5</span>  <span class="kd">synchronized</span> <span class="o">(</span><span class="k">this</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">6</span>    <span class="n">location</span> <span class="o">=</span> <span class="n">attributes</span><span class="o">.</span><span class="na">get</span><span class="o">(</span><span class="n">key</span><span class="o">);</span>
-<span class="ln">7</span>  <span class="o">}</span>
-<span class="ln">8</span>  <span class="k">return</span> <span class="n">Pattern</span><span class="o">.</span><span class="na">matches</span><span class="o">(</span><span class="n">regexp</span><span class="o">,</span> <span class="n">location</span><span class="o">);</span>
-<span class="ln">9</span><span class="o">}</span>
-</code></pre></div><p>或者：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln">1</span><span class="kd">private</span> <span class="n">Map</span><span class="o">&lt;</span><span class="n">String</span><span class="o">,</span> <span class="n">String</span><span class="o">&gt;</span> <span class="n">attributes</span> <span class="o">=</span> <span class="n">Collections</span><span class="o">.</span><span class="na">synchronizedMap</span><span class="o">(...);</span>
-</code></pre></div><h3 id="lock-splitting锁分割">Lock Splitting，锁分割<a class="anchor ms-1" href="#lock-splitting锁分割"><i class="fas fa-link"></i></a></h3>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="kd">private</span> <span class="n">HashMap</span><span class="o">&lt;</span><span class="n">String</span><span class="o">,</span> <span class="n">String</span><span class="o">&gt;</span> <span class="n">attributes</span><span class="o">;</span>
+<span class="kd">public</span> <span class="kd">synchronized</span> <span class="kt">boolean</span> <span class="nf">userLocationMatches</span><span class="o">(</span><span class="n">String</span> <span class="n">name</span><span class="o">,</span> <span class="n">String</span> <span class="n">regexp</span><span class="o">)</span> <span class="o">{</span>
+  <span class="n">String</span> <span class="n">key</span> <span class="o">=</span> <span class="s">&#34;users.&#34;</span> <span class="o">+</span> <span class="n">name</span> <span class="o">+</span> <span class="s">&#34;.location&#34;</span><span class="o">;</span>
+  <span class="n">String</span> <span class="n">location</span> <span class="o">=</span> <span class="n">attributes</span><span class="o">.</span><span class="na">get</span><span class="o">(</span><span class="n">key</span><span class="o">);</span>
+  <span class="k">return</span> <span class="n">Pattern</span><span class="o">.</span><span class="na">matches</span><span class="o">(</span><span class="n">regexp</span><span class="o">,</span> <span class="n">location</span><span class="o">);</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>优化后：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span><span class="lnt">9
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="kd">private</span> <span class="n">HashMap</span><span class="o">&lt;</span><span class="n">String</span><span class="o">,</span> <span class="n">String</span><span class="o">&gt;</span> <span class="n">attributes</span><span class="o">;</span>
+<span class="kd">public</span> <span class="kt">boolean</span> <span class="nf">userLocationMatches</span><span class="o">(</span><span class="n">String</span> <span class="n">name</span><span class="o">,</span> <span class="n">String</span> <span class="n">regexp</span><span class="o">)</span> <span class="o">{</span>
+  <span class="n">String</span> <span class="n">key</span> <span class="o">=</span> <span class="s">&#34;users.&#34;</span> <span class="o">+</span> <span class="n">name</span> <span class="o">+</span> <span class="s">&#34;.location&#34;</span><span class="o">;</span>
+  <span class="n">String</span> <span class="n">location</span><span class="o">;</span>
+  <span class="kd">synchronized</span> <span class="o">(</span><span class="k">this</span><span class="o">)</span> <span class="o">{</span>
+    <span class="n">location</span> <span class="o">=</span> <span class="n">attributes</span><span class="o">.</span><span class="na">get</span><span class="o">(</span><span class="n">key</span><span class="o">);</span>
+  <span class="o">}</span>
+  <span class="k">return</span> <span class="n">Pattern</span><span class="o">.</span><span class="na">matches</span><span class="o">(</span><span class="n">regexp</span><span class="o">,</span> <span class="n">location</span><span class="o">);</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>或者：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="kd">private</span> <span class="n">Map</span><span class="o">&lt;</span><span class="n">String</span><span class="o">,</span> <span class="n">String</span><span class="o">&gt;</span> <span class="n">attributes</span> <span class="o">=</span> <span class="n">Collections</span><span class="o">.</span><span class="na">synchronizedMap</span><span class="o">(...);</span>
+</code></pre></td></tr></table>
+</div>
+</div><h3 id="lock-splitting锁分割">Lock Splitting，锁分割<a class="anchor ms-1" href="#lock-splitting锁分割"><i class="fas fa-link"></i></a></h3>
 <p>不要用一把锁保护两个独立的状态变量：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln"> 1</span><span class="kd">public</span> <span class="kd">class</span> <span class="nc">ServerStatus</span> <span class="o">{</span>
-<span class="ln"> 2</span>  <span class="kd">private</span> <span class="n">Set</span><span class="o">&lt;</span><span class="n">String</span><span class="o">&gt;</span> <span class="n">users</span><span class="o">;</span>
-<span class="ln"> 3</span>  <span class="kd">private</span> <span class="n">Set</span><span class="o">&lt;</span><span class="n">String</span><span class="o">&gt;</span> <span class="n">queries</span><span class="o">;</span>
-<span class="ln"> 4</span>  <span class="kd">public</span> <span class="kd">synchronized</span> <span class="kt">void</span> <span class="nf">addUser</span><span class="o">(...)</span> <span class="o">{</span>
-<span class="ln"> 5</span>    <span class="n">users</span><span class="o">.</span><span class="na">add</span><span class="o">(...);</span>
-<span class="ln"> 6</span>  <span class="o">}</span>
-<span class="ln"> 7</span>  <span class="n">pubilc</span> <span class="kd">synchronized</span> <span class="kt">void</span> <span class="nf">addQuery</span><span class="o">(...)</span> <span class="o">{</span>
-<span class="ln"> 8</span>    <span class="n">queries</span><span class="o">.</span><span class="na">add</span><span class="o">(...);</span>
-<span class="ln"> 9</span>  <span class="o">}</span>
-<span class="ln">10</span><span class="o">}</span>
-</code></pre></div><p>可以两把锁来会更好：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln"> 1</span><span class="kd">public</span> <span class="kd">class</span> <span class="nc">ServerStatus</span> <span class="o">{</span>
-<span class="ln"> 2</span>  <span class="kd">private</span> <span class="n">Set</span><span class="o">&lt;</span><span class="n">String</span><span class="o">&gt;</span> <span class="n">users</span><span class="o">;</span>
-<span class="ln"> 3</span>  <span class="kd">private</span> <span class="n">Set</span><span class="o">&lt;</span><span class="n">String</span><span class="o">&gt;</span> <span class="n">queries</span><span class="o">;</span>
-<span class="ln"> 4</span>  <span class="kd">public</span> <span class="kt">void</span> <span class="nf">addUser</span><span class="o">(...)</span> <span class="o">{</span>
-<span class="ln"> 5</span>    <span class="kd">synchronized</span> <span class="o">(</span><span class="n">users</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 6</span>      <span class="n">users</span><span class="o">.</span><span class="na">add</span><span class="o">(...);</span>      
-<span class="ln"> 7</span>    <span class="o">}</span>
-<span class="ln"> 8</span>  <span class="o">}</span>
-<span class="ln"> 9</span>  <span class="n">pubilc</span> <span class="kt">void</span> <span class="nf">addQuery</span><span class="o">(...)</span> <span class="o">{</span>
-<span class="ln">10</span>    <span class="kd">synchronized</span> <span class="o">(</span><span class="n">queries</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">11</span>      <span class="n">queries</span><span class="o">.</span><span class="na">add</span><span class="o">(...);</span>      
-<span class="ln">12</span>    <span class="o">}</span>
-<span class="ln">13</span>  <span class="o">}</span>
-<span class="ln">14</span><span class="o">}</span>
-</code></pre></div></div></div>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="kd">public</span> <span class="kd">class</span> <span class="nc">ServerStatus</span> <span class="o">{</span>
+  <span class="kd">private</span> <span class="n">Set</span><span class="o">&lt;</span><span class="n">String</span><span class="o">&gt;</span> <span class="n">users</span><span class="o">;</span>
+  <span class="kd">private</span> <span class="n">Set</span><span class="o">&lt;</span><span class="n">String</span><span class="o">&gt;</span> <span class="n">queries</span><span class="o">;</span>
+  <span class="kd">public</span> <span class="kd">synchronized</span> <span class="kt">void</span> <span class="nf">addUser</span><span class="o">(...)</span> <span class="o">{</span>
+    <span class="n">users</span><span class="o">.</span><span class="na">add</span><span class="o">(...);</span>
+  <span class="o">}</span>
+  <span class="n">pubilc</span> <span class="kd">synchronized</span> <span class="kt">void</span> <span class="nf">addQuery</span><span class="o">(...)</span> <span class="o">{</span>
+    <span class="n">queries</span><span class="o">.</span><span class="na">add</span><span class="o">(...);</span>
+  <span class="o">}</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>可以两把锁来会更好：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="kd">public</span> <span class="kd">class</span> <span class="nc">ServerStatus</span> <span class="o">{</span>
+  <span class="kd">private</span> <span class="n">Set</span><span class="o">&lt;</span><span class="n">String</span><span class="o">&gt;</span> <span class="n">users</span><span class="o">;</span>
+  <span class="kd">private</span> <span class="n">Set</span><span class="o">&lt;</span><span class="n">String</span><span class="o">&gt;</span> <span class="n">queries</span><span class="o">;</span>
+  <span class="kd">public</span> <span class="kt">void</span> <span class="nf">addUser</span><span class="o">(...)</span> <span class="o">{</span>
+    <span class="kd">synchronized</span> <span class="o">(</span><span class="n">users</span><span class="o">)</span> <span class="o">{</span>
+      <span class="n">users</span><span class="o">.</span><span class="na">add</span><span class="o">(...);</span>      
+    <span class="o">}</span>
+  <span class="o">}</span>
+  <span class="n">pubilc</span> <span class="kt">void</span> <span class="nf">addQuery</span><span class="o">(...)</span> <span class="o">{</span>
+    <span class="kd">synchronized</span> <span class="o">(</span><span class="n">queries</span><span class="o">)</span> <span class="o">{</span>
+      <span class="n">queries</span><span class="o">.</span><span class="na">add</span><span class="o">(...);</span>      
+    <span class="o">}</span>
+  <span class="o">}</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div></div></div>
   <div class="card-footer"><div class="post-navs d-flex justify-content-evenly">
   <div class="post-nav post-prev"><i class="fas fa-fw fa-chevron-left"></i>
     <a href="/post/concurrent-programming/avoiding-liveness-hazards/">Avoiding Liveness Hazards

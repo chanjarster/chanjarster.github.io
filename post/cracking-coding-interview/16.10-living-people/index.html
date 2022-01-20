@@ -12,7 +12,7 @@
 <meta name="description" content="" /><meta itemprop="name" content="Cracking Coding Interview - 16.10 Living People">
 <meta itemprop="description" content=""><meta itemprop="datePublished" content="2019-09-10T16:00:11+08:00" />
 <meta itemprop="dateModified" content="2019-09-10T16:00:11+08:00" />
-<meta itemprop="wordCount" content="466">
+<meta itemprop="wordCount" content="480">
 <meta itemprop="keywords" content="ARTS-A," /><meta property="og:title" content="Cracking Coding Interview - 16.10 Living People" />
 <meta property="og:description" content="" />
 <meta property="og:type" content="article" />
@@ -225,55 +225,118 @@
 </div>
 <div class="post-content mb-3"><p><strong>Living People</strong>: Given a list of people with their birth and death years, implement a method to compute the year with the most number of people alive. You may assume that all people were born between 1900 and 2000 (inclusive). If a person was alive during any portion of that year, they should be included in that year&rsquo;s count. For example, Person (birth= 1908, death= 1909) is included in the counts for both 1908 and 1909.</p>
 <p>Hints: #476, #490, #507, #514, #523, #532, #541, #549, #576</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln">1</span><span class="kd">public</span> <span class="kd">class</span> <span class="nc">Person</span> <span class="o">{</span>
-<span class="ln">2</span>  <span class="kd">private</span> <span class="kt">int</span> <span class="kd">final</span> <span class="n">birthYear</span><span class="o">;</span>
-<span class="ln">3</span>  <span class="kd">private</span> <span class="kt">int</span> <span class="kd">final</span> <span class="n">deathYear</span><span class="o">;</span>
-<span class="ln">4</span>  <span class="c1">// getters
-</span><span class="ln">5</span><span class="c1"></span><span class="o">}</span>
-<span class="ln">6</span>
-<span class="ln">7</span><span class="n">List</span><span class="o">&lt;</span><span class="n">Human</span><span class="o">&gt;</span> <span class="n">people</span> <span class="o">=</span> <span class="o">...;</span>
-</code></pre></div><h2 id="解法">解法<a class="anchor ms-1" href="#解法"><i class="fas fa-link"></i></a></h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="kd">public</span> <span class="kd">class</span> <span class="nc">Person</span> <span class="o">{</span>
+  <span class="kd">private</span> <span class="kt">int</span> <span class="kd">final</span> <span class="n">birthYear</span><span class="o">;</span>
+  <span class="kd">private</span> <span class="kt">int</span> <span class="kd">final</span> <span class="n">deathYear</span><span class="o">;</span>
+  <span class="c1">// getters
+</span><span class="c1"></span><span class="o">}</span>
+
+<span class="n">List</span><span class="o">&lt;</span><span class="n">Human</span><span class="o">&gt;</span> <span class="n">people</span> <span class="o">=</span> <span class="o">...;</span>
+</code></pre></td></tr></table>
+</div>
+</div><h2 id="解法">解法<a class="anchor ms-1" href="#解法"><i class="fas fa-link"></i></a></h2>
 <p>维护一个delta数组代表1900年到2001年，遇到出生的就在slot上+1，遇到死亡的就在slot上-1，然后将其做成累加数列，结果就变成了每年还有多少人活着的数列。最后遍历这个数组找到最大值所在的slot，知道其年份。</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln"> 1</span>b=1904, d=1920
-<span class="ln"> 2</span>b=1910, d=1918
-<span class="ln"> 3</span>
-<span class="ln"> 4</span>index: 0 1 2 3 4 ... 10 ... 18 19 20 21
-<span class="ln"> 5</span>delta: 0 0 0 0 1     1      0  -1  0 -1
-<span class="ln"> 6</span>
-<span class="ln"> 7</span>变成累加数列:
-<span class="ln"> 8</span>index: 0 1 2 3 4 ... 10 ... 18 19 20 21
-<span class="ln"> 9</span>livin: 0 0 0 0 1     2      2  1  1  0
-<span class="ln">10</span>
-<span class="ln">11</span>当你求1919年多少人活着，那就是1人
-</code></pre></div><p>代码：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln"> 1</span><span class="kd">private</span> <span class="kt">int</span> <span class="kd">static</span> <span class="kd">final</span> <span class="kt">int</span> <span class="n">START</span> <span class="o">=</span> <span class="n">1900</span><span class="o">;</span>
-<span class="ln"> 2</span>
-<span class="ln"> 3</span><span class="kd">private</span> <span class="kt">int</span><span class="o">[]</span> <span class="n">living</span> <span class="o">=</span> <span class="k">new</span> <span class="kt">int</span><span class="o">[</span><span class="n">2000</span> <span class="o">-</span> <span class="n">START</span> <span class="o">+</span> <span class="n">2</span><span class="o">];</span>
-<span class="ln"> 4</span>
-<span class="ln"> 5</span><span class="kd">public</span> <span class="kt">void</span> <span class="nf">process</span><span class="o">(</span><span class="n">List</span><span class="o">&lt;</span><span class="n">Person</span><span class="o">&gt;</span> <span class="n">people</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 6</span>  <span class="k">for</span> <span class="o">(</span><span class="n">Person</span> <span class="n">person</span><span class="o">:</span> <span class="n">people</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 7</span>    <span class="n">living</span><span class="o">[</span><span class="n">person</span><span class="o">.</span><span class="na">birthYear</span> <span class="o">-</span> <span class="n">START</span><span class="o">]++;</span>
-<span class="ln"> 8</span>    <span class="c1">// 死亡计数延后一年，根据题意1980年死的人在1980年还活着
-</span><span class="ln"> 9</span><span class="c1"></span>    <span class="n">living</span><span class="o">[</span><span class="n">person</span><span class="o">.</span><span class="na">deathYear</span> <span class="o">-</span> <span class="n">START</span> <span class="o">+</span> <span class="n">1</span><span class="o">]--;</span>
-<span class="ln">10</span>  <span class="o">}</span>
-<span class="ln">11</span>  <span class="c1">// 计算每年活着的人数
-</span><span class="ln">12</span><span class="c1"></span>  <span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="n">1</span><span class="o">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">living</span><span class="o">.</span><span class="na">length</span><span class="o">;</span> <span class="n">i</span><span class="o">++)</span> <span class="o">{</span>
-<span class="ln">13</span>    <span class="n">living</span><span class="o">[</span><span class="n">i</span><span class="o">]</span> <span class="o">+=</span> <span class="n">living</span><span class="o">[</span><span class="n">i</span> <span class="o">-</span> <span class="n">1</span><span class="o">];</span>
-<span class="ln">14</span>  <span class="o">}</span>  
-<span class="ln">15</span><span class="o">}</span>
-<span class="ln">16</span>
-<span class="ln">17</span><span class="kd">public</span> <span class="kt">int</span> <span class="nf">maxLivingYear</span><span class="o">()</span> <span class="o">{</span>
-<span class="ln">18</span>  <span class="kt">int</span> <span class="n">maxLinvingYear</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span>
-<span class="ln">19</span>  <span class="kt">int</span> <span class="n">maxLiving</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span>
-<span class="ln">20</span>  <span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">living</span><span class="o">.</span><span class="na">length</span><span class="o">;</span> <span class="n">i</span><span class="o">++)</span> <span class="o">{</span>
-<span class="ln">21</span>    <span class="k">if</span> <span class="o">(</span><span class="n">living</span><span class="o">[</span><span class="n">i</span><span class="o">]</span> <span class="o">&gt;</span> <span class="n">maxLiving</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">22</span>      <span class="n">maxLiving</span> <span class="o">=</span> <span class="n">living</span><span class="o">[</span><span class="n">i</span><span class="o">];</span>
-<span class="ln">23</span>      <span class="n">maxLinvingYear</span> <span class="o">=</span> <span class="n">i</span> <span class="o">+</span> <span class="n">START</span><span class="o">;</span>
-<span class="ln">24</span>    <span class="o">}</span>
-<span class="ln">25</span>  <span class="o">}</span>
-<span class="ln">26</span>  <span class="k">return</span> <span class="n">maxLinvingYear</span><span class="o">;</span>
-<span class="ln">27</span><span class="o">}</span>
-</code></pre></div></div></div>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt">b=1904, d=1920
+b=1910, d=1918
+
+index: 0 1 2 3 4 ... 10 ... 18 19 20 21
+delta: 0 0 0 0 1     1      0  -1  0 -1
+
+变成累加数列:
+index: 0 1 2 3 4 ... 10 ... 18 19 20 21
+livin: 0 0 0 0 1     2      2  1  1  0
+
+当你求1919年多少人活着，那就是1人
+</code></pre></td></tr></table>
+</div>
+</div><p>代码：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="kd">private</span> <span class="kt">int</span> <span class="kd">static</span> <span class="kd">final</span> <span class="kt">int</span> <span class="n">START</span> <span class="o">=</span> <span class="n">1900</span><span class="o">;</span>
+
+<span class="kd">private</span> <span class="kt">int</span><span class="o">[]</span> <span class="n">living</span> <span class="o">=</span> <span class="k">new</span> <span class="kt">int</span><span class="o">[</span><span class="n">2000</span> <span class="o">-</span> <span class="n">START</span> <span class="o">+</span> <span class="n">2</span><span class="o">];</span>
+
+<span class="kd">public</span> <span class="kt">void</span> <span class="nf">process</span><span class="o">(</span><span class="n">List</span><span class="o">&lt;</span><span class="n">Person</span><span class="o">&gt;</span> <span class="n">people</span><span class="o">)</span> <span class="o">{</span>
+  <span class="k">for</span> <span class="o">(</span><span class="n">Person</span> <span class="n">person</span><span class="o">:</span> <span class="n">people</span><span class="o">)</span> <span class="o">{</span>
+    <span class="n">living</span><span class="o">[</span><span class="n">person</span><span class="o">.</span><span class="na">birthYear</span> <span class="o">-</span> <span class="n">START</span><span class="o">]++;</span>
+    <span class="c1">// 死亡计数延后一年，根据题意1980年死的人在1980年还活着
+</span><span class="c1"></span>    <span class="n">living</span><span class="o">[</span><span class="n">person</span><span class="o">.</span><span class="na">deathYear</span> <span class="o">-</span> <span class="n">START</span> <span class="o">+</span> <span class="n">1</span><span class="o">]--;</span>
+  <span class="o">}</span>
+  <span class="c1">// 计算每年活着的人数
+</span><span class="c1"></span>  <span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="n">1</span><span class="o">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">living</span><span class="o">.</span><span class="na">length</span><span class="o">;</span> <span class="n">i</span><span class="o">++)</span> <span class="o">{</span>
+    <span class="n">living</span><span class="o">[</span><span class="n">i</span><span class="o">]</span> <span class="o">+=</span> <span class="n">living</span><span class="o">[</span><span class="n">i</span> <span class="o">-</span> <span class="n">1</span><span class="o">];</span>
+  <span class="o">}</span>  
+<span class="o">}</span>
+
+<span class="kd">public</span> <span class="kt">int</span> <span class="nf">maxLivingYear</span><span class="o">()</span> <span class="o">{</span>
+  <span class="kt">int</span> <span class="n">maxLinvingYear</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span>
+  <span class="kt">int</span> <span class="n">maxLiving</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span>
+  <span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">living</span><span class="o">.</span><span class="na">length</span><span class="o">;</span> <span class="n">i</span><span class="o">++)</span> <span class="o">{</span>
+    <span class="k">if</span> <span class="o">(</span><span class="n">living</span><span class="o">[</span><span class="n">i</span><span class="o">]</span> <span class="o">&gt;</span> <span class="n">maxLiving</span><span class="o">)</span> <span class="o">{</span>
+      <span class="n">maxLiving</span> <span class="o">=</span> <span class="n">living</span><span class="o">[</span><span class="n">i</span><span class="o">];</span>
+      <span class="n">maxLinvingYear</span> <span class="o">=</span> <span class="n">i</span> <span class="o">+</span> <span class="n">START</span><span class="o">;</span>
+    <span class="o">}</span>
+  <span class="o">}</span>
+  <span class="k">return</span> <span class="n">maxLinvingYear</span><span class="o">;</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div></div></div>
   <div class="card-footer"><div class="post-navs d-flex justify-content-evenly">
   <div class="post-nav post-prev"><i class="fas fa-fw fa-chevron-left"></i>
     <a href="/post/jvm/class-loading-classloader/">JVM - 类加载器

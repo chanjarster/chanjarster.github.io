@@ -12,7 +12,7 @@
 <meta name="description" content="" /><meta itemprop="name" content="Cracking Coding Interview - 4.7 Build Order">
 <meta itemprop="description" content=""><meta itemprop="datePublished" content="2019-08-15T13:05:11+08:00" />
 <meta itemprop="dateModified" content="2019-08-15T13:05:11+08:00" />
-<meta itemprop="wordCount" content="1719">
+<meta itemprop="wordCount" content="1762">
 <meta itemprop="keywords" content="ARTS-A," /><meta property="og:title" content="Cracking Coding Interview - 4.7 Build Order" />
 <meta property="og:description" content="" />
 <meta property="og:type" content="article" />
@@ -225,11 +225,21 @@
 </div>
 <div class="post-content mb-3"><p><strong>Build Order</strong>: You are given a list of projects and a list of dependencies (which is a list of pairs of projects, where the second project is dependent on the first project). All of a project&rsquo;s dependencies must be built before the project is. Find a build order that will allow the projects to be built. If there is no valid build order, return an error.</p>
 <p>EXAMPLE</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln">1</span>Input:
-<span class="ln">2</span>projects:      a, b, c, d, e, f
-<span class="ln">3</span>dependencies: (a, d), (f, b), (b, d), (f, a), (d, c) 
-<span class="ln">4</span>Output:        f, e, a, b, d, c
-</code></pre></div><p>Hints: #26, #47, #60, #85, #125, #133</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt">Input:
+projects:      a, b, c, d, e, f
+dependencies: (a, d), (f, b), (b, d), (f, a), (d, c) 
+Output:        f, e, a, b, d, c
+</code></pre></td></tr></table>
+</div>
+</div><p>Hints: #26, #47, #60, #85, #125, #133</p>
 <h2 id="解法1有bug">解法1（有bug）<a class="anchor ms-1" href="#解法1有bug"><i class="fas fa-link"></i></a></h2>
 <p>这个题目可以认为是一张有向不循环的图，我们可以利用dependencies信息构建一个图，然后利用BFS（广度优先）的方法遍历这张图。</p>
 <p>这张图的合法性其实在于是否出现循环，我们可以在遍历的时候判断是否某个节点出现两次来判断。</p>
@@ -240,90 +250,184 @@
 </ol>
 <p>顺带一提，root节点不只1个，例子中f和e都是root节点</p>
 <p>确定root节点的方式比较简单，如果这个节点没有指向它的边，那么它就是root</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln"> 1</span><span class="kd">public</span> <span class="kd">class</span> <span class="nc">Node</span> <span class="o">{</span>
-<span class="ln"> 2</span>  <span class="kd">private</span> <span class="kt">char</span> <span class="n">project</span><span class="o">;</span>
-<span class="ln"> 3</span>  <span class="kd">private</span> <span class="kt">boolean</span> <span class="n">referenced</span><span class="o">;</span> <span class="c1">// 是否有边指向它自己
-</span><span class="ln"> 4</span><span class="c1"></span>  <span class="kd">private</span> <span class="n">List</span><span class="o">&lt;</span><span class="n">Node</span><span class="o">&gt;</span> <span class="n">adjacents</span> <span class="o">=</span> <span class="k">new</span> <span class="n">ArrayList</span><span class="o">&lt;&gt;();</span>
-<span class="ln"> 5</span>  <span class="kd">private</span> <span class="kt">boolean</span> <span class="n">marked</span><span class="o">;</span>     <span class="c1">// BFS时用
-</span><span class="ln"> 6</span><span class="c1"></span><span class="o">}</span>
-<span class="ln"> 7</span>
-<span class="ln"> 8</span><span class="kd">public</span> <span class="kd">class</span> <span class="nc">Dependency</span> <span class="o">{</span>
-<span class="ln"> 9</span>  <span class="kd">private</span> <span class="kt">char</span> <span class="n">from</span><span class="o">;</span>
-<span class="ln">10</span>  <span class="kd">private</span> <span class="kt">char</span> <span class="n">to</span><span class="o">;</span>
-<span class="ln">11</span><span class="o">}</span>
-<span class="ln">12</span>
-<span class="ln">13</span><span class="kd">public</span> <span class="kt">char</span><span class="o">[]</span> <span class="nf">buildOrder</span><span class="o">(</span><span class="kt">char</span><span class="o">[]</span> <span class="n">projects</span><span class="o">,</span> <span class="n">Dependency</span><span class="o">[]</span> <span class="n">dependencies</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">14</span>  <span class="n">List</span><span class="o">&lt;</span><span class="n">Node</span><span class="o">&gt;</span> <span class="n">nodes</span> <span class="o">=</span> <span class="n">buildNodes</span><span class="o">(</span><span class="n">projects</span><span class="o">);</span>
-<span class="ln">15</span>  <span class="n">buildGraph</span><span class="o">(</span><span class="n">nodes</span><span class="o">,</span> <span class="n">dependencies</span><span class="o">);</span>
-<span class="ln">16</span>  <span class="n">List</span><span class="o">&lt;</span><span class="n">Node</span><span class="o">&gt;</span> <span class="n">roots</span> <span class="o">=</span> <span class="n">findRoots</span><span class="o">(</span><span class="n">nodes</span><span class="o">);</span>
-<span class="ln">17</span>  <span class="k">if</span> <span class="o">(</span><span class="n">roots</span><span class="o">.</span><span class="na">isEmpty</span><span class="o">())</span> <span class="o">{</span>
-<span class="ln">18</span>    <span class="k">throw</span> <span class="k">new</span> <span class="n">IllegalException</span><span class="o">(</span><span class="s">&#34;circular dependencies&#34;</span><span class="o">);</span>
-<span class="ln">19</span>  <span class="o">}</span>
-<span class="ln">20</span>  <span class="k">return</span> <span class="n">bfsTraverse</span><span class="o">(</span><span class="n">roots</span><span class="o">,</span> <span class="n">projects</span><span class="o">.</span><span class="na">length</span><span class="o">);</span>
-<span class="ln">21</span><span class="o">}</span>
-<span class="ln">22</span>
-<span class="ln">23</span><span class="c1">// O(n)
-</span><span class="ln">24</span><span class="c1"></span><span class="kd">private</span> <span class="n">List</span><span class="o">&lt;</span><span class="n">Node</span><span class="o">&gt;</span> <span class="nf">buildNodes</span><span class="o">(</span><span class="kt">char</span><span class="o">[]</span> <span class="n">projects</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">25</span>  <span class="n">List</span><span class="o">&lt;</span><span class="n">Node</span><span class="o">&gt;</span> <span class="n">res</span> <span class="o">=</span> <span class="k">new</span> <span class="n">ArrayList</span><span class="o">&lt;&gt;();</span>
-<span class="ln">26</span>  <span class="k">for</span> <span class="o">(</span><span class="kt">char</span> <span class="n">p</span> <span class="o">:</span> <span class="n">projects</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">27</span>    <span class="n">res</span><span class="o">.</span><span class="na">add</span><span class="o">(</span><span class="k">new</span> <span class="n">Node</span><span class="o">(</span><span class="n">p</span><span class="o">));</span>
-<span class="ln">28</span>  <span class="o">}</span>
-<span class="ln">29</span>  <span class="k">return</span> <span class="n">res</span><span class="o">;</span>
-<span class="ln">30</span><span class="o">}</span>
-<span class="ln">31</span>
-<span class="ln">32</span><span class="c1">// O(n)
-</span><span class="ln">33</span><span class="c1"></span><span class="kd">private</span> <span class="kt">void</span> <span class="nf">buildGraph</span><span class="o">(</span><span class="n">List</span><span class="o">&lt;</span><span class="n">Node</span><span class="o">&gt;</span> <span class="n">nodes</span><span class="o">,</span> <span class="n">Dependency</span><span class="o">[]</span> <span class="n">dependencies</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">34</span>  <span class="n">Map</span><span class="o">&lt;</span><span class="n">Char</span><span class="o">,</span> <span class="n">Node</span><span class="o">&gt;</span> <span class="n">nodeMap</span> <span class="o">=</span> <span class="n">buildNodeMap</span><span class="o">(</span><span class="n">nodes</span><span class="o">);</span>
-<span class="ln">35</span>  <span class="k">for</span> <span class="o">(</span><span class="n">Dependency</span> <span class="n">dep</span> <span class="o">:</span> <span class="n">dependencies</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">36</span>    <span class="n">Node</span> <span class="n">from</span> <span class="o">=</span> <span class="n">nodeMap</span><span class="o">.</span><span class="na">get</span><span class="o">(</span><span class="n">dep</span><span class="o">.</span><span class="na">from</span><span class="o">);</span>
-<span class="ln">37</span>    <span class="n">Node</span> <span class="n">to</span> <span class="o">=</span> <span class="n">nodeMap</span><span class="o">.</span><span class="na">get</span><span class="o">(</span><span class="n">dep</span><span class="o">.</span><span class="na">to</span><span class="o">);</span>
-<span class="ln">38</span>    <span class="n">to</span><span class="o">.</span><span class="na">referenced</span> <span class="o">=</span> <span class="kc">true</span><span class="o">;</span>
-<span class="ln">39</span>    <span class="n">from</span><span class="o">.</span><span class="na">adjacents</span><span class="o">.</span><span class="na">add</span><span class="o">(</span><span class="n">to</span><span class="o">);</span>
-<span class="ln">40</span>  <span class="o">}</span>
-<span class="ln">41</span><span class="o">}</span>
-<span class="ln">42</span>
-<span class="ln">43</span><span class="c1">// O(n)
-</span><span class="ln">44</span><span class="c1"></span><span class="kd">private</span> <span class="n">List</span><span class="o">&lt;</span><span class="n">Node</span><span class="o">&gt;</span> <span class="nf">findRoots</span><span class="o">(</span><span class="n">List</span><span class="o">&lt;</span><span class="n">Node</span><span class="o">&gt;</span> <span class="n">nodes</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">45</span>  <span class="n">List</span><span class="o">&lt;</span><span class="n">Node</span><span class="o">&gt;</span> <span class="n">res</span> <span class="o">=</span> <span class="k">new</span> <span class="n">ArrayList</span><span class="o">&lt;&gt;();</span>
-<span class="ln">46</span>  <span class="k">for</span> <span class="o">(</span><span class="n">Node</span> <span class="n">n</span> <span class="o">:</span> <span class="n">nodes</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">47</span>    <span class="k">if</span> <span class="o">(!</span><span class="n">n</span><span class="o">.</span><span class="na">referenced</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">48</span>      <span class="n">res</span><span class="o">.</span><span class="na">add</span><span class="o">(</span><span class="n">n</span><span class="o">);</span>
-<span class="ln">49</span>    <span class="o">}</span>
-<span class="ln">50</span>  <span class="o">}</span>
-<span class="ln">51</span>  <span class="k">return</span> <span class="n">res</span><span class="o">;</span>
-<span class="ln">52</span><span class="o">}</span>
-<span class="ln">53</span>
-<span class="ln">54</span><span class="c1">// 如果每个节点指向所有其他节点，那么复杂度是O(n^2)
-</span><span class="ln">55</span><span class="c1">// 如果图退化为链表，那么复杂度是O(n)
-</span><span class="ln">56</span><span class="c1"></span><span class="kd">private</span> <span class="kt">char</span><span class="o">[]</span> <span class="nf">bfsTraverse</span><span class="o">(</span><span class="n">List</span><span class="o">&lt;</span><span class="n">Node</span><span class="o">&gt;</span> <span class="n">nodes</span><span class="o">,</span> <span class="kt">int</span> <span class="n">total</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">57</span>  <span class="n">List</span><span class="o">&lt;</span><span class="n">Node</span><span class="o">&gt;</span> <span class="n">current</span> <span class="o">=</span> <span class="n">nodes</span><span class="o">;</span>  
-<span class="ln">58</span>  <span class="kt">char</span><span class="o">[]</span> <span class="n">res</span> <span class="o">=</span> <span class="k">new</span> <span class="kt">char</span><span class="o">[</span><span class="n">total</span><span class="o">];</span>
-<span class="ln">59</span>  <span class="kt">int</span> <span class="n">index</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span>
-<span class="ln">60</span>  <span class="k">while</span> <span class="o">(!</span><span class="n">current</span><span class="o">.</span><span class="na">isEmpty</span><span class="o">())</span> <span class="o">{</span>
-<span class="ln">61</span>    <span class="n">List</span><span class="o">&lt;</span><span class="n">Node</span><span class="o">&gt;</span> <span class="n">next</span> <span class="o">=</span> <span class="k">new</span> <span class="n">ArrayList</span><span class="o">&lt;&gt;();</span>
-<span class="ln">62</span>    <span class="k">for</span> <span class="o">(</span><span class="n">Node</span> <span class="n">n</span> <span class="o">:</span> <span class="n">current</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">63</span>      <span class="n">res</span><span class="o">[</span><span class="n">index</span><span class="o">++]</span> <span class="o">=</span> <span class="n">n</span><span class="o">.</span><span class="na">project</span><span class="o">;</span>
-<span class="ln">64</span>      <span class="k">if</span> <span class="o">(</span><span class="n">n</span><span class="o">.</span><span class="na">marked</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">65</span>        <span class="k">throw</span> <span class="k">new</span> <span class="n">IllegalException</span><span class="o">(</span><span class="s">&#34;circular dependency: &#34;</span> <span class="o">+</span> <span class="n">res</span><span class="o">);</span>
-<span class="ln">66</span>      <span class="o">}</span>
-<span class="ln">67</span>      <span class="n">n</span><span class="o">.</span><span class="na">marked</span> <span class="o">=</span> <span class="kc">true</span><span class="o">;</span>
-<span class="ln">68</span>      <span class="k">for</span> <span class="o">(</span><span class="n">Node</span> <span class="n">a</span> <span class="o">:</span> <span class="n">node</span><span class="o">.</span><span class="na">adjacents</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">69</span>        <span class="n">next</span><span class="o">.</span><span class="na">add</span><span class="o">(</span><span class="n">a</span><span class="o">);</span>
-<span class="ln">70</span>      <span class="o">}</span>
-<span class="ln">71</span>    <span class="o">}</span>
-<span class="ln">72</span>    <span class="n">current</span> <span class="o">=</span> <span class="n">next</span><span class="o">;</span>
-<span class="ln">73</span>  <span class="o">}</span>
-<span class="ln">74</span>  <span class="k">return</span> <span class="n">res</span><span class="o">;</span>
-<span class="ln">75</span><span class="o">}</span>
-</code></pre></div><p>如果遇到下面这种情况（都是从上往下的箭头），解法1存在bug：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln">1</span>      f
-<span class="ln">2</span>     /|\
-<span class="ln">3</span>    c | d
-<span class="ln">4</span>     \|/|
-<span class="ln">5</span>      a |
-<span class="ln">6</span>      |/
-<span class="ln">7</span>      e
-</code></pre></div><p>正确的顺序应该是f、c、d、a、e，但是解法1采用广度优先，因此会变成f、c、a、d、e。造成这个错误的原因是没有判断某个节点的所有父节点是否都构建过了</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span><span class="lnt">46
+</span><span class="lnt">47
+</span><span class="lnt">48
+</span><span class="lnt">49
+</span><span class="lnt">50
+</span><span class="lnt">51
+</span><span class="lnt">52
+</span><span class="lnt">53
+</span><span class="lnt">54
+</span><span class="lnt">55
+</span><span class="lnt">56
+</span><span class="lnt">57
+</span><span class="lnt">58
+</span><span class="lnt">59
+</span><span class="lnt">60
+</span><span class="lnt">61
+</span><span class="lnt">62
+</span><span class="lnt">63
+</span><span class="lnt">64
+</span><span class="lnt">65
+</span><span class="lnt">66
+</span><span class="lnt">67
+</span><span class="lnt">68
+</span><span class="lnt">69
+</span><span class="lnt">70
+</span><span class="lnt">71
+</span><span class="lnt">72
+</span><span class="lnt">73
+</span><span class="lnt">74
+</span><span class="lnt">75
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="kd">public</span> <span class="kd">class</span> <span class="nc">Node</span> <span class="o">{</span>
+  <span class="kd">private</span> <span class="kt">char</span> <span class="n">project</span><span class="o">;</span>
+  <span class="kd">private</span> <span class="kt">boolean</span> <span class="n">referenced</span><span class="o">;</span> <span class="c1">// 是否有边指向它自己
+</span><span class="c1"></span>  <span class="kd">private</span> <span class="n">List</span><span class="o">&lt;</span><span class="n">Node</span><span class="o">&gt;</span> <span class="n">adjacents</span> <span class="o">=</span> <span class="k">new</span> <span class="n">ArrayList</span><span class="o">&lt;&gt;();</span>
+  <span class="kd">private</span> <span class="kt">boolean</span> <span class="n">marked</span><span class="o">;</span>     <span class="c1">// BFS时用
+</span><span class="c1"></span><span class="o">}</span>
+
+<span class="kd">public</span> <span class="kd">class</span> <span class="nc">Dependency</span> <span class="o">{</span>
+  <span class="kd">private</span> <span class="kt">char</span> <span class="n">from</span><span class="o">;</span>
+  <span class="kd">private</span> <span class="kt">char</span> <span class="n">to</span><span class="o">;</span>
+<span class="o">}</span>
+
+<span class="kd">public</span> <span class="kt">char</span><span class="o">[]</span> <span class="nf">buildOrder</span><span class="o">(</span><span class="kt">char</span><span class="o">[]</span> <span class="n">projects</span><span class="o">,</span> <span class="n">Dependency</span><span class="o">[]</span> <span class="n">dependencies</span><span class="o">)</span> <span class="o">{</span>
+  <span class="n">List</span><span class="o">&lt;</span><span class="n">Node</span><span class="o">&gt;</span> <span class="n">nodes</span> <span class="o">=</span> <span class="n">buildNodes</span><span class="o">(</span><span class="n">projects</span><span class="o">);</span>
+  <span class="n">buildGraph</span><span class="o">(</span><span class="n">nodes</span><span class="o">,</span> <span class="n">dependencies</span><span class="o">);</span>
+  <span class="n">List</span><span class="o">&lt;</span><span class="n">Node</span><span class="o">&gt;</span> <span class="n">roots</span> <span class="o">=</span> <span class="n">findRoots</span><span class="o">(</span><span class="n">nodes</span><span class="o">);</span>
+  <span class="k">if</span> <span class="o">(</span><span class="n">roots</span><span class="o">.</span><span class="na">isEmpty</span><span class="o">())</span> <span class="o">{</span>
+    <span class="k">throw</span> <span class="k">new</span> <span class="n">IllegalException</span><span class="o">(</span><span class="s">&#34;circular dependencies&#34;</span><span class="o">);</span>
+  <span class="o">}</span>
+  <span class="k">return</span> <span class="n">bfsTraverse</span><span class="o">(</span><span class="n">roots</span><span class="o">,</span> <span class="n">projects</span><span class="o">.</span><span class="na">length</span><span class="o">);</span>
+<span class="o">}</span>
+
+<span class="c1">// O(n)
+</span><span class="c1"></span><span class="kd">private</span> <span class="n">List</span><span class="o">&lt;</span><span class="n">Node</span><span class="o">&gt;</span> <span class="nf">buildNodes</span><span class="o">(</span><span class="kt">char</span><span class="o">[]</span> <span class="n">projects</span><span class="o">)</span> <span class="o">{</span>
+  <span class="n">List</span><span class="o">&lt;</span><span class="n">Node</span><span class="o">&gt;</span> <span class="n">res</span> <span class="o">=</span> <span class="k">new</span> <span class="n">ArrayList</span><span class="o">&lt;&gt;();</span>
+  <span class="k">for</span> <span class="o">(</span><span class="kt">char</span> <span class="n">p</span> <span class="o">:</span> <span class="n">projects</span><span class="o">)</span> <span class="o">{</span>
+    <span class="n">res</span><span class="o">.</span><span class="na">add</span><span class="o">(</span><span class="k">new</span> <span class="n">Node</span><span class="o">(</span><span class="n">p</span><span class="o">));</span>
+  <span class="o">}</span>
+  <span class="k">return</span> <span class="n">res</span><span class="o">;</span>
+<span class="o">}</span>
+
+<span class="c1">// O(n)
+</span><span class="c1"></span><span class="kd">private</span> <span class="kt">void</span> <span class="nf">buildGraph</span><span class="o">(</span><span class="n">List</span><span class="o">&lt;</span><span class="n">Node</span><span class="o">&gt;</span> <span class="n">nodes</span><span class="o">,</span> <span class="n">Dependency</span><span class="o">[]</span> <span class="n">dependencies</span><span class="o">)</span> <span class="o">{</span>
+  <span class="n">Map</span><span class="o">&lt;</span><span class="n">Char</span><span class="o">,</span> <span class="n">Node</span><span class="o">&gt;</span> <span class="n">nodeMap</span> <span class="o">=</span> <span class="n">buildNodeMap</span><span class="o">(</span><span class="n">nodes</span><span class="o">);</span>
+  <span class="k">for</span> <span class="o">(</span><span class="n">Dependency</span> <span class="n">dep</span> <span class="o">:</span> <span class="n">dependencies</span><span class="o">)</span> <span class="o">{</span>
+    <span class="n">Node</span> <span class="n">from</span> <span class="o">=</span> <span class="n">nodeMap</span><span class="o">.</span><span class="na">get</span><span class="o">(</span><span class="n">dep</span><span class="o">.</span><span class="na">from</span><span class="o">);</span>
+    <span class="n">Node</span> <span class="n">to</span> <span class="o">=</span> <span class="n">nodeMap</span><span class="o">.</span><span class="na">get</span><span class="o">(</span><span class="n">dep</span><span class="o">.</span><span class="na">to</span><span class="o">);</span>
+    <span class="n">to</span><span class="o">.</span><span class="na">referenced</span> <span class="o">=</span> <span class="kc">true</span><span class="o">;</span>
+    <span class="n">from</span><span class="o">.</span><span class="na">adjacents</span><span class="o">.</span><span class="na">add</span><span class="o">(</span><span class="n">to</span><span class="o">);</span>
+  <span class="o">}</span>
+<span class="o">}</span>
+
+<span class="c1">// O(n)
+</span><span class="c1"></span><span class="kd">private</span> <span class="n">List</span><span class="o">&lt;</span><span class="n">Node</span><span class="o">&gt;</span> <span class="nf">findRoots</span><span class="o">(</span><span class="n">List</span><span class="o">&lt;</span><span class="n">Node</span><span class="o">&gt;</span> <span class="n">nodes</span><span class="o">)</span> <span class="o">{</span>
+  <span class="n">List</span><span class="o">&lt;</span><span class="n">Node</span><span class="o">&gt;</span> <span class="n">res</span> <span class="o">=</span> <span class="k">new</span> <span class="n">ArrayList</span><span class="o">&lt;&gt;();</span>
+  <span class="k">for</span> <span class="o">(</span><span class="n">Node</span> <span class="n">n</span> <span class="o">:</span> <span class="n">nodes</span><span class="o">)</span> <span class="o">{</span>
+    <span class="k">if</span> <span class="o">(!</span><span class="n">n</span><span class="o">.</span><span class="na">referenced</span><span class="o">)</span> <span class="o">{</span>
+      <span class="n">res</span><span class="o">.</span><span class="na">add</span><span class="o">(</span><span class="n">n</span><span class="o">);</span>
+    <span class="o">}</span>
+  <span class="o">}</span>
+  <span class="k">return</span> <span class="n">res</span><span class="o">;</span>
+<span class="o">}</span>
+
+<span class="c1">// 如果每个节点指向所有其他节点，那么复杂度是O(n^2)
+</span><span class="c1">// 如果图退化为链表，那么复杂度是O(n)
+</span><span class="c1"></span><span class="kd">private</span> <span class="kt">char</span><span class="o">[]</span> <span class="nf">bfsTraverse</span><span class="o">(</span><span class="n">List</span><span class="o">&lt;</span><span class="n">Node</span><span class="o">&gt;</span> <span class="n">nodes</span><span class="o">,</span> <span class="kt">int</span> <span class="n">total</span><span class="o">)</span> <span class="o">{</span>
+  <span class="n">List</span><span class="o">&lt;</span><span class="n">Node</span><span class="o">&gt;</span> <span class="n">current</span> <span class="o">=</span> <span class="n">nodes</span><span class="o">;</span>  
+  <span class="kt">char</span><span class="o">[]</span> <span class="n">res</span> <span class="o">=</span> <span class="k">new</span> <span class="kt">char</span><span class="o">[</span><span class="n">total</span><span class="o">];</span>
+  <span class="kt">int</span> <span class="n">index</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span>
+  <span class="k">while</span> <span class="o">(!</span><span class="n">current</span><span class="o">.</span><span class="na">isEmpty</span><span class="o">())</span> <span class="o">{</span>
+    <span class="n">List</span><span class="o">&lt;</span><span class="n">Node</span><span class="o">&gt;</span> <span class="n">next</span> <span class="o">=</span> <span class="k">new</span> <span class="n">ArrayList</span><span class="o">&lt;&gt;();</span>
+    <span class="k">for</span> <span class="o">(</span><span class="n">Node</span> <span class="n">n</span> <span class="o">:</span> <span class="n">current</span><span class="o">)</span> <span class="o">{</span>
+      <span class="n">res</span><span class="o">[</span><span class="n">index</span><span class="o">++]</span> <span class="o">=</span> <span class="n">n</span><span class="o">.</span><span class="na">project</span><span class="o">;</span>
+      <span class="k">if</span> <span class="o">(</span><span class="n">n</span><span class="o">.</span><span class="na">marked</span><span class="o">)</span> <span class="o">{</span>
+        <span class="k">throw</span> <span class="k">new</span> <span class="n">IllegalException</span><span class="o">(</span><span class="s">&#34;circular dependency: &#34;</span> <span class="o">+</span> <span class="n">res</span><span class="o">);</span>
+      <span class="o">}</span>
+      <span class="n">n</span><span class="o">.</span><span class="na">marked</span> <span class="o">=</span> <span class="kc">true</span><span class="o">;</span>
+      <span class="k">for</span> <span class="o">(</span><span class="n">Node</span> <span class="n">a</span> <span class="o">:</span> <span class="n">node</span><span class="o">.</span><span class="na">adjacents</span><span class="o">)</span> <span class="o">{</span>
+        <span class="n">next</span><span class="o">.</span><span class="na">add</span><span class="o">(</span><span class="n">a</span><span class="o">);</span>
+      <span class="o">}</span>
+    <span class="o">}</span>
+    <span class="n">current</span> <span class="o">=</span> <span class="n">next</span><span class="o">;</span>
+  <span class="o">}</span>
+  <span class="k">return</span> <span class="n">res</span><span class="o">;</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>如果遇到下面这种情况（都是从上往下的箭头），解法1存在bug：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt">      f
+     /|\
+    c | d
+     \|/|
+      a |
+      |/
+      e
+</code></pre></td></tr></table>
+</div>
+</div><p>正确的顺序应该是f、c、d、a、e，但是解法1采用广度优先，因此会变成f、c、a、d、e。造成这个错误的原因是没有判断某个节点的所有父节点是否都构建过了</p>
 <h2 id="解法2">解法2<a class="anchor ms-1" href="#解法2"><i class="fas fa-link"></i></a></h2>
 <p>A -&gt; B 的意思是 B 依赖 A</p>
 <ol>
@@ -331,90 +435,179 @@
 <li>删掉它们到下级节点对它们的依赖（因为已经构建过了，那么这个依赖可以不需要了）</li>
 <li>在它们的下级节点里重复1、2步骤</li>
 </ol>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln"> 1</span><span class="kd">public</span> <span class="kd">class</span> <span class="nc">Graph</span> <span class="o">{</span>
-<span class="ln"> 2</span>  <span class="kd">private</span> <span class="n">Map</span><span class="o">&lt;</span><span class="n">String</span><span class="o">,</span> <span class="n">Project</span><span class="o">&gt;</span> <span class="n">projectMap</span> <span class="o">=</span> <span class="k">new</span> <span class="n">HashMap</span><span class="o">&lt;&gt;();</span>
-<span class="ln"> 3</span>  <span class="kd">private</span> <span class="n">List</span><span class="o">&lt;</span><span class="n">Project</span><span class="o">&gt;</span> <span class="n">nodes</span> <span class="o">=</span> <span class="k">new</span> <span class="n">ArrayList</span><span class="o">&lt;&gt;();</span>
-<span class="ln"> 4</span>  
-<span class="ln"> 5</span>  <span class="kd">public</span> <span class="kt">void</span> <span class="nf">addProject</span><span class="o">(</span><span class="n">String</span> <span class="n">name</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 6</span>    <span class="k">if</span> <span class="o">(!</span><span class="n">projectMap</span><span class="o">.</span><span class="na">containsKey</span><span class="o">(</span><span class="n">name</span><span class="o">))</span> <span class="o">{</span>
-<span class="ln"> 7</span>      <span class="n">Project</span> <span class="n">p</span> <span class="o">=</span> <span class="k">new</span> <span class="n">Project</span><span class="o">(</span><span class="n">name</span><span class="o">);</span>
-<span class="ln"> 8</span>      <span class="n">nodes</span><span class="o">.</span><span class="na">add</span><span class="o">(</span><span class="n">p</span><span class="o">);</span>
-<span class="ln"> 9</span>      <span class="n">nodes</span><span class="o">.</span><span class="na">put</span><span class="o">(</span><span class="n">name</span><span class="o">,</span> <span class="n">p</span><span class="o">);</span>
-<span class="ln">10</span>    <span class="o">}</span>
-<span class="ln">11</span>  <span class="o">}</span>
-<span class="ln">12</span>  <span class="kd">public</span> <span class="kt">void</span> <span class="nf">addEdge</span><span class="o">(</span><span class="n">Edge</span> <span class="n">edge</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">13</span>    <span class="n">Project</span> <span class="n">from</span> <span class="o">=</span> <span class="n">nodes</span><span class="o">.</span><span class="na">get</span><span class="o">(</span><span class="n">edge</span><span class="o">.</span><span class="na">from</span><span class="o">);</span>
-<span class="ln">14</span>    <span class="n">Project</span> <span class="n">to</span> <span class="o">=</span> <span class="n">nodes</span><span class="o">.</span><span class="na">get</span><span class="o">(</span><span class="n">edge</span><span class="o">.</span><span class="na">to</span><span class="o">);</span>
-<span class="ln">15</span>    <span class="k">if</span> <span class="o">(</span><span class="n">from</span> <span class="o">==</span> <span class="kc">null</span> <span class="o">||</span> <span class="n">to</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">16</span>      <span class="k">throw</span> <span class="k">new</span> <span class="n">RuntimeException</span><span class="o">();</span>
-<span class="ln">17</span>    <span class="o">}</span>
-<span class="ln">18</span>    <span class="n">from</span><span class="o">.</span><span class="na">addNeighbor</span><span class="o">(</span><span class="n">to</span><span class="o">);</span>
-<span class="ln">19</span>  <span class="o">}</span>
-<span class="ln">20</span>  <span class="kd">public</span> <span class="n">List</span><span class="o">&lt;</span><span class="n">Project</span><span class="o">&gt;</span> <span class="nf">getNodes</span><span class="o">()</span> <span class="o">{</span> <span class="o">...</span> <span class="o">};</span>
-<span class="ln">21</span><span class="o">}</span>
-<span class="ln">22</span>
-<span class="ln">23</span><span class="kd">public</span> <span class="kd">class</span> <span class="nc">Project</span> <span class="o">{</span>
-<span class="ln">24</span>  <span class="kd">private</span> <span class="n">Map</span><span class="o">&lt;</span><span class="n">String</span><span class="o">,</span> <span class="n">Project</span><span class="o">&gt;</span> <span class="n">projectMap</span> <span class="o">=</span> <span class="k">new</span> <span class="n">HashMap</span><span class="o">&lt;&gt;();</span>
-<span class="ln">25</span>  <span class="kd">private</span> <span class="n">List</span><span class="o">&lt;</span><span class="n">Project</span><span class="o">&gt;</span> <span class="n">neighbors</span> <span class="o">=</span> <span class="k">new</span> <span class="n">ArrayList</span><span class="o">&lt;&gt;();</span>
-<span class="ln">26</span>  <span class="kd">private</span> <span class="n">String</span> <span class="n">name</span><span class="o">;</span>
-<span class="ln">27</span>  <span class="kd">private</span> <span class="kt">int</span> <span class="n">deps</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span>  <span class="c1">// 自己依赖多少个其他项目
-</span><span class="ln">28</span><span class="c1"></span>  <span class="kd">public</span> <span class="nf">Project</span><span class="o">(</span><span class="n">String</span> <span class="n">name</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">29</span>    <span class="k">this</span><span class="o">.</span><span class="na">name</span> <span class="o">=</span> <span class="n">name</span><span class="o">;</span>
-<span class="ln">30</span>  <span class="o">}</span>
-<span class="ln">31</span>  <span class="kd">public</span> <span class="kt">void</span> <span class="nf">addNeighbor</span><span class="o">(</span><span class="n">Project</span> <span class="n">p</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">32</span>    <span class="k">if</span> <span class="o">(!</span><span class="n">projectMap</span><span class="o">.</span><span class="na">containsKey</span><span class="o">(</span><span class="n">p</span><span class="o">.</span><span class="na">name</span><span class="o">))</span> <span class="o">{</span>
-<span class="ln">33</span>      <span class="n">projectMap</span><span class="o">.</span><span class="na">put</span><span class="o">(</span><span class="n">p</span><span class="o">.</span><span class="na">name</span><span class="o">,</span> <span class="n">p</span><span class="o">);</span>
-<span class="ln">34</span>      <span class="n">neighbors</span><span class="o">.</span><span class="na">add</span><span class="o">(</span><span class="n">p</span><span class="o">);</span>
-<span class="ln">35</span>      <span class="n">p</span><span class="o">.</span><span class="na">incrementDeps</span><span class="o">();</span>
-<span class="ln">36</span>    <span class="o">}</span>
-<span class="ln">37</span>  <span class="o">}</span>
-<span class="ln">38</span>  <span class="kd">public</span> <span class="kt">void</span> <span class="nf">incrementDeps</span><span class="o">()</span> <span class="o">{</span>
-<span class="ln">39</span>    <span class="k">this</span><span class="o">.</span><span class="na">deps</span><span class="o">++;</span>
-<span class="ln">40</span>  <span class="o">}</span>
-<span class="ln">41</span>  <span class="kd">public</span> <span class="kt">void</span> <span class="nf">decrementDeps</span><span class="o">()</span> <span class="o">{</span>
-<span class="ln">42</span>    <span class="k">this</span><span class="o">.</span><span class="na">deps</span><span class="o">--;</span>
-<span class="ln">43</span>  <span class="o">}</span>
-<span class="ln">44</span>  <span class="kd">public</span> <span class="n">List</span><span class="o">&lt;</span><span class="n">Project</span><span class="o">&gt;</span> <span class="nf">getNeighbors</span><span class="o">()</span> <span class="o">{</span> <span class="o">...</span> <span class="o">}</span>
-<span class="ln">45</span><span class="o">}</span>
-<span class="ln">46</span>
-<span class="ln">47</span><span class="kd">public</span> <span class="kd">class</span> <span class="nc">Edge</span> <span class="o">{</span>
-<span class="ln">48</span>  <span class="kd">private</span> <span class="n">String</span> <span class="n">from</span><span class="o">;</span>
-<span class="ln">49</span>  <span class="kd">private</span> <span class="n">String</span> <span class="n">to</span><span class="o">;</span>
-<span class="ln">50</span><span class="o">}</span>
-<span class="ln">51</span>
-<span class="ln">52</span><span class="kd">public</span> <span class="n">Project</span><span class="o">[]</span> <span class="nf">buildOrder</span><span class="o">(</span><span class="n">String</span><span class="o">[]</span> <span class="n">projectNames</span><span class="o">,</span> <span class="n">Edge</span><span class="o">[]</span> <span class="n">edges</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">53</span>  <span class="n">Graph</span> <span class="n">graph</span> <span class="o">=</span> <span class="n">buildGraph</span><span class="o">(</span><span class="n">projectNames</span><span class="o">);</span>
-<span class="ln">54</span>  <span class="n">buildEdges</span><span class="o">(</span><span class="n">graph</span><span class="o">,</span> <span class="n">edges</span><span class="o">);</span> 
-<span class="ln">55</span>  
-<span class="ln">56</span>  <span class="n">Project</span><span class="o">[]</span> <span class="n">order</span> <span class="o">=</span> <span class="k">new</span> <span class="n">Project</span><span class="o">[</span><span class="n">projects</span><span class="o">.</span><span class="na">length</span><span class="o">];</span>
-<span class="ln">57</span>  <span class="kt">int</span> <span class="n">end</span> <span class="o">=</span> <span class="n">projectOrder</span><span class="o">(</span><span class="n">order</span><span class="o">,</span> <span class="n">projects</span><span class="o">,</span> <span class="n">0</span><span class="o">);</span>
-<span class="ln">58</span>  <span class="kt">int</span> <span class="n">index</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span>
-<span class="ln">59</span>  <span class="k">while</span> <span class="o">(</span><span class="n">index</span> <span class="o">&lt;</span> <span class="n">order</span><span class="o">.</span><span class="na">length</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">60</span>    <span class="n">Project</span> <span class="n">current</span> <span class="o">=</span> <span class="n">order</span><span class="o">[</span><span class="n">index</span><span class="o">];</span>
-<span class="ln">61</span>    <span class="cm">/* We have a circular dependency since there are no remaining projects with
-</span><span class="ln">62</span><span class="cm">     * zero dependencies. */</span>
-<span class="ln">63</span>    <span class="k">if</span> <span class="o">(</span><span class="n">current</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">64</span>      <span class="k">return</span> <span class="kc">null</span><span class="o">;</span>
-<span class="ln">65</span>    <span class="o">}</span>
-<span class="ln">66</span>    <span class="k">for</span> <span class="o">(</span><span class="n">Project</span> <span class="n">c</span> <span class="o">:</span> <span class="n">current</span><span class="o">.</span><span class="na">adjacents</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">67</span>      <span class="n">c</span><span class="o">.</span><span class="na">decrementDeps</span><span class="o">();</span>
-<span class="ln">68</span>    <span class="o">}</span>
-<span class="ln">69</span>    <span class="n">end</span> <span class="o">=</span> <span class="n">projectOrder</span><span class="o">(</span><span class="n">order</span><span class="o">,</span> <span class="n">current</span><span class="o">.</span><span class="na">adjacents</span><span class="o">,</span> <span class="n">end</span><span class="o">);</span>
-<span class="ln">70</span>    <span class="n">index</span><span class="o">++;</span>
-<span class="ln">71</span>  <span class="o">}</span>
-<span class="ln">72</span>  
-<span class="ln">73</span>  <span class="k">return</span> <span class="n">order</span><span class="o">;</span>
-<span class="ln">74</span><span class="o">}</span>
-<span class="ln">75</span>
-<span class="ln">76</span><span class="kd">private</span> <span class="kt">int</span> <span class="nf">projectOrder</span><span class="o">(</span><span class="n">Project</span><span class="o">[]</span> <span class="n">projectOrder</span><span class="o">,</span> <span class="n">List</span><span class="o">&lt;</span><span class="n">Project</span><span class="o">&gt;</span> <span class="n">projects</span><span class="o">,</span> <span class="kt">int</span> <span class="n">end</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">77</span>  <span class="k">for</span> <span class="o">(</span><span class="n">Project</span> <span class="n">p</span> <span class="o">:</span> <span class="n">projects</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">78</span>    <span class="k">if</span> <span class="o">(</span><span class="n">p</span><span class="o">.</span><span class="na">deps</span> <span class="o">==</span> <span class="n">0</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">79</span>      <span class="n">projectOrder</span><span class="o">[</span><span class="n">end</span><span class="o">++]</span> <span class="o">=</span> <span class="n">p</span><span class="o">;</span>
-<span class="ln">80</span>    <span class="o">}</span>
-<span class="ln">81</span>  <span class="o">}</span>
-<span class="ln">82</span>  <span class="k">return</span> <span class="n">end</span><span class="o">;</span>
-<span class="ln">83</span><span class="o">}</span>
-</code></pre></div><p>时间复杂度：O(P+D)，P是项目数，D是依赖数（在构建依赖的时候所用的循环）。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span><span class="lnt">46
+</span><span class="lnt">47
+</span><span class="lnt">48
+</span><span class="lnt">49
+</span><span class="lnt">50
+</span><span class="lnt">51
+</span><span class="lnt">52
+</span><span class="lnt">53
+</span><span class="lnt">54
+</span><span class="lnt">55
+</span><span class="lnt">56
+</span><span class="lnt">57
+</span><span class="lnt">58
+</span><span class="lnt">59
+</span><span class="lnt">60
+</span><span class="lnt">61
+</span><span class="lnt">62
+</span><span class="lnt">63
+</span><span class="lnt">64
+</span><span class="lnt">65
+</span><span class="lnt">66
+</span><span class="lnt">67
+</span><span class="lnt">68
+</span><span class="lnt">69
+</span><span class="lnt">70
+</span><span class="lnt">71
+</span><span class="lnt">72
+</span><span class="lnt">73
+</span><span class="lnt">74
+</span><span class="lnt">75
+</span><span class="lnt">76
+</span><span class="lnt">77
+</span><span class="lnt">78
+</span><span class="lnt">79
+</span><span class="lnt">80
+</span><span class="lnt">81
+</span><span class="lnt">82
+</span><span class="lnt">83
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="kd">public</span> <span class="kd">class</span> <span class="nc">Graph</span> <span class="o">{</span>
+  <span class="kd">private</span> <span class="n">Map</span><span class="o">&lt;</span><span class="n">String</span><span class="o">,</span> <span class="n">Project</span><span class="o">&gt;</span> <span class="n">projectMap</span> <span class="o">=</span> <span class="k">new</span> <span class="n">HashMap</span><span class="o">&lt;&gt;();</span>
+  <span class="kd">private</span> <span class="n">List</span><span class="o">&lt;</span><span class="n">Project</span><span class="o">&gt;</span> <span class="n">nodes</span> <span class="o">=</span> <span class="k">new</span> <span class="n">ArrayList</span><span class="o">&lt;&gt;();</span>
+  
+  <span class="kd">public</span> <span class="kt">void</span> <span class="nf">addProject</span><span class="o">(</span><span class="n">String</span> <span class="n">name</span><span class="o">)</span> <span class="o">{</span>
+    <span class="k">if</span> <span class="o">(!</span><span class="n">projectMap</span><span class="o">.</span><span class="na">containsKey</span><span class="o">(</span><span class="n">name</span><span class="o">))</span> <span class="o">{</span>
+      <span class="n">Project</span> <span class="n">p</span> <span class="o">=</span> <span class="k">new</span> <span class="n">Project</span><span class="o">(</span><span class="n">name</span><span class="o">);</span>
+      <span class="n">nodes</span><span class="o">.</span><span class="na">add</span><span class="o">(</span><span class="n">p</span><span class="o">);</span>
+      <span class="n">nodes</span><span class="o">.</span><span class="na">put</span><span class="o">(</span><span class="n">name</span><span class="o">,</span> <span class="n">p</span><span class="o">);</span>
+    <span class="o">}</span>
+  <span class="o">}</span>
+  <span class="kd">public</span> <span class="kt">void</span> <span class="nf">addEdge</span><span class="o">(</span><span class="n">Edge</span> <span class="n">edge</span><span class="o">)</span> <span class="o">{</span>
+    <span class="n">Project</span> <span class="n">from</span> <span class="o">=</span> <span class="n">nodes</span><span class="o">.</span><span class="na">get</span><span class="o">(</span><span class="n">edge</span><span class="o">.</span><span class="na">from</span><span class="o">);</span>
+    <span class="n">Project</span> <span class="n">to</span> <span class="o">=</span> <span class="n">nodes</span><span class="o">.</span><span class="na">get</span><span class="o">(</span><span class="n">edge</span><span class="o">.</span><span class="na">to</span><span class="o">);</span>
+    <span class="k">if</span> <span class="o">(</span><span class="n">from</span> <span class="o">==</span> <span class="kc">null</span> <span class="o">||</span> <span class="n">to</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
+      <span class="k">throw</span> <span class="k">new</span> <span class="n">RuntimeException</span><span class="o">();</span>
+    <span class="o">}</span>
+    <span class="n">from</span><span class="o">.</span><span class="na">addNeighbor</span><span class="o">(</span><span class="n">to</span><span class="o">);</span>
+  <span class="o">}</span>
+  <span class="kd">public</span> <span class="n">List</span><span class="o">&lt;</span><span class="n">Project</span><span class="o">&gt;</span> <span class="nf">getNodes</span><span class="o">()</span> <span class="o">{</span> <span class="o">...</span> <span class="o">};</span>
+<span class="o">}</span>
+
+<span class="kd">public</span> <span class="kd">class</span> <span class="nc">Project</span> <span class="o">{</span>
+  <span class="kd">private</span> <span class="n">Map</span><span class="o">&lt;</span><span class="n">String</span><span class="o">,</span> <span class="n">Project</span><span class="o">&gt;</span> <span class="n">projectMap</span> <span class="o">=</span> <span class="k">new</span> <span class="n">HashMap</span><span class="o">&lt;&gt;();</span>
+  <span class="kd">private</span> <span class="n">List</span><span class="o">&lt;</span><span class="n">Project</span><span class="o">&gt;</span> <span class="n">neighbors</span> <span class="o">=</span> <span class="k">new</span> <span class="n">ArrayList</span><span class="o">&lt;&gt;();</span>
+  <span class="kd">private</span> <span class="n">String</span> <span class="n">name</span><span class="o">;</span>
+  <span class="kd">private</span> <span class="kt">int</span> <span class="n">deps</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span>  <span class="c1">// 自己依赖多少个其他项目
+</span><span class="c1"></span>  <span class="kd">public</span> <span class="nf">Project</span><span class="o">(</span><span class="n">String</span> <span class="n">name</span><span class="o">)</span> <span class="o">{</span>
+    <span class="k">this</span><span class="o">.</span><span class="na">name</span> <span class="o">=</span> <span class="n">name</span><span class="o">;</span>
+  <span class="o">}</span>
+  <span class="kd">public</span> <span class="kt">void</span> <span class="nf">addNeighbor</span><span class="o">(</span><span class="n">Project</span> <span class="n">p</span><span class="o">)</span> <span class="o">{</span>
+    <span class="k">if</span> <span class="o">(!</span><span class="n">projectMap</span><span class="o">.</span><span class="na">containsKey</span><span class="o">(</span><span class="n">p</span><span class="o">.</span><span class="na">name</span><span class="o">))</span> <span class="o">{</span>
+      <span class="n">projectMap</span><span class="o">.</span><span class="na">put</span><span class="o">(</span><span class="n">p</span><span class="o">.</span><span class="na">name</span><span class="o">,</span> <span class="n">p</span><span class="o">);</span>
+      <span class="n">neighbors</span><span class="o">.</span><span class="na">add</span><span class="o">(</span><span class="n">p</span><span class="o">);</span>
+      <span class="n">p</span><span class="o">.</span><span class="na">incrementDeps</span><span class="o">();</span>
+    <span class="o">}</span>
+  <span class="o">}</span>
+  <span class="kd">public</span> <span class="kt">void</span> <span class="nf">incrementDeps</span><span class="o">()</span> <span class="o">{</span>
+    <span class="k">this</span><span class="o">.</span><span class="na">deps</span><span class="o">++;</span>
+  <span class="o">}</span>
+  <span class="kd">public</span> <span class="kt">void</span> <span class="nf">decrementDeps</span><span class="o">()</span> <span class="o">{</span>
+    <span class="k">this</span><span class="o">.</span><span class="na">deps</span><span class="o">--;</span>
+  <span class="o">}</span>
+  <span class="kd">public</span> <span class="n">List</span><span class="o">&lt;</span><span class="n">Project</span><span class="o">&gt;</span> <span class="nf">getNeighbors</span><span class="o">()</span> <span class="o">{</span> <span class="o">...</span> <span class="o">}</span>
+<span class="o">}</span>
+
+<span class="kd">public</span> <span class="kd">class</span> <span class="nc">Edge</span> <span class="o">{</span>
+  <span class="kd">private</span> <span class="n">String</span> <span class="n">from</span><span class="o">;</span>
+  <span class="kd">private</span> <span class="n">String</span> <span class="n">to</span><span class="o">;</span>
+<span class="o">}</span>
+
+<span class="kd">public</span> <span class="n">Project</span><span class="o">[]</span> <span class="nf">buildOrder</span><span class="o">(</span><span class="n">String</span><span class="o">[]</span> <span class="n">projectNames</span><span class="o">,</span> <span class="n">Edge</span><span class="o">[]</span> <span class="n">edges</span><span class="o">)</span> <span class="o">{</span>
+  <span class="n">Graph</span> <span class="n">graph</span> <span class="o">=</span> <span class="n">buildGraph</span><span class="o">(</span><span class="n">projectNames</span><span class="o">);</span>
+  <span class="n">buildEdges</span><span class="o">(</span><span class="n">graph</span><span class="o">,</span> <span class="n">edges</span><span class="o">);</span> 
+  
+  <span class="n">Project</span><span class="o">[]</span> <span class="n">order</span> <span class="o">=</span> <span class="k">new</span> <span class="n">Project</span><span class="o">[</span><span class="n">projects</span><span class="o">.</span><span class="na">length</span><span class="o">];</span>
+  <span class="kt">int</span> <span class="n">end</span> <span class="o">=</span> <span class="n">projectOrder</span><span class="o">(</span><span class="n">order</span><span class="o">,</span> <span class="n">projects</span><span class="o">,</span> <span class="n">0</span><span class="o">);</span>
+  <span class="kt">int</span> <span class="n">index</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span>
+  <span class="k">while</span> <span class="o">(</span><span class="n">index</span> <span class="o">&lt;</span> <span class="n">order</span><span class="o">.</span><span class="na">length</span><span class="o">)</span> <span class="o">{</span>
+    <span class="n">Project</span> <span class="n">current</span> <span class="o">=</span> <span class="n">order</span><span class="o">[</span><span class="n">index</span><span class="o">];</span>
+    <span class="cm">/* We have a circular dependency since there are no remaining projects with
+</span><span class="cm">     * zero dependencies. */</span>
+    <span class="k">if</span> <span class="o">(</span><span class="n">current</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
+      <span class="k">return</span> <span class="kc">null</span><span class="o">;</span>
+    <span class="o">}</span>
+    <span class="k">for</span> <span class="o">(</span><span class="n">Project</span> <span class="n">c</span> <span class="o">:</span> <span class="n">current</span><span class="o">.</span><span class="na">adjacents</span><span class="o">)</span> <span class="o">{</span>
+      <span class="n">c</span><span class="o">.</span><span class="na">decrementDeps</span><span class="o">();</span>
+    <span class="o">}</span>
+    <span class="n">end</span> <span class="o">=</span> <span class="n">projectOrder</span><span class="o">(</span><span class="n">order</span><span class="o">,</span> <span class="n">current</span><span class="o">.</span><span class="na">adjacents</span><span class="o">,</span> <span class="n">end</span><span class="o">);</span>
+    <span class="n">index</span><span class="o">++;</span>
+  <span class="o">}</span>
+  
+  <span class="k">return</span> <span class="n">order</span><span class="o">;</span>
+<span class="o">}</span>
+
+<span class="kd">private</span> <span class="kt">int</span> <span class="nf">projectOrder</span><span class="o">(</span><span class="n">Project</span><span class="o">[]</span> <span class="n">projectOrder</span><span class="o">,</span> <span class="n">List</span><span class="o">&lt;</span><span class="n">Project</span><span class="o">&gt;</span> <span class="n">projects</span><span class="o">,</span> <span class="kt">int</span> <span class="n">end</span><span class="o">)</span> <span class="o">{</span>
+  <span class="k">for</span> <span class="o">(</span><span class="n">Project</span> <span class="n">p</span> <span class="o">:</span> <span class="n">projects</span><span class="o">)</span> <span class="o">{</span>
+    <span class="k">if</span> <span class="o">(</span><span class="n">p</span><span class="o">.</span><span class="na">deps</span> <span class="o">==</span> <span class="n">0</span><span class="o">)</span> <span class="o">{</span>
+      <span class="n">projectOrder</span><span class="o">[</span><span class="n">end</span><span class="o">++]</span> <span class="o">=</span> <span class="n">p</span><span class="o">;</span>
+    <span class="o">}</span>
+  <span class="o">}</span>
+  <span class="k">return</span> <span class="n">end</span><span class="o">;</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>时间复杂度：O(P+D)，P是项目数，D是依赖数（在构建依赖的时候所用的循环）。</p>
 <h2 id="解法3">解法3<a class="anchor ms-1" href="#解法3"><i class="fas fa-link"></i></a></h2>
 <p>解法2只能发现有循环依赖，无法告诉循环到底是什么。</p>
 <p>采用深度优先的方法（DFS）来做。</p>
@@ -426,64 +619,142 @@
 </ol>
 <p>可以从任意节点开始处理，因为第4点保证了不会重复处理，第2点则保证了parent肯定在child之前。</p>
 <p>看这个例子（所有箭头都是从上往下）：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln">1</span>      f         d
-<span class="ln">2</span>     /|\        |
-<span class="ln">3</span>    c | b       g
-<span class="ln">4</span>     \|/|\
-<span class="ln">5</span>      a | h
-<span class="ln">6</span>      |/
-<span class="ln">7</span>      e
-</code></pre></div><p>比如我们先处理b：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln">1</span>DFS(b)
-<span class="ln">2</span>  DFS(h)
-<span class="ln">3</span>    build order = ..., h
-<span class="ln">4</span>  DFS(a)
-<span class="ln">5</span>    DFS(e)
-<span class="ln">6</span>      build order = ..., e, h
-<span class="ln">7</span>    build order = ..., a, e, h
-<span class="ln">8</span>  build order = ..., b, a, e, h
-</code></pre></div><p>然后我们处理f：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln">1</span>build order = ..., b, a, e, h
-<span class="ln">2</span>DFS(f)
-<span class="ln">3</span>  DFS(c)
-<span class="ln">4</span>    DFS(a) skip
-<span class="ln">5</span>    build order = ..., c, b, a, e, h
-<span class="ln">6</span>  DFS(a) skip
-<span class="ln">7</span>  DFS(B) skip
-<span class="ln">8</span>  build order = ..., f, c, b, a, e, h
-</code></pre></div><p>代码：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln"> 1</span><span class="kd">public</span> <span class="kd">class</span> <span class="nc">Project</span> <span class="o">{</span>
-<span class="ln"> 2</span>  <span class="n">String</span> <span class="n">name</span><span class="o">;</span>
-<span class="ln"> 3</span>  <span class="n">List</span><span class="o">&lt;</span><span class="n">Project</span><span class="o">&gt;</span> <span class="n">adjacents</span> <span class="o">=</span> <span class="k">new</span> <span class="n">ArrayList</span><span class="o">&lt;&gt;();</span>
-<span class="ln"> 4</span><span class="o">}</span>
-<span class="ln"> 5</span>
-<span class="ln"> 6</span><span class="kd">public</span> <span class="kt">void</span> <span class="nf">buildOrder</span><span class="o">(</span><span class="n">List</span><span class="o">&lt;</span><span class="n">Project</span><span class="o">&gt;</span> <span class="n">projects</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 7</span>  
-<span class="ln"> 8</span>  <span class="n">LinkedList</span><span class="o">&lt;</span><span class="n">Project</span><span class="o">&gt;</span> <span class="n">order</span> <span class="o">=</span> <span class="k">new</span> <span class="n">LinkedList</span><span class="o">&lt;&gt;();</span>
-<span class="ln"> 9</span>  <span class="k">for</span> <span class="o">(</span><span class="n">Project</span> <span class="n">p</span> <span class="o">:</span> <span class="n">projects</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">10</span>    <span class="n">buildOrder</span><span class="o">(</span><span class="n">p</span><span class="o">,</span> <span class="n">order</span><span class="o">);</span>
-<span class="ln">11</span>  <span class="o">}</span>
-<span class="ln">12</span>  <span class="k">return</span> <span class="n">order</span><span class="o">;</span>
-<span class="ln">13</span><span class="o">}</span>
-<span class="ln">14</span>
-<span class="ln">15</span><span class="kd">private</span> <span class="kt">void</span> <span class="nf">buildOrder</span><span class="o">(</span><span class="n">Project</span> <span class="n">project</span><span class="o">,</span> <span class="n">LinkedList</span><span class="o">&lt;</span><span class="n">Project</span><span class="o">&gt;</span> <span class="n">order</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">16</span>  <span class="k">if</span> <span class="o">(</span><span class="n">project</span><span class="o">.</span><span class="na">isVisiting</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">17</span>    <span class="c1">// 发现循环依赖
-</span><span class="ln">18</span><span class="c1"></span>    <span class="n">order</span><span class="o">.</span><span class="na">insertFirst</span><span class="o">(</span><span class="n">project</span><span class="o">);</span>
-<span class="ln">19</span>    <span class="k">throw</span> <span class="k">new</span> <span class="n">RuntimeException</span><span class="o">(</span><span class="s">&#34;Cyclic depedencies: &#34;</span> <span class="o">+</span> <span class="n">order</span><span class="o">);</span>
-<span class="ln">20</span>  <span class="o">}</span>
-<span class="ln">21</span>  <span class="k">if</span> <span class="o">(</span><span class="n">project</span><span class="o">.</span><span class="na">isCompleted</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">22</span>    <span class="c1">// 该项目已经处理过了
-</span><span class="ln">23</span><span class="c1"></span>    <span class="k">return</span><span class="o">;</span>
-<span class="ln">24</span>  <span class="o">}</span>
-<span class="ln">25</span>  <span class="n">project</span><span class="o">.</span><span class="na">isVisiting</span> <span class="o">=</span> <span class="kc">true</span><span class="o">;</span>
-<span class="ln">26</span>  <span class="k">for</span> <span class="o">(</span><span class="n">Project</span> <span class="n">c</span> <span class="o">:</span> <span class="n">p</span><span class="o">.</span><span class="na">adjacents</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">27</span>    <span class="n">buildOrder</span><span class="o">(</span><span class="n">c</span><span class="o">,</span> <span class="n">order</span><span class="o">);</span>
-<span class="ln">28</span>  <span class="o">}</span>
-<span class="ln">29</span>  <span class="n">order</span><span class="o">.</span><span class="na">insertFirst</span><span class="o">(</span><span class="n">project</span><span class="o">);</span>
-<span class="ln">30</span>  <span class="n">project</span><span class="o">.</span><span class="na">isFinished</span> <span class="o">=</span> <span class="kc">true</span><span class="o">;</span>
-<span class="ln">31</span><span class="o">}</span>
-</code></pre></div></div></div>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt">      f         d
+     /|\        |
+    c | b       g
+     \|/|\
+      a | h
+      |/
+      e
+</code></pre></td></tr></table>
+</div>
+</div><p>比如我们先处理b：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt">DFS(b)
+  DFS(h)
+    build order = ..., h
+  DFS(a)
+    DFS(e)
+      build order = ..., e, h
+    build order = ..., a, e, h
+  build order = ..., b, a, e, h
+</code></pre></td></tr></table>
+</div>
+</div><p>然后我们处理f：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt">build order = ..., b, a, e, h
+DFS(f)
+  DFS(c)
+    DFS(a) skip
+    build order = ..., c, b, a, e, h
+  DFS(a) skip
+  DFS(B) skip
+  build order = ..., f, c, b, a, e, h
+</code></pre></td></tr></table>
+</div>
+</div><p>代码：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="kd">public</span> <span class="kd">class</span> <span class="nc">Project</span> <span class="o">{</span>
+  <span class="n">String</span> <span class="n">name</span><span class="o">;</span>
+  <span class="n">List</span><span class="o">&lt;</span><span class="n">Project</span><span class="o">&gt;</span> <span class="n">adjacents</span> <span class="o">=</span> <span class="k">new</span> <span class="n">ArrayList</span><span class="o">&lt;&gt;();</span>
+<span class="o">}</span>
+
+<span class="kd">public</span> <span class="kt">void</span> <span class="nf">buildOrder</span><span class="o">(</span><span class="n">List</span><span class="o">&lt;</span><span class="n">Project</span><span class="o">&gt;</span> <span class="n">projects</span><span class="o">)</span> <span class="o">{</span>
+  
+  <span class="n">LinkedList</span><span class="o">&lt;</span><span class="n">Project</span><span class="o">&gt;</span> <span class="n">order</span> <span class="o">=</span> <span class="k">new</span> <span class="n">LinkedList</span><span class="o">&lt;&gt;();</span>
+  <span class="k">for</span> <span class="o">(</span><span class="n">Project</span> <span class="n">p</span> <span class="o">:</span> <span class="n">projects</span><span class="o">)</span> <span class="o">{</span>
+    <span class="n">buildOrder</span><span class="o">(</span><span class="n">p</span><span class="o">,</span> <span class="n">order</span><span class="o">);</span>
+  <span class="o">}</span>
+  <span class="k">return</span> <span class="n">order</span><span class="o">;</span>
+<span class="o">}</span>
+
+<span class="kd">private</span> <span class="kt">void</span> <span class="nf">buildOrder</span><span class="o">(</span><span class="n">Project</span> <span class="n">project</span><span class="o">,</span> <span class="n">LinkedList</span><span class="o">&lt;</span><span class="n">Project</span><span class="o">&gt;</span> <span class="n">order</span><span class="o">)</span> <span class="o">{</span>
+  <span class="k">if</span> <span class="o">(</span><span class="n">project</span><span class="o">.</span><span class="na">isVisiting</span><span class="o">)</span> <span class="o">{</span>
+    <span class="c1">// 发现循环依赖
+</span><span class="c1"></span>    <span class="n">order</span><span class="o">.</span><span class="na">insertFirst</span><span class="o">(</span><span class="n">project</span><span class="o">);</span>
+    <span class="k">throw</span> <span class="k">new</span> <span class="n">RuntimeException</span><span class="o">(</span><span class="s">&#34;Cyclic depedencies: &#34;</span> <span class="o">+</span> <span class="n">order</span><span class="o">);</span>
+  <span class="o">}</span>
+  <span class="k">if</span> <span class="o">(</span><span class="n">project</span><span class="o">.</span><span class="na">isCompleted</span><span class="o">)</span> <span class="o">{</span>
+    <span class="c1">// 该项目已经处理过了
+</span><span class="c1"></span>    <span class="k">return</span><span class="o">;</span>
+  <span class="o">}</span>
+  <span class="n">project</span><span class="o">.</span><span class="na">isVisiting</span> <span class="o">=</span> <span class="kc">true</span><span class="o">;</span>
+  <span class="k">for</span> <span class="o">(</span><span class="n">Project</span> <span class="n">c</span> <span class="o">:</span> <span class="n">p</span><span class="o">.</span><span class="na">adjacents</span><span class="o">)</span> <span class="o">{</span>
+    <span class="n">buildOrder</span><span class="o">(</span><span class="n">c</span><span class="o">,</span> <span class="n">order</span><span class="o">);</span>
+  <span class="o">}</span>
+  <span class="n">order</span><span class="o">.</span><span class="na">insertFirst</span><span class="o">(</span><span class="n">project</span><span class="o">);</span>
+  <span class="n">project</span><span class="o">.</span><span class="na">isFinished</span> <span class="o">=</span> <span class="kc">true</span><span class="o">;</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div></div></div>
   <div class="card-footer"><div class="post-navs d-flex justify-content-evenly">
   <div class="post-nav post-prev"><i class="fas fa-fw fa-chevron-left"></i>
     <a href="/post/cracking-coding-interview/4.8-first-common-ancestor/">Cracking Coding Interview - 4.8 First Common Ancestor

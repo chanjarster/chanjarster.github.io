@@ -12,7 +12,7 @@
 <meta name="description" content="" /><meta itemprop="name" content="Cracking Coding Interview - 5.8 Draw Line">
 <meta itemprop="description" content=""><meta itemprop="datePublished" content="2019-08-20T10:24:11+08:00" />
 <meta itemprop="dateModified" content="2019-08-20T10:24:11+08:00" />
-<meta itemprop="wordCount" content="631">
+<meta itemprop="wordCount" content="642">
 <meta itemprop="keywords" content="ARTS-A," /><meta property="og:title" content="Cracking Coding Interview - 5.8 Draw Line" />
 <meta property="og:description" content="" />
 <meta property="og:type" content="article" />
@@ -225,57 +225,139 @@
 </div>
 <div class="post-content mb-3"><p><strong>Draw Line</strong>: A monochrome screen is stored as a single array of bytes, allowing eight consecutive pixels to be stored in one byte. The screen has width <code>w</code>, where <code>w</code> is divisible by <code>8</code> (that is, no byte will be split across rows). The height of the screen, of course, can be derived from the length of the array and the width. Implement a function that draws a horizontal line from <code>(x1, y)</code> to <code>(x2, y)</code>.</p>
 <p>The method signature should look something like:</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln">1</span><span class="n">drawline</span><span class="o">(</span><span class="kt">byte</span><span class="o">[]</span> <span class="n">screen</span><span class="o">,</span> <span class="kt">int</span> <span class="n">width</span><span class="o">,</span> <span class="kt">int</span> <span class="n">xl</span><span class="o">,</span> <span class="kt">int</span> <span class="n">x2</span><span class="o">,</span> <span class="kt">int</span> <span class="n">y</span><span class="o">)</span>
-</code></pre></div><p>Hints: #366, #381, #384, #391</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="n">drawline</span><span class="o">(</span><span class="kt">byte</span><span class="o">[]</span> <span class="n">screen</span><span class="o">,</span> <span class="kt">int</span> <span class="n">width</span><span class="o">,</span> <span class="kt">int</span> <span class="n">xl</span><span class="o">,</span> <span class="kt">int</span> <span class="n">x2</span><span class="o">,</span> <span class="kt">int</span> <span class="n">y</span><span class="o">)</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>Hints: #366, #381, #384, #391</p>
 <h2 id="解法">解法<a class="anchor ms-1" href="#解法"><i class="fas fa-link"></i></a></h2>
 <p><code>byte[] screen</code>是一个一维数组，里面存放的是一个byte，byte中的<code>1</code>bit代表一个像素点。里面存的是：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln">1</span>|  byte  |  byte  |  byte  |  byte  |
-<span class="ln">2</span>[00100110,11100000,10100000,00001001, ...]
-</code></pre></div><p>width是8的倍数，单位是bit，height = screen * / width。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt">|  byte  |  byte  |  byte  |  byte  |
+[00100110,11100000,10100000,00001001, ...]
+</code></pre></td></tr></table>
+</div>
+</div><p>width是8的倍数，单位是bit，height = screen * / width。</p>
 <p>所谓画一条线就是把这条线上的像素点代表的bit设为<code>1</code>。注意这道题目中的画的是水平线，不是斜线，所以比较简单。</p>
 <p>先把<code>byte [] screen</code>变成下面这种形式看看：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln">1</span>|&lt;-            width              -&gt;|
-<span class="ln">2</span> 00000000 00000000 00000000 00000000
-<span class="ln">3</span> 00000000 00000000 00000000 00000000
-<span class="ln">4</span>         (x1, y)             (x2, y)
-<span class="ln">5</span>            v                   v
-<span class="ln">6</span> 00000000 00111111 11111111 11111000
-<span class="ln">7</span> 00000000 00000000 00000000 00000000
-<span class="ln">8</span> 00000000 00000000 00000000 00000000
-<span class="ln">9</span> 00000000 00000000 00000000 00000000
-</code></pre></div><p>给定一个坐标让你求是第几个bit（从左往右数的，从0开始的）：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln">1</span>int allBitIndex = (y - 1) * width + x
-</code></pre></div><p>求位于第几个byte：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln">1</span>int byteIndex = allBitIndex / 8
-</code></pre></div><p>求位于这个byte里的第几个bit：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln">1</span>int byteBitIndex = allBitIndex % 8
-</code></pre></div><p>代码：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln"> 1</span><span class="kd">public</span> <span class="kt">void</span> <span class="nf">drawline</span><span class="o">(</span><span class="kt">byte</span><span class="o">[]</span> <span class="n">screen</span><span class="o">,</span> <span class="kt">int</span> <span class="n">width</span><span class="o">,</span> <span class="kt">int</span> <span class="n">xl</span><span class="o">,</span> <span class="kt">int</span> <span class="n">x2</span><span class="o">,</span> <span class="kt">int</span> <span class="n">y</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 2</span>  <span class="n">Coord</span> <span class="n">c1</span> <span class="o">=</span> <span class="n">getCoord</span><span class="o">(</span><span class="n">width</span><span class="o">,</span> <span class="n">x1</span><span class="o">,</span> <span class="n">y</span><span class="o">);</span>
-<span class="ln"> 3</span>  <span class="n">Coord</span> <span class="n">c2</span> <span class="o">=</span> <span class="n">getCoord</span><span class="o">(</span><span class="n">width</span><span class="o">,</span> <span class="n">x2</span><span class="o">,</span> <span class="n">y</span><span class="o">);</span>
-<span class="ln"> 4</span>  <span class="kt">byte</span> <span class="n">allOne</span> <span class="o">=</span> <span class="o">(</span><span class="kt">byte</span><span class="o">)</span> <span class="o">(~</span><span class="n">0</span><span class="o">);</span>
-<span class="ln"> 5</span>
-<span class="ln"> 6</span>  <span class="c1">// 把x1, x2（不含）之间字节的都设1
-</span><span class="ln"> 7</span><span class="c1"></span>  <span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="n">c1</span><span class="o">.</span><span class="na">byteIdx</span> <span class="o">+</span> <span class="n">1</span><span class="o">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">c2</span><span class="o">.</span><span class="na">byteIdx</span><span class="o">;</span> <span class="n">i</span><span class="o">++)</span> <span class="o">{</span>
-<span class="ln"> 8</span>    <span class="n">screen</span><span class="o">[</span><span class="n">c1</span><span class="o">.</span><span class="na">byteIdx</span><span class="o">]</span> <span class="o">=</span> <span class="n">allOne</span><span class="o">;</span>
-<span class="ln"> 9</span>  <span class="o">}</span>
-<span class="ln">10</span>  <span class="k">if</span> <span class="o">(</span><span class="n">c1</span><span class="o">.</span><span class="na">byteIdx</span> <span class="o">!=</span> <span class="n">c2</span><span class="o">.</span><span class="na">byteIdx</span><span class="o">)</span> <span class="o">{</span> <span class="c1">// 两个像素在同一个byte里
-</span><span class="ln">11</span><span class="c1"></span>    <span class="c1">// 把c1.bitIdx后面（含）都设1
-</span><span class="ln">12</span><span class="c1"></span>    <span class="n">screen</span><span class="o">[</span><span class="n">c1</span><span class="o">.</span><span class="na">byteIdx</span><span class="o">]</span> <span class="o">|=</span> <span class="n">allOne</span> <span class="o">&gt;&gt;</span> <span class="n">c1</span><span class="o">.</span><span class="na">bitIdx</span><span class="o">;</span>
-<span class="ln">13</span>    <span class="c1">// 把c2.bitIdx前面（含）都设1
-</span><span class="ln">14</span><span class="c1"></span>    <span class="n">screen</span><span class="o">[</span><span class="n">c2</span><span class="o">.</span><span class="na">byteIdx</span><span class="o">]</span> <span class="o">|=</span> <span class="n">allOne</span> <span class="o">&lt;&lt;</span> <span class="o">(</span><span class="n">8</span> <span class="o">-</span> <span class="n">c2</span><span class="o">.</span><span class="na">bitIdx</span> <span class="o">-</span> <span class="n">1</span><span class="o">);</span>    
-<span class="ln">15</span>  <span class="o">}</span> <span class="k">else</span> <span class="o">{</span>
-<span class="ln">16</span>    <span class="n">screen</span><span class="o">[</span><span class="n">c1</span><span class="o">.</span><span class="na">byteIdx</span><span class="o">]</span> <span class="o">|=</span> <span class="o">(</span><span class="n">allOne</span> <span class="o">&gt;&gt;</span> <span class="n">c1</span><span class="o">.</span><span class="na">bitIdx</span><span class="o">)</span> <span class="o">&amp;</span> <span class="o">(</span><span class="n">allOne</span> <span class="o">&lt;&lt;</span> <span class="o">(</span><span class="n">8</span> <span class="o">-</span> <span class="n">c2</span><span class="o">.</span><span class="na">bitIdx</span> <span class="o">-</span> <span class="n">1</span><span class="o">));</span>
-<span class="ln">17</span>  <span class="o">}</span>
-<span class="ln">18</span><span class="o">}</span>
-<span class="ln">19</span>
-<span class="ln">20</span><span class="kd">private</span> <span class="n">Coord</span> <span class="nf">getCoord</span><span class="o">(</span><span class="kt">int</span> <span class="n">width</span><span class="o">,</span> <span class="kt">int</span> <span class="n">x</span><span class="o">,</span> <span class="kt">int</span> <span class="n">y</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">21</span>  <span class="kt">int</span> <span class="n">allBitIdx</span> <span class="o">=</span> <span class="o">(</span><span class="n">y</span> <span class="o">-</span> <span class="n">1</span><span class="o">)</span> <span class="o">*</span> <span class="n">width</span> <span class="o">+</span> <span class="n">x</span><span class="o">;</span>
-<span class="ln">22</span>  <span class="kt">int</span> <span class="n">byteIdx</span> <span class="o">=</span> <span class="n">allBitIdx</span> <span class="o">/</span> <span class="n">8</span><span class="o">;</span> <span class="c1">// 也可以是 allBitIdx &gt;&gt; 3
-</span><span class="ln">23</span><span class="c1"></span>  <span class="kt">int</span> <span class="n">bitIdx</span> <span class="o">=</span> <span class="n">allBitIdx</span> <span class="o">%</span> <span class="n">8</span><span class="o">;</span>  <span class="c1">// 也可以是 allBitIdx &amp; 7  ( 0..0 111)
-</span><span class="ln">24</span><span class="c1"></span>  <span class="k">return</span> <span class="k">new</span> <span class="n">Coord</span><span class="o">(</span><span class="n">byteIdx</span><span class="o">,</span> <span class="n">bitIdx</span><span class="o">);</span>
-<span class="ln">25</span><span class="o">}</span>
-</code></pre></div></div></div>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span><span class="lnt">9
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt">|&lt;-            width              -&gt;|
+ 00000000 00000000 00000000 00000000
+ 00000000 00000000 00000000 00000000
+         (x1, y)             (x2, y)
+            v                   v
+ 00000000 00111111 11111111 11111000
+ 00000000 00000000 00000000 00000000
+ 00000000 00000000 00000000 00000000
+ 00000000 00000000 00000000 00000000
+</code></pre></td></tr></table>
+</div>
+</div><p>给定一个坐标让你求是第几个bit（从左往右数的，从0开始的）：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt">int allBitIndex = (y - 1) * width + x
+</code></pre></td></tr></table>
+</div>
+</div><p>求位于第几个byte：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt">int byteIndex = allBitIndex / 8
+</code></pre></td></tr></table>
+</div>
+</div><p>求位于这个byte里的第几个bit：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt">int byteBitIndex = allBitIndex % 8
+</code></pre></td></tr></table>
+</div>
+</div><p>代码：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="kd">public</span> <span class="kt">void</span> <span class="nf">drawline</span><span class="o">(</span><span class="kt">byte</span><span class="o">[]</span> <span class="n">screen</span><span class="o">,</span> <span class="kt">int</span> <span class="n">width</span><span class="o">,</span> <span class="kt">int</span> <span class="n">xl</span><span class="o">,</span> <span class="kt">int</span> <span class="n">x2</span><span class="o">,</span> <span class="kt">int</span> <span class="n">y</span><span class="o">)</span> <span class="o">{</span>
+  <span class="n">Coord</span> <span class="n">c1</span> <span class="o">=</span> <span class="n">getCoord</span><span class="o">(</span><span class="n">width</span><span class="o">,</span> <span class="n">x1</span><span class="o">,</span> <span class="n">y</span><span class="o">);</span>
+  <span class="n">Coord</span> <span class="n">c2</span> <span class="o">=</span> <span class="n">getCoord</span><span class="o">(</span><span class="n">width</span><span class="o">,</span> <span class="n">x2</span><span class="o">,</span> <span class="n">y</span><span class="o">);</span>
+  <span class="kt">byte</span> <span class="n">allOne</span> <span class="o">=</span> <span class="o">(</span><span class="kt">byte</span><span class="o">)</span> <span class="o">(~</span><span class="n">0</span><span class="o">);</span>
+
+  <span class="c1">// 把x1, x2（不含）之间字节的都设1
+</span><span class="c1"></span>  <span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="n">c1</span><span class="o">.</span><span class="na">byteIdx</span> <span class="o">+</span> <span class="n">1</span><span class="o">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">c2</span><span class="o">.</span><span class="na">byteIdx</span><span class="o">;</span> <span class="n">i</span><span class="o">++)</span> <span class="o">{</span>
+    <span class="n">screen</span><span class="o">[</span><span class="n">c1</span><span class="o">.</span><span class="na">byteIdx</span><span class="o">]</span> <span class="o">=</span> <span class="n">allOne</span><span class="o">;</span>
+  <span class="o">}</span>
+  <span class="k">if</span> <span class="o">(</span><span class="n">c1</span><span class="o">.</span><span class="na">byteIdx</span> <span class="o">!=</span> <span class="n">c2</span><span class="o">.</span><span class="na">byteIdx</span><span class="o">)</span> <span class="o">{</span> <span class="c1">// 两个像素在同一个byte里
+</span><span class="c1"></span>    <span class="c1">// 把c1.bitIdx后面（含）都设1
+</span><span class="c1"></span>    <span class="n">screen</span><span class="o">[</span><span class="n">c1</span><span class="o">.</span><span class="na">byteIdx</span><span class="o">]</span> <span class="o">|=</span> <span class="n">allOne</span> <span class="o">&gt;&gt;</span> <span class="n">c1</span><span class="o">.</span><span class="na">bitIdx</span><span class="o">;</span>
+    <span class="c1">// 把c2.bitIdx前面（含）都设1
+</span><span class="c1"></span>    <span class="n">screen</span><span class="o">[</span><span class="n">c2</span><span class="o">.</span><span class="na">byteIdx</span><span class="o">]</span> <span class="o">|=</span> <span class="n">allOne</span> <span class="o">&lt;&lt;</span> <span class="o">(</span><span class="n">8</span> <span class="o">-</span> <span class="n">c2</span><span class="o">.</span><span class="na">bitIdx</span> <span class="o">-</span> <span class="n">1</span><span class="o">);</span>    
+  <span class="o">}</span> <span class="k">else</span> <span class="o">{</span>
+    <span class="n">screen</span><span class="o">[</span><span class="n">c1</span><span class="o">.</span><span class="na">byteIdx</span><span class="o">]</span> <span class="o">|=</span> <span class="o">(</span><span class="n">allOne</span> <span class="o">&gt;&gt;</span> <span class="n">c1</span><span class="o">.</span><span class="na">bitIdx</span><span class="o">)</span> <span class="o">&amp;</span> <span class="o">(</span><span class="n">allOne</span> <span class="o">&lt;&lt;</span> <span class="o">(</span><span class="n">8</span> <span class="o">-</span> <span class="n">c2</span><span class="o">.</span><span class="na">bitIdx</span> <span class="o">-</span> <span class="n">1</span><span class="o">));</span>
+  <span class="o">}</span>
+<span class="o">}</span>
+
+<span class="kd">private</span> <span class="n">Coord</span> <span class="nf">getCoord</span><span class="o">(</span><span class="kt">int</span> <span class="n">width</span><span class="o">,</span> <span class="kt">int</span> <span class="n">x</span><span class="o">,</span> <span class="kt">int</span> <span class="n">y</span><span class="o">)</span> <span class="o">{</span>
+  <span class="kt">int</span> <span class="n">allBitIdx</span> <span class="o">=</span> <span class="o">(</span><span class="n">y</span> <span class="o">-</span> <span class="n">1</span><span class="o">)</span> <span class="o">*</span> <span class="n">width</span> <span class="o">+</span> <span class="n">x</span><span class="o">;</span>
+  <span class="kt">int</span> <span class="n">byteIdx</span> <span class="o">=</span> <span class="n">allBitIdx</span> <span class="o">/</span> <span class="n">8</span><span class="o">;</span> <span class="c1">// 也可以是 allBitIdx &gt;&gt; 3
+</span><span class="c1"></span>  <span class="kt">int</span> <span class="n">bitIdx</span> <span class="o">=</span> <span class="n">allBitIdx</span> <span class="o">%</span> <span class="n">8</span><span class="o">;</span>  <span class="c1">// 也可以是 allBitIdx &amp; 7  ( 0..0 111)
+</span><span class="c1"></span>  <span class="k">return</span> <span class="k">new</span> <span class="n">Coord</span><span class="o">(</span><span class="n">byteIdx</span><span class="o">,</span> <span class="n">bitIdx</span><span class="o">);</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div></div></div>
   <div class="card-footer"><div class="post-navs d-flex justify-content-evenly">
   <div class="post-nav post-prev"><i class="fas fa-fw fa-chevron-left"></i>
     <a href="/post/cracking-coding-interview/5.7-pairwise-swap/">Cracking Coding Interview - 5.7 Pairwise Swap

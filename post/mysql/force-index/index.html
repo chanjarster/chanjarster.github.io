@@ -12,7 +12,7 @@
 <meta name="description" content="" /><meta itemprop="name" content="MySQL - 数据库选错索引怎么办">
 <meta itemprop="description" content=""><meta itemprop="datePublished" content="2020-01-12T20:03:02+08:00" />
 <meta itemprop="dateModified" content="2020-01-12T20:03:02+08:00" />
-<meta itemprop="wordCount" content="769">
+<meta itemprop="wordCount" content="576">
 <meta itemprop="keywords" content="mysql," /><meta property="og:title" content="MySQL - 数据库选错索引怎么办" />
 <meta property="og:description" content="" />
 <meta property="og:type" content="article" />
@@ -227,30 +227,69 @@
 里提到在执行查询时优化器负责选择使用哪个索引。</p>
 <h2 id="实验1">实验1<a class="anchor ms-1" href="#实验1"><i class="fas fa-link"></i></a></h2>
 <p>建表：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="ln">1</span><span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="o">`</span><span class="n">t</span><span class="o">`</span><span class="w"> </span><span class="p">(</span><span class="w">
-</span><span class="ln">2</span><span class="w">  </span><span class="o">`</span><span class="n">id</span><span class="o">`</span><span class="w"> </span><span class="nb">int</span><span class="p">(</span><span class="mi">11</span><span class="p">)</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="p">,</span><span class="w">
-</span><span class="ln">3</span><span class="w">  </span><span class="o">`</span><span class="n">a</span><span class="o">`</span><span class="w"> </span><span class="nb">int</span><span class="p">(</span><span class="mi">11</span><span class="p">)</span><span class="w"> </span><span class="k">DEFAULT</span><span class="w"> </span><span class="k">NULL</span><span class="p">,</span><span class="w">
-</span><span class="ln">4</span><span class="w">  </span><span class="o">`</span><span class="n">b</span><span class="o">`</span><span class="w"> </span><span class="nb">int</span><span class="p">(</span><span class="mi">11</span><span class="p">)</span><span class="w"> </span><span class="k">DEFAULT</span><span class="w"> </span><span class="k">NULL</span><span class="p">,</span><span class="w">
-</span><span class="ln">5</span><span class="w">  </span><span class="k">PRIMARY</span><span class="w"> </span><span class="k">KEY</span><span class="w"> </span><span class="p">(</span><span class="o">`</span><span class="n">id</span><span class="o">`</span><span class="p">),</span><span class="w">
-</span><span class="ln">6</span><span class="w">  </span><span class="k">KEY</span><span class="w"> </span><span class="o">`</span><span class="n">a</span><span class="o">`</span><span class="w"> </span><span class="p">(</span><span class="o">`</span><span class="n">a</span><span class="o">`</span><span class="p">),</span><span class="w">
-</span><span class="ln">7</span><span class="w">  </span><span class="k">KEY</span><span class="w"> </span><span class="o">`</span><span class="n">b</span><span class="o">`</span><span class="w"> </span><span class="p">(</span><span class="o">`</span><span class="n">b</span><span class="o">`</span><span class="p">)</span><span class="w">
-</span><span class="ln">8</span><span class="w"></span><span class="p">)</span><span class="w"> </span><span class="n">ENGINE</span><span class="o">=</span><span class="n">InnoDB</span><span class="err">；</span><span class="w">
-</span></code></pre></div><p>插入数据：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="ln"> 1</span><span class="k">delimiter</span><span class="w"> </span><span class="p">;;</span><span class="w">
-</span><span class="ln"> 2</span><span class="w"></span><span class="k">create</span><span class="w"> </span><span class="k">procedure</span><span class="w"> </span><span class="n">idata</span><span class="p">()</span><span class="w">
-</span><span class="ln"> 3</span><span class="w"></span><span class="k">begin</span><span class="w">
-</span><span class="ln"> 4</span><span class="w">  </span><span class="k">declare</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="nb">int</span><span class="p">;</span><span class="w">
-</span><span class="ln"> 5</span><span class="w">  </span><span class="k">set</span><span class="w"> </span><span class="n">i</span><span class="o">=</span><span class="mi">1</span><span class="p">;</span><span class="w">
-</span><span class="ln"> 6</span><span class="w">  </span><span class="n">while</span><span class="p">(</span><span class="n">i</span><span class="o">&lt;=</span><span class="mi">100000</span><span class="p">)</span><span class="k">do</span><span class="w">
-</span><span class="ln"> 7</span><span class="w">    </span><span class="k">insert</span><span class="w"> </span><span class="k">into</span><span class="w"> </span><span class="n">t</span><span class="w"> </span><span class="k">values</span><span class="p">(</span><span class="n">i</span><span class="p">,</span><span class="w"> </span><span class="n">i</span><span class="p">,</span><span class="w"> </span><span class="n">i</span><span class="p">);</span><span class="w">
-</span><span class="ln"> 8</span><span class="w">    </span><span class="k">set</span><span class="w"> </span><span class="n">i</span><span class="o">=</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">;</span><span class="w">
-</span><span class="ln"> 9</span><span class="w">  </span><span class="k">end</span><span class="w"> </span><span class="n">while</span><span class="p">;</span><span class="w">
-</span><span class="ln">10</span><span class="w"></span><span class="k">end</span><span class="p">;;</span><span class="w">
-</span><span class="ln">11</span><span class="w"></span><span class="k">delimiter</span><span class="w"> </span><span class="p">;</span><span class="w">
-</span><span class="ln">12</span><span class="w"></span><span class="k">call</span><span class="w"> </span><span class="n">idata</span><span class="p">();</span><span class="w">
-</span></code></pre></div><p>用explain`来观察MySQL会选择哪个索引：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="ln">1</span><span class="n">mysql</span><span class="o">&gt;</span><span class="w"> </span><span class="k">explain</span><span class="w"> </span><span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">t</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">a</span><span class="w"> </span><span class="k">between</span><span class="w"> </span><span class="mi">10000</span><span class="w"> </span><span class="k">and</span><span class="w"> </span><span class="mi">20000</span><span class="p">;</span><span class="w">
-</span></code></pre></div><figure><img src="explain-1.png" width="100%"/>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="o">`</span><span class="n">t</span><span class="o">`</span><span class="w"> </span><span class="p">(</span><span class="w">
+</span><span class="w">  </span><span class="o">`</span><span class="n">id</span><span class="o">`</span><span class="w"> </span><span class="nb">int</span><span class="p">(</span><span class="mi">11</span><span class="p">)</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="p">,</span><span class="w">
+</span><span class="w">  </span><span class="o">`</span><span class="n">a</span><span class="o">`</span><span class="w"> </span><span class="nb">int</span><span class="p">(</span><span class="mi">11</span><span class="p">)</span><span class="w"> </span><span class="k">DEFAULT</span><span class="w"> </span><span class="k">NULL</span><span class="p">,</span><span class="w">
+</span><span class="w">  </span><span class="o">`</span><span class="n">b</span><span class="o">`</span><span class="w"> </span><span class="nb">int</span><span class="p">(</span><span class="mi">11</span><span class="p">)</span><span class="w"> </span><span class="k">DEFAULT</span><span class="w"> </span><span class="k">NULL</span><span class="p">,</span><span class="w">
+</span><span class="w">  </span><span class="k">PRIMARY</span><span class="w"> </span><span class="k">KEY</span><span class="w"> </span><span class="p">(</span><span class="o">`</span><span class="n">id</span><span class="o">`</span><span class="p">),</span><span class="w">
+</span><span class="w">  </span><span class="k">KEY</span><span class="w"> </span><span class="o">`</span><span class="n">a</span><span class="o">`</span><span class="w"> </span><span class="p">(</span><span class="o">`</span><span class="n">a</span><span class="o">`</span><span class="p">),</span><span class="w">
+</span><span class="w">  </span><span class="k">KEY</span><span class="w"> </span><span class="o">`</span><span class="n">b</span><span class="o">`</span><span class="w"> </span><span class="p">(</span><span class="o">`</span><span class="n">b</span><span class="o">`</span><span class="p">)</span><span class="w">
+</span><span class="w"></span><span class="p">)</span><span class="w"> </span><span class="n">ENGINE</span><span class="o">=</span><span class="n">InnoDB</span><span class="err">；</span><span class="w">
+</span></code></pre></td></tr></table>
+</div>
+</div><p>插入数据：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="k">delimiter</span><span class="w"> </span><span class="p">;;</span><span class="w">
+</span><span class="w"></span><span class="k">create</span><span class="w"> </span><span class="k">procedure</span><span class="w"> </span><span class="n">idata</span><span class="p">()</span><span class="w">
+</span><span class="w"></span><span class="k">begin</span><span class="w">
+</span><span class="w">  </span><span class="k">declare</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="nb">int</span><span class="p">;</span><span class="w">
+</span><span class="w">  </span><span class="k">set</span><span class="w"> </span><span class="n">i</span><span class="o">=</span><span class="mi">1</span><span class="p">;</span><span class="w">
+</span><span class="w">  </span><span class="n">while</span><span class="p">(</span><span class="n">i</span><span class="o">&lt;=</span><span class="mi">100000</span><span class="p">)</span><span class="k">do</span><span class="w">
+</span><span class="w">    </span><span class="k">insert</span><span class="w"> </span><span class="k">into</span><span class="w"> </span><span class="n">t</span><span class="w"> </span><span class="k">values</span><span class="p">(</span><span class="n">i</span><span class="p">,</span><span class="w"> </span><span class="n">i</span><span class="p">,</span><span class="w"> </span><span class="n">i</span><span class="p">);</span><span class="w">
+</span><span class="w">    </span><span class="k">set</span><span class="w"> </span><span class="n">i</span><span class="o">=</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">;</span><span class="w">
+</span><span class="w">  </span><span class="k">end</span><span class="w"> </span><span class="n">while</span><span class="p">;</span><span class="w">
+</span><span class="w"></span><span class="k">end</span><span class="p">;;</span><span class="w">
+</span><span class="w"></span><span class="k">delimiter</span><span class="w"> </span><span class="p">;</span><span class="w">
+</span><span class="w"></span><span class="k">call</span><span class="w"> </span><span class="n">idata</span><span class="p">();</span><span class="w">
+</span></code></pre></td></tr></table>
+</div>
+</div><p>用explain`来观察MySQL会选择哪个索引：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="n">mysql</span><span class="o">&gt;</span><span class="w"> </span><span class="k">explain</span><span class="w"> </span><span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">t</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">a</span><span class="w"> </span><span class="k">between</span><span class="w"> </span><span class="mi">10000</span><span class="w"> </span><span class="k">and</span><span class="w"> </span><span class="mi">20000</span><span class="p">;</span><span class="w">
+</span></code></pre></td></tr></table>
+</div>
+</div><figure><img src="explain-1.png" width="100%"/>
 </figure>
 
 <p>结果表明MySQL会选择索引<strong>a</strong>，并且预计扫描10001行，为什么是10001行而不是10000行？这是因为在扫描的时候要扫描到第一个不满足条件的数据为止，因此会多扫一行。</p>
@@ -259,8 +298,15 @@
 <ul>
 <li>cardinality（基数），基数代表区分度，基数越大区分度则越大，不同值越多则区分度越大，区分度大的索引被选择的概率大</li>
 </ul>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="ln">1</span><span class="n">mysql</span><span class="o">&gt;</span><span class="w"> </span><span class="k">show</span><span class="w"> </span><span class="k">index</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">t</span><span class="p">;</span><span class="w">
-</span></code></pre></div><figure><img src="cardinality.png" width="100%"/>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="n">mysql</span><span class="o">&gt;</span><span class="w"> </span><span class="k">show</span><span class="w"> </span><span class="k">index</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">t</span><span class="p">;</span><span class="w">
+</span></code></pre></td></tr></table>
+</div>
+</div><figure><img src="cardinality.png" width="100%"/>
 </figure>
 
 <p>基数的值并非精确值而是一个估算值，InnoDB选取N个数据页统计不同值，计算基数平均值。当更新的行超过1/M时，重新计算基数。可以用<code>innodb_stats_persistent</code>来控制这个统计信息存在哪里。</p>
@@ -269,10 +315,24 @@
 </ul>
 <h2 id="纠正办法">纠正办法<a class="anchor ms-1" href="#纠正办法"><i class="fas fa-link"></i></a></h2>
 <p>重新统计索引信息：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="ln">1</span><span class="k">ANALYZE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">t</span><span class="p">;</span><span class="w">
-</span></code></pre></div><p>强制告诉使用哪个索引，<code>force index</code>：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="ln">1</span><span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">t</span><span class="w"> </span><span class="k">force</span><span class="w"> </span><span class="k">index</span><span class="p">(</span><span class="n">a</span><span class="p">)</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="p">...</span><span class="w">
-</span></code></pre></div><p>其他tricky的方法，这里不做介绍了。</p></div></div>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="k">ANALYZE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">t</span><span class="p">;</span><span class="w">
+</span></code></pre></td></tr></table>
+</div>
+</div><p>强制告诉使用哪个索引，<code>force index</code>：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">t</span><span class="w"> </span><span class="k">force</span><span class="w"> </span><span class="k">index</span><span class="p">(</span><span class="n">a</span><span class="p">)</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="p">...</span><span class="w">
+</span></code></pre></td></tr></table>
+</div>
+</div><p>其他tricky的方法，这里不做介绍了。</p></div></div>
   <div class="card-footer"><div class="post-navs d-flex justify-content-evenly">
   <div class="post-nav post-prev"><i class="fas fa-fw fa-chevron-left"></i>
     <a href="/post/mysql/page-change-buffer-index/">MySQL - 数据页、change Buffer和索引

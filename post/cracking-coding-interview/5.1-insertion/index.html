@@ -12,7 +12,7 @@
 <meta name="description" content="" /><meta itemprop="name" content="Cracking Coding Interview - 5.1 Insertion">
 <meta itemprop="description" content=""><meta itemprop="datePublished" content="2019-08-19T10:15:11+08:00" />
 <meta itemprop="dateModified" content="2019-08-19T10:15:11+08:00" />
-<meta itemprop="wordCount" content="311">
+<meta itemprop="wordCount" content="320">
 <meta itemprop="keywords" content="ARTS-A," /><meta property="og:title" content="Cracking Coding Interview - 5.1 Insertion" />
 <meta property="og:description" content="" />
 <meta property="og:type" content="article" />
@@ -225,9 +225,17 @@
 </div>
 <div class="post-content mb-3"><p><strong>Insertion</strong>: You are given two 32-bit numbers, <code>N</code> and <code>M</code>, and two bit positions, <code>i</code> and <code>j</code>. Write a method to insert <code>M</code> into <code>N</code> such that <code>M</code> starts at bit <code>j</code> and ends at bit <code>i</code>. You can assume that the bits <code>j</code> through <code>i</code> have enough space to fit all of <code>M</code>. That is, if <code>M = 10011</code>, you can assume that there are at least 5 bits between <code>j</code> and <code>i</code>. You would not, for example, have <code>j = 3</code> and <code>i = 2</code>, because M could not fully fit between bit 3 and bit 2.</p>
 <p>EXAMPLE</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln">1</span>Input:  N   10000000000, M = 10011, i = 2, j = 6
-<span class="ln">2</span>Output: N = 10001001100
-</code></pre></div><p>Hints: #137, #169, #215</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt">Input:  N   10000000000, M = 10011, i = 2, j = 6
+Output: N = 10001001100
+</code></pre></td></tr></table>
+</div>
+</div><p>Hints: #137, #169, #215</p>
 <h2 id="解法">解法<a class="anchor ms-1" href="#解法"><i class="fas fa-link"></i></a></h2>
 <p>这个问题其实大致分为两步：</p>
 <ol>
@@ -236,21 +244,50 @@
 <li>两者OR一下</li>
 </ol>
 <p>第一步中需要做一个Mask：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln">1</span>N:     10000000000, i=2, j=6
-<span class="ln">2</span>Mask:  11110000011
-</code></pre></div><p>Mask可以分为两部分做：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln">1</span>Mask1: 11110000000
-<span class="ln">2</span>Mask2: 00000000011
-<span class="ln">3</span>Mask : Mask1 | Mask2
-<span class="ln">4</span>       11111000011
-</code></pre></div><p>Mask1可以用<code>-1 &lt;&lt; j + 1</code>来得到（<code>-1</code>到bit都是<code>1</code>），Mask2可以用<code>(1 &lt;&lt; i) - 1</code>得到。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt">N:     10000000000, i=2, j=6
+Mask:  11110000011
+</code></pre></td></tr></table>
+</div>
+</div><p>Mask可以分为两部分做：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt">Mask1: 11110000000
+Mask2: 00000000011
+Mask : Mask1 | Mask2
+       11111000011
+</code></pre></td></tr></table>
+</div>
+</div><p>Mask1可以用<code>-1 &lt;&lt; j + 1</code>来得到（<code>-1</code>到bit都是<code>1</code>），Mask2可以用<code>(1 &lt;&lt; i) - 1</code>得到。</p>
 <p>代码：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln">1</span><span class="kd">public</span> <span class="kt">int</span> <span class="nf">insert</span><span class="o">(</span><span class="kt">int</span> <span class="n">n</span><span class="o">,</span> <span class="kt">int</span> <span class="n">m</span><span class="o">,</span> <span class="kt">int</span> <span class="n">i</span><span class="o">,</span> <span class="kt">int</span> <span class="n">j</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">2</span>  <span class="kt">int</span> <span class="n">allOnes</span> <span class="o">=</span> <span class="o">~</span><span class="n">0</span><span class="o">;</span> <span class="c1">// 都是1
-</span><span class="ln">3</span><span class="c1"></span>  <span class="kt">int</span> <span class="n">mask</span> <span class="o">=</span> <span class="o">(</span><span class="n">allOnes</span> <span class="o">&lt;&lt;</span> <span class="o">(</span><span class="n">j</span> <span class="o">+</span> <span class="n">1</span><span class="o">))</span> <span class="o">|</span> <span class="o">((</span><span class="n">1</span> <span class="o">&lt;&lt;</span> <span class="n">i</span><span class="o">)</span> <span class="o">-</span> <span class="n">1</span><span class="o">);</span> <span class="c1">// mask1 | mask2
-</span><span class="ln">4</span><span class="c1"></span>  <span class="k">return</span> <span class="o">(</span><span class="n">n</span> <span class="o">&amp;</span> <span class="n">mask</span><span class="o">)</span> <span class="o">|</span> <span class="o">(</span><span class="n">m</span> <span class="o">&lt;&lt;</span> <span class="n">i</span><span class="o">);</span>
-<span class="ln">5</span><span class="o">}</span>
-</code></pre></div></div></div>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="kd">public</span> <span class="kt">int</span> <span class="nf">insert</span><span class="o">(</span><span class="kt">int</span> <span class="n">n</span><span class="o">,</span> <span class="kt">int</span> <span class="n">m</span><span class="o">,</span> <span class="kt">int</span> <span class="n">i</span><span class="o">,</span> <span class="kt">int</span> <span class="n">j</span><span class="o">)</span> <span class="o">{</span>
+  <span class="kt">int</span> <span class="n">allOnes</span> <span class="o">=</span> <span class="o">~</span><span class="n">0</span><span class="o">;</span> <span class="c1">// 都是1
+</span><span class="c1"></span>  <span class="kt">int</span> <span class="n">mask</span> <span class="o">=</span> <span class="o">(</span><span class="n">allOnes</span> <span class="o">&lt;&lt;</span> <span class="o">(</span><span class="n">j</span> <span class="o">+</span> <span class="n">1</span><span class="o">))</span> <span class="o">|</span> <span class="o">((</span><span class="n">1</span> <span class="o">&lt;&lt;</span> <span class="n">i</span><span class="o">)</span> <span class="o">-</span> <span class="n">1</span><span class="o">);</span> <span class="c1">// mask1 | mask2
+</span><span class="c1"></span>  <span class="k">return</span> <span class="o">(</span><span class="n">n</span> <span class="o">&amp;</span> <span class="n">mask</span><span class="o">)</span> <span class="o">|</span> <span class="o">(</span><span class="n">m</span> <span class="o">&lt;&lt;</span> <span class="n">i</span><span class="o">);</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div></div></div>
   <div class="card-footer"><div class="post-navs d-flex justify-content-evenly">
   <div class="post-nav post-prev"><i class="fas fa-fw fa-chevron-left"></i>
     <a href="/post/cracking-coding-interview/4.11-random-node/">Cracking Coding Interview - 4.11 Random Node

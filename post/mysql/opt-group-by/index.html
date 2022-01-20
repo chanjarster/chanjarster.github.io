@@ -12,7 +12,7 @@
 <meta name="description" content="" /><meta itemprop="name" content="SQL优化:一个超大表的GROUP BY">
 <meta itemprop="description" content=""><meta itemprop="datePublished" content="2021-10-11T11:39:00+08:00" />
 <meta itemprop="dateModified" content="2021-10-11T11:39:00+08:00" />
-<meta itemprop="wordCount" content="454">
+<meta itemprop="wordCount" content="228">
 <meta itemprop="keywords" content="mysql,性能调优," /><meta property="og:title" content="SQL优化:一个超大表的GROUP BY" />
 <meta property="og:description" content="" />
 <meta property="og:type" content="article" />
@@ -222,13 +222,25 @@
   </span><span class="post-taxonomies"><a href="/tags/mysql/" class="badge post-taxonomy">mysql</a><a href="/tags/%E6%80%A7%E8%83%BD%E8%B0%83%E4%BC%98/" class="badge post-taxonomy">性能调优</a></span>
 </div>
 <div class="post-content mb-3"><p>有一条SQL语句执行比较慢，在并发情况下存在瓶颈：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="ln">1</span><span class="k">select</span><span class="w"> 
-</span><span class="ln">2</span><span class="w">  </span><span class="n">t</span><span class="p">.</span><span class="n">APP_ID</span><span class="p">,</span><span class="w">
-</span><span class="ln">3</span><span class="w">  </span><span class="n">t</span><span class="p">.</span><span class="n">API_VERSION_MANAGEMENT</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">API_ID</span><span class="p">,</span><span class="w"> 
-</span><span class="ln">4</span><span class="w">  </span><span class="k">max</span><span class="p">(</span><span class="n">t</span><span class="p">.</span><span class="n">QUERY_NUM</span><span class="p">)</span><span class="k">as</span><span class="w"> </span><span class="n">DATA_COUNT</span><span class="w"> 
-</span><span class="ln">5</span><span class="w"></span><span class="k">from</span><span class="w"> </span><span class="n">data_statistics_log</span><span class="w"> </span><span class="n">t</span><span class="w"> 
-</span><span class="ln">6</span><span class="w"></span><span class="k">group</span><span class="w"> </span><span class="k">by</span><span class="w"> </span><span class="n">t</span><span class="p">.</span><span class="n">APP_ID</span><span class="p">,</span><span class="n">t</span><span class="p">.</span><span class="n">API_VERSION_MANAGEMENT</span><span class="w">
-</span></code></pre></div><p>这张表的数据量在60w左右，查看这张表的执行计划：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="k">select</span><span class="w"> 
+</span><span class="w">  </span><span class="n">t</span><span class="p">.</span><span class="n">APP_ID</span><span class="p">,</span><span class="w">
+</span><span class="w">  </span><span class="n">t</span><span class="p">.</span><span class="n">API_VERSION_MANAGEMENT</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">API_ID</span><span class="p">,</span><span class="w"> 
+</span><span class="w">  </span><span class="k">max</span><span class="p">(</span><span class="n">t</span><span class="p">.</span><span class="n">QUERY_NUM</span><span class="p">)</span><span class="k">as</span><span class="w"> </span><span class="n">DATA_COUNT</span><span class="w"> 
+</span><span class="w"></span><span class="k">from</span><span class="w"> </span><span class="n">data_statistics_log</span><span class="w"> </span><span class="n">t</span><span class="w"> 
+</span><span class="w"></span><span class="k">group</span><span class="w"> </span><span class="k">by</span><span class="w"> </span><span class="n">t</span><span class="p">.</span><span class="n">APP_ID</span><span class="p">,</span><span class="n">t</span><span class="p">.</span><span class="n">API_VERSION_MANAGEMENT</span><span class="w">
+</span></code></pre></td></tr></table>
+</div>
+</div><p>这张表的数据量在60w左右，查看这张表的执行计划：</p>
 <table>
 <thead>
 <tr>
@@ -266,8 +278,15 @@
 <p>可以看到使用了全表扫描和临时表。</p>
 <p>根据<a href="https://dev.mysql.com/doc/refman/8.0/en/group-by-optimization.html" target="_blank" rel="noopener noreferrer">MySQL GROUP BY优化</a>
 的要义，对此次查询的3个字段做联合索引：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="ln">1</span><span class="k">alter</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">data_statistics_log</span><span class="w"> </span><span class="k">add</span><span class="w"> </span><span class="k">index</span><span class="w"> </span><span class="n">query_max</span><span class="p">(</span><span class="n">APP_ID</span><span class="p">,</span><span class="n">API_VERSION_MANAGEMENT</span><span class="p">,</span><span class="n">QUERY_NUM</span><span class="p">);</span><span class="w">
-</span></code></pre></div><p>再看执行计划：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="k">alter</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">data_statistics_log</span><span class="w"> </span><span class="k">add</span><span class="w"> </span><span class="k">index</span><span class="w"> </span><span class="n">query_max</span><span class="p">(</span><span class="n">APP_ID</span><span class="p">,</span><span class="n">API_VERSION_MANAGEMENT</span><span class="p">,</span><span class="n">QUERY_NUM</span><span class="p">);</span><span class="w">
+</span></code></pre></td></tr></table>
+</div>
+</div><p>再看执行计划：</p>
 <table>
 <thead>
 <tr>

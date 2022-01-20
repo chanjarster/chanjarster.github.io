@@ -14,7 +14,7 @@
 <meta itemprop="description" content="Docker Daemon生产环境配置
 提到了MTU设置，但是这只是针对于名为bridge的docker bridge network，对于overlay network是无效的。"><meta itemprop="datePublished" content="2019-01-11T14:20:16+08:00" />
 <meta itemprop="dateModified" content="2019-01-11T14:20:16+08:00" />
-<meta itemprop="wordCount" content="1277">
+<meta itemprop="wordCount" content="1268">
 <meta itemprop="keywords" content="docker," /><meta property="og:title" content="Docker Overlay网络的MTU和子网" />
 <meta property="og:description" content="Docker Daemon生产环境配置
 提到了MTU设置，但是这只是针对于名为bridge的docker bridge network，对于overlay network是无效的。" />
@@ -236,15 +236,33 @@
 <li>Docker swarm创建<code>ingress</code>和<code>docker_gwbridge</code>网络的子网和现有网络冲突</li>
 </ol>
 <p>观察MTU的方法：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>$ docker network inspect -f <span class="s1">&#39;{{json .Options}}&#39;</span> &lt;network-name&gt;
-<span class="ln">2</span>
-<span class="ln">3</span><span class="o">{</span><span class="s2">&#34;com.docker.network.driver.mtu&#34;</span>:<span class="s2">&#34;1450&#34;</span>,<span class="s2">&#34;com.docker.network.driver.overlay.vxlanid_list&#34;</span>:<span class="s2">&#34;4099&#34;</span><span class="o">}</span>
-</code></pre></div><p>如果没有<code>com.docker.network.driver.mtu</code>，那么就是默认的1500。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">$ docker network inspect -f <span class="s1">&#39;{{json .Options}}&#39;</span> &lt;network-name&gt;
+
+<span class="o">{</span><span class="s2">&#34;com.docker.network.driver.mtu&#34;</span>:<span class="s2">&#34;1450&#34;</span>,<span class="s2">&#34;com.docker.network.driver.overlay.vxlanid_list&#34;</span>:<span class="s2">&#34;4099&#34;</span><span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>如果没有<code>com.docker.network.driver.mtu</code>，那么就是默认的1500。</p>
 <p>观察子网的方法：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>$ docker network inspect -f <span class="s1">&#39;{{json .IPAM}}&#39;</span> &lt;network-name&gt;
-<span class="ln">2</span>
-<span class="ln">3</span><span class="o">{</span><span class="s2">&#34;Driver&#34;</span>:<span class="s2">&#34;default&#34;</span>,<span class="s2">&#34;Options&#34;</span>:null,<span class="s2">&#34;Config&#34;</span>:<span class="o">[{</span><span class="s2">&#34;Subnet&#34;</span>:<span class="s2">&#34;10.0.0.0/24&#34;</span>,<span class="s2">&#34;Gateway&#34;</span>:<span class="s2">&#34;10.0.0.1&#34;</span><span class="o">}]}</span>
-</code></pre></div><h2 id="修改ingress和docker_gwbridge网络">修改ingress和docker_gwbridge网络<a class="anchor ms-1" href="#修改ingress和docker_gwbridge网络"><i class="fas fa-link"></i></a></h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">$ docker network inspect -f <span class="s1">&#39;{{json .IPAM}}&#39;</span> &lt;network-name&gt;
+
+<span class="o">{</span><span class="s2">&#34;Driver&#34;</span>:<span class="s2">&#34;default&#34;</span>,<span class="s2">&#34;Options&#34;</span>:null,<span class="s2">&#34;Config&#34;</span>:<span class="o">[{</span><span class="s2">&#34;Subnet&#34;</span>:<span class="s2">&#34;10.0.0.0/24&#34;</span>,<span class="s2">&#34;Gateway&#34;</span>:<span class="s2">&#34;10.0.0.1&#34;</span><span class="o">}]}</span>
+</code></pre></td></tr></table>
+</div>
+</div><h2 id="修改ingress和docker_gwbridge网络">修改ingress和docker_gwbridge网络<a class="anchor ms-1" href="#修改ingress和docker_gwbridge网络"><i class="fas fa-link"></i></a></h2>
 <p><strong>以下步骤得在swarm init或join之前做</strong></p>
 <p>假设你有三个机器，manager、worker-1、worker-2，准备搞一个Docker swarm集群</p>
 <ol>
@@ -255,9 +273,17 @@
 <p>[manager] 获得<code>docker_gwbridge</code>的参数，注意<code>Subnet</code></p>
 </li>
 </ol>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>$ docker network inspect -f <span class="s1">&#39;{{json .IPAM}}&#39;</span> docker_gwbridge
-<span class="ln">2</span><span class="o">{</span><span class="s2">&#34;Driver&#34;</span>:<span class="s2">&#34;default&#34;</span>,<span class="s2">&#34;Options&#34;</span>:null,<span class="s2">&#34;Config&#34;</span>:<span class="o">[{</span><span class="s2">&#34;Subnet&#34;</span>:<span class="s2">&#34;172.18.0.0/16&#34;</span>,<span class="s2">&#34;Gateway&#34;</span>:<span class="s2">&#34;172.18.0.1&#34;</span><span class="o">}]}</span>
-</code></pre></div><ol start="3">
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">$ docker network inspect -f <span class="s1">&#39;{{json .IPAM}}&#39;</span> docker_gwbridge
+<span class="o">{</span><span class="s2">&#34;Driver&#34;</span>:<span class="s2">&#34;default&#34;</span>,<span class="s2">&#34;Options&#34;</span>:null,<span class="s2">&#34;Config&#34;</span>:<span class="o">[{</span><span class="s2">&#34;Subnet&#34;</span>:<span class="s2">&#34;172.18.0.0/16&#34;</span>,<span class="s2">&#34;Gateway&#34;</span>:<span class="s2">&#34;172.18.0.1&#34;</span><span class="o">}]}</span>
+</code></pre></td></tr></table>
+</div>
+</div><ol start="3">
 <li>
 <p>[manager] <code>docker swarm leave --force</code></p>
 </li>
@@ -268,9 +294,17 @@
 <p>[manager] 删掉虚拟网卡<code>docker_gwbridge</code></p>
 </li>
 </ol>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>$ sudo ip link <span class="nb">set</span> docker_gwbridge down
-<span class="ln">2</span>$ sudo ip link del dev docker_gwbridge
-</code></pre></div><ol start="6">
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">$ sudo ip link <span class="nb">set</span> docker_gwbridge down
+$ sudo ip link del dev docker_gwbridge
+</code></pre></td></tr></table>
+</div>
+</div><ol start="6">
 <li>
 <p>[manager] 启动docker <code>sudo systemctl start docker.service</code></p>
 </li>
@@ -279,15 +313,29 @@
 </li>
 </ol>
 <p>记得设置之前得到的<code>Subnet</code>参数和正确的MTU值，如果子网和现有网络冲突，则要修改subnet参数：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>$ docker network rm docker_gwbridge
-<span class="ln">2</span>$ docker network create <span class="se">\
-</span><span class="ln">3</span><span class="se"></span>  --subnet 172.18.0.0/16 <span class="se">\
-</span><span class="ln">4</span><span class="se"></span>  --opt com.docker.network.bridge.name<span class="o">=</span>docker_gwbridge <span class="se">\
-</span><span class="ln">5</span><span class="se"></span>  --opt com.docker.network.bridge.enable_icc<span class="o">=</span><span class="nb">false</span> <span class="se">\
-</span><span class="ln">6</span><span class="se"></span>  --opt com.docker.network.bridge.enable_ip_masquerade<span class="o">=</span><span class="nb">true</span> <span class="se">\
-</span><span class="ln">7</span><span class="se"></span>  --opt com.docker.network.driver.mtu<span class="o">=</span><span class="m">1450</span> <span class="se">\
-</span><span class="ln">8</span><span class="se"></span>  docker_gwbridge
-</code></pre></div><p>再到worker-1和worker-2上执行相同的命令。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">$ docker network rm docker_gwbridge
+$ docker network create <span class="se">\
+</span><span class="se"></span>  --subnet 172.18.0.0/16 <span class="se">\
+</span><span class="se"></span>  --opt com.docker.network.bridge.name<span class="o">=</span>docker_gwbridge <span class="se">\
+</span><span class="se"></span>  --opt com.docker.network.bridge.enable_icc<span class="o">=</span><span class="nb">false</span> <span class="se">\
+</span><span class="se"></span>  --opt com.docker.network.bridge.enable_ip_masquerade<span class="o">=</span><span class="nb">true</span> <span class="se">\
+</span><span class="se"></span>  --opt com.docker.network.driver.mtu<span class="o">=</span><span class="m">1450</span> <span class="se">\
+</span><span class="se"></span>  docker_gwbridge
+</code></pre></td></tr></table>
+</div>
+</div><p>再到worker-1和worker-2上执行相同的命令。</p>
 <ol start="8">
 <li>
 <p>[manager] <code>docker swarm init</code></p>
@@ -296,9 +344,17 @@
 <p>[manager] 先观察<code>ingress</code> network的参数，注意<code>Subnet</code>和<code>Gateway</code>：</p>
 </li>
 </ol>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>$ docker network inspect -f <span class="s1">&#39;{{json .IPAM}}&#39;</span> ingress
-<span class="ln">2</span><span class="o">{</span><span class="s2">&#34;Driver&#34;</span>:<span class="s2">&#34;default&#34;</span>,<span class="s2">&#34;Options&#34;</span>:null,<span class="s2">&#34;Config&#34;</span>:<span class="o">[{</span><span class="s2">&#34;Subnet&#34;</span>:<span class="s2">&#34;10.255.0.0/16&#34;</span>,<span class="s2">&#34;Gateway&#34;</span>:<span class="s2">&#34;10.255.0.1&#34;</span><span class="o">}]}</span>
-</code></pre></div><ol start="10">
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">$ docker network inspect -f <span class="s1">&#39;{{json .IPAM}}&#39;</span> ingress
+<span class="o">{</span><span class="s2">&#34;Driver&#34;</span>:<span class="s2">&#34;default&#34;</span>,<span class="s2">&#34;Options&#34;</span>:null,<span class="s2">&#34;Config&#34;</span>:<span class="o">[{</span><span class="s2">&#34;Subnet&#34;</span>:<span class="s2">&#34;10.255.0.0/16&#34;</span>,<span class="s2">&#34;Gateway&#34;</span>:<span class="s2">&#34;10.255.0.1&#34;</span><span class="o">}]}</span>
+</code></pre></td></tr></table>
+</div>
+</div><ol start="10">
 <li>
 <p>[manager] 删除<code>ingress</code> network，<code>docker network rm ingress</code>。</p>
 </li>
@@ -306,14 +362,27 @@
 <p>[manager] 重新创建<code>ingress</code> network，记得填写之前得到的<code>Subnet</code>和<code>Gateway</code>，以及正确的MTU值，如果子网和现有网络冲突，则要修改subnet参数：：</p>
 </li>
 </ol>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>$ docker network create <span class="se">\
-</span><span class="ln">2</span><span class="se"></span>  --driver overlay <span class="se">\
-</span><span class="ln">3</span><span class="se"></span>  --ingress <span class="se">\
-</span><span class="ln">4</span><span class="se"></span>  --subnet<span class="o">=</span>10.255.0.0/16 <span class="se">\
-</span><span class="ln">5</span><span class="se"></span>  --gateway<span class="o">=</span>10.255.0.1 <span class="se">\
-</span><span class="ln">6</span><span class="se"></span>  --opt com.docker.network.driver.mtu<span class="o">=</span><span class="m">1450</span> <span class="se">\
-</span><span class="ln">7</span><span class="se"></span>  ingress
-</code></pre></div><ol start="12">
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">$ docker network create <span class="se">\
+</span><span class="se"></span>  --driver overlay <span class="se">\
+</span><span class="se"></span>  --ingress <span class="se">\
+</span><span class="se"></span>  --subnet<span class="o">=</span>10.255.0.0/16 <span class="se">\
+</span><span class="se"></span>  --gateway<span class="o">=</span>10.255.0.1 <span class="se">\
+</span><span class="se"></span>  --opt com.docker.network.driver.mtu<span class="o">=</span><span class="m">1450</span> <span class="se">\
+</span><span class="se"></span>  ingress
+</code></pre></td></tr></table>
+</div>
+</div><ol start="12">
 <li>[worker-1] [worker-2] join <code>docker swarm join ...</code></li>
 </ol>
 <p><strong>注意：新机器在join到swarm之前，得先执行第7步</strong></p>
@@ -327,58 +396,128 @@
 </li>
 </ol>
 <p>发现MTU都是1450：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln"> 1</span>$ ip link
-<span class="ln"> 2</span>1: lo: &lt;LOOPBACK,UP,LOWER_UP&gt; mtu <span class="m">65536</span> qdisc noqueue state UNKNOWN mode DEFAULT group default qlen <span class="m">1</span>
-<span class="ln"> 3</span>    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
-<span class="ln"> 4</span>2: ens3: &lt;BROADCAST,MULTICAST,UP,LOWER_UP&gt; mtu <span class="m">1450</span> qdisc pfifo_fast state UP mode DEFAULT group default qlen <span class="m">1000</span>
-<span class="ln"> 5</span>    link/ether fa:16:3e:71:09:f5 brd ff:ff:ff:ff:ff:ff
-<span class="ln"> 6</span>3: docker0: &lt;BROADCAST,MULTICAST,UP,LOWER_UP&gt; mtu <span class="m">1450</span> qdisc noqueue state UP mode DEFAULT group default
-<span class="ln"> 7</span>    link/ether 02:42:6b🇩🇪95:71 brd ff:ff:ff:ff:ff:ff
-<span class="ln"> 8</span>298: docker_gwbridge: &lt;BROADCAST,MULTICAST,UP,LOWER_UP&gt; mtu <span class="m">1450</span> qdisc noqueue state UP mode DEFAULT group default
-<span class="ln"> 9</span>    link/ether 02:42:ae:7b:cd:b4 brd ff:ff:ff:ff:ff:ff
-<span class="ln">10</span>309: veth7e0f9e5@if308: &lt;BROADCAST,MULTICAST,UP,LOWER_UP&gt; mtu <span class="m">1450</span> qdisc noqueue master docker_gwbridge state UP mode DEFAULT group default
-<span class="ln">11</span>    link/ether 16:ca:8f:c7:d3:7f brd ff:ff:ff:ff:ff:ff link-netnsid <span class="m">1</span>
-<span class="ln">12</span>311: vethcb94fec@if310: &lt;BROADCAST,MULTICAST,UP,LOWER_UP&gt; mtu <span class="m">1450</span> qdisc noqueue master docker0 state UP mode DEFAULT group default
-<span class="ln">13</span>    link/ether 9a:aa:de:7b:4f:d4 brd ff:ff:ff:ff:ff:ff link-netnsid <span class="m">2</span>
-</code></pre></div><ol start="3">
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">$ ip link
+1: lo: &lt;LOOPBACK,UP,LOWER_UP&gt; mtu <span class="m">65536</span> qdisc noqueue state UNKNOWN mode DEFAULT group default qlen <span class="m">1</span>
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+2: ens3: &lt;BROADCAST,MULTICAST,UP,LOWER_UP&gt; mtu <span class="m">1450</span> qdisc pfifo_fast state UP mode DEFAULT group default qlen <span class="m">1000</span>
+    link/ether fa:16:3e:71:09:f5 brd ff:ff:ff:ff:ff:ff
+3: docker0: &lt;BROADCAST,MULTICAST,UP,LOWER_UP&gt; mtu <span class="m">1450</span> qdisc noqueue state UP mode DEFAULT group default
+    link/ether 02:42:6b🇩🇪95:71 brd ff:ff:ff:ff:ff:ff
+298: docker_gwbridge: &lt;BROADCAST,MULTICAST,UP,LOWER_UP&gt; mtu <span class="m">1450</span> qdisc noqueue state UP mode DEFAULT group default
+    link/ether 02:42:ae:7b:cd:b4 brd ff:ff:ff:ff:ff:ff
+309: veth7e0f9e5@if308: &lt;BROADCAST,MULTICAST,UP,LOWER_UP&gt; mtu <span class="m">1450</span> qdisc noqueue master docker_gwbridge state UP mode DEFAULT group default
+    link/ether 16:ca:8f:c7:d3:7f brd ff:ff:ff:ff:ff:ff link-netnsid <span class="m">1</span>
+311: vethcb94fec@if310: &lt;BROADCAST,MULTICAST,UP,LOWER_UP&gt; mtu <span class="m">1450</span> qdisc noqueue master docker0 state UP mode DEFAULT group default
+    link/ether 9a:aa:de:7b:4f:d4 brd ff:ff:ff:ff:ff:ff link-netnsid <span class="m">2</span>
+</code></pre></td></tr></table>
+</div>
+</div><ol start="3">
 <li>观察容器内网卡</li>
 </ol>
 <p>网卡MTU也是1450：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>$ docker <span class="nb">exec</span> b.1.pdsdgghzyy5rhqkk5et59qa3o ip link
-<span class="ln">2</span>1: lo: &lt;LOOPBACK,UP,LOWER_UP&gt; mtu <span class="m">65536</span> qdisc noqueue qlen <span class="m">1</span>
-<span class="ln">3</span>    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
-<span class="ln">4</span>310: eth0@if311: &lt;BROADCAST,MULTICAST,UP,LOWER_UP,M-DOWN&gt; mtu <span class="m">1450</span> qdisc noqueue
-<span class="ln">5</span>    link/ether 02:42:ac:11:00:02 brd ff:ff:ff:ff:ff:ff
-</code></pre></div><h2 id="自建overlay-network的mtu和子网">自建overlay network的MTU和子网<a class="anchor ms-1" href="#自建overlay-network的mtu和子网"><i class="fas fa-link"></i></a></h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">$ docker <span class="nb">exec</span> b.1.pdsdgghzyy5rhqkk5et59qa3o ip link
+1: lo: &lt;LOOPBACK,UP,LOWER_UP&gt; mtu <span class="m">65536</span> qdisc noqueue qlen <span class="m">1</span>
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+310: eth0@if311: &lt;BROADCAST,MULTICAST,UP,LOWER_UP,M-DOWN&gt; mtu <span class="m">1450</span> qdisc noqueue
+    link/ether 02:42:ac:11:00:02 brd ff:ff:ff:ff:ff:ff
+</code></pre></td></tr></table>
+</div>
+</div><h2 id="自建overlay-network的mtu和子网">自建overlay network的MTU和子网<a class="anchor ms-1" href="#自建overlay-network的mtu和子网"><i class="fas fa-link"></i></a></h2>
 <h3 id="方法一在docker-compose-file设置">方法一：在docker compose file设置<a class="anchor ms-1" href="#方法一在docker-compose-file设置"><i class="fas fa-link"></i></a></h3>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-yaml" data-lang="yaml"><span class="ln"> 1</span><span class="nn">...</span><span class="w">
-</span><span class="ln"> 2</span><span class="w">
-</span><span class="ln"> 3</span><span class="w"></span><span class="nt">networks</span><span class="p">:</span><span class="w">                                
-</span><span class="ln"> 4</span><span class="w">  </span><span class="nt">my-overlay</span><span class="p">:</span><span class="w">                               
-</span><span class="ln"> 5</span><span class="w">    </span><span class="nt">driver</span><span class="p">:</span><span class="w"> </span><span class="l">overlay</span><span class="w">
-</span><span class="ln"> 6</span><span class="w">    </span><span class="nt">ipam</span><span class="p">:</span><span class="w">
-</span><span class="ln"> 7</span><span class="w">      </span><span class="nt">driver</span><span class="p">:</span><span class="w"> </span><span class="l">default</span><span class="w">
-</span><span class="ln"> 8</span><span class="w">      </span><span class="nt">config</span><span class="p">:</span><span class="w">
-</span><span class="ln"> 9</span><span class="w">      </span>- <span class="nt">subnet</span><span class="p">:</span><span class="w"> </span><span class="l">&lt;subnet&gt;                       </span><span class="w">
-</span><span class="ln">10</span><span class="w">    </span><span class="nt">driver_opts</span><span class="p">:</span><span class="w">                         
-</span><span class="ln">11</span><span class="w">      </span><span class="nt">com.docker.network.driver.mtu</span><span class="p">:</span><span class="w"> </span><span class="m">1450</span><span class="w">
-</span></code></pre></div><p>不过这样不好，因为这样就把docker compose file的内容和生产环境绑定了，换了个环境这个MTU值未必合适。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-yaml" data-lang="yaml"><span class="nn">...</span><span class="w">
+</span><span class="w">
+</span><span class="w"></span><span class="nt">networks</span><span class="p">:</span><span class="w">                                
+</span><span class="w">  </span><span class="nt">my-overlay</span><span class="p">:</span><span class="w">                               
+</span><span class="w">    </span><span class="nt">driver</span><span class="p">:</span><span class="w"> </span><span class="l">overlay</span><span class="w">
+</span><span class="w">    </span><span class="nt">ipam</span><span class="p">:</span><span class="w">
+</span><span class="w">      </span><span class="nt">driver</span><span class="p">:</span><span class="w"> </span><span class="l">default</span><span class="w">
+</span><span class="w">      </span><span class="nt">config</span><span class="p">:</span><span class="w">
+</span><span class="w">      </span>- <span class="nt">subnet</span><span class="p">:</span><span class="w"> </span><span class="l">&lt;subnet&gt;                       </span><span class="w">
+</span><span class="w">    </span><span class="nt">driver_opts</span><span class="p">:</span><span class="w">                         
+</span><span class="w">      </span><span class="nt">com.docker.network.driver.mtu</span><span class="p">:</span><span class="w"> </span><span class="m">1450</span><span class="w">
+</span></code></pre></td></tr></table>
+</div>
+</div><p>不过这样不好，因为这样就把docker compose file的内容和生产环境绑定了，换了个环境这个MTU值未必合适。</p>
 <h3 id="方法二外部创建时设置">方法二：外部创建时设置<a class="anchor ms-1" href="#方法二外部创建时设置"><i class="fas fa-link"></i></a></h3>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>docker network create <span class="se">\
-</span><span class="ln">2</span><span class="se"></span>  -d overlay <span class="se">\
-</span><span class="ln">3</span><span class="se"></span>  --subnet &lt;subnet-net&gt; <span class="se">\
-</span><span class="ln">4</span><span class="se"></span>  --opt com.docker.network.driver.mtu<span class="o">=</span><span class="m">1450</span> <span class="se">\
-</span><span class="ln">5</span><span class="se"></span>  --attachable <span class="se">\
-</span><span class="ln">6</span><span class="se"></span>  my-overlay
-</code></pre></div><p>用法：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">docker network create <span class="se">\
+</span><span class="se"></span>  -d overlay <span class="se">\
+</span><span class="se"></span>  --subnet &lt;subnet-net&gt; <span class="se">\
+</span><span class="se"></span>  --opt com.docker.network.driver.mtu<span class="o">=</span><span class="m">1450</span> <span class="se">\
+</span><span class="se"></span>  --attachable <span class="se">\
+</span><span class="se"></span>  my-overlay
+</code></pre></td></tr></table>
+</div>
+</div><p>用法：</p>
 <ol>
 <li>在docker compose file里这样用：
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-yaml" data-lang="yaml"><span class="ln">1</span><span class="nn">...</span><span class="w">
-</span><span class="ln">2</span><span class="w"> 
-</span><span class="ln">3</span><span class="w">  </span><span class="nt">app-net</span><span class="p">:</span><span class="w">
-</span><span class="ln">4</span><span class="w">    </span><span class="nt">external</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w">
-</span><span class="ln">5</span><span class="w">    </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">my-overlay</span><span class="w">
-</span></code></pre></div></li>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-yaml" data-lang="yaml"><span class="nn">...</span><span class="w">
+</span><span class="w"> 
+</span><span class="w">  </span><span class="nt">app-net</span><span class="p">:</span><span class="w">
+</span><span class="w">    </span><span class="nt">external</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w">
+</span><span class="w">    </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">my-overlay</span><span class="w">
+</span></code></pre></td></tr></table>
+</div>
+</div></li>
 <li><code>docker run --network my-overlay ...</code></li>
 <li><code>docker service create --network my-overlay ...</code></li>
 </ol>

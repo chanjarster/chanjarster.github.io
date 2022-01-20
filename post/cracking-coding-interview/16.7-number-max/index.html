@@ -12,7 +12,7 @@
 <meta name="description" content="" /><meta itemprop="name" content="Cracking Coding Interview - 16.7 Number Max">
 <meta itemprop="description" content=""><meta itemprop="datePublished" content="2019-09-05T15:50:11+08:00" />
 <meta itemprop="dateModified" content="2019-09-05T15:50:11+08:00" />
-<meta itemprop="wordCount" content="679">
+<meta itemprop="wordCount" content="694">
 <meta itemprop="keywords" content="ARTS-A," /><meta property="og:title" content="Cracking Coding Interview - 16.7 Number Max" />
 <meta property="og:description" content="" />
 <meta property="og:type" content="article" />
@@ -228,53 +228,117 @@
 <h2 id="解法">解法<a class="anchor ms-1" href="#解法"><i class="fas fa-link"></i></a></h2>
 <p>不用任何<code>if-else</code>和比较操作符，给你两个数字，让你返回最大的那一个。换句话说就是禁止使用if-else、三元条件式、大于小于等于。那么剩下的就只有数学运算符和bit运算符。</p>
 <p>如果给你一个k，当a &gt; b时k=1，否则k=0。那么怎么得到a和b中的最大值呢？可以这样：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln">1</span>max = b + (a - b) * k
-<span class="ln">2</span>OR
-<span class="ln">3</span>max = a * k + b * (not k)
-</code></pre></div><p>那如何创建k呢？</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt">max = b + (a - b) * k
+OR
+max = a * k + b * (not k)
+</code></pre></td></tr></table>
+</div>
+</div><p>那如何创建k呢？</p>
 <p>如果a &gt; b，那么 a - b &gt; 0，那么它的符号位是0，向右shift 31 bit，和1 XOR一下，得到k = 1</p>
 <p>如果a &lt; b，那么 a - b &lt; 0，那么它的符号位是1，向右shift 31 bit，和1 XOR一下，得到k = 0</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln"> 1</span><span class="c1">// n &gt;= 0 return 1, else return 0
-</span><span class="ln"> 2</span><span class="c1"></span><span class="kd">public</span> <span class="kt">int</span> <span class="nf">sign</span><span class="o">(</span><span class="kt">int</span> <span class="n">n</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 3</span>  <span class="k">return</span> <span class="n">flip</span><span class="o">(</span><span class="n">n</span> <span class="o">&gt;&gt;</span> <span class="n">31</span><span class="o">);</span>
-<span class="ln"> 4</span><span class="o">}</span>
-<span class="ln"> 5</span><span class="kd">public</span> <span class="kt">int</span> <span class="nf">flip</span><span class="o">(</span><span class="kt">int</span> <span class="n">n</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 6</span>  <span class="k">return</span> <span class="n">n</span> <span class="o">^</span> <span class="n">1</span><span class="o">;</span>
-<span class="ln"> 7</span><span class="o">}</span>
-<span class="ln"> 8</span>
-<span class="ln"> 9</span><span class="kd">public</span> <span class="kt">int</span> <span class="nf">max</span><span class="o">(</span><span class="kt">int</span> <span class="n">a</span><span class="o">,</span> <span class="kt">int</span> <span class="n">b</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">10</span>  <span class="kt">int</span> <span class="n">k</span> <span class="o">=</span> <span class="n">sign</span><span class="o">(</span><span class="n">a</span> <span class="o">-</span> <span class="n">b</span><span class="o">);</span>
-<span class="ln">11</span>  <span class="kt">int</span> <span class="n">q</span> <span class="o">=</span> <span class="n">flip</span><span class="o">(</span><span class="n">k</span><span class="o">);</span>
-<span class="ln">12</span>  <span class="k">return</span> <span class="n">a</span> <span class="o">*</span> <span class="n">k</span> <span class="o">+</span> <span class="n">b</span> <span class="o">*</span> <span class="n">q</span><span class="o">;</span>
-<span class="ln">13</span><span class="o">}</span>
-</code></pre></div><p>但是要注意a - b可能会造成int的bit溢出，导致符号位变成1。比如<code>a=Integer.MAX_VALUE b=-20</code>，a &lt; 0且b &gt; 0时，a - b虽然会有溢出，但是符号位不会变。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="c1">// n &gt;= 0 return 1, else return 0
+</span><span class="c1"></span><span class="kd">public</span> <span class="kt">int</span> <span class="nf">sign</span><span class="o">(</span><span class="kt">int</span> <span class="n">n</span><span class="o">)</span> <span class="o">{</span>
+  <span class="k">return</span> <span class="n">flip</span><span class="o">(</span><span class="n">n</span> <span class="o">&gt;&gt;</span> <span class="n">31</span><span class="o">);</span>
+<span class="o">}</span>
+<span class="kd">public</span> <span class="kt">int</span> <span class="nf">flip</span><span class="o">(</span><span class="kt">int</span> <span class="n">n</span><span class="o">)</span> <span class="o">{</span>
+  <span class="k">return</span> <span class="n">n</span> <span class="o">^</span> <span class="n">1</span><span class="o">;</span>
+<span class="o">}</span>
+
+<span class="kd">public</span> <span class="kt">int</span> <span class="nf">max</span><span class="o">(</span><span class="kt">int</span> <span class="n">a</span><span class="o">,</span> <span class="kt">int</span> <span class="n">b</span><span class="o">)</span> <span class="o">{</span>
+  <span class="kt">int</span> <span class="n">k</span> <span class="o">=</span> <span class="n">sign</span><span class="o">(</span><span class="n">a</span> <span class="o">-</span> <span class="n">b</span><span class="o">);</span>
+  <span class="kt">int</span> <span class="n">q</span> <span class="o">=</span> <span class="n">flip</span><span class="o">(</span><span class="n">k</span><span class="o">);</span>
+  <span class="k">return</span> <span class="n">a</span> <span class="o">*</span> <span class="n">k</span> <span class="o">+</span> <span class="n">b</span> <span class="o">*</span> <span class="n">q</span><span class="o">;</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>但是要注意a - b可能会造成int的bit溢出，导致符号位变成1。比如<code>a=Integer.MAX_VALUE b=-20</code>，a &lt; 0且b &gt; 0时，a - b虽然会有溢出，但是符号位不会变。</p>
 <p>所以：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln">1</span>符号位=1代表整数，符号位=0代表负数
-<span class="ln">2</span>
-<span class="ln">3</span>if (a和b的符号位不同) {
-<span class="ln">4</span>  // a &lt; 0, b &gt; 0时, a - b符号位应该是0，和a相同
-<span class="ln">5</span>  // a &gt; 0, b &lt; 0时, a - b符号位应该是1，和a相同
-<span class="ln">6</span>  符号位 = a的符号位
-<span class="ln">7</span>} else {
-<span class="ln">8</span>  符号位 = (a - b)的符号位
-<span class="ln">9</span>}
-</code></pre></div><p>代码：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln"> 1</span><span class="kd">public</span> <span class="kt">int</span> <span class="nf">max</span><span class="o">(</span><span class="kt">int</span> <span class="n">a</span><span class="o">,</span> <span class="kt">int</span> <span class="n">b</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 2</span>  <span class="kt">int</span> <span class="n">c</span> <span class="o">=</span> <span class="n">a</span> <span class="o">-</span> <span class="n">b</span><span class="o">;</span>
-<span class="ln"> 3</span>  <span class="kt">int</span> <span class="n">sa</span> <span class="o">=</span> <span class="n">sign</span><span class="o">(</span><span class="n">a</span><span class="o">);</span>
-<span class="ln"> 4</span>  <span class="kt">int</span> <span class="n">sb</span> <span class="o">=</span> <span class="n">sign</span><span class="o">(</span><span class="n">b</span><span class="o">);</span>
-<span class="ln"> 5</span>  <span class="kt">int</span> <span class="n">sc</span> <span class="o">=</span> <span class="n">sign</span><span class="o">(</span><span class="n">c</span><span class="o">);</span>
-<span class="ln"> 6</span>  
-<span class="ln"> 7</span>  <span class="c1">// sign a和sign b符号是否不同，相同得到0，不同得到1
-</span><span class="ln"> 8</span><span class="c1"></span>  <span class="kt">int</span> <span class="n">use_sa</span> <span class="o">=</span> <span class="n">sa</span> <span class="o">^</span> <span class="n">sb</span><span class="o">;</span>
-<span class="ln"> 9</span>  <span class="c1">// sign a和sign b符号是否相同，相同得到1，不同得到0
-</span><span class="ln">10</span><span class="c1"></span>  <span class="kt">int</span> <span class="n">use_sc</span> <span class="o">=</span> <span class="n">flip</span><span class="o">(</span><span class="n">sa</span> <span class="o">^</span> <span class="n">sb</span><span class="o">);</span>
-<span class="ln">11</span>  
-<span class="ln">12</span>  <span class="kt">int</span> <span class="n">k</span> <span class="o">=</span> <span class="n">sa</span> <span class="o">*</span> <span class="n">use_sa</span> <span class="o">+</span> <span class="n">sc</span> <span class="o">*</span> <span class="n">use_sc</span><span class="o">;</span>
-<span class="ln">13</span>  <span class="kt">int</span> <span class="n">q</span> <span class="o">=</span> <span class="n">flip</span><span class="o">(</span><span class="n">k</span><span class="o">);</span>
-<span class="ln">14</span>  <span class="k">return</span> <span class="n">a</span> <span class="o">*</span> <span class="n">k</span> <span class="o">+</span> <span class="n">b</span> <span class="o">*</span> <span class="n">q</span><span class="o">;</span>
-<span class="ln">15</span><span class="o">}</span>
-</code></pre></div></div></div>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span><span class="lnt">9
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt">符号位=1代表整数，符号位=0代表负数
+
+if (a和b的符号位不同) {
+  // a &lt; 0, b &gt; 0时, a - b符号位应该是0，和a相同
+  // a &gt; 0, b &lt; 0时, a - b符号位应该是1，和a相同
+  符号位 = a的符号位
+} else {
+  符号位 = (a - b)的符号位
+}
+</code></pre></td></tr></table>
+</div>
+</div><p>代码：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="kd">public</span> <span class="kt">int</span> <span class="nf">max</span><span class="o">(</span><span class="kt">int</span> <span class="n">a</span><span class="o">,</span> <span class="kt">int</span> <span class="n">b</span><span class="o">)</span> <span class="o">{</span>
+  <span class="kt">int</span> <span class="n">c</span> <span class="o">=</span> <span class="n">a</span> <span class="o">-</span> <span class="n">b</span><span class="o">;</span>
+  <span class="kt">int</span> <span class="n">sa</span> <span class="o">=</span> <span class="n">sign</span><span class="o">(</span><span class="n">a</span><span class="o">);</span>
+  <span class="kt">int</span> <span class="n">sb</span> <span class="o">=</span> <span class="n">sign</span><span class="o">(</span><span class="n">b</span><span class="o">);</span>
+  <span class="kt">int</span> <span class="n">sc</span> <span class="o">=</span> <span class="n">sign</span><span class="o">(</span><span class="n">c</span><span class="o">);</span>
+  
+  <span class="c1">// sign a和sign b符号是否不同，相同得到0，不同得到1
+</span><span class="c1"></span>  <span class="kt">int</span> <span class="n">use_sa</span> <span class="o">=</span> <span class="n">sa</span> <span class="o">^</span> <span class="n">sb</span><span class="o">;</span>
+  <span class="c1">// sign a和sign b符号是否相同，相同得到1，不同得到0
+</span><span class="c1"></span>  <span class="kt">int</span> <span class="n">use_sc</span> <span class="o">=</span> <span class="n">flip</span><span class="o">(</span><span class="n">sa</span> <span class="o">^</span> <span class="n">sb</span><span class="o">);</span>
+  
+  <span class="kt">int</span> <span class="n">k</span> <span class="o">=</span> <span class="n">sa</span> <span class="o">*</span> <span class="n">use_sa</span> <span class="o">+</span> <span class="n">sc</span> <span class="o">*</span> <span class="n">use_sc</span><span class="o">;</span>
+  <span class="kt">int</span> <span class="n">q</span> <span class="o">=</span> <span class="n">flip</span><span class="o">(</span><span class="n">k</span><span class="o">);</span>
+  <span class="k">return</span> <span class="n">a</span> <span class="o">*</span> <span class="n">k</span> <span class="o">+</span> <span class="n">b</span> <span class="o">*</span> <span class="n">q</span><span class="o">;</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div></div></div>
   <div class="card-footer"><div class="post-navs d-flex justify-content-evenly">
   <div class="post-nav post-prev"><i class="fas fa-fw fa-chevron-left"></i>
     <a href="/post/cracking-coding-interview/16.6-smallest-difference/">Cracking Coding Interview - 16.6 Smallest Difference

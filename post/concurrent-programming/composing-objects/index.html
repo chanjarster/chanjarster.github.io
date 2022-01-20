@@ -12,7 +12,7 @@
 <meta name="description" content="" /><meta itemprop="name" content="编写线程安全对象">
 <meta itemprop="description" content=""><meta itemprop="datePublished" content="2019-09-19T11:40:29+08:00" />
 <meta itemprop="dateModified" content="2019-09-19T11:40:29+08:00" />
-<meta itemprop="wordCount" content="611">
+<meta itemprop="wordCount" content="628">
 <meta itemprop="keywords" content="并发编程," /><meta property="og:title" content="编写线程安全对象" />
 <meta property="og:description" content="" />
 <meta property="og:type" content="article" />
@@ -226,90 +226,202 @@
 <div class="post-content mb-3"><img src="composing-objects.png" style="zoom:50%" />
 <h3 id="对象管制">对象管制<a class="anchor ms-1" href="#对象管制"><i class="fas fa-link"></i></a></h3>
 <p>例子1：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln">1</span><span class="nd">@ThreadSafe</span>
-<span class="ln">2</span><span class="kd">public</span> <span class="kd">class</span> <span class="nc">PersonSet</span> <span class="o">{</span>
-<span class="ln">3</span>  <span class="kd">private</span> <span class="kd">final</span> <span class="n">Set</span><span class="o">&lt;</span><span class="n">Person</span><span class="o">&gt;</span> <span class="n">mySet</span> <span class="o">=</span> <span class="k">new</span> <span class="n">HashSet</span><span class="o">&lt;&gt;();</span>
-<span class="ln">4</span>  <span class="kd">public</span> <span class="kd">synchronized</span> <span class="kt">void</span> <span class="nf">addPerson</span><span class="o">(</span><span class="n">Person</span> <span class="n">p</span><span class="o">)</span> <span class="o">{</span> <span class="o">...</span> <span class="o">}</span>
-<span class="ln">5</span>  <span class="kd">public</span> <span class="kd">synchronized</span> <span class="kt">boolean</span> <span class="nf">containsPerson</span><span class="o">(</span><span class="n">Person</span> <span class="n">p</span><span class="o">)</span> <span class="o">{</span> <span class="o">...</span> <span class="o">}</span>
-<span class="ln">6</span><span class="o">}</span>
-</code></pre></div><p>例子2：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln"> 1</span><span class="nd">@ThreadSafe</span>
-<span class="ln"> 2</span><span class="kd">public</span> <span class="kd">class</span> <span class="nc">PersonSet</span> <span class="o">{</span>
-<span class="ln"> 3</span>  <span class="kd">private</span> <span class="kd">final</span> <span class="n">Set</span><span class="o">&lt;</span><span class="n">Person</span><span class="o">&gt;</span> <span class="n">mySet</span> <span class="o">=</span> <span class="k">new</span> <span class="n">HashSet</span><span class="o">&lt;&gt;();</span>
-<span class="ln"> 4</span>  <span class="kd">private</span> <span class="kd">final</span> <span class="n">Object</span> <span class="n">mylock</span> <span class="o">=</span> <span class="k">new</span> <span class="n">Object</span><span class="o">();</span>
-<span class="ln"> 5</span>  <span class="kd">public</span> <span class="kt">void</span> <span class="nf">addPerson</span><span class="o">(</span><span class="n">Person</span> <span class="n">p</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 6</span>    <span class="kd">synchronized</span><span class="o">(</span><span class="n">mylock</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 7</span>      <span class="o">...</span>
-<span class="ln"> 8</span>    <span class="o">}</span>
-<span class="ln"> 9</span>  <span class="o">}</span>
-<span class="ln">10</span><span class="o">}</span>
-</code></pre></div><p>例子3：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln"> 1</span><span class="nd">@TreadSafe</span>
-<span class="ln"> 2</span><span class="kd">public</span> <span class="kd">class</span> <span class="nc">MonitorVehicleTracker</span> <span class="o">{</span>
-<span class="ln"> 3</span>  <span class="kd">private</span> <span class="kd">final</span> <span class="n">Map</span><span class="o">&lt;</span><span class="n">String</span><span class="o">,</span> <span class="n">MutablePoint</span><span class="o">&gt;</span> <span class="n">locations</span><span class="o">;</span>
-<span class="ln"> 4</span>  <span class="kd">public</span> <span class="nf">MonitorVehicleTracker</span><span class="o">(</span><span class="n">Map</span><span class="o">&lt;</span><span class="n">String</span><span class="o">,</span> <span class="n">MutablePoint</span><span class="o">&gt;</span> <span class="n">locations</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 5</span>    <span class="c1">// 深copyMap，防止MutablePoint被共享
-</span><span class="ln"> 6</span><span class="c1"></span>    <span class="k">this</span><span class="o">.</span><span class="na">locations</span> <span class="o">=</span> <span class="n">deepCopy</span><span class="o">(</span><span class="n">locations</span><span class="o">);</span>
-<span class="ln"> 7</span>  <span class="o">}</span>
-<span class="ln"> 8</span>  <span class="kd">public</span> <span class="kd">synchronized</span> <span class="n">Map</span><span class="o">&lt;</span><span class="n">String</span><span class="o">,</span> <span class="n">MutablePoint</span><span class="o">&gt;</span> <span class="nf">getLocations</span><span class="o">()</span> <span class="o">{</span>
-<span class="ln"> 9</span>    <span class="c1">// 深copyMap，防止MutablePoint逃逸
-</span><span class="ln">10</span><span class="c1"></span>    <span class="k">return</span> <span class="n">deepCopy</span><span class="o">(</span><span class="k">this</span><span class="o">.</span><span class="na">locations</span><span class="o">);</span>
-<span class="ln">11</span>  <span class="o">}</span>
-<span class="ln">12</span>  <span class="c1">// 用monitor lock保护访问
-</span><span class="ln">13</span><span class="c1"></span>  <span class="kd">public</span> <span class="kd">synchronized</span> <span class="kt">void</span> <span class="nf">setLocation</span><span class="o">(</span><span class="n">String</span> <span class="n">id</span><span class="o">,</span> <span class="kt">int</span> <span class="n">x</span><span class="o">,</span> <span class="kt">int</span> <span class="n">y</span><span class="o">)</span> <span class="o">{</span> <span class="o">...</span> <span class="o">}</span>
-<span class="ln">14</span><span class="o">}</span>
-</code></pre></div><h2 id="代理线程安全">代理线程安全<a class="anchor ms-1" href="#代理线程安全"><i class="fas fa-link"></i></a></h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="nd">@ThreadSafe</span>
+<span class="kd">public</span> <span class="kd">class</span> <span class="nc">PersonSet</span> <span class="o">{</span>
+  <span class="kd">private</span> <span class="kd">final</span> <span class="n">Set</span><span class="o">&lt;</span><span class="n">Person</span><span class="o">&gt;</span> <span class="n">mySet</span> <span class="o">=</span> <span class="k">new</span> <span class="n">HashSet</span><span class="o">&lt;&gt;();</span>
+  <span class="kd">public</span> <span class="kd">synchronized</span> <span class="kt">void</span> <span class="nf">addPerson</span><span class="o">(</span><span class="n">Person</span> <span class="n">p</span><span class="o">)</span> <span class="o">{</span> <span class="o">...</span> <span class="o">}</span>
+  <span class="kd">public</span> <span class="kd">synchronized</span> <span class="kt">boolean</span> <span class="nf">containsPerson</span><span class="o">(</span><span class="n">Person</span> <span class="n">p</span><span class="o">)</span> <span class="o">{</span> <span class="o">...</span> <span class="o">}</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>例子2：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="nd">@ThreadSafe</span>
+<span class="kd">public</span> <span class="kd">class</span> <span class="nc">PersonSet</span> <span class="o">{</span>
+  <span class="kd">private</span> <span class="kd">final</span> <span class="n">Set</span><span class="o">&lt;</span><span class="n">Person</span><span class="o">&gt;</span> <span class="n">mySet</span> <span class="o">=</span> <span class="k">new</span> <span class="n">HashSet</span><span class="o">&lt;&gt;();</span>
+  <span class="kd">private</span> <span class="kd">final</span> <span class="n">Object</span> <span class="n">mylock</span> <span class="o">=</span> <span class="k">new</span> <span class="n">Object</span><span class="o">();</span>
+  <span class="kd">public</span> <span class="kt">void</span> <span class="nf">addPerson</span><span class="o">(</span><span class="n">Person</span> <span class="n">p</span><span class="o">)</span> <span class="o">{</span>
+    <span class="kd">synchronized</span><span class="o">(</span><span class="n">mylock</span><span class="o">)</span> <span class="o">{</span>
+      <span class="o">...</span>
+    <span class="o">}</span>
+  <span class="o">}</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>例子3：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="nd">@TreadSafe</span>
+<span class="kd">public</span> <span class="kd">class</span> <span class="nc">MonitorVehicleTracker</span> <span class="o">{</span>
+  <span class="kd">private</span> <span class="kd">final</span> <span class="n">Map</span><span class="o">&lt;</span><span class="n">String</span><span class="o">,</span> <span class="n">MutablePoint</span><span class="o">&gt;</span> <span class="n">locations</span><span class="o">;</span>
+  <span class="kd">public</span> <span class="nf">MonitorVehicleTracker</span><span class="o">(</span><span class="n">Map</span><span class="o">&lt;</span><span class="n">String</span><span class="o">,</span> <span class="n">MutablePoint</span><span class="o">&gt;</span> <span class="n">locations</span><span class="o">)</span> <span class="o">{</span>
+    <span class="c1">// 深copyMap，防止MutablePoint被共享
+</span><span class="c1"></span>    <span class="k">this</span><span class="o">.</span><span class="na">locations</span> <span class="o">=</span> <span class="n">deepCopy</span><span class="o">(</span><span class="n">locations</span><span class="o">);</span>
+  <span class="o">}</span>
+  <span class="kd">public</span> <span class="kd">synchronized</span> <span class="n">Map</span><span class="o">&lt;</span><span class="n">String</span><span class="o">,</span> <span class="n">MutablePoint</span><span class="o">&gt;</span> <span class="nf">getLocations</span><span class="o">()</span> <span class="o">{</span>
+    <span class="c1">// 深copyMap，防止MutablePoint逃逸
+</span><span class="c1"></span>    <span class="k">return</span> <span class="n">deepCopy</span><span class="o">(</span><span class="k">this</span><span class="o">.</span><span class="na">locations</span><span class="o">);</span>
+  <span class="o">}</span>
+  <span class="c1">// 用monitor lock保护访问
+</span><span class="c1"></span>  <span class="kd">public</span> <span class="kd">synchronized</span> <span class="kt">void</span> <span class="nf">setLocation</span><span class="o">(</span><span class="n">String</span> <span class="n">id</span><span class="o">,</span> <span class="kt">int</span> <span class="n">x</span><span class="o">,</span> <span class="kt">int</span> <span class="n">y</span><span class="o">)</span> <span class="o">{</span> <span class="o">...</span> <span class="o">}</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><h2 id="代理线程安全">代理线程安全<a class="anchor ms-1" href="#代理线程安全"><i class="fas fa-link"></i></a></h2>
 <p>把线程安全的工作代理给其他能提供线程安全的类：</p>
 <p>例子：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln"> 1</span><span class="nd">@ThreadSafe</span> <span class="kd">class</span> <span class="nc">DelegatingVehicleTracker</span> <span class="o">{</span>
-<span class="ln"> 2</span>  <span class="kd">private</span> <span class="kd">final</span> <span class="n">ConcurrentMap</span><span class="o">&lt;</span><span class="n">String</span><span class="o">,</span> <span class="n">ImmutablePoint</span><span class="o">&gt;</span> <span class="n">locations</span><span class="o">;</span>
-<span class="ln"> 3</span>  <span class="kd">private</span> <span class="kd">final</span> <span class="n">Map</span><span class="o">&lt;</span><span class="n">String</span><span class="o">,</span> <span class="n">ImmutablePoint</span><span class="o">&gt;</span> <span class="n">unmodifiableMap</span><span class="o">;</span>
-<span class="ln"> 4</span>  <span class="kd">public</span> <span class="nf">DelegatingVehicleTracker</span><span class="o">(</span><span class="n">Map</span><span class="o">&lt;</span><span class="n">String</span><span class="o">,</span> <span class="n">ImmutablePoint</span><span class="o">&gt;</span> <span class="n">points</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 5</span>    <span class="c1">// 把Map浅copy过来
-</span><span class="ln"> 6</span><span class="c1"></span>    <span class="n">locations</span> <span class="o">=</span> <span class="k">new</span> <span class="n">ConcurrentHashMap</span><span class="o">&lt;&gt;(</span><span class="n">points</span><span class="o">);</span>
-<span class="ln"> 7</span>    <span class="c1">// 这个比较妙，把线程安全代理给了并发Map
-</span><span class="ln"> 8</span><span class="c1"></span>    <span class="n">unmodifiableMap</span> <span class="o">=</span> <span class="n">Collections</span><span class="o">.</span><span class="na">unmodifiableMap</span><span class="o">(</span><span class="n">locations</span><span class="o">);</span>
-<span class="ln"> 9</span>  <span class="o">}</span>
-<span class="ln">10</span>  <span class="c1">// 就算逃逸出去也无所谓，反正只能只读，而且因为底层是并发Map，所以不用担心可见性、原子性等问题
-</span><span class="ln">11</span><span class="c1"></span>  <span class="kd">public</span> <span class="n">Map</span><span class="o">&lt;</span><span class="n">String</span><span class="o">,</span> <span class="n">MutablePoint</span><span class="o">&gt;</span> <span class="nf">getLocations</span><span class="o">()</span> <span class="o">{</span>
-<span class="ln">12</span>    <span class="k">return</span> <span class="n">unmodifiableMap</span><span class="o">;</span>
-<span class="ln">13</span>  <span class="o">}</span>
-<span class="ln">14</span>  <span class="kd">public</span> <span class="kt">void</span> <span class="nf">setLocation</span><span class="o">(</span><span class="n">String</span> <span class="n">id</span><span class="o">,</span> <span class="kt">int</span> <span class="n">x</span><span class="o">,</span> <span class="kt">int</span> <span class="n">y</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">15</span>    <span class="n">locations</span><span class="o">.</span><span class="na">put</span><span class="o">(...)</span>
-<span class="ln">16</span>  <span class="o">}</span>
-<span class="ln">17</span><span class="o">}</span>
-</code></pre></div><h2 id="给线程安全类添加功能">给线程安全类添加功能<a class="anchor ms-1" href="#给线程安全类添加功能"><i class="fas fa-link"></i></a></h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="nd">@ThreadSafe</span> <span class="kd">class</span> <span class="nc">DelegatingVehicleTracker</span> <span class="o">{</span>
+  <span class="kd">private</span> <span class="kd">final</span> <span class="n">ConcurrentMap</span><span class="o">&lt;</span><span class="n">String</span><span class="o">,</span> <span class="n">ImmutablePoint</span><span class="o">&gt;</span> <span class="n">locations</span><span class="o">;</span>
+  <span class="kd">private</span> <span class="kd">final</span> <span class="n">Map</span><span class="o">&lt;</span><span class="n">String</span><span class="o">,</span> <span class="n">ImmutablePoint</span><span class="o">&gt;</span> <span class="n">unmodifiableMap</span><span class="o">;</span>
+  <span class="kd">public</span> <span class="nf">DelegatingVehicleTracker</span><span class="o">(</span><span class="n">Map</span><span class="o">&lt;</span><span class="n">String</span><span class="o">,</span> <span class="n">ImmutablePoint</span><span class="o">&gt;</span> <span class="n">points</span><span class="o">)</span> <span class="o">{</span>
+    <span class="c1">// 把Map浅copy过来
+</span><span class="c1"></span>    <span class="n">locations</span> <span class="o">=</span> <span class="k">new</span> <span class="n">ConcurrentHashMap</span><span class="o">&lt;&gt;(</span><span class="n">points</span><span class="o">);</span>
+    <span class="c1">// 这个比较妙，把线程安全代理给了并发Map
+</span><span class="c1"></span>    <span class="n">unmodifiableMap</span> <span class="o">=</span> <span class="n">Collections</span><span class="o">.</span><span class="na">unmodifiableMap</span><span class="o">(</span><span class="n">locations</span><span class="o">);</span>
+  <span class="o">}</span>
+  <span class="c1">// 就算逃逸出去也无所谓，反正只能只读，而且因为底层是并发Map，所以不用担心可见性、原子性等问题
+</span><span class="c1"></span>  <span class="kd">public</span> <span class="n">Map</span><span class="o">&lt;</span><span class="n">String</span><span class="o">,</span> <span class="n">MutablePoint</span><span class="o">&gt;</span> <span class="nf">getLocations</span><span class="o">()</span> <span class="o">{</span>
+    <span class="k">return</span> <span class="n">unmodifiableMap</span><span class="o">;</span>
+  <span class="o">}</span>
+  <span class="kd">public</span> <span class="kt">void</span> <span class="nf">setLocation</span><span class="o">(</span><span class="n">String</span> <span class="n">id</span><span class="o">,</span> <span class="kt">int</span> <span class="n">x</span><span class="o">,</span> <span class="kt">int</span> <span class="n">y</span><span class="o">)</span> <span class="o">{</span>
+    <span class="n">locations</span><span class="o">.</span><span class="na">put</span><span class="o">(...)</span>
+  <span class="o">}</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><h2 id="给线程安全类添加功能">给线程安全类添加功能<a class="anchor ms-1" href="#给线程安全类添加功能"><i class="fas fa-link"></i></a></h2>
 <p>给线程安全的类添加功能的时候要注意不要破坏线程安全。</p>
 <h3 id="客户方加锁">客户方加锁<a class="anchor ms-1" href="#客户方加锁"><i class="fas fa-link"></i></a></h3>
 <p><strong>下面就是个反面例子：</strong></p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln">1</span><span class="kd">public</span> <span class="kd">class</span> <span class="nc">ListHelper</span> <span class="o">{</span>
-<span class="ln">2</span>  <span class="kd">public</span> <span class="n">List</span> <span class="n">list</span> <span class="o">=</span> <span class="n">Collections</span><span class="o">.</span><span class="na">synchronizedList</span><span class="o">(</span><span class="k">new</span> <span class="n">ArrayList</span><span class="o">());</span>
-<span class="ln">3</span>  <span class="kd">public</span> <span class="kd">synchronized</span> <span class="kt">boolean</span> <span class="nf">putIfAbsent</span><span class="o">(</span><span class="n">Object</span> <span class="n">v</span><span class="o">)</span> <span class="o">{</span> <span class="o">...</span> <span class="o">}</span>
-<span class="ln">4</span><span class="o">}</span>
-</code></pre></div><p>这是因为<code>putIfAbsent</code>使用的monitor lock和<code>synchronizedList</code>自身使用的monitor lock不是同一个，这就破坏了线程安全。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="kd">public</span> <span class="kd">class</span> <span class="nc">ListHelper</span> <span class="o">{</span>
+  <span class="kd">public</span> <span class="n">List</span> <span class="n">list</span> <span class="o">=</span> <span class="n">Collections</span><span class="o">.</span><span class="na">synchronizedList</span><span class="o">(</span><span class="k">new</span> <span class="n">ArrayList</span><span class="o">());</span>
+  <span class="kd">public</span> <span class="kd">synchronized</span> <span class="kt">boolean</span> <span class="nf">putIfAbsent</span><span class="o">(</span><span class="n">Object</span> <span class="n">v</span><span class="o">)</span> <span class="o">{</span> <span class="o">...</span> <span class="o">}</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>这是因为<code>putIfAbsent</code>使用的monitor lock和<code>synchronizedList</code>自身使用的monitor lock不是同一个，这就破坏了线程安全。</p>
 <p><strong>正确的做法：</strong></p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln">1</span><span class="kd">public</span> <span class="kd">class</span> <span class="nc">ListHelper</span> <span class="o">{</span>
-<span class="ln">2</span>  <span class="kd">public</span> <span class="n">List</span> <span class="n">list</span> <span class="o">=</span> <span class="n">Collections</span><span class="o">.</span><span class="na">synchronizedList</span><span class="o">(</span><span class="k">new</span> <span class="n">ArrayList</span><span class="o">());</span>
-<span class="ln">3</span>  <span class="kd">public</span> <span class="kt">boolean</span> <span class="nf">putIfAbsent</span><span class="o">(</span><span class="n">Object</span> <span class="n">v</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">4</span>    <span class="kd">synchronized</span> <span class="o">(</span><span class="n">list</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">5</span>      <span class="o">...</span>
-<span class="ln">6</span>    <span class="o">}</span>
-<span class="ln">7</span>  <span class="o">}</span>
-<span class="ln">8</span><span class="o">}</span>
-</code></pre></div><h3 id="组合">组合<a class="anchor ms-1" href="#组合"><i class="fas fa-link"></i></a></h3>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="kd">public</span> <span class="kd">class</span> <span class="nc">ListHelper</span> <span class="o">{</span>
+  <span class="kd">public</span> <span class="n">List</span> <span class="n">list</span> <span class="o">=</span> <span class="n">Collections</span><span class="o">.</span><span class="na">synchronizedList</span><span class="o">(</span><span class="k">new</span> <span class="n">ArrayList</span><span class="o">());</span>
+  <span class="kd">public</span> <span class="kt">boolean</span> <span class="nf">putIfAbsent</span><span class="o">(</span><span class="n">Object</span> <span class="n">v</span><span class="o">)</span> <span class="o">{</span>
+    <span class="kd">synchronized</span> <span class="o">(</span><span class="n">list</span><span class="o">)</span> <span class="o">{</span>
+      <span class="o">...</span>
+    <span class="o">}</span>
+  <span class="o">}</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><h3 id="组合">组合<a class="anchor ms-1" href="#组合"><i class="fas fa-link"></i></a></h3>
 <p>可以这么干：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln"> 1</span><span class="kd">public</span> <span class="kd">class</span> <span class="nc">ImprovedList</span> <span class="n">implents</span> <span class="n">List</span> <span class="o">{</span>
-<span class="ln"> 2</span>  <span class="kd">private</span> <span class="kd">final</span> <span class="n">List</span> <span class="n">list</span><span class="o">;</span>
-<span class="ln"> 3</span>  <span class="kd">public</span> <span class="kd">synchronized</span> <span class="kt">boolean</span> <span class="nf">putIfAbsent</span><span class="o">(</span><span class="n">Object</span> <span class="n">v</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 4</span>    <span class="o">...</span>
-<span class="ln"> 5</span>    <span class="n">list</span><span class="o">.</span><span class="na">add</span><span class="o">(</span><span class="n">v</span><span class="o">);</span>
-<span class="ln"> 6</span>  <span class="o">}</span>
-<span class="ln"> 7</span>  <span class="kd">public</span> <span class="kd">synchronized</span> <span class="kt">void</span> <span class="nf">clear</span><span class="o">()</span> <span class="o">{</span>
-<span class="ln"> 8</span>    <span class="n">list</span><span class="o">.</span><span class="na">clear</span><span class="o">();</span>
-<span class="ln"> 9</span>  <span class="o">}</span>
-<span class="ln">10</span>  <span class="o">...</span>
-<span class="ln">11</span><span class="o">}</span>
-</code></pre></div></div></div>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="kd">public</span> <span class="kd">class</span> <span class="nc">ImprovedList</span> <span class="n">implents</span> <span class="n">List</span> <span class="o">{</span>
+  <span class="kd">private</span> <span class="kd">final</span> <span class="n">List</span> <span class="n">list</span><span class="o">;</span>
+  <span class="kd">public</span> <span class="kd">synchronized</span> <span class="kt">boolean</span> <span class="nf">putIfAbsent</span><span class="o">(</span><span class="n">Object</span> <span class="n">v</span><span class="o">)</span> <span class="o">{</span>
+    <span class="o">...</span>
+    <span class="n">list</span><span class="o">.</span><span class="na">add</span><span class="o">(</span><span class="n">v</span><span class="o">);</span>
+  <span class="o">}</span>
+  <span class="kd">public</span> <span class="kd">synchronized</span> <span class="kt">void</span> <span class="nf">clear</span><span class="o">()</span> <span class="o">{</span>
+    <span class="n">list</span><span class="o">.</span><span class="na">clear</span><span class="o">();</span>
+  <span class="o">}</span>
+  <span class="o">...</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div></div></div>
   <div class="card-footer"><div class="post-navs d-flex justify-content-evenly">
   <div class="post-nav post-prev"><i class="fas fa-fw fa-chevron-left"></i>
     <a href="/post/concurrent-programming/amdahls-law/">Amdahl定律

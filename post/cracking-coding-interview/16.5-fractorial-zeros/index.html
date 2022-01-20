@@ -12,7 +12,7 @@
 <meta name="description" content="" /><meta itemprop="name" content="Cracking Coding Interview - 16.5 Factorial Zeros">
 <meta itemprop="description" content=""><meta itemprop="datePublished" content="2019-09-04T13:57:11+08:00" />
 <meta itemprop="dateModified" content="2019-09-04T13:57:11+08:00" />
-<meta itemprop="wordCount" content="644">
+<meta itemprop="wordCount" content="654">
 <meta itemprop="keywords" content="ARTS-A," /><meta property="og:title" content="Cracking Coding Interview - 16.5 Factorial Zeros" />
 <meta property="og:description" content="" />
 <meta property="og:type" content="article" />
@@ -228,51 +228,115 @@
 <p>求n的阶乘里，尾部有多少个0。</p>
 <h2 id="解法1不好">解法1(不好)<a class="anchor ms-1" href="#解法1不好"><i class="fas fa-link"></i></a></h2>
 <p>算出n!然后看尾部有多少个0。</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln">1</span><span class="kd">public</span> <span class="kt">int</span> <span class="nf">zeros</span><span class="o">(</span><span class="kt">int</span> <span class="n">n</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">2</span>  <span class="kt">int</span> <span class="n">f</span> <span class="o">=</span> <span class="n">fractorial</span><span class="o">(</span><span class="n">n</span><span class="o">);</span>
-<span class="ln">3</span>  <span class="kt">int</span> <span class="n">count</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span>
-<span class="ln">4</span>  <span class="k">while</span> <span class="o">(</span><span class="n">f</span> <span class="o">%</span> <span class="n">10</span> <span class="o">==</span> <span class="n">0</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">5</span>    <span class="n">count</span><span class="o">++;</span>
-<span class="ln">6</span>    <span class="n">f</span> <span class="o">=</span> <span class="n">f</span> <span class="o">/</span> <span class="n">10</span><span class="o">;</span>
-<span class="ln">7</span>  <span class="o">}</span>
-<span class="ln">8</span>  <span class="k">return</span> <span class="n">count</span><span class="o">;</span>
-<span class="ln">9</span><span class="o">}</span>
-</code></pre></div><p>这个方法的缺陷在于n的阶乘会很快就变得很大，int类型会溢出。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span><span class="lnt">9
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="kd">public</span> <span class="kt">int</span> <span class="nf">zeros</span><span class="o">(</span><span class="kt">int</span> <span class="n">n</span><span class="o">)</span> <span class="o">{</span>
+  <span class="kt">int</span> <span class="n">f</span> <span class="o">=</span> <span class="n">fractorial</span><span class="o">(</span><span class="n">n</span><span class="o">);</span>
+  <span class="kt">int</span> <span class="n">count</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span>
+  <span class="k">while</span> <span class="o">(</span><span class="n">f</span> <span class="o">%</span> <span class="n">10</span> <span class="o">==</span> <span class="n">0</span><span class="o">)</span> <span class="o">{</span>
+    <span class="n">count</span><span class="o">++;</span>
+    <span class="n">f</span> <span class="o">=</span> <span class="n">f</span> <span class="o">/</span> <span class="n">10</span><span class="o">;</span>
+  <span class="o">}</span>
+  <span class="k">return</span> <span class="n">count</span><span class="o">;</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>这个方法的缺陷在于n的阶乘会很快就变得很大，int类型会溢出。</p>
 <h2 id="解法2">解法2<a class="anchor ms-1" href="#解法2"><i class="fas fa-link"></i></a></h2>
 <p>如果一个数字尾部出现0，那么就意味着10是它的因子，而10的因子则是2和5。也就是说如果两个数字，一个是2的倍数，一个是5的倍数，那么它们两个相乘就能得到等到一个10，那就会在尾部出现一个0。</p>
 <p>因为在1～n的连续数字中，2的倍数的数量总是比5的倍数的数量多，因此只要看5的倍数就行。</p>
 <p>而且不光要看这个数是否5的倍数，还要看它的因子里包含了多少个5，比如15的因子是3 * 5，提供了一个5，可以和一个2相乘得到10。25的因子是5 * 5，提供了两个5，可以组成两个10。75的因子是5 * 5 * 3，同样提供了两个5。</p>
 <p>比如下面的阶乘：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln">1</span>1 * 2 * 3 * 4 * 5 * 6 * 7 * 8 * 9 * 10 * 11 * 12 * ...
-</code></pre></div><p>实际上贡献10的数字是：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln">1</span>2 * ... * 5 * ... * 10 * ... * 15
-</code></pre></div><p>所以代码就变成了在[1, n]的范围内，遍历每个数字，看它们的因子里有多少个5，然后累加起来：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln"> 1</span><span class="kd">public</span> <span class="kt">int</span> <span class="nf">countFactor5</span><span class="o">(</span><span class="kt">int</span> <span class="n">i</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 2</span>  <span class="kt">int</span> <span class="n">count</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span>
-<span class="ln"> 3</span>  <span class="k">while</span> <span class="o">(</span><span class="n">i</span> <span class="o">%</span> <span class="n">5</span> <span class="o">==</span> <span class="n">0</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 4</span>    <span class="n">count</span><span class="o">++;</span>
-<span class="ln"> 5</span>    <span class="n">i</span> <span class="o">=</span> <span class="n">i</span> <span class="o">/</span> <span class="n">5</span><span class="o">;</span>
-<span class="ln"> 6</span>  <span class="o">}</span>
-<span class="ln"> 7</span>  <span class="k">return</span> <span class="n">count</span><span class="o">;</span>
-<span class="ln"> 8</span><span class="o">}</span>
-<span class="ln"> 9</span>
-<span class="ln">10</span><span class="kd">public</span> <span class="kt">int</span> <span class="nf">zeros</span><span class="o">(</span><span class="kt">int</span> <span class="n">n</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">11</span>  <span class="kt">int</span> <span class="n">count</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span>
-<span class="ln">12</span>  <span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="n">1</span><span class="o">;</span> <span class="n">i</span> <span class="o">&lt;=</span> <span class="n">n</span><span class="o">;</span> <span class="n">i</span><span class="o">++)</span> <span class="o">{</span>
-<span class="ln">13</span>    <span class="n">count</span> <span class="o">+=</span> <span class="n">countFactor5</span><span class="o">(</span><span class="n">i</span><span class="o">);</span>
-<span class="ln">14</span>  <span class="o">}</span>
-<span class="ln">15</span>  <span class="k">return</span> <span class="n">count</span><span class="o">;</span>
-<span class="ln">16</span><span class="o">}</span>
-</code></pre></div><h2 id="解法3">解法3<a class="anchor ms-1" href="#解法3"><i class="fas fa-link"></i></a></h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt">1 * 2 * 3 * 4 * 5 * 6 * 7 * 8 * 9 * 10 * 11 * 12 * ...
+</code></pre></td></tr></table>
+</div>
+</div><p>实际上贡献10的数字是：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt">2 * ... * 5 * ... * 10 * ... * 15
+</code></pre></td></tr></table>
+</div>
+</div><p>所以代码就变成了在[1, n]的范围内，遍历每个数字，看它们的因子里有多少个5，然后累加起来：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="kd">public</span> <span class="kt">int</span> <span class="nf">countFactor5</span><span class="o">(</span><span class="kt">int</span> <span class="n">i</span><span class="o">)</span> <span class="o">{</span>
+  <span class="kt">int</span> <span class="n">count</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span>
+  <span class="k">while</span> <span class="o">(</span><span class="n">i</span> <span class="o">%</span> <span class="n">5</span> <span class="o">==</span> <span class="n">0</span><span class="o">)</span> <span class="o">{</span>
+    <span class="n">count</span><span class="o">++;</span>
+    <span class="n">i</span> <span class="o">=</span> <span class="n">i</span> <span class="o">/</span> <span class="n">5</span><span class="o">;</span>
+  <span class="o">}</span>
+  <span class="k">return</span> <span class="n">count</span><span class="o">;</span>
+<span class="o">}</span>
+
+<span class="kd">public</span> <span class="kt">int</span> <span class="nf">zeros</span><span class="o">(</span><span class="kt">int</span> <span class="n">n</span><span class="o">)</span> <span class="o">{</span>
+  <span class="kt">int</span> <span class="n">count</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span>
+  <span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="n">1</span><span class="o">;</span> <span class="n">i</span> <span class="o">&lt;=</span> <span class="n">n</span><span class="o">;</span> <span class="n">i</span><span class="o">++)</span> <span class="o">{</span>
+    <span class="n">count</span> <span class="o">+=</span> <span class="n">countFactor5</span><span class="o">(</span><span class="n">i</span><span class="o">);</span>
+  <span class="o">}</span>
+  <span class="k">return</span> <span class="n">count</span><span class="o">;</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><h2 id="解法3">解法3<a class="anchor ms-1" href="#解法3"><i class="fas fa-link"></i></a></h2>
 <p>可以比解法2更高效，比如我们可以看[1, n]之间5的倍数有多少个，再看25的倍数有多少个，125的倍数有多少个。</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln">1</span><span class="kd">public</span> <span class="kt">int</span> <span class="nf">zeros</span><span class="o">(</span><span class="kt">int</span> <span class="n">n</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">2</span>  <span class="kt">int</span> <span class="n">count</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span>
-<span class="ln">3</span>  <span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="n">5</span><span class="o">;</span> <span class="n">i</span> <span class="o">&lt;=</span> <span class="n">n</span><span class="o">;</span> <span class="n">i</span> <span class="o">=</span> <span class="n">i</span> <span class="o">*</span> <span class="n">5</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">4</span>    <span class="n">count</span> <span class="o">+=</span> <span class="n">n</span> <span class="o">/</span> <span class="n">i</span><span class="o">;</span>
-<span class="ln">5</span>  <span class="o">}</span>
-<span class="ln">6</span>  <span class="k">return</span> <span class="n">count</span><span class="o">;</span>
-<span class="ln">7</span><span class="o">}</span>
-</code></pre></div></div></div>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="kd">public</span> <span class="kt">int</span> <span class="nf">zeros</span><span class="o">(</span><span class="kt">int</span> <span class="n">n</span><span class="o">)</span> <span class="o">{</span>
+  <span class="kt">int</span> <span class="n">count</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span>
+  <span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="n">5</span><span class="o">;</span> <span class="n">i</span> <span class="o">&lt;=</span> <span class="n">n</span><span class="o">;</span> <span class="n">i</span> <span class="o">=</span> <span class="n">i</span> <span class="o">*</span> <span class="n">5</span><span class="o">)</span> <span class="o">{</span>
+    <span class="n">count</span> <span class="o">+=</span> <span class="n">n</span> <span class="o">/</span> <span class="n">i</span><span class="o">;</span>
+  <span class="o">}</span>
+  <span class="k">return</span> <span class="n">count</span><span class="o">;</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div></div></div>
   <div class="card-footer"><div class="post-navs d-flex justify-content-evenly">
   <div class="post-nav post-prev"><i class="fas fa-fw fa-chevron-left"></i>
     <a href="/post/k8s/k8s-how-to-manage-tls-certs/">K8S中的TLS证书管理方案

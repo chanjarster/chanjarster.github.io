@@ -16,7 +16,7 @@
 和VisualVm利用SSL连接JMX的方法
 里介绍了如何使用VisualVm&#43;JMX监控远程Java进程的方法。那么如何监控一个运行在K8S集群中的Java进程呢？其实大致方法也是类似的。"><meta itemprop="datePublished" content="2018-10-15T09:55:12+08:00" />
 <meta itemprop="dateModified" content="2018-10-15T09:55:12+08:00" />
-<meta itemprop="wordCount" content="974">
+<meta itemprop="wordCount" content="1023">
 <meta itemprop="keywords" content="java,visualvm,jmx,k8s," /><meta property="og:title" content="利用VisualVm和JMX远程监控K8S里的Java进程" />
 <meta property="og:description" content="在利用VisualVm和JMX远程监控Java进程
 和VisualVm利用SSL连接JMX的方法
@@ -228,7 +228,7 @@
   <span class="post-date" title="创建于 2018-10-15 09:55:12 &#43;0800 CST。">
     2018-10-15
   </span><span class="post-reading-time">
-    2 分钟阅读
+    3 分钟阅读
   </span><span class="post-taxonomies"><a href="/tags/java/" class="badge post-taxonomy">java</a><a href="/tags/visualvm/" class="badge post-taxonomy">visualvm</a><a href="/tags/jmx/" class="badge post-taxonomy">jmx</a><a href="/tags/k8s/" class="badge post-taxonomy">k8s</a></span>
 </div>
 <div class="post-content mb-3"><p>在<a href="../visualvm-remote-monitoring-jmx/">利用VisualVm和JMX远程监控Java进程</a>
@@ -237,74 +237,179 @@
 <h2 id="非ssl-jmx连接">非SSL JMX连接<a class="anchor ms-1" href="#非ssl-jmx连接"><i class="fas fa-link"></i></a></h2>
 <p>如果采用非SSL JMX连接，那么你只需要这么几步就可以让你本地的VisualVm连接到K8S集群里的Java进程了。</p>
 <p><strong>Step1 修改Deployment.yaml，添加以下System Properties</strong></p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>-Dcom.sun.management.jmxremote
-<span class="ln">2</span>-Dcom.sun.management.jmxremote.authenticate<span class="o">=</span><span class="nb">false</span>
-<span class="ln">3</span>-Dcom.sun.management.jmxremote.ssl<span class="o">=</span><span class="nb">false</span>
-<span class="ln">4</span>-Dcom.sun.management.jmxremote.port<span class="o">=</span><span class="m">1100</span>
-<span class="ln">5</span>-Dcom.sun.management.jmxremote.rmi.port<span class="o">=</span><span class="m">1100</span>
-<span class="ln">6</span>-Djava.rmi.server.hostname<span class="o">=</span>localhost
-</code></pre></div><p>注意，<code>-Djava.rmi.server.hostname</code>一定要设置成<code>localhost</code></p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">-Dcom.sun.management.jmxremote
+-Dcom.sun.management.jmxremote.authenticate<span class="o">=</span><span class="nb">false</span>
+-Dcom.sun.management.jmxremote.ssl<span class="o">=</span><span class="nb">false</span>
+-Dcom.sun.management.jmxremote.port<span class="o">=</span><span class="m">1100</span>
+-Dcom.sun.management.jmxremote.rmi.port<span class="o">=</span><span class="m">1100</span>
+-Djava.rmi.server.hostname<span class="o">=</span>localhost
+</code></pre></td></tr></table>
+</div>
+</div><p>注意，<code>-Djava.rmi.server.hostname</code>一定要设置成<code>localhost</code></p>
 <p><strong>Step2 修改Deployment.yaml，添加Container Port</strong></p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-yaml" data-lang="yaml"><span class="ln">1</span><span class="nt">containers</span><span class="p">:</span><span class="w">
-</span><span class="ln">2</span><span class="w"></span>- <span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">...</span><span class="w">
-</span><span class="ln">3</span><span class="w">  </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l">...</span><span class="w">
-</span><span class="ln">4</span><span class="w">  </span><span class="nt">ports</span><span class="p">:</span><span class="w">
-</span><span class="ln">5</span><span class="w">  </span>- <span class="nt">containerPort</span><span class="p">:</span><span class="w"> </span><span class="m">1100</span><span class="w">
-</span><span class="ln">6</span><span class="w">    </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">tcp-jmx</span><span class="w">
-</span></code></pre></div><p><strong>Step3 部署Deployment</strong></p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-yaml" data-lang="yaml"><span class="nt">containers</span><span class="p">:</span><span class="w">
+</span><span class="w"></span>- <span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">...</span><span class="w">
+</span><span class="w">  </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l">...</span><span class="w">
+</span><span class="w">  </span><span class="nt">ports</span><span class="p">:</span><span class="w">
+</span><span class="w">  </span>- <span class="nt">containerPort</span><span class="p">:</span><span class="w"> </span><span class="m">1100</span><span class="w">
+</span><span class="w">    </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">tcp-jmx</span><span class="w">
+</span></code></pre></td></tr></table>
+</div>
+</div><p><strong>Step3 部署Deployment</strong></p>
 <p><strong>Step4 利用kubectl转发端口</strong></p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>kubectl -n &lt;namespace&gt; port-forward &lt;pod-name&gt; <span class="m">1100</span>
-</code></pre></div><p><strong>Step5 启动VisualVm，创建JMX连接<code>localhost:1100</code></strong></p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">kubectl -n &lt;namespace&gt; port-forward &lt;pod-name&gt; <span class="m">1100</span>
+</code></pre></td></tr></table>
+</div>
+</div><p><strong>Step5 启动VisualVm，创建JMX连接<code>localhost:1100</code></strong></p>
 <h2 id="ssl-jmx连接">SSL JMX连接<a class="anchor ms-1" href="#ssl-jmx连接"><i class="fas fa-link"></i></a></h2>
 <p>启用SSL JMX连接，那么需要增加三个步骤，步骤就稍微复杂一些，假设你已经根据<a href="../visualvm-remote-monitoring-jmx-ssl/">VisualVm利用SSL连接JMX的方法</a>
 创建好了<code>java-app</code>和<code>visualvm</code>的keystore和truststore。</p>
 <p><strong>Step1 创建一个Secret包含<code>java-app.keystore</code>和<code>java-app.truststore</code></strong></p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>kubectl -n &lt;namespace&gt; create secret generic jmx-ssl <span class="se">\
-</span><span class="ln">2</span><span class="se"></span>  --from-file<span class="o">=</span>java-app.keystore <span class="se">\
-</span><span class="ln">3</span><span class="se"></span>  --from-file<span class="o">=</span>java-app.truststore
-</code></pre></div><p><strong>Step2 修改Deployment.yaml，把Secret挂载到容器内的<code>/jmx-ssl</code>目录下</strong></p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-yaml" data-lang="yaml"><span class="ln"> 1</span><span class="w">
-</span><span class="ln"> 2</span><span class="w"> </span><span class="nt">containers</span><span class="p">:</span><span class="w">
-</span><span class="ln"> 3</span><span class="w"> </span>- <span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">...</span><span class="w">
-</span><span class="ln"> 4</span><span class="w">   </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l">...</span><span class="w">
-</span><span class="ln"> 5</span><span class="w">   </span><span class="nt">volumeMounts</span><span class="p">:</span><span class="w">
-</span><span class="ln"> 6</span><span class="w">   </span>- <span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">jmx-ssl-vol</span><span class="w">
-</span><span class="ln"> 7</span><span class="w">     </span><span class="nt">mountPath</span><span class="p">:</span><span class="w"> </span><span class="l">/jmx-ssl</span><span class="w">
-</span><span class="ln"> 8</span><span class="w"> </span><span class="nt">volumes</span><span class="p">:</span><span class="w">
-</span><span class="ln"> 9</span><span class="w"> </span>- <span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">jmx-ssl-vol</span><span class="w">
-</span><span class="ln">10</span><span class="w">   </span><span class="nt">secret</span><span class="p">:</span><span class="w">
-</span><span class="ln">11</span><span class="w">     </span><span class="nt">secretName</span><span class="p">:</span><span class="w"> </span><span class="l">jmx-ssl</span><span class="w">
-</span></code></pre></div><p><strong>Step3 修改Deployment.yaml，添加以下System Properties</strong></p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln"> 1</span>-Dcom.sun.management.jmxremote
-<span class="ln"> 2</span>-Dcom.sun.management.jmxremote.port<span class="o">=</span><span class="m">1100</span>
-<span class="ln"> 3</span>-Dcom.sun.management.jmxremote.rmi.port<span class="o">=</span><span class="m">1100</span>
-<span class="ln"> 4</span>-Dcom.sun.management.jmxremote.authenticate<span class="o">=</span><span class="nb">false</span>
-<span class="ln"> 5</span>-Dcom.sun.management.jmxremote.ssl<span class="o">=</span><span class="nb">true</span>
-<span class="ln"> 6</span>-Dcom.sun.management.jmxremote.registry.ssl<span class="o">=</span><span class="nb">true</span>
-<span class="ln"> 7</span>-Dcom.sun.management.jmxremote.ssl.need.client.auth<span class="o">=</span><span class="nb">true</span>
-<span class="ln"> 8</span>-Djavax.net.ssl.keyStore<span class="o">=</span>/jmx-ssl/java-app.keystore
-<span class="ln"> 9</span>-Djavax.net.ssl.keyStorePassword<span class="o">=</span>&lt;keystore password&gt;
-<span class="ln">10</span>-Djavax.net.ssl.trustStore<span class="o">=</span>/jmx-ssl/java-app.truststore
-<span class="ln">11</span>-Djavax.net.ssl.trustStorePassword<span class="o">=</span>&lt;truststore password&gt;
-<span class="ln">12</span>-Djava.rmi.server.hostname<span class="o">=</span>localhost
-</code></pre></div><p>注意，<code>-Djava.rmi.server.hostname</code>一定要设置成<code>localhost</code></p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">kubectl -n &lt;namespace&gt; create secret generic jmx-ssl <span class="se">\
+</span><span class="se"></span>  --from-file<span class="o">=</span>java-app.keystore <span class="se">\
+</span><span class="se"></span>  --from-file<span class="o">=</span>java-app.truststore
+</code></pre></td></tr></table>
+</div>
+</div><p><strong>Step2 修改Deployment.yaml，把Secret挂载到容器内的<code>/jmx-ssl</code>目录下</strong></p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-yaml" data-lang="yaml"><span class="w">
+</span><span class="w"> </span><span class="nt">containers</span><span class="p">:</span><span class="w">
+</span><span class="w"> </span>- <span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">...</span><span class="w">
+</span><span class="w">   </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l">...</span><span class="w">
+</span><span class="w">   </span><span class="nt">volumeMounts</span><span class="p">:</span><span class="w">
+</span><span class="w">   </span>- <span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">jmx-ssl-vol</span><span class="w">
+</span><span class="w">     </span><span class="nt">mountPath</span><span class="p">:</span><span class="w"> </span><span class="l">/jmx-ssl</span><span class="w">
+</span><span class="w"> </span><span class="nt">volumes</span><span class="p">:</span><span class="w">
+</span><span class="w"> </span>- <span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">jmx-ssl-vol</span><span class="w">
+</span><span class="w">   </span><span class="nt">secret</span><span class="p">:</span><span class="w">
+</span><span class="w">     </span><span class="nt">secretName</span><span class="p">:</span><span class="w"> </span><span class="l">jmx-ssl</span><span class="w">
+</span></code></pre></td></tr></table>
+</div>
+</div><p><strong>Step3 修改Deployment.yaml，添加以下System Properties</strong></p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">-Dcom.sun.management.jmxremote
+-Dcom.sun.management.jmxremote.port<span class="o">=</span><span class="m">1100</span>
+-Dcom.sun.management.jmxremote.rmi.port<span class="o">=</span><span class="m">1100</span>
+-Dcom.sun.management.jmxremote.authenticate<span class="o">=</span><span class="nb">false</span>
+-Dcom.sun.management.jmxremote.ssl<span class="o">=</span><span class="nb">true</span>
+-Dcom.sun.management.jmxremote.registry.ssl<span class="o">=</span><span class="nb">true</span>
+-Dcom.sun.management.jmxremote.ssl.need.client.auth<span class="o">=</span><span class="nb">true</span>
+-Djavax.net.ssl.keyStore<span class="o">=</span>/jmx-ssl/java-app.keystore
+-Djavax.net.ssl.keyStorePassword<span class="o">=</span>&lt;keystore password&gt;
+-Djavax.net.ssl.trustStore<span class="o">=</span>/jmx-ssl/java-app.truststore
+-Djavax.net.ssl.trustStorePassword<span class="o">=</span>&lt;truststore password&gt;
+-Djava.rmi.server.hostname<span class="o">=</span>localhost
+</code></pre></td></tr></table>
+</div>
+</div><p>注意，<code>-Djava.rmi.server.hostname</code>一定要设置成<code>localhost</code></p>
 <p><strong>Step4 修改Deployment.yaml，添加Container Port</strong></p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-yaml" data-lang="yaml"><span class="ln">1</span><span class="nt">containers</span><span class="p">:</span><span class="w">
-</span><span class="ln">2</span><span class="w"></span>- <span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">...</span><span class="w">
-</span><span class="ln">3</span><span class="w">  </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l">...</span><span class="w">
-</span><span class="ln">4</span><span class="w">  </span><span class="nt">ports</span><span class="p">:</span><span class="w">
-</span><span class="ln">5</span><span class="w">  </span>- <span class="nt">containerPort</span><span class="p">:</span><span class="w"> </span><span class="m">1100</span><span class="w">
-</span><span class="ln">6</span><span class="w">    </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">tcp-jmx</span><span class="w">
-</span><span class="ln">7</span><span class="w">  </span><span class="l">...</span><span class="w">
-</span></code></pre></div><p><strong>Step5 部署Deployment</strong></p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-yaml" data-lang="yaml"><span class="nt">containers</span><span class="p">:</span><span class="w">
+</span><span class="w"></span>- <span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">...</span><span class="w">
+</span><span class="w">  </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l">...</span><span class="w">
+</span><span class="w">  </span><span class="nt">ports</span><span class="p">:</span><span class="w">
+</span><span class="w">  </span>- <span class="nt">containerPort</span><span class="p">:</span><span class="w"> </span><span class="m">1100</span><span class="w">
+</span><span class="w">    </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">tcp-jmx</span><span class="w">
+</span><span class="w">  </span><span class="l">...</span><span class="w">
+</span></code></pre></td></tr></table>
+</div>
+</div><p><strong>Step5 部署Deployment</strong></p>
 <p><strong>Step6 利用kubectl转发端口</strong></p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>kubectl -n &lt;namespace&gt; port-forward &lt;pod-name&gt; <span class="m">1100</span>
-</code></pre></div><p><strong>Step7 启动VisualVm，创建JMX连接<code>localhost:1100</code></strong></p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>jvisualvm -J-Djavax.net.ssl.keyStore<span class="o">=</span>&lt;path to visualvm.keystore&gt; <span class="se">\
-</span><span class="ln">2</span><span class="se"></span>  -J-Djavax.net.ssl.keyStorePassword<span class="o">=</span>&lt;visualvm.keystore的密码&gt; <span class="se">\
-</span><span class="ln">3</span><span class="se"></span>  -J-Djavax.net.ssl.trustStore<span class="o">=</span>&lt;path to visualvm.truststore&gt; <span class="se">\
-</span><span class="ln">4</span><span class="se"></span>  -J-Djavax.net.ssl.trustStorePassword<span class="o">=</span>&lt;visualvm.truststore的密码&gt;
-</code></pre></div><h2 id="k8s样例配置文件">K8S样例配置文件<a class="anchor ms-1" href="#k8s样例配置文件"><i class="fas fa-link"></i></a></h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">kubectl -n &lt;namespace&gt; port-forward &lt;pod-name&gt; <span class="m">1100</span>
+</code></pre></td></tr></table>
+</div>
+</div><p><strong>Step7 启动VisualVm，创建JMX连接<code>localhost:1100</code></strong></p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">jvisualvm -J-Djavax.net.ssl.keyStore<span class="o">=</span>&lt;path to visualvm.keystore&gt; <span class="se">\
+</span><span class="se"></span>  -J-Djavax.net.ssl.keyStorePassword<span class="o">=</span>&lt;visualvm.keystore的密码&gt; <span class="se">\
+</span><span class="se"></span>  -J-Djavax.net.ssl.trustStore<span class="o">=</span>&lt;path to visualvm.truststore&gt; <span class="se">\
+</span><span class="se"></span>  -J-Djavax.net.ssl.trustStorePassword<span class="o">=</span>&lt;visualvm.truststore的密码&gt;
+</code></pre></td></tr></table>
+</div>
+</div><h2 id="k8s样例配置文件">K8S样例配置文件<a class="anchor ms-1" href="#k8s样例配置文件"><i class="fas fa-link"></i></a></h2>
 <p>相关K8S样例配置文件在<a href="https://gist.github.com/chanjarster/c8de40ef4086cded378df122bea6fe7d" target="_blank" rel="noopener noreferrer">这里</a>
 （用tomcat做的例子）。</p>
 <h2 id="参考文档">参考文档<a class="anchor ms-1" href="#参考文档"><i class="fas fa-link"></i></a></h2>

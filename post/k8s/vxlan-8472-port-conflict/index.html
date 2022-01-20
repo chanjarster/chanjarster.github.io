@@ -12,7 +12,7 @@
 <meta name="description" content="" /><meta itemprop="name" content="记一次K8S VXLAN Overlay网络8472端口冲突问题的排查">
 <meta itemprop="description" content=""><meta itemprop="datePublished" content="2020-11-10T08:49:44+08:00" />
 <meta itemprop="dateModified" content="2020-11-10T08:49:44+08:00" />
-<meta itemprop="wordCount" content="1470">
+<meta itemprop="wordCount" content="1154">
 <meta itemprop="keywords" content="k8s,rancher,troubleshooting," /><meta property="og:title" content="记一次K8S VXLAN Overlay网络8472端口冲突问题的排查" />
 <meta property="og:description" content="" />
 <meta property="og:type" content="article" />
@@ -235,16 +235,37 @@
 <p>根据<a href="https://docs.rancher.cn/docs/rancher2/installation/requirements/ports/_index" target="_blank" rel="noopener noreferrer">Rancher文档上提到的</a>
 ，Host的8472/udp端口是Flannel/Calico的VXLAN Overlay网络专用端口，即所有跨Host的容器间网络通信都走这个端口。因此：</p>
 <p>在172.17.17.22上，用tcpdump抓发出的包：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>tcpdump -nn <span class="s1">&#39;udp and src host 172.17.17.22 and dst port 8472&#39;</span>
-</code></pre></div><p>另开一个22的终端，执行 <code>curl http://localhost</code> 能够看到 22-&gt;20 的UDP包，见下图：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">tcpdump -nn <span class="s1">&#39;udp and src host 172.17.17.22 and dst port 8472&#39;</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>另开一个22的终端，执行 <code>curl http://localhost</code> 能够看到 22-&gt;20 的UDP包，见下图：</p>
 <img src="tcpdump-1.jpg" style="zoom:50%"/>
 <p>在172.17.17.20上，用tcpdump抓收到的包：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>tcpdump -nn <span class="s1">&#39;udp and src host 172.17.17.22 and dst port 8472&#39;</span>
-</code></pre></div><p>结果是没有抓到任何包。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">tcpdump -nn <span class="s1">&#39;udp and src host 172.17.17.22 and dst port 8472&#39;</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>结果是没有抓到任何包。</p>
 <h3 id="排查虚拟机网络安全组">排查虚拟机网络安全组<a class="anchor ms-1" href="#排查虚拟机网络安全组"><i class="fas fa-link"></i></a></h3>
 <p>合理怀疑虚拟机网络安全组没有放开8472/udp端口的访问权限，在22上使用netcat发送数据：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>nc -u 172.17.17.20 <span class="m">8472</span>
-</code></pre></div><p>随便打点字回车传输，如下图：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">nc -u 172.17.17.20 <span class="m">8472</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>随便打点字回车传输，如下图：</p>
 <img src="tcpdump-2.jpg" style="zoom:50%"/>
 <p>结果在20上能够抓到收到的包：</p>
 <img src="tcpdump-3.jpg" style="zoom:50%"/>
@@ -266,40 +287,92 @@
 <p>也可以在rke创建k8s集群的时候修改flannel的端口，需要修改cluster.yml（<a href="https://docs.rancher.cn/docs/rke/config-options/add-ons/network-plugins/_index#canal-%E6%8F%92%E4%BB%B6%E9%80%89%E9%A1%B9" target="_blank" rel="noopener noreferrer">参考文档</a>
 ）。</p>
 <p>如果你用的是canal网络插件（默认）：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-yaml" data-lang="yaml"><span class="ln">1</span><span class="nn">...</span><span class="w">
-</span><span class="ln">2</span><span class="w"></span><span class="nt">network</span><span class="p">:</span><span class="w">
-</span><span class="ln">3</span><span class="w">  </span><span class="nt">plugin</span><span class="p">:</span><span class="w"> </span><span class="l">canal</span><span class="w">
-</span><span class="ln">4</span><span class="w">  </span><span class="nt">options</span><span class="p">:</span><span class="w">
-</span><span class="ln">5</span><span class="w">    </span><span class="nt">canal_flannel_backend_type</span><span class="p">:</span><span class="w"> </span><span class="l">vxlan</span><span class="w">
-</span><span class="ln">6</span><span class="w">    </span><span class="nt">canal_flannel_backend_port</span><span class="p">:</span><span class="w"> </span><span class="s2">&#34;8872&#34;</span><span class="w">
-</span><span class="ln">7</span><span class="w">  </span><span class="l">...</span><span class="w">
-</span></code></pre></div><p>如果用的是flannel网络插件：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-yaml" data-lang="yaml"><span class="ln">1</span><span class="nn">...</span><span class="w">
-</span><span class="ln">2</span><span class="w"></span><span class="nt">network</span><span class="p">:</span><span class="w">
-</span><span class="ln">3</span><span class="w">  </span><span class="nt">plugin</span><span class="p">:</span><span class="w"> </span><span class="l">flannel</span><span class="w">
-</span><span class="ln">4</span><span class="w">  </span><span class="nt">options</span><span class="p">:</span><span class="w">
-</span><span class="ln">5</span><span class="w">    </span><span class="nt">flannel_backend_type</span><span class="p">:</span><span class="w"> </span><span class="l">vxlan</span><span class="w">
-</span><span class="ln">6</span><span class="w">    </span><span class="nt">flannel_backend_port</span><span class="p">:</span><span class="w"> </span><span class="s2">&#34;8872&#34;</span><span class="w">
-</span><span class="ln">7</span><span class="w">  </span><span class="l">...</span><span class="w">
-</span></code></pre></div><p>在Rancher中创建自定义集群的时候，需要自定义集群参数来修改端口（<a href="https://docs.rancher.cn/docs/rancher2/cluster-provisioning/rke-clusters/options/_index" target="_blank" rel="noopener noreferrer">参考文档</a>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-yaml" data-lang="yaml"><span class="nn">...</span><span class="w">
+</span><span class="w"></span><span class="nt">network</span><span class="p">:</span><span class="w">
+</span><span class="w">  </span><span class="nt">plugin</span><span class="p">:</span><span class="w"> </span><span class="l">canal</span><span class="w">
+</span><span class="w">  </span><span class="nt">options</span><span class="p">:</span><span class="w">
+</span><span class="w">    </span><span class="nt">canal_flannel_backend_type</span><span class="p">:</span><span class="w"> </span><span class="l">vxlan</span><span class="w">
+</span><span class="w">    </span><span class="nt">canal_flannel_backend_port</span><span class="p">:</span><span class="w"> </span><span class="s2">&#34;8872&#34;</span><span class="w">
+</span><span class="w">  </span><span class="l">...</span><span class="w">
+</span></code></pre></td></tr></table>
+</div>
+</div><p>如果用的是flannel网络插件：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-yaml" data-lang="yaml"><span class="nn">...</span><span class="w">
+</span><span class="w"></span><span class="nt">network</span><span class="p">:</span><span class="w">
+</span><span class="w">  </span><span class="nt">plugin</span><span class="p">:</span><span class="w"> </span><span class="l">flannel</span><span class="w">
+</span><span class="w">  </span><span class="nt">options</span><span class="p">:</span><span class="w">
+</span><span class="w">    </span><span class="nt">flannel_backend_type</span><span class="p">:</span><span class="w"> </span><span class="l">vxlan</span><span class="w">
+</span><span class="w">    </span><span class="nt">flannel_backend_port</span><span class="p">:</span><span class="w"> </span><span class="s2">&#34;8872&#34;</span><span class="w">
+</span><span class="w">  </span><span class="l">...</span><span class="w">
+</span></code></pre></td></tr></table>
+</div>
+</div><p>在Rancher中创建自定义集群的时候，需要自定义集群参数来修改端口（<a href="https://docs.rancher.cn/docs/rancher2/cluster-provisioning/rke-clusters/options/_index" target="_blank" rel="noopener noreferrer">参考文档</a>
 ）。</p>
 <p>如果用的是canal网络插件（默认）：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-yaml" data-lang="yaml"><span class="ln">1</span><span class="nt">rancher_kubernetes_engine_config</span><span class="p">:</span><span class="w">
-</span><span class="ln">2</span><span class="w">  </span><span class="l">...</span><span class="w">
-</span><span class="ln">3</span><span class="w">  </span><span class="nt">network</span><span class="p">:</span><span class="w">
-</span><span class="ln">4</span><span class="w">    </span><span class="nt">options</span><span class="p">:</span><span class="w">
-</span><span class="ln">5</span><span class="w">      </span><span class="nt">flannel_backend_type</span><span class="p">:</span><span class="w"> </span><span class="l">vxlan</span><span class="w">
-</span><span class="ln">6</span><span class="w">      </span><span class="nt">flannel_backend_port</span><span class="p">:</span><span class="w"> </span><span class="s2">&#34;8872&#34;</span><span class="w">
-</span><span class="ln">7</span><span class="w">    </span><span class="nt">plugin</span><span class="p">:</span><span class="w"> </span><span class="l">canal</span><span class="w">
-</span></code></pre></div><p>如果用的是flannel网络插件：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-yaml" data-lang="yaml"><span class="ln">1</span><span class="nt">rancher_kubernetes_engine_config</span><span class="p">:</span><span class="w">
-</span><span class="ln">2</span><span class="w">  </span><span class="l">...</span><span class="w">
-</span><span class="ln">3</span><span class="w">  </span><span class="nt">network</span><span class="p">:</span><span class="w">
-</span><span class="ln">4</span><span class="w">    </span><span class="nt">options</span><span class="p">:</span><span class="w">
-</span><span class="ln">5</span><span class="w">      </span><span class="nt">flannel_backend_type</span><span class="p">:</span><span class="w"> </span><span class="l">vxlan</span><span class="w">
-</span><span class="ln">6</span><span class="w">      </span><span class="nt">flannel_backend_port</span><span class="p">:</span><span class="w"> </span><span class="s2">&#34;8872&#34;</span><span class="w">
-</span><span class="ln">7</span><span class="w">    </span><span class="nt">plugin</span><span class="p">:</span><span class="w"> </span><span class="l">flannel</span><span class="w">
-</span></code></pre></div></div></div>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-yaml" data-lang="yaml"><span class="nt">rancher_kubernetes_engine_config</span><span class="p">:</span><span class="w">
+</span><span class="w">  </span><span class="l">...</span><span class="w">
+</span><span class="w">  </span><span class="nt">network</span><span class="p">:</span><span class="w">
+</span><span class="w">    </span><span class="nt">options</span><span class="p">:</span><span class="w">
+</span><span class="w">      </span><span class="nt">flannel_backend_type</span><span class="p">:</span><span class="w"> </span><span class="l">vxlan</span><span class="w">
+</span><span class="w">      </span><span class="nt">flannel_backend_port</span><span class="p">:</span><span class="w"> </span><span class="s2">&#34;8872&#34;</span><span class="w">
+</span><span class="w">    </span><span class="nt">plugin</span><span class="p">:</span><span class="w"> </span><span class="l">canal</span><span class="w">
+</span></code></pre></td></tr></table>
+</div>
+</div><p>如果用的是flannel网络插件：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-yaml" data-lang="yaml"><span class="nt">rancher_kubernetes_engine_config</span><span class="p">:</span><span class="w">
+</span><span class="w">  </span><span class="l">...</span><span class="w">
+</span><span class="w">  </span><span class="nt">network</span><span class="p">:</span><span class="w">
+</span><span class="w">    </span><span class="nt">options</span><span class="p">:</span><span class="w">
+</span><span class="w">      </span><span class="nt">flannel_backend_type</span><span class="p">:</span><span class="w"> </span><span class="l">vxlan</span><span class="w">
+</span><span class="w">      </span><span class="nt">flannel_backend_port</span><span class="p">:</span><span class="w"> </span><span class="s2">&#34;8872&#34;</span><span class="w">
+</span><span class="w">    </span><span class="nt">plugin</span><span class="p">:</span><span class="w"> </span><span class="l">flannel</span><span class="w">
+</span></code></pre></td></tr></table>
+</div>
+</div></div></div>
   <div class="card-footer"><div class="post-navs d-flex justify-content-evenly">
   <div class="post-nav post-prev"><i class="fas fa-fw fa-chevron-left"></i>
     <a href="/post/mysql-case-insensitive-query/">Mysql字符串字段查询默认大小写不敏感

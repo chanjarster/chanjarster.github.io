@@ -12,7 +12,7 @@
 <meta name="description" content="" /><meta itemprop="name" content="Cracking Coding Interview - 16.23 Rand7 from Rand5">
 <meta itemprop="description" content=""><meta itemprop="datePublished" content="2019-09-18T11:01:11+08:00" />
 <meta itemprop="dateModified" content="2019-09-18T11:01:11+08:00" />
-<meta itemprop="wordCount" content="916">
+<meta itemprop="wordCount" content="920">
 <meta itemprop="keywords" content="ARTS-A," /><meta property="og:title" content="Cracking Coding Interview - 16.23 Rand7 from Rand5" />
 <meta property="og:description" content="" />
 <meta property="og:type" content="article" />
@@ -470,24 +470,52 @@
 </tbody>
 </table>
 <p>可以发现，结果出现的次数都是一次，也就是概率相同。那么，我们可以抛弃掉[21, 24]这4个结果，在[0, 20]之间 % 7，代码：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln">1</span><span class="kd">public</span> <span class="kt">int</span> <span class="nf">rand7</span><span class="o">()</span> <span class="o">{</span>
-<span class="ln">2</span>  <span class="k">while</span> <span class="o">(</span><span class="kc">true</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">3</span>    <span class="kt">int</span> <span class="n">num</span> <span class="o">=</span> <span class="n">rand5</span><span class="o">()</span> <span class="o">*</span> <span class="n">5</span> <span class="o">+</span> <span class="n">rand5</span><span class="o">();</span>
-<span class="ln">4</span>    <span class="k">if</span> <span class="o">(</span><span class="n">num</span> <span class="o">&lt;</span> <span class="n">21</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">5</span>      <span class="k">return</span> <span class="n">num</span> <span class="o">%</span> <span class="n">7</span><span class="o">;</span>
-<span class="ln">6</span>    <span class="o">}</span>
-<span class="ln">7</span>  <span class="o">}</span>
-<span class="ln">8</span><span class="o">}</span>
-</code></pre></div><p>为什么这样做概率是均匀的？我们可以把代码做一个转换，因为已知<code>rand5(5) + rand(5)</code>能够得到一个均匀分布的[0, 24]的区间，那么就等价于<code>rand25()</code>，然后我们把 % 7 这个操作去掉，把代码变成这样：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln">1</span><span class="kd">public</span> <span class="kt">int</span> <span class="nf">rand21</span><span class="o">()</span> <span class="o">{</span>
-<span class="ln">2</span>  <span class="k">while</span> <span class="o">(</span><span class="kc">true</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">3</span>    <span class="kt">int</span> <span class="n">num</span> <span class="o">=</span> <span class="n">rand</span><span class="o">(</span><span class="n">25</span><span class="o">);</span>
-<span class="ln">4</span>    <span class="k">if</span> <span class="o">(</span><span class="n">num</span> <span class="o">&lt;</span> <span class="n">21</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">5</span>      <span class="k">return</span> <span class="n">num</span><span class="o">;</span>
-<span class="ln">6</span>    <span class="o">}</span>
-<span class="ln">7</span>  <span class="o">}</span>
-<span class="ln">8</span><span class="o">}</span>
-</code></pre></div><p>假设每次调用<code>rand25()</code>的返回结果是<code>0, 1, 2, 3, ..., 24, 0, 1, 2, ..., 24</code>，那么调用<code>rand21()</code>的记录就是：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="kd">public</span> <span class="kt">int</span> <span class="nf">rand7</span><span class="o">()</span> <span class="o">{</span>
+  <span class="k">while</span> <span class="o">(</span><span class="kc">true</span><span class="o">)</span> <span class="o">{</span>
+    <span class="kt">int</span> <span class="n">num</span> <span class="o">=</span> <span class="n">rand5</span><span class="o">()</span> <span class="o">*</span> <span class="n">5</span> <span class="o">+</span> <span class="n">rand5</span><span class="o">();</span>
+    <span class="k">if</span> <span class="o">(</span><span class="n">num</span> <span class="o">&lt;</span> <span class="n">21</span><span class="o">)</span> <span class="o">{</span>
+      <span class="k">return</span> <span class="n">num</span> <span class="o">%</span> <span class="n">7</span><span class="o">;</span>
+    <span class="o">}</span>
+  <span class="o">}</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>为什么这样做概率是均匀的？我们可以把代码做一个转换，因为已知<code>rand5(5) + rand(5)</code>能够得到一个均匀分布的[0, 24]的区间，那么就等价于<code>rand25()</code>，然后我们把 % 7 这个操作去掉，把代码变成这样：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="kd">public</span> <span class="kt">int</span> <span class="nf">rand21</span><span class="o">()</span> <span class="o">{</span>
+  <span class="k">while</span> <span class="o">(</span><span class="kc">true</span><span class="o">)</span> <span class="o">{</span>
+    <span class="kt">int</span> <span class="n">num</span> <span class="o">=</span> <span class="n">rand</span><span class="o">(</span><span class="n">25</span><span class="o">);</span>
+    <span class="k">if</span> <span class="o">(</span><span class="n">num</span> <span class="o">&lt;</span> <span class="n">21</span><span class="o">)</span> <span class="o">{</span>
+      <span class="k">return</span> <span class="n">num</span><span class="o">;</span>
+    <span class="o">}</span>
+  <span class="o">}</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>假设每次调用<code>rand25()</code>的返回结果是<code>0, 1, 2, 3, ..., 24, 0, 1, 2, ..., 24</code>，那么调用<code>rand21()</code>的记录就是：</p>
 <table>
 <thead>
 <tr>

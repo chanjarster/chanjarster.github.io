@@ -12,7 +12,7 @@
 <meta name="description" content="" /><meta itemprop="name" content="MySQL - MVCC和事务隔离">
 <meta itemprop="description" content=""><meta itemprop="datePublished" content="2019-12-30T20:03:02+08:00" />
 <meta itemprop="dateModified" content="2019-12-30T20:03:02+08:00" />
-<meta itemprop="wordCount" content="2722">
+<meta itemprop="wordCount" content="2633">
 <meta itemprop="keywords" content="mysql," /><meta property="og:title" content="MySQL - MVCC和事务隔离" />
 <meta property="og:description" content="" />
 <meta property="og:type" content="article" />
@@ -227,13 +227,25 @@
 <h2 id="先思考一下">先思考一下<a class="anchor ms-1" href="#先思考一下"><i class="fas fa-link"></i></a></h2>
 <p>下面是一个例子，这个例子中的数据库事务隔离级别是RR（Repeatable Read），并且auto commit=1。</p>
 <p>有一张表，且有(1,1)和(2,2)两条数据：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="ln">1</span><span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="o">`</span><span class="n">t</span><span class="o">`</span><span class="w"> </span><span class="p">(</span><span class="w">
-</span><span class="ln">2</span><span class="w">  </span><span class="o">`</span><span class="n">id</span><span class="o">`</span><span class="w"> </span><span class="nb">int</span><span class="p">(</span><span class="mi">11</span><span class="p">)</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="p">,</span><span class="w">
-</span><span class="ln">3</span><span class="w">  </span><span class="o">`</span><span class="n">k</span><span class="o">`</span><span class="w"> </span><span class="nb">int</span><span class="p">(</span><span class="mi">11</span><span class="p">)</span><span class="w"> </span><span class="k">DEFAULT</span><span class="w"> </span><span class="k">NULL</span><span class="p">,</span><span class="w">
-</span><span class="ln">4</span><span class="w">  </span><span class="k">PRIMARY</span><span class="w"> </span><span class="k">KEY</span><span class="w"> </span><span class="p">(</span><span class="o">`</span><span class="n">id</span><span class="o">`</span><span class="p">)</span><span class="w">
-</span><span class="ln">5</span><span class="w"></span><span class="p">)</span><span class="w"> </span><span class="n">ENGINE</span><span class="o">=</span><span class="n">InnoDB</span><span class="p">;</span><span class="w">
-</span><span class="ln">6</span><span class="w"></span><span class="k">insert</span><span class="w"> </span><span class="k">into</span><span class="w"> </span><span class="n">t</span><span class="p">(</span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="n">k</span><span class="p">)</span><span class="w"> </span><span class="k">values</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">),(</span><span class="mi">2</span><span class="p">,</span><span class="mi">2</span><span class="p">);</span><span class="w">
-</span></code></pre></div><p>下面是三个事务的执行语句的情况，自上而下代表时间的先后。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="o">`</span><span class="n">t</span><span class="o">`</span><span class="w"> </span><span class="p">(</span><span class="w">
+</span><span class="w">  </span><span class="o">`</span><span class="n">id</span><span class="o">`</span><span class="w"> </span><span class="nb">int</span><span class="p">(</span><span class="mi">11</span><span class="p">)</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="p">,</span><span class="w">
+</span><span class="w">  </span><span class="o">`</span><span class="n">k</span><span class="o">`</span><span class="w"> </span><span class="nb">int</span><span class="p">(</span><span class="mi">11</span><span class="p">)</span><span class="w"> </span><span class="k">DEFAULT</span><span class="w"> </span><span class="k">NULL</span><span class="p">,</span><span class="w">
+</span><span class="w">  </span><span class="k">PRIMARY</span><span class="w"> </span><span class="k">KEY</span><span class="w"> </span><span class="p">(</span><span class="o">`</span><span class="n">id</span><span class="o">`</span><span class="p">)</span><span class="w">
+</span><span class="w"></span><span class="p">)</span><span class="w"> </span><span class="n">ENGINE</span><span class="o">=</span><span class="n">InnoDB</span><span class="p">;</span><span class="w">
+</span><span class="w"></span><span class="k">insert</span><span class="w"> </span><span class="k">into</span><span class="w"> </span><span class="n">t</span><span class="p">(</span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="n">k</span><span class="p">)</span><span class="w"> </span><span class="k">values</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">),(</span><span class="mi">2</span><span class="p">,</span><span class="mi">2</span><span class="p">);</span><span class="w">
+</span></code></pre></td></tr></table>
+</div>
+</div><p>下面是三个事务的执行语句的情况，自上而下代表时间的先后。</p>
 <table>
 <thead>
 <tr>
@@ -357,41 +369,87 @@
 </ul>
 <h2 id="思考题">思考题<a class="anchor ms-1" href="#思考题"><i class="fas fa-link"></i></a></h2>
 <p>下面描述了一个场景：数据明明没有变，为何却无法更新。</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="ln">1</span><span class="n">mysql</span><span class="o">&gt;</span><span class="w"> </span><span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="o">`</span><span class="n">t</span><span class="o">`</span><span class="w"> </span><span class="p">(</span><span class="w">
-</span><span class="ln">2</span><span class="w">  </span><span class="o">`</span><span class="n">id</span><span class="o">`</span><span class="w"> </span><span class="nb">int</span><span class="p">(</span><span class="mi">11</span><span class="p">)</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="p">,</span><span class="w">
-</span><span class="ln">3</span><span class="w">  </span><span class="o">`</span><span class="k">c</span><span class="o">`</span><span class="w"> </span><span class="nb">int</span><span class="p">(</span><span class="mi">11</span><span class="p">)</span><span class="w"> </span><span class="k">DEFAULT</span><span class="w"> </span><span class="k">NULL</span><span class="p">,</span><span class="w">
-</span><span class="ln">4</span><span class="w">  </span><span class="k">PRIMARY</span><span class="w"> </span><span class="k">KEY</span><span class="w"> </span><span class="p">(</span><span class="o">`</span><span class="n">id</span><span class="o">`</span><span class="p">)</span><span class="w">
-</span><span class="ln">5</span><span class="w"></span><span class="p">)</span><span class="w"> </span><span class="n">ENGINE</span><span class="o">=</span><span class="n">InnoDB</span><span class="p">;</span><span class="w">
-</span><span class="ln">6</span><span class="w"></span><span class="k">insert</span><span class="w"> </span><span class="k">into</span><span class="w"> </span><span class="n">t</span><span class="p">(</span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="k">c</span><span class="p">)</span><span class="w"> </span><span class="k">values</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">),(</span><span class="mi">2</span><span class="p">,</span><span class="mi">2</span><span class="p">),(</span><span class="mi">3</span><span class="p">,</span><span class="mi">3</span><span class="p">),(</span><span class="mi">4</span><span class="p">,</span><span class="mi">4</span><span class="p">);</span><span class="w">
-</span></code></pre></div><div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln"> 1</span>mysql&gt; begin<span class="p">;</span>
-<span class="ln"> 2</span>Query OK, <span class="m">0</span> rows affected <span class="o">(</span>0.00 sec<span class="o">)</span>
-<span class="ln"> 3</span>
-<span class="ln"> 4</span>mysql&gt; <span class="k">select</span> * from t<span class="p">;</span>
-<span class="ln"> 5</span>+----+------+
-<span class="ln"> 6</span><span class="p">|</span> id <span class="p">|</span> c    <span class="p">|</span>
-<span class="ln"> 7</span>+----+------+
-<span class="ln"> 8</span><span class="p">|</span> <span class="m">1</span>  <span class="p">|</span> <span class="m">1</span>    <span class="p">|</span>
-<span class="ln"> 9</span><span class="p">|</span> <span class="m">2</span>  <span class="p">|</span> <span class="m">2</span>    <span class="p">|</span>
-<span class="ln">10</span><span class="p">|</span> <span class="m">3</span>  <span class="p">|</span> <span class="m">3</span>    <span class="p">|</span>
-<span class="ln">11</span><span class="p">|</span> <span class="m">4</span>  <span class="p">|</span> <span class="m">4</span>    <span class="p">|</span>
-<span class="ln">12</span>+----+------+
-<span class="ln">13</span><span class="m">4</span> rows in <span class="nb">set</span> <span class="o">(</span>0.00 sec<span class="o">)</span>
-<span class="ln">14</span>
-<span class="ln">15</span>mysql&gt; update t <span class="nb">set</span> <span class="nv">c</span><span class="o">=</span><span class="m">0</span> where <span class="nv">id</span><span class="o">=</span>c<span class="p">;</span>
-<span class="ln">16</span>Query OK, <span class="m">0</span> rows affected <span class="o">(</span>0.00 sec<span class="o">)</span>
-<span class="ln">17</span>Rows matched: <span class="m">0</span> Changed: <span class="m">0</span> Warnings: <span class="m">0</span>
-<span class="ln">18</span>
-<span class="ln">19</span>mysql&gt; <span class="k">select</span> * from t<span class="p">;</span>
-<span class="ln">20</span>+----+------+
-<span class="ln">21</span><span class="p">|</span> id <span class="p">|</span> c    <span class="p">|</span>
-<span class="ln">22</span>+----+------+
-<span class="ln">23</span><span class="p">|</span> <span class="m">1</span>  <span class="p">|</span> <span class="m">1</span>    <span class="p">|</span>
-<span class="ln">24</span><span class="p">|</span> <span class="m">2</span>  <span class="p">|</span> <span class="m">2</span>    <span class="p">|</span>
-<span class="ln">25</span><span class="p">|</span> <span class="m">3</span>  <span class="p">|</span> <span class="m">3</span>    <span class="p">|</span>
-<span class="ln">26</span><span class="p">|</span> <span class="m">4</span>  <span class="p">|</span> <span class="m">4</span>    <span class="p">|</span>
-<span class="ln">27</span>+----+------+
-<span class="ln">28</span><span class="m">4</span> rows in <span class="nb">set</span> <span class="o">(</span>0.00 sec<span class="o">)</span>
-</code></pre></div><p>要怎样做才能产生这种情况呢？回顾这张图：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="n">mysql</span><span class="o">&gt;</span><span class="w"> </span><span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="o">`</span><span class="n">t</span><span class="o">`</span><span class="w"> </span><span class="p">(</span><span class="w">
+</span><span class="w">  </span><span class="o">`</span><span class="n">id</span><span class="o">`</span><span class="w"> </span><span class="nb">int</span><span class="p">(</span><span class="mi">11</span><span class="p">)</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="p">,</span><span class="w">
+</span><span class="w">  </span><span class="o">`</span><span class="k">c</span><span class="o">`</span><span class="w"> </span><span class="nb">int</span><span class="p">(</span><span class="mi">11</span><span class="p">)</span><span class="w"> </span><span class="k">DEFAULT</span><span class="w"> </span><span class="k">NULL</span><span class="p">,</span><span class="w">
+</span><span class="w">  </span><span class="k">PRIMARY</span><span class="w"> </span><span class="k">KEY</span><span class="w"> </span><span class="p">(</span><span class="o">`</span><span class="n">id</span><span class="o">`</span><span class="p">)</span><span class="w">
+</span><span class="w"></span><span class="p">)</span><span class="w"> </span><span class="n">ENGINE</span><span class="o">=</span><span class="n">InnoDB</span><span class="p">;</span><span class="w">
+</span><span class="w"></span><span class="k">insert</span><span class="w"> </span><span class="k">into</span><span class="w"> </span><span class="n">t</span><span class="p">(</span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="k">c</span><span class="p">)</span><span class="w"> </span><span class="k">values</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">),(</span><span class="mi">2</span><span class="p">,</span><span class="mi">2</span><span class="p">),(</span><span class="mi">3</span><span class="p">,</span><span class="mi">3</span><span class="p">),(</span><span class="mi">4</span><span class="p">,</span><span class="mi">4</span><span class="p">);</span><span class="w">
+</span></code></pre></td></tr></table>
+</div>
+</div><div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">mysql&gt; begin<span class="p">;</span>
+Query OK, <span class="m">0</span> rows affected <span class="o">(</span>0.00 sec<span class="o">)</span>
+
+mysql&gt; <span class="k">select</span> * from t<span class="p">;</span>
++----+------+
+<span class="p">|</span> id <span class="p">|</span> c    <span class="p">|</span>
++----+------+
+<span class="p">|</span> <span class="m">1</span>  <span class="p">|</span> <span class="m">1</span>    <span class="p">|</span>
+<span class="p">|</span> <span class="m">2</span>  <span class="p">|</span> <span class="m">2</span>    <span class="p">|</span>
+<span class="p">|</span> <span class="m">3</span>  <span class="p">|</span> <span class="m">3</span>    <span class="p">|</span>
+<span class="p">|</span> <span class="m">4</span>  <span class="p">|</span> <span class="m">4</span>    <span class="p">|</span>
++----+------+
+<span class="m">4</span> rows in <span class="nb">set</span> <span class="o">(</span>0.00 sec<span class="o">)</span>
+
+mysql&gt; update t <span class="nb">set</span> <span class="nv">c</span><span class="o">=</span><span class="m">0</span> where <span class="nv">id</span><span class="o">=</span>c<span class="p">;</span>
+Query OK, <span class="m">0</span> rows affected <span class="o">(</span>0.00 sec<span class="o">)</span>
+Rows matched: <span class="m">0</span> Changed: <span class="m">0</span> Warnings: <span class="m">0</span>
+
+mysql&gt; <span class="k">select</span> * from t<span class="p">;</span>
++----+------+
+<span class="p">|</span> id <span class="p">|</span> c    <span class="p">|</span>
++----+------+
+<span class="p">|</span> <span class="m">1</span>  <span class="p">|</span> <span class="m">1</span>    <span class="p">|</span>
+<span class="p">|</span> <span class="m">2</span>  <span class="p">|</span> <span class="m">2</span>    <span class="p">|</span>
+<span class="p">|</span> <span class="m">3</span>  <span class="p">|</span> <span class="m">3</span>    <span class="p">|</span>
+<span class="p">|</span> <span class="m">4</span>  <span class="p">|</span> <span class="m">4</span>    <span class="p">|</span>
++----+------+
+<span class="m">4</span> rows in <span class="nb">set</span> <span class="o">(</span>0.00 sec<span class="o">)</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>要怎样做才能产生这种情况呢？回顾这张图：</p>
 <figure><img src="hi-lo.png" width="100%"/>
 </figure>
 

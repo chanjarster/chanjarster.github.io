@@ -12,7 +12,7 @@
 <meta name="description" content="" /><meta itemprop="name" content="Cracking Coding Interview - 10.7 Missing Int">
 <meta itemprop="description" content=""><meta itemprop="datePublished" content="2019-08-28T16:30:11+08:00" />
 <meta itemprop="dateModified" content="2019-08-28T16:30:11+08:00" />
-<meta itemprop="wordCount" content="1108">
+<meta itemprop="wordCount" content="1121">
 <meta itemprop="keywords" content="ARTS-A," /><meta property="og:title" content="Cracking Coding Interview - 10.7 Missing Int" />
 <meta property="og:description" content="" />
 <meta property="og:type" content="article" />
@@ -229,14 +229,27 @@
 <p>Hints: #235, #254, #281</p>
 <h2 id="解法1">解法1<a class="anchor ms-1" href="#解法1"><i class="fas fa-link"></i></a></h2>
 <p>一个文件里有40亿个非负整数，同时文件里的数字又没有排序，现在要写一个算法生成一个不在其中的整数。</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln">1</span>b    m    t
-<span class="ln">2</span>0, 000, 000, 000
-<span class="ln">3</span>Gb   Mb   Kb
-<span class="ln">4</span>
-<span class="ln">5</span>b: billion
-<span class="ln">6</span>m: million
-<span class="ln">7</span>t: thousand
-</code></pre></div><p>注意4 billion = 4 * 1 billion = 4 * 2<sup>30</sup> = 2<sup>32</sup>，而Integer的非负数最多只有2<sup>31</sup>个，那也就意味着这个文件里<strong>肯定存在重复的数字</strong>。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt">b    m    t
+0, 000, 000, 000
+Gb   Mb   Kb
+
+b: billion
+m: million
+t: thousand
+</code></pre></td></tr></table>
+</div>
+</div><p>注意4 billion = 4 * 1 billion = 4 * 2<sup>30</sup> = 2<sup>32</sup>，而Integer的非负数最多只有2<sup>31</sup>个，那也就意味着这个文件里<strong>肯定存在重复的数字</strong>。</p>
 <p>如果我们用每个bit对应一个数字，那么需要2<sup>31</sup>个bit，也就是2<sup>28</sup> bytes = 250Mb，我们现在有1GB内存，所以Hold的住。</p>
 <p>那么算法是：</p>
 <ol>
@@ -245,25 +258,49 @@
 <li>遍历bit vector，找到第一个是0的bit</li>
 <li>把它变成数字</li>
 </ol>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln"> 1</span><span class="kd">public</span> <span class="kt">int</span> <span class="nf">getMissingInt</span><span class="o">(</span><span class="n">File</span> <span class="n">file</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 2</span>  <span class="kt">long</span> <span class="n">bits</span> <span class="o">=</span> <span class="o">((</span><span class="kt">long</span><span class="o">)</span> <span class="n">Integer</span><span class="o">.</span><span class="na">MAX_VALUE</span><span class="o">)</span> <span class="o">+</span> <span class="n">1</span><span class="o">;</span>
-<span class="ln"> 3</span>  <span class="kt">byte</span><span class="o">[]</span> <span class="n">bitVector</span> <span class="o">=</span> <span class="k">new</span> <span class="kt">byte</span><span class="o">[(</span><span class="kt">int</span><span class="o">)(</span><span class="n">bits</span> <span class="o">/</span> <span class="n">Byte</span><span class="o">.</span><span class="na">SIZE</span><span class="o">)];</span>
-<span class="ln"> 4</span>  <span class="k">while</span> <span class="o">(</span><span class="n">file</span> <span class="n">not</span> <span class="n">eof</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 5</span>    <span class="n">String</span> <span class="n">line</span> <span class="o">=</span> <span class="n">readLine</span><span class="o">(</span><span class="n">file</span><span class="o">);</span>
-<span class="ln"> 6</span>    <span class="kt">int</span> <span class="n">num</span> <span class="o">=</span> <span class="n">Integer</span><span class="o">.</span><span class="na">valueOf</span><span class="o">(</span><span class="n">line</span><span class="o">);</span>
-<span class="ln"> 7</span>    <span class="n">bitVector</span><span class="o">[</span><span class="n">num</span> <span class="o">/</span> <span class="n">Byte</span><span class="o">.</span><span class="na">SIZE</span><span class="o">]</span> <span class="o">|=</span> <span class="n">1</span> <span class="o">&lt;&lt;</span> <span class="o">(</span><span class="n">num</span> <span class="o">%</span> <span class="n">Byte</span><span class="o">.</span><span class="na">SIZE</span><span class="o">);</span>
-<span class="ln"> 8</span>  <span class="o">}</span>
-<span class="ln"> 9</span>  <span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">bitVector</span><span class="o">.</span><span class="na">length</span><span class="o">;</span> <span class="n">i</span><span class="o">++)</span> <span class="o">{</span>
-<span class="ln">10</span>    <span class="kt">int</span> <span class="n">b</span> <span class="o">=</span> <span class="o">(</span><span class="kt">int</span><span class="o">)</span> <span class="n">bitVector</span><span class="o">[</span><span class="n">i</span><span class="o">];</span>
-<span class="ln">11</span>    <span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">j</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span> <span class="n">j</span> <span class="o">&lt;</span> <span class="n">Byte</span><span class="o">.</span><span class="na">SIZE</span><span class="o">;</span> <span class="n">j</span><span class="o">++)</span> <span class="o">{</span>
-<span class="ln">12</span>      <span class="k">if</span> <span class="o">(</span><span class="n">b</span> <span class="o">&amp;</span> <span class="o">(</span><span class="n">1</span> <span class="o">&lt;&lt;</span> <span class="n">j</span><span class="o">)</span> <span class="o">==</span> <span class="n">0</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">13</span>        <span class="k">return</span> <span class="n">i</span> <span class="o">*</span> <span class="n">Byte</span><span class="o">.</span><span class="na">SIZE</span> <span class="o">+</span> <span class="n">j</span><span class="o">;</span>
-<span class="ln">14</span>      <span class="o">}</span>
-<span class="ln">15</span>    <span class="o">}</span>
-<span class="ln">16</span>  <span class="o">}</span>
-<span class="ln">17</span>  <span class="k">return</span> <span class="o">-</span><span class="n">1</span><span class="o">;</span>
-<span class="ln">18</span><span class="o">}</span>
-</code></pre></div><h2 id="解follow-up">解Follow Up<a class="anchor ms-1" href="#解follow-up"><i class="fas fa-link"></i></a></h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="kd">public</span> <span class="kt">int</span> <span class="nf">getMissingInt</span><span class="o">(</span><span class="n">File</span> <span class="n">file</span><span class="o">)</span> <span class="o">{</span>
+  <span class="kt">long</span> <span class="n">bits</span> <span class="o">=</span> <span class="o">((</span><span class="kt">long</span><span class="o">)</span> <span class="n">Integer</span><span class="o">.</span><span class="na">MAX_VALUE</span><span class="o">)</span> <span class="o">+</span> <span class="n">1</span><span class="o">;</span>
+  <span class="kt">byte</span><span class="o">[]</span> <span class="n">bitVector</span> <span class="o">=</span> <span class="k">new</span> <span class="kt">byte</span><span class="o">[(</span><span class="kt">int</span><span class="o">)(</span><span class="n">bits</span> <span class="o">/</span> <span class="n">Byte</span><span class="o">.</span><span class="na">SIZE</span><span class="o">)];</span>
+  <span class="k">while</span> <span class="o">(</span><span class="n">file</span> <span class="n">not</span> <span class="n">eof</span><span class="o">)</span> <span class="o">{</span>
+    <span class="n">String</span> <span class="n">line</span> <span class="o">=</span> <span class="n">readLine</span><span class="o">(</span><span class="n">file</span><span class="o">);</span>
+    <span class="kt">int</span> <span class="n">num</span> <span class="o">=</span> <span class="n">Integer</span><span class="o">.</span><span class="na">valueOf</span><span class="o">(</span><span class="n">line</span><span class="o">);</span>
+    <span class="n">bitVector</span><span class="o">[</span><span class="n">num</span> <span class="o">/</span> <span class="n">Byte</span><span class="o">.</span><span class="na">SIZE</span><span class="o">]</span> <span class="o">|=</span> <span class="n">1</span> <span class="o">&lt;&lt;</span> <span class="o">(</span><span class="n">num</span> <span class="o">%</span> <span class="n">Byte</span><span class="o">.</span><span class="na">SIZE</span><span class="o">);</span>
+  <span class="o">}</span>
+  <span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">bitVector</span><span class="o">.</span><span class="na">length</span><span class="o">;</span> <span class="n">i</span><span class="o">++)</span> <span class="o">{</span>
+    <span class="kt">int</span> <span class="n">b</span> <span class="o">=</span> <span class="o">(</span><span class="kt">int</span><span class="o">)</span> <span class="n">bitVector</span><span class="o">[</span><span class="n">i</span><span class="o">];</span>
+    <span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">j</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span> <span class="n">j</span> <span class="o">&lt;</span> <span class="n">Byte</span><span class="o">.</span><span class="na">SIZE</span><span class="o">;</span> <span class="n">j</span><span class="o">++)</span> <span class="o">{</span>
+      <span class="k">if</span> <span class="o">(</span><span class="n">b</span> <span class="o">&amp;</span> <span class="o">(</span><span class="n">1</span> <span class="o">&lt;&lt;</span> <span class="n">j</span><span class="o">)</span> <span class="o">==</span> <span class="n">0</span><span class="o">)</span> <span class="o">{</span>
+        <span class="k">return</span> <span class="n">i</span> <span class="o">*</span> <span class="n">Byte</span><span class="o">.</span><span class="na">SIZE</span> <span class="o">+</span> <span class="n">j</span><span class="o">;</span>
+      <span class="o">}</span>
+    <span class="o">}</span>
+  <span class="o">}</span>
+  <span class="k">return</span> <span class="o">-</span><span class="n">1</span><span class="o">;</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><h2 id="解follow-up">解Follow Up<a class="anchor ms-1" href="#解follow-up"><i class="fas fa-link"></i></a></h2>
 <p>现在有1 Billion个不重复的非负整数，然后有10MB内存。</p>
 <p>如果有前面bit vector的方法，我们需要250MB内存，但我们现在只有10MB，所以方法1不适合。</p>
 <p>因为告诉你了数字不重复，那么你就可以对分段进行计数，比如分为<code>[0, 999]</code>、<code>1000, 1999]</code>，如果一个数字在某个分段范围内，那么就把这个分段的计数+1。然后当某个分段计数不等于1000的时候，就知道它里面缺少某个数字。</p>
@@ -271,50 +308,99 @@
 <p>每个分段都用一个Integer计数，一个Integer占用4个字节，现在有10MB内存，那么可以分为 (10 * 2<sup>20</sup>) / 4 = 10 * 2<sup>18</sup> 个段。</p>
 <p>然后最多有有2<sup>31</sup>个非负Integer，那么每段的大小是 2<sup>31</sup> / (10 * 2<sup>18</sup>) = 2<sup>13</sup> / 10 = 8192 / 10 ~= 820。为了方便起见我们可以把分段大小变大一点，比如1024，这样会占用 &lt; 10MB的内存。</p>
 <p>因为知道某个段里缺少数字，那么我们就可以像前面那样用bit vector找出缺少的数字，不过这个时候的bit vector需要饱含的bit数只需要1024个就行了。</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln"> 1</span><span class="kd">private</span> <span class="kd">final</span> <span class="kt">int</span> <span class="n">SEG_SIZE</span> <span class="o">=</span> <span class="n">1024</span><span class="o">;</span>
-<span class="ln"> 2</span>
-<span class="ln"> 3</span><span class="kd">public</span> <span class="kt">int</span> <span class="nf">getMissingInt</span><span class="o">(</span><span class="n">File</span> <span class="n">file</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 4</span>  <span class="kt">int</span><span class="o">[]</span> <span class="n">blocks</span> <span class="o">=</span> <span class="k">new</span> <span class="kt">int</span><span class="o">[</span><span class="n">Integer</span><span class="o">.</span><span class="na">MAX_VALUE</span> <span class="o">/</span> <span class="n">SEG_SIZE</span> <span class="o">+</span> <span class="n">1</span><span class="o">];</span>
-<span class="ln"> 5</span>  <span class="k">while</span> <span class="o">(</span><span class="n">file</span> <span class="n">not</span> <span class="n">eof</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 6</span>    <span class="n">String</span> <span class="n">line</span> <span class="o">=</span> <span class="n">readLine</span><span class="o">(</span><span class="n">file</span><span class="o">);</span>
-<span class="ln"> 7</span>    <span class="kt">int</span> <span class="n">n</span> <span class="o">=</span> <span class="n">Integer</span><span class="o">.</span><span class="na">valueOf</span><span class="o">(</span><span class="n">line</span><span class="o">);</span>
-<span class="ln"> 8</span>    <span class="n">blocks</span><span class="o">[</span><span class="n">n</span> <span class="o">/</span> <span class="n">SEG_SIZE</span><span class="o">]++;</span>
-<span class="ln"> 9</span>  <span class="o">}</span>
-<span class="ln">10</span>  
-<span class="ln">11</span>  <span class="kt">int</span> <span class="n">start</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span>
-<span class="ln">12</span>  <span class="kt">int</span> <span class="n">end</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span>
-<span class="ln">13</span>  <span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">count</span><span class="o">.</span><span class="na">length</span><span class="o">;</span> <span class="n">i</span><span class="o">++)</span> <span class="o">{</span>
-<span class="ln">14</span>    <span class="k">if</span> <span class="o">(</span><span class="n">count</span><span class="o">[</span><span class="n">i</span><span class="o">]</span> <span class="o">!=</span> <span class="n">SEG_SIZE</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">15</span>      <span class="n">start</span> <span class="o">=</span> <span class="n">SEG_SIZE</span> <span class="o">*</span> <span class="n">i</span><span class="o">;</span>
-<span class="ln">16</span>      <span class="n">end</span> <span class="o">=</span> <span class="n">start</span> <span class="o">+</span> <span class="n">SEG_SIZE</span> <span class="o">-</span> <span class="n">1</span><span class="o">;</span>
-<span class="ln">17</span>      <span class="k">break</span><span class="o">;</span>
-<span class="ln">18</span>    <span class="o">}</span>
-<span class="ln">19</span>  <span class="o">}</span>
-<span class="ln">20</span>  <span class="k">return</span> <span class="n">findMissingInt</span><span class="o">(</span><span class="n">file</span><span class="o">,</span> <span class="n">start</span><span class="o">,</span> <span class="n">end</span><span class="o">);</span>
-<span class="ln">21</span><span class="o">}</span>
-<span class="ln">22</span>
-<span class="ln">23</span><span class="kd">private</span> <span class="kt">int</span> <span class="nf">findMissingInt</span><span class="o">(</span><span class="n">File</span> <span class="n">file</span><span class="o">,</span> <span class="kt">int</span> <span class="n">start</span><span class="o">,</span> <span class="kt">int</span> <span class="n">end</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">24</span>  <span class="kt">byte</span><span class="o">[]</span> <span class="n">bitVector</span> <span class="o">=</span> <span class="k">new</span> <span class="kt">byte</span><span class="o">[</span><span class="n">SEG_SIZE</span> <span class="o">/</span> <span class="n">Byte</span><span class="o">.</span><span class="na">SIZE</span><span class="o">];</span>
-<span class="ln">25</span>  <span class="k">while</span> <span class="o">(</span><span class="n">file</span> <span class="n">not</span> <span class="n">eof</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">26</span>    <span class="n">String</span> <span class="n">line</span> <span class="o">=</span> <span class="n">readLine</span><span class="o">(</span><span class="n">file</span><span class="o">);</span>
-<span class="ln">27</span>    <span class="kt">int</span> <span class="n">n</span> <span class="o">=</span> <span class="n">Integer</span><span class="o">.</span><span class="na">valueOf</span><span class="o">(</span><span class="n">line</span><span class="o">);</span>
-<span class="ln">28</span>    <span class="k">if</span> <span class="o">(</span><span class="n">n</span> <span class="o">&lt;</span> <span class="n">start</span> <span class="o">||</span> <span class="n">n</span> <span class="o">&gt;</span> <span class="n">end</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">29</span>      <span class="k">continue</span><span class="o">;</span>
-<span class="ln">30</span>    <span class="o">}</span>
-<span class="ln">31</span>    <span class="n">bitVector</span><span class="o">[(</span><span class="n">n</span> <span class="o">-</span> <span class="n">start</span><span class="o">)</span> <span class="o">/</span> <span class="n">Byte</span><span class="o">.</span><span class="na">SIZE</span><span class="o">]</span> <span class="o">|=</span> <span class="o">(</span><span class="n">n</span> <span class="o">-</span> <span class="n">start</span><span class="o">)</span> <span class="o">%</span> <span class="n">Byte</span><span class="o">.</span><span class="na">SIZE</span><span class="o">;</span>
-<span class="ln">32</span>  <span class="o">}</span>
-<span class="ln">33</span>  
-<span class="ln">34</span>  <span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">bitVector</span><span class="o">.</span><span class="na">length</span><span class="o">;</span> <span class="n">i</span><span class="o">++)</span> <span class="o">{</span>
-<span class="ln">35</span>    <span class="kt">int</span> <span class="n">b</span> <span class="o">=</span> <span class="n">bitVector</span><span class="o">[</span><span class="n">i</span><span class="o">];</span>
-<span class="ln">36</span>    <span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">j</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span> <span class="n">j</span> <span class="o">&lt;</span> <span class="n">Byte</span><span class="o">.</span><span class="na">SIZE</span><span class="o">;</span> <span class="n">j</span><span class="o">++)</span> <span class="o">{</span>
-<span class="ln">37</span>      <span class="k">if</span> <span class="o">(</span><span class="n">b</span> <span class="o">&amp;</span> <span class="o">(</span><span class="n">1</span> <span class="o">&lt;&lt;</span> <span class="n">j</span><span class="o">)</span> <span class="o">==</span> <span class="n">0</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">38</span>        <span class="k">return</span> <span class="n">start</span> <span class="o">+</span> <span class="n">i</span> <span class="o">*</span> <span class="n">Byte</span><span class="o">.</span><span class="na">SIZE</span> <span class="o">+</span> <span class="n">j</span><span class="o">;</span>
-<span class="ln">39</span>      <span class="o">}</span>
-<span class="ln">40</span>    <span class="o">}</span>
-<span class="ln">41</span>  <span class="o">}</span>
-<span class="ln">42</span>  <span class="k">return</span> <span class="o">-</span><span class="n">1</span><span class="o">;</span>
-<span class="ln">43</span><span class="o">}</span>
-</code></pre></div></div></div>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="kd">private</span> <span class="kd">final</span> <span class="kt">int</span> <span class="n">SEG_SIZE</span> <span class="o">=</span> <span class="n">1024</span><span class="o">;</span>
+
+<span class="kd">public</span> <span class="kt">int</span> <span class="nf">getMissingInt</span><span class="o">(</span><span class="n">File</span> <span class="n">file</span><span class="o">)</span> <span class="o">{</span>
+  <span class="kt">int</span><span class="o">[]</span> <span class="n">blocks</span> <span class="o">=</span> <span class="k">new</span> <span class="kt">int</span><span class="o">[</span><span class="n">Integer</span><span class="o">.</span><span class="na">MAX_VALUE</span> <span class="o">/</span> <span class="n">SEG_SIZE</span> <span class="o">+</span> <span class="n">1</span><span class="o">];</span>
+  <span class="k">while</span> <span class="o">(</span><span class="n">file</span> <span class="n">not</span> <span class="n">eof</span><span class="o">)</span> <span class="o">{</span>
+    <span class="n">String</span> <span class="n">line</span> <span class="o">=</span> <span class="n">readLine</span><span class="o">(</span><span class="n">file</span><span class="o">);</span>
+    <span class="kt">int</span> <span class="n">n</span> <span class="o">=</span> <span class="n">Integer</span><span class="o">.</span><span class="na">valueOf</span><span class="o">(</span><span class="n">line</span><span class="o">);</span>
+    <span class="n">blocks</span><span class="o">[</span><span class="n">n</span> <span class="o">/</span> <span class="n">SEG_SIZE</span><span class="o">]++;</span>
+  <span class="o">}</span>
+  
+  <span class="kt">int</span> <span class="n">start</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span>
+  <span class="kt">int</span> <span class="n">end</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span>
+  <span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">count</span><span class="o">.</span><span class="na">length</span><span class="o">;</span> <span class="n">i</span><span class="o">++)</span> <span class="o">{</span>
+    <span class="k">if</span> <span class="o">(</span><span class="n">count</span><span class="o">[</span><span class="n">i</span><span class="o">]</span> <span class="o">!=</span> <span class="n">SEG_SIZE</span><span class="o">)</span> <span class="o">{</span>
+      <span class="n">start</span> <span class="o">=</span> <span class="n">SEG_SIZE</span> <span class="o">*</span> <span class="n">i</span><span class="o">;</span>
+      <span class="n">end</span> <span class="o">=</span> <span class="n">start</span> <span class="o">+</span> <span class="n">SEG_SIZE</span> <span class="o">-</span> <span class="n">1</span><span class="o">;</span>
+      <span class="k">break</span><span class="o">;</span>
+    <span class="o">}</span>
+  <span class="o">}</span>
+  <span class="k">return</span> <span class="n">findMissingInt</span><span class="o">(</span><span class="n">file</span><span class="o">,</span> <span class="n">start</span><span class="o">,</span> <span class="n">end</span><span class="o">);</span>
+<span class="o">}</span>
+
+<span class="kd">private</span> <span class="kt">int</span> <span class="nf">findMissingInt</span><span class="o">(</span><span class="n">File</span> <span class="n">file</span><span class="o">,</span> <span class="kt">int</span> <span class="n">start</span><span class="o">,</span> <span class="kt">int</span> <span class="n">end</span><span class="o">)</span> <span class="o">{</span>
+  <span class="kt">byte</span><span class="o">[]</span> <span class="n">bitVector</span> <span class="o">=</span> <span class="k">new</span> <span class="kt">byte</span><span class="o">[</span><span class="n">SEG_SIZE</span> <span class="o">/</span> <span class="n">Byte</span><span class="o">.</span><span class="na">SIZE</span><span class="o">];</span>
+  <span class="k">while</span> <span class="o">(</span><span class="n">file</span> <span class="n">not</span> <span class="n">eof</span><span class="o">)</span> <span class="o">{</span>
+    <span class="n">String</span> <span class="n">line</span> <span class="o">=</span> <span class="n">readLine</span><span class="o">(</span><span class="n">file</span><span class="o">);</span>
+    <span class="kt">int</span> <span class="n">n</span> <span class="o">=</span> <span class="n">Integer</span><span class="o">.</span><span class="na">valueOf</span><span class="o">(</span><span class="n">line</span><span class="o">);</span>
+    <span class="k">if</span> <span class="o">(</span><span class="n">n</span> <span class="o">&lt;</span> <span class="n">start</span> <span class="o">||</span> <span class="n">n</span> <span class="o">&gt;</span> <span class="n">end</span><span class="o">)</span> <span class="o">{</span>
+      <span class="k">continue</span><span class="o">;</span>
+    <span class="o">}</span>
+    <span class="n">bitVector</span><span class="o">[(</span><span class="n">n</span> <span class="o">-</span> <span class="n">start</span><span class="o">)</span> <span class="o">/</span> <span class="n">Byte</span><span class="o">.</span><span class="na">SIZE</span><span class="o">]</span> <span class="o">|=</span> <span class="o">(</span><span class="n">n</span> <span class="o">-</span> <span class="n">start</span><span class="o">)</span> <span class="o">%</span> <span class="n">Byte</span><span class="o">.</span><span class="na">SIZE</span><span class="o">;</span>
+  <span class="o">}</span>
+  
+  <span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">bitVector</span><span class="o">.</span><span class="na">length</span><span class="o">;</span> <span class="n">i</span><span class="o">++)</span> <span class="o">{</span>
+    <span class="kt">int</span> <span class="n">b</span> <span class="o">=</span> <span class="n">bitVector</span><span class="o">[</span><span class="n">i</span><span class="o">];</span>
+    <span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">j</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span> <span class="n">j</span> <span class="o">&lt;</span> <span class="n">Byte</span><span class="o">.</span><span class="na">SIZE</span><span class="o">;</span> <span class="n">j</span><span class="o">++)</span> <span class="o">{</span>
+      <span class="k">if</span> <span class="o">(</span><span class="n">b</span> <span class="o">&amp;</span> <span class="o">(</span><span class="n">1</span> <span class="o">&lt;&lt;</span> <span class="n">j</span><span class="o">)</span> <span class="o">==</span> <span class="n">0</span><span class="o">)</span> <span class="o">{</span>
+        <span class="k">return</span> <span class="n">start</span> <span class="o">+</span> <span class="n">i</span> <span class="o">*</span> <span class="n">Byte</span><span class="o">.</span><span class="na">SIZE</span> <span class="o">+</span> <span class="n">j</span><span class="o">;</span>
+      <span class="o">}</span>
+    <span class="o">}</span>
+  <span class="o">}</span>
+  <span class="k">return</span> <span class="o">-</span><span class="n">1</span><span class="o">;</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div></div></div>
   <div class="card-footer"><div class="post-navs d-flex justify-content-evenly">
   <div class="post-nav post-prev"><i class="fas fa-fw fa-chevron-left"></i>
     <a href="/post/cracking-coding-interview/10.6-sort-big-file/">Cracking Coding Interview - 10.6 Sort Big File

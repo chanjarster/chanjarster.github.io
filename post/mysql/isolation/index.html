@@ -12,7 +12,7 @@
 <meta name="description" content="" /><meta itemprop="name" content="MySQL - 事务隔离">
 <meta itemprop="description" content=""><meta itemprop="datePublished" content="2019-12-19T16:15:00+08:00" />
 <meta itemprop="dateModified" content="2019-12-19T16:15:00+08:00" />
-<meta itemprop="wordCount" content="1236">
+<meta itemprop="wordCount" content="1083">
 <meta itemprop="keywords" content="mysql," /><meta property="og:title" content="MySQL - 事务隔离" />
 <meta property="og:description" content="" />
 <meta property="og:type" content="article" />
@@ -300,18 +300,40 @@
 </ul>
 <p><strong>所以如果<code>set autocommit=0</code>，则会让你无意当中开启了一个事务而不提交结果就造成了长事务。</strong></p>
 <p><code>commit work and chain</code>可以让你提交事务之后立即再开启一个事务：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="ln">1</span><span class="k">begin</span><span class="p">;</span><span class="w">
-</span><span class="ln">2</span><span class="w">
-</span><span class="ln">3</span><span class="w"></span><span class="k">select</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">dual</span><span class="p">;</span><span class="w">
-</span><span class="ln">4</span><span class="w">
-</span><span class="ln">5</span><span class="w"></span><span class="k">commit</span><span class="w"> </span><span class="k">work</span><span class="w"> </span><span class="k">and</span><span class="w"> </span><span class="k">chain</span><span class="p">;</span><span class="w">
-</span><span class="ln">6</span><span class="w">
-</span><span class="ln">7</span><span class="w"></span><span class="k">select</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">dual</span><span class="p">;</span><span class="w">
-</span><span class="ln">8</span><span class="w">
-</span><span class="ln">9</span><span class="w"></span><span class="k">commit</span><span class="p">;</span><span class="w">
-</span></code></pre></div><p>下面语句可以查询出超过60秒的长事务：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="ln">1</span><span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">information_schema</span><span class="p">.</span><span class="n">innodb_trx</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">TIME_TO_SEC</span><span class="p">(</span><span class="n">timediff</span><span class="p">(</span><span class="n">now</span><span class="p">(),</span><span class="n">trx_started</span><span class="p">))</span><span class="o">&gt;</span><span class="mi">60</span><span class="w">
-</span></code></pre></div><h2 id="避免长事务">避免长事务<a class="anchor ms-1" href="#避免长事务"><i class="fas fa-link"></i></a></h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span><span class="lnt">9
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="k">begin</span><span class="p">;</span><span class="w">
+</span><span class="w">
+</span><span class="w"></span><span class="k">select</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">dual</span><span class="p">;</span><span class="w">
+</span><span class="w">
+</span><span class="w"></span><span class="k">commit</span><span class="w"> </span><span class="k">work</span><span class="w"> </span><span class="k">and</span><span class="w"> </span><span class="k">chain</span><span class="p">;</span><span class="w">
+</span><span class="w">
+</span><span class="w"></span><span class="k">select</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">dual</span><span class="p">;</span><span class="w">
+</span><span class="w">
+</span><span class="w"></span><span class="k">commit</span><span class="p">;</span><span class="w">
+</span></code></pre></td></tr></table>
+</div>
+</div><p>下面语句可以查询出超过60秒的长事务：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">information_schema</span><span class="p">.</span><span class="n">innodb_trx</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">TIME_TO_SEC</span><span class="p">(</span><span class="n">timediff</span><span class="p">(</span><span class="n">now</span><span class="p">(),</span><span class="n">trx_started</span><span class="p">))</span><span class="o">&gt;</span><span class="mi">60</span><span class="w">
+</span></code></pre></td></tr></table>
+</div>
+</div><h2 id="避免长事务">避免长事务<a class="anchor ms-1" href="#避免长事务"><i class="fas fa-link"></i></a></h2>
 <ul>
 <li>确保客户端设置了<code>autocommit=1</code></li>
 <li>如果是只读事务（只有select），那么就不需要begin/commit</li>

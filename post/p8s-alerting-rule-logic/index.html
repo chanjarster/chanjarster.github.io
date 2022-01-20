@@ -12,7 +12,7 @@
 <meta name="description" content="" /><meta itemprop="name" content="Prometheus报警逻辑分析">
 <meta itemprop="description" content=""><meta itemprop="datePublished" content="2021-02-26T09:42:05+08:00" />
 <meta itemprop="dateModified" content="2021-02-26T09:42:05+08:00" />
-<meta itemprop="wordCount" content="905">
+<meta itemprop="wordCount" content="910">
 <meta itemprop="keywords" content="prometheus," /><meta property="og:title" content="Prometheus报警逻辑分析" />
 <meta property="og:description" content="" />
 <meta property="og:type" content="article" />
@@ -228,18 +228,35 @@
 <h2 id="领域模型">领域模型<a class="anchor ms-1" href="#领域模型"><i class="fas fa-link"></i></a></h2>
 <p>在Prometheus的定义中，报警规则由AlertingRule来描述，而AlertingRule则被归到<a href="https://prometheus.io/docs/prometheus/2.25/configuration/recording_rules/#rule_group" target="_blank" rel="noopener noreferrer">Group</a>
 中，比如下面的配置文件例子：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-yaml" data-lang="yaml"><span class="ln"> 1</span><span class="nt">groups</span><span class="p">:</span><span class="w">
-</span><span class="ln"> 2</span><span class="w"></span>- <span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">example</span><span class="w">
-</span><span class="ln"> 3</span><span class="w">  </span><span class="nt">interval</span><span class="p">:</span><span class="w"> </span><span class="l">30s</span><span class="w">
-</span><span class="ln"> 4</span><span class="w">  </span><span class="nt">rules</span><span class="p">:</span><span class="w">
-</span><span class="ln"> 5</span><span class="w">  </span>- <span class="nt">alert</span><span class="p">:</span><span class="w"> </span><span class="l">HighRequestLatency</span><span class="w">
-</span><span class="ln"> 6</span><span class="w">    </span><span class="nt">expr</span><span class="p">:</span><span class="w"> </span><span class="l">job:request_latency_seconds:mean5m{job=&#34;myjob&#34;} &gt; 0.5</span><span class="w">
-</span><span class="ln"> 7</span><span class="w">    </span><span class="nt">for</span><span class="p">:</span><span class="w"> </span><span class="l">10m</span><span class="w">
-</span><span class="ln"> 8</span><span class="w">    </span><span class="nt">labels</span><span class="p">:</span><span class="w">
-</span><span class="ln"> 9</span><span class="w">      </span><span class="nt">severity</span><span class="p">:</span><span class="w"> </span><span class="l">page</span><span class="w">
-</span><span class="ln">10</span><span class="w">    </span><span class="nt">annotations</span><span class="p">:</span><span class="w">
-</span><span class="ln">11</span><span class="w">      </span><span class="nt">summary</span><span class="p">:</span><span class="w"> </span><span class="l">High request latency</span><span class="w">
-</span></code></pre></div><p>每个AlertingRule在运行时还维护具体的报警对象（Alert）。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-yaml" data-lang="yaml"><span class="nt">groups</span><span class="p">:</span><span class="w">
+</span><span class="w"></span>- <span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">example</span><span class="w">
+</span><span class="w">  </span><span class="nt">interval</span><span class="p">:</span><span class="w"> </span><span class="l">30s</span><span class="w">
+</span><span class="w">  </span><span class="nt">rules</span><span class="p">:</span><span class="w">
+</span><span class="w">  </span>- <span class="nt">alert</span><span class="p">:</span><span class="w"> </span><span class="l">HighRequestLatency</span><span class="w">
+</span><span class="w">    </span><span class="nt">expr</span><span class="p">:</span><span class="w"> </span><span class="l">job:request_latency_seconds:mean5m{job=&#34;myjob&#34;} &gt; 0.5</span><span class="w">
+</span><span class="w">    </span><span class="nt">for</span><span class="p">:</span><span class="w"> </span><span class="l">10m</span><span class="w">
+</span><span class="w">    </span><span class="nt">labels</span><span class="p">:</span><span class="w">
+</span><span class="w">      </span><span class="nt">severity</span><span class="p">:</span><span class="w"> </span><span class="l">page</span><span class="w">
+</span><span class="w">    </span><span class="nt">annotations</span><span class="p">:</span><span class="w">
+</span><span class="w">      </span><span class="nt">summary</span><span class="p">:</span><span class="w"> </span><span class="l">High request latency</span><span class="w">
+</span></code></pre></td></tr></table>
+</div>
+</div><p>每个AlertingRule在运行时还维护具体的报警对象（Alert）。</p>
 <p>下面是领域模型：</p>
 <img src="domain.png" style="zoom:50%" />
 <h2 id="报警逻辑">报警逻辑<a class="anchor ms-1" href="#报警逻辑"><i class="fas fa-link"></i></a></h2>

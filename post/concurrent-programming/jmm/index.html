@@ -12,7 +12,7 @@
 <meta name="description" content="" /><meta itemprop="name" content="The Java Memory Model">
 <meta itemprop="description" content=""><meta itemprop="datePublished" content="2019-11-26T20:56:29+08:00" />
 <meta itemprop="dateModified" content="2019-11-26T20:56:29+08:00" />
-<meta itemprop="wordCount" content="3265">
+<meta itemprop="wordCount" content="3287">
 <meta itemprop="keywords" content="并发编程," /><meta property="og:title" content="The Java Memory Model" />
 <meta property="og:description" content="" />
 <meta property="og:type" content="article" />
@@ -247,36 +247,76 @@
 <p>Java内存模型也不提供顺序一致性，现代多处理器架构也不支持顺序一致性。</p>
 <h3 id="重排序">重排序<a class="anchor ms-1" href="#重排序"><i class="fas fa-link"></i></a></h3>
 <p>下面这段代码从代码顺序来说，可能的结果是：(1, 0)，(0, 1)，(1, 1)。但还有可能是 (0, 0)。</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln"> 1</span><span class="kd">public</span> <span class="kd">class</span> <span class="nc">PossibleReordering</span> <span class="o">{</span>
-<span class="ln"> 2</span>  <span class="kd">static</span> <span class="kt">int</span> <span class="n">x</span> <span class="o">=</span> <span class="n">0</span><span class="o">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span>
-<span class="ln"> 3</span>  <span class="kd">static</span> <span class="kt">int</span> <span class="n">a</span> <span class="o">=</span> <span class="n">0</span><span class="o">,</span> <span class="n">b</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span>
-<span class="ln"> 4</span>
-<span class="ln"> 5</span>  <span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">main</span><span class="o">(</span><span class="n">String</span><span class="o">[]</span> <span class="n">args</span><span class="o">)</span> <span class="kd">throws</span> <span class="n">InterruptedException</span> <span class="o">{</span>
-<span class="ln"> 6</span>    <span class="c1">// Thread A
-</span><span class="ln"> 7</span><span class="c1"></span>    <span class="n">Thread</span> <span class="n">one</span> <span class="o">=</span> <span class="k">new</span> <span class="n">Thread</span><span class="o">(</span><span class="k">new</span> <span class="n">Runnable</span><span class="o">()</span> <span class="o">{</span>
-<span class="ln"> 8</span>      <span class="kd">public</span> <span class="kt">void</span> <span class="nf">run</span><span class="o">()</span> <span class="o">{</span>
-<span class="ln"> 9</span>        <span class="n">a</span> <span class="o">=</span> <span class="n">1</span><span class="o">;</span>
-<span class="ln">10</span>        <span class="n">x</span> <span class="o">=</span> <span class="n">b</span><span class="o">;</span>
-<span class="ln">11</span>      <span class="o">}</span>
-<span class="ln">12</span>    <span class="o">});</span>
-<span class="ln">13</span>    <span class="c1">// Thread B
-</span><span class="ln">14</span><span class="c1"></span>    <span class="n">Thread</span> <span class="n">other</span> <span class="o">=</span> <span class="k">new</span> <span class="n">Thread</span><span class="o">(</span><span class="k">new</span> <span class="n">Runnable</span><span class="o">()</span> <span class="o">{</span>
-<span class="ln">15</span>      <span class="kd">public</span> <span class="kt">void</span> <span class="nf">run</span><span class="o">()</span> <span class="o">{</span>
-<span class="ln">16</span>        <span class="n">b</span> <span class="o">=</span> <span class="n">1</span><span class="o">;</span>
-<span class="ln">17</span>        <span class="n">y</span> <span class="o">=</span> <span class="n">a</span><span class="o">;</span>
-<span class="ln">18</span>      <span class="o">}</span>
-<span class="ln">19</span>    <span class="o">});</span>
-<span class="ln">20</span>    <span class="n">one</span><span class="o">.</span><span class="na">start</span><span class="o">();</span>
-<span class="ln">21</span>    <span class="n">other</span><span class="o">.</span><span class="na">start</span><span class="o">();</span>
-<span class="ln">22</span>    <span class="n">one</span><span class="o">.</span><span class="na">join</span><span class="o">();</span>
-<span class="ln">23</span>    <span class="n">other</span><span class="o">.</span><span class="na">join</span><span class="o">();</span>
-<span class="ln">24</span>    <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">&#34;( &#34;</span> <span class="o">+</span> <span class="n">x</span> <span class="o">+</span> <span class="s">&#34;,&#34;</span> <span class="o">+</span> <span class="n">y</span> <span class="o">+</span> <span class="s">&#34;)&#34;</span><span class="o">);</span>
-<span class="ln">25</span>  <span class="o">}</span>
-<span class="ln">26</span><span class="o">}</span>
-</code></pre></div><p>前面将了代码重排序的原因，实际上就算代码按顺序执行，因为cache刷新到主内存的时机也可能使B线程看到A是以相反顺序执行的。</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln">1</span>Thread A  ---&gt; x=b(0) ----------------------&gt; a=1
-<span class="ln">2</span>Thread B  --------------&gt; b=1 -----&gt; y=a(0)
-</code></pre></div><p>同步（synchronization）禁止了编译器、运行时和硬件对内存操作做出能够违反JMM要求的可见性保证的重排序。注意是可以重排序的，支持禁止了哪些会违反可见性保证的重排序。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="kd">public</span> <span class="kd">class</span> <span class="nc">PossibleReordering</span> <span class="o">{</span>
+  <span class="kd">static</span> <span class="kt">int</span> <span class="n">x</span> <span class="o">=</span> <span class="n">0</span><span class="o">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span>
+  <span class="kd">static</span> <span class="kt">int</span> <span class="n">a</span> <span class="o">=</span> <span class="n">0</span><span class="o">,</span> <span class="n">b</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span>
+
+  <span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">main</span><span class="o">(</span><span class="n">String</span><span class="o">[]</span> <span class="n">args</span><span class="o">)</span> <span class="kd">throws</span> <span class="n">InterruptedException</span> <span class="o">{</span>
+    <span class="c1">// Thread A
+</span><span class="c1"></span>    <span class="n">Thread</span> <span class="n">one</span> <span class="o">=</span> <span class="k">new</span> <span class="n">Thread</span><span class="o">(</span><span class="k">new</span> <span class="n">Runnable</span><span class="o">()</span> <span class="o">{</span>
+      <span class="kd">public</span> <span class="kt">void</span> <span class="nf">run</span><span class="o">()</span> <span class="o">{</span>
+        <span class="n">a</span> <span class="o">=</span> <span class="n">1</span><span class="o">;</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">b</span><span class="o">;</span>
+      <span class="o">}</span>
+    <span class="o">});</span>
+    <span class="c1">// Thread B
+</span><span class="c1"></span>    <span class="n">Thread</span> <span class="n">other</span> <span class="o">=</span> <span class="k">new</span> <span class="n">Thread</span><span class="o">(</span><span class="k">new</span> <span class="n">Runnable</span><span class="o">()</span> <span class="o">{</span>
+      <span class="kd">public</span> <span class="kt">void</span> <span class="nf">run</span><span class="o">()</span> <span class="o">{</span>
+        <span class="n">b</span> <span class="o">=</span> <span class="n">1</span><span class="o">;</span>
+        <span class="n">y</span> <span class="o">=</span> <span class="n">a</span><span class="o">;</span>
+      <span class="o">}</span>
+    <span class="o">});</span>
+    <span class="n">one</span><span class="o">.</span><span class="na">start</span><span class="o">();</span>
+    <span class="n">other</span><span class="o">.</span><span class="na">start</span><span class="o">();</span>
+    <span class="n">one</span><span class="o">.</span><span class="na">join</span><span class="o">();</span>
+    <span class="n">other</span><span class="o">.</span><span class="na">join</span><span class="o">();</span>
+    <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">&#34;( &#34;</span> <span class="o">+</span> <span class="n">x</span> <span class="o">+</span> <span class="s">&#34;,&#34;</span> <span class="o">+</span> <span class="n">y</span> <span class="o">+</span> <span class="s">&#34;)&#34;</span><span class="o">);</span>
+  <span class="o">}</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>前面将了代码重排序的原因，实际上就算代码按顺序执行，因为cache刷新到主内存的时机也可能使B线程看到A是以相反顺序执行的。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt">Thread A  ---&gt; x=b(0) ----------------------&gt; a=1
+Thread B  --------------&gt; b=1 -----&gt; y=a(0)
+</code></pre></td></tr></table>
+</div>
+</div><p>同步（synchronization）禁止了编译器、运行时和硬件对内存操作做出能够违反JMM要求的可见性保证的重排序。注意是可以重排序的，支持禁止了哪些会违反可见性保证的重排序。</p>
 <p>happens-before：要确保操作B能够看到操作A的结果（不论A和B是否在相同线程中），它们必须有happens-before关系。如果没有happens-before，那么JVM可以随意重排序。</p>
 <p>happens-before规则：</p>
 <ul>
@@ -315,142 +355,304 @@
 <li>一个线程到达 <code>CyclicBarrier</code>/<code>Exchanger</code> happens-before 从同一个barrier/exchanger释放到其他线程。如果<code>CyclicBarrier</code>使用barrier action，那么到达<code>CyclicBarrier</code> happens-before barrier action，进而happens-before 从barrier释放到线程。</li>
 </ul>
 <p>注意传递性规则，看这个图，线程A的所有操作happens-before 线程B的所有操作：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln">1</span> [Thread A]
-<span class="ln">2</span>    y=1
-<span class="ln">3</span>  lock M
-<span class="ln">4</span>    x=1                        [Thread B]
-<span class="ln">5</span>  unlock M ------------------&gt;   lock M
-<span class="ln">6</span>                                  i=x
-<span class="ln">7</span>                                 unlock M
-<span class="ln">8</span>                                  j=y
-</code></pre></div><h3 id="接力式同步">接力式同步<a class="anchor ms-1" href="#接力式同步"><i class="fas fa-link"></i></a></h3>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"> [Thread A]
+    y=1
+  lock M
+    x=1                        [Thread B]
+  unlock M ------------------&gt;   lock M
+                                  i=x
+                                 unlock M
+                                  j=y
+</code></pre></td></tr></table>
+</div>
+</div><h3 id="接力式同步">接力式同步<a class="anchor ms-1" href="#接力式同步"><i class="fas fa-link"></i></a></h3>
 <p>把一个happens-before规则和另一个happens-before规则结合起来，一般都是volatile变量 或者 内置锁，使得对一个变量的访问有序。不过这个技巧对语句的顺序很敏感，也容易被破坏，所以这个是榨取性能的最后武器，一般不推荐使用。</p>
 <p>下面这段代码看不到什么锁，但是能够保证不被重排序是因为间接的使用了同一个volatile变量：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln"> 1</span>  <span class="kd">private</span> <span class="kd">final</span> <span class="kd">class</span> <span class="nc">Sync</span> <span class="kd">extends</span> <span class="n">AbstractQueuedSynchronizer</span> <span class="o">{</span>
-<span class="ln"> 2</span>    <span class="cm">/** State value representing that task is ready to run */</span>
-<span class="ln"> 3</span>    <span class="kd">private</span> <span class="kd">static</span> <span class="kd">final</span> <span class="kt">int</span> <span class="n">READY</span>   <span class="o">=</span> <span class="n">0</span><span class="o">;</span>
-<span class="ln"> 4</span>    <span class="cm">/** State value representing that task is running */</span>
-<span class="ln"> 5</span>    <span class="kd">private</span> <span class="kd">static</span> <span class="kd">final</span> <span class="kt">int</span> <span class="n">RUNNING</span>   <span class="o">=</span> <span class="n">1</span><span class="o">;</span>
-<span class="ln"> 6</span>    <span class="cm">/** State value representing that task ran */</span>
-<span class="ln"> 7</span>    <span class="kd">private</span> <span class="kd">static</span> <span class="kd">final</span> <span class="kt">int</span> <span class="n">RAN</span>     <span class="o">=</span> <span class="n">2</span><span class="o">;</span>
-<span class="ln"> 8</span>    <span class="cm">/** State value representing that task was cancelled */</span>
-<span class="ln"> 9</span>    <span class="kd">private</span> <span class="kd">static</span> <span class="kd">final</span> <span class="kt">int</span> <span class="n">CANCELLED</span> <span class="o">=</span> <span class="n">4</span><span class="o">;</span>
-<span class="ln">10</span>    <span class="cm">/** The result to return from get() */</span>
-<span class="ln">11</span>    <span class="kd">private</span> <span class="n">V</span> <span class="n">result</span><span class="o">;</span>
-<span class="ln">12</span>    <span class="cm">/** The exception to throw from get() */</span>
-<span class="ln">13</span>    <span class="kd">private</span> <span class="n">Throwable</span> <span class="n">exception</span><span class="o">;</span>
-<span class="ln">14</span>
-<span class="ln">15</span>    <span class="n">V</span> <span class="nf">innerGet</span><span class="o">()</span> <span class="kd">throws</span> <span class="n">InterruptedException</span><span class="o">,</span> <span class="n">ExecutionException</span> <span class="o">{</span>
-<span class="ln">16</span>      <span class="c1">// 间接调用了tryAcquireShared -&gt; 读取 volatile state变量
-</span><span class="ln">17</span><span class="c1"></span>      <span class="n">acquireSharedInterruptibly</span><span class="o">(</span><span class="n">0</span><span class="o">);</span>
-<span class="ln">18</span>      <span class="k">if</span> <span class="o">(</span><span class="n">getState</span><span class="o">()</span> <span class="o">==</span> <span class="n">CANCELLED</span><span class="o">)</span>
-<span class="ln">19</span>        <span class="k">throw</span> <span class="k">new</span> <span class="n">CancellationException</span><span class="o">();</span>
-<span class="ln">20</span>      <span class="k">if</span> <span class="o">(</span><span class="n">exception</span> <span class="o">!=</span> <span class="kc">null</span><span class="o">)</span>
-<span class="ln">21</span>        <span class="k">throw</span> <span class="k">new</span> <span class="n">ExecutionException</span><span class="o">(</span><span class="n">exception</span><span class="o">);</span>
-<span class="ln">22</span>      <span class="k">return</span> <span class="n">result</span><span class="o">;</span>
-<span class="ln">23</span>    <span class="o">}</span>
-<span class="ln">24</span>
-<span class="ln">25</span>    <span class="kt">void</span> <span class="nf">innerSet</span><span class="o">(</span><span class="n">V</span> <span class="n">v</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">26</span>      <span class="k">for</span> <span class="o">(;;)</span> <span class="o">{</span>
-<span class="ln">27</span>        <span class="kt">int</span> <span class="n">s</span> <span class="o">=</span> <span class="n">getState</span><span class="o">();</span>
-<span class="ln">28</span>        <span class="k">if</span> <span class="o">(</span><span class="n">s</span> <span class="o">==</span> <span class="n">RAN</span><span class="o">)</span>
-<span class="ln">29</span>          <span class="k">return</span><span class="o">;</span>
-<span class="ln">30</span>        <span class="k">if</span> <span class="o">(</span><span class="n">s</span> <span class="o">==</span> <span class="n">CANCELLED</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">31</span>          <span class="c1">// 间接调用了tryReleaseShared -&gt; 写 volatile state变量
-</span><span class="ln">32</span><span class="c1"></span>          <span class="n">releaseShared</span><span class="o">(</span><span class="n">0</span><span class="o">);</span>
-<span class="ln">33</span>          <span class="k">return</span><span class="o">;</span>
-<span class="ln">34</span>        <span class="o">}</span>
-<span class="ln">35</span>        <span class="k">if</span> <span class="o">(</span><span class="n">compareAndSetState</span><span class="o">(</span><span class="n">s</span><span class="o">,</span> <span class="n">RAN</span><span class="o">))</span> <span class="o">{</span>
-<span class="ln">36</span>          <span class="n">result</span> <span class="o">=</span> <span class="n">v</span><span class="o">;</span>
-<span class="ln">37</span>          <span class="c1">// 间接调用了tryReleaseShared -&gt; 写 volatile state变量
-</span><span class="ln">38</span><span class="c1"></span>          <span class="n">releaseShared</span><span class="o">(</span><span class="n">0</span><span class="o">);</span>
-<span class="ln">39</span>          <span class="n">done</span><span class="o">();</span>
-<span class="ln">40</span>          <span class="k">return</span><span class="o">;</span>
-<span class="ln">41</span>        <span class="o">}</span>
-<span class="ln">42</span>      <span class="o">}</span>
-<span class="ln">43</span>    <span class="o">}</span>
-<span class="ln">44</span>  <span class="o">}</span>
-</code></pre></div><h2 id="发布">发布<a class="anchor ms-1" href="#发布"><i class="fas fa-link"></i></a></h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java">  <span class="kd">private</span> <span class="kd">final</span> <span class="kd">class</span> <span class="nc">Sync</span> <span class="kd">extends</span> <span class="n">AbstractQueuedSynchronizer</span> <span class="o">{</span>
+    <span class="cm">/** State value representing that task is ready to run */</span>
+    <span class="kd">private</span> <span class="kd">static</span> <span class="kd">final</span> <span class="kt">int</span> <span class="n">READY</span>   <span class="o">=</span> <span class="n">0</span><span class="o">;</span>
+    <span class="cm">/** State value representing that task is running */</span>
+    <span class="kd">private</span> <span class="kd">static</span> <span class="kd">final</span> <span class="kt">int</span> <span class="n">RUNNING</span>   <span class="o">=</span> <span class="n">1</span><span class="o">;</span>
+    <span class="cm">/** State value representing that task ran */</span>
+    <span class="kd">private</span> <span class="kd">static</span> <span class="kd">final</span> <span class="kt">int</span> <span class="n">RAN</span>     <span class="o">=</span> <span class="n">2</span><span class="o">;</span>
+    <span class="cm">/** State value representing that task was cancelled */</span>
+    <span class="kd">private</span> <span class="kd">static</span> <span class="kd">final</span> <span class="kt">int</span> <span class="n">CANCELLED</span> <span class="o">=</span> <span class="n">4</span><span class="o">;</span>
+    <span class="cm">/** The result to return from get() */</span>
+    <span class="kd">private</span> <span class="n">V</span> <span class="n">result</span><span class="o">;</span>
+    <span class="cm">/** The exception to throw from get() */</span>
+    <span class="kd">private</span> <span class="n">Throwable</span> <span class="n">exception</span><span class="o">;</span>
+
+    <span class="n">V</span> <span class="nf">innerGet</span><span class="o">()</span> <span class="kd">throws</span> <span class="n">InterruptedException</span><span class="o">,</span> <span class="n">ExecutionException</span> <span class="o">{</span>
+      <span class="c1">// 间接调用了tryAcquireShared -&gt; 读取 volatile state变量
+</span><span class="c1"></span>      <span class="n">acquireSharedInterruptibly</span><span class="o">(</span><span class="n">0</span><span class="o">);</span>
+      <span class="k">if</span> <span class="o">(</span><span class="n">getState</span><span class="o">()</span> <span class="o">==</span> <span class="n">CANCELLED</span><span class="o">)</span>
+        <span class="k">throw</span> <span class="k">new</span> <span class="n">CancellationException</span><span class="o">();</span>
+      <span class="k">if</span> <span class="o">(</span><span class="n">exception</span> <span class="o">!=</span> <span class="kc">null</span><span class="o">)</span>
+        <span class="k">throw</span> <span class="k">new</span> <span class="n">ExecutionException</span><span class="o">(</span><span class="n">exception</span><span class="o">);</span>
+      <span class="k">return</span> <span class="n">result</span><span class="o">;</span>
+    <span class="o">}</span>
+
+    <span class="kt">void</span> <span class="nf">innerSet</span><span class="o">(</span><span class="n">V</span> <span class="n">v</span><span class="o">)</span> <span class="o">{</span>
+      <span class="k">for</span> <span class="o">(;;)</span> <span class="o">{</span>
+        <span class="kt">int</span> <span class="n">s</span> <span class="o">=</span> <span class="n">getState</span><span class="o">();</span>
+        <span class="k">if</span> <span class="o">(</span><span class="n">s</span> <span class="o">==</span> <span class="n">RAN</span><span class="o">)</span>
+          <span class="k">return</span><span class="o">;</span>
+        <span class="k">if</span> <span class="o">(</span><span class="n">s</span> <span class="o">==</span> <span class="n">CANCELLED</span><span class="o">)</span> <span class="o">{</span>
+          <span class="c1">// 间接调用了tryReleaseShared -&gt; 写 volatile state变量
+</span><span class="c1"></span>          <span class="n">releaseShared</span><span class="o">(</span><span class="n">0</span><span class="o">);</span>
+          <span class="k">return</span><span class="o">;</span>
+        <span class="o">}</span>
+        <span class="k">if</span> <span class="o">(</span><span class="n">compareAndSetState</span><span class="o">(</span><span class="n">s</span><span class="o">,</span> <span class="n">RAN</span><span class="o">))</span> <span class="o">{</span>
+          <span class="n">result</span> <span class="o">=</span> <span class="n">v</span><span class="o">;</span>
+          <span class="c1">// 间接调用了tryReleaseShared -&gt; 写 volatile state变量
+</span><span class="c1"></span>          <span class="n">releaseShared</span><span class="o">(</span><span class="n">0</span><span class="o">);</span>
+          <span class="n">done</span><span class="o">();</span>
+          <span class="k">return</span><span class="o">;</span>
+        <span class="o">}</span>
+      <span class="o">}</span>
+    <span class="o">}</span>
+  <span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><h2 id="发布">发布<a class="anchor ms-1" href="#发布"><i class="fas fa-link"></i></a></h2>
 <p>不正确发布的风险正是发布共享对象的线程和访问该对象的线程缺少happens-before的结果。</p>
 <h3 id="不安全发布">不安全发布<a class="anchor ms-1" href="#不安全发布"><i class="fas fa-link"></i></a></h3>
 <p>看下面这段代码，<code>new Resource()</code>里有对Resource内部属性的写，发布这个对象则是对<code>resource</code>变量的写，两者之间缺乏happens-before关系，那么就意味着这些操作可能会重排序，也就意味着其他线程可能会看到一个构造不完全的对象：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln"> 1</span><span class="nd">@NotThreadSafe</span>
-<span class="ln"> 2</span><span class="kd">public</span> <span class="kd">class</span> <span class="nc">UnsafeLazyInitialization</span> <span class="o">{</span>
-<span class="ln"> 3</span>    <span class="kd">private</span> <span class="kd">static</span> <span class="n">Resource</span> <span class="n">resource</span><span class="o">;</span>
-<span class="ln"> 4</span>
-<span class="ln"> 5</span>    <span class="kd">public</span> <span class="kd">static</span> <span class="n">Resource</span> <span class="nf">getInstance</span><span class="o">()</span> <span class="o">{</span>
-<span class="ln"> 6</span>        <span class="k">if</span> <span class="o">(</span><span class="n">resource</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span>
-<span class="ln"> 7</span>            <span class="n">resource</span> <span class="o">=</span> <span class="k">new</span> <span class="n">Resource</span><span class="o">();</span> <span class="c1">// unsafe publication
-</span><span class="ln"> 8</span><span class="c1"></span>        <span class="k">return</span> <span class="n">resource</span><span class="o">;</span>
-<span class="ln"> 9</span>    <span class="o">}</span>
-<span class="ln">10</span>
-<span class="ln">11</span>    <span class="kd">static</span> <span class="kd">class</span> <span class="nc">Resource</span> <span class="o">{</span>
-<span class="ln">12</span>    <span class="o">}</span>
-<span class="ln">13</span><span class="o">}</span>
-</code></pre></div><h3 id="安全发布">安全发布<a class="anchor ms-1" href="#安全发布"><i class="fas fa-link"></i></a></h3>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="nd">@NotThreadSafe</span>
+<span class="kd">public</span> <span class="kd">class</span> <span class="nc">UnsafeLazyInitialization</span> <span class="o">{</span>
+    <span class="kd">private</span> <span class="kd">static</span> <span class="n">Resource</span> <span class="n">resource</span><span class="o">;</span>
+
+    <span class="kd">public</span> <span class="kd">static</span> <span class="n">Resource</span> <span class="nf">getInstance</span><span class="o">()</span> <span class="o">{</span>
+        <span class="k">if</span> <span class="o">(</span><span class="n">resource</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span>
+            <span class="n">resource</span> <span class="o">=</span> <span class="k">new</span> <span class="n">Resource</span><span class="o">();</span> <span class="c1">// unsafe publication
+</span><span class="c1"></span>        <span class="k">return</span> <span class="n">resource</span><span class="o">;</span>
+    <span class="o">}</span>
+
+    <span class="kd">static</span> <span class="kd">class</span> <span class="nc">Resource</span> <span class="o">{</span>
+    <span class="o">}</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><h3 id="安全发布">安全发布<a class="anchor ms-1" href="#安全发布"><i class="fas fa-link"></i></a></h3>
 <p>举个队列的例子，如果A放X到队列的动作happens-before B从队列中取出B，那么不仅B能看到A所留下的X的状态，B也能看到A在传递X之前的所有动作。</p>
 <h3 id="安全法发布惯用法">安全法发布惯用法<a class="anchor ms-1" href="#安全法发布惯用法"><i class="fas fa-link"></i></a></h3>
 <p>添加了<code>synchronized</code>（用的是内置锁规则）：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln"> 1</span><span class="nd">@ThreadSafe</span>
-<span class="ln"> 2</span><span class="kd">public</span> <span class="kd">class</span> <span class="nc">SafeLazyInitialization</span> <span class="o">{</span>
-<span class="ln"> 3</span>    <span class="kd">private</span> <span class="kd">static</span> <span class="n">Resource</span> <span class="n">resource</span><span class="o">;</span>
-<span class="ln"> 4</span>  
-<span class="ln"> 5</span>    <span class="kd">public</span> <span class="kd">synchronized</span> <span class="kd">static</span> <span class="n">Resource</span> <span class="nf">getInstance</span><span class="o">()</span> <span class="o">{</span>
-<span class="ln"> 6</span>        <span class="k">if</span> <span class="o">(</span><span class="n">resource</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span>
-<span class="ln"> 7</span>            <span class="n">resource</span> <span class="o">=</span> <span class="k">new</span> <span class="n">Resource</span><span class="o">();</span>
-<span class="ln"> 8</span>        <span class="k">return</span> <span class="n">resource</span><span class="o">;</span>
-<span class="ln"> 9</span>    <span class="o">}</span>
-<span class="ln">10</span>
-<span class="ln">11</span>    <span class="kd">static</span> <span class="kd">class</span> <span class="nc">Resource</span> <span class="o">{</span>
-<span class="ln">12</span>    <span class="o">}</span>
-<span class="ln">13</span><span class="o">}</span>
-</code></pre></div><p>也可以利用JVM初始化类时，初始化其静态变量串行话（使用了锁）的事实：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln"> 1</span><span class="nd">@ThreadSafe</span>
-<span class="ln"> 2</span><span class="kd">public</span> <span class="kd">class</span> <span class="nc">EagerInitialization</span> <span class="o">{</span>
-<span class="ln"> 3</span>    <span class="kd">private</span> <span class="kd">static</span> <span class="n">Resource</span> <span class="n">resource</span> <span class="o">=</span> <span class="k">new</span> <span class="n">Resource</span><span class="o">();</span>
-<span class="ln"> 4</span>
-<span class="ln"> 5</span>    <span class="kd">public</span> <span class="kd">static</span> <span class="n">Resource</span> <span class="nf">getResource</span><span class="o">()</span> <span class="o">{</span>
-<span class="ln"> 6</span>        <span class="k">return</span> <span class="n">resource</span><span class="o">;</span>
-<span class="ln"> 7</span>    <span class="o">}</span>
-<span class="ln"> 8</span>
-<span class="ln"> 9</span>    <span class="kd">static</span> <span class="kd">class</span> <span class="nc">Resource</span> <span class="o">{</span>
-<span class="ln">10</span>    <span class="o">}</span>
-<span class="ln">11</span><span class="o">}</span>
-</code></pre></div><p>再Hack一点，弄个懒加载：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln"> 1</span><span class="nd">@ThreadSafe</span>
-<span class="ln"> 2</span><span class="kd">public</span> <span class="kd">class</span> <span class="nc">ResourceFactory</span> <span class="o">{</span>
-<span class="ln"> 3</span>    <span class="kd">private</span> <span class="kd">static</span> <span class="kd">class</span> <span class="nc">ResourceHolder</span> <span class="o">{</span>
-<span class="ln"> 4</span>        <span class="kd">public</span> <span class="kd">static</span> <span class="n">Resource</span> <span class="n">resource</span> <span class="o">=</span> <span class="k">new</span> <span class="n">Resource</span><span class="o">();</span>
-<span class="ln"> 5</span>    <span class="o">}</span>
-<span class="ln"> 6</span>
-<span class="ln"> 7</span>    <span class="kd">public</span> <span class="kd">static</span> <span class="n">Resource</span> <span class="nf">getResource</span><span class="o">()</span> <span class="o">{</span>
-<span class="ln"> 8</span>        <span class="k">return</span> <span class="n">ResourceFactory</span><span class="o">.</span><span class="na">ResourceHolder</span><span class="o">.</span><span class="na">resource</span><span class="o">;</span>
-<span class="ln"> 9</span>    <span class="o">}</span>
-<span class="ln">10</span>
-<span class="ln">11</span>    <span class="kd">static</span> <span class="kd">class</span> <span class="nc">Resource</span> <span class="o">{</span>
-<span class="ln">12</span>    <span class="o">}</span>
-<span class="ln">13</span><span class="o">}</span>
-</code></pre></div><h3 id="double-checked-locking">Double-checked locking<a class="anchor ms-1" href="#double-checked-locking"><i class="fas fa-link"></i></a></h3>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="nd">@ThreadSafe</span>
+<span class="kd">public</span> <span class="kd">class</span> <span class="nc">SafeLazyInitialization</span> <span class="o">{</span>
+    <span class="kd">private</span> <span class="kd">static</span> <span class="n">Resource</span> <span class="n">resource</span><span class="o">;</span>
+  
+    <span class="kd">public</span> <span class="kd">synchronized</span> <span class="kd">static</span> <span class="n">Resource</span> <span class="nf">getInstance</span><span class="o">()</span> <span class="o">{</span>
+        <span class="k">if</span> <span class="o">(</span><span class="n">resource</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span>
+            <span class="n">resource</span> <span class="o">=</span> <span class="k">new</span> <span class="n">Resource</span><span class="o">();</span>
+        <span class="k">return</span> <span class="n">resource</span><span class="o">;</span>
+    <span class="o">}</span>
+
+    <span class="kd">static</span> <span class="kd">class</span> <span class="nc">Resource</span> <span class="o">{</span>
+    <span class="o">}</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>也可以利用JVM初始化类时，初始化其静态变量串行话（使用了锁）的事实：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="nd">@ThreadSafe</span>
+<span class="kd">public</span> <span class="kd">class</span> <span class="nc">EagerInitialization</span> <span class="o">{</span>
+    <span class="kd">private</span> <span class="kd">static</span> <span class="n">Resource</span> <span class="n">resource</span> <span class="o">=</span> <span class="k">new</span> <span class="n">Resource</span><span class="o">();</span>
+
+    <span class="kd">public</span> <span class="kd">static</span> <span class="n">Resource</span> <span class="nf">getResource</span><span class="o">()</span> <span class="o">{</span>
+        <span class="k">return</span> <span class="n">resource</span><span class="o">;</span>
+    <span class="o">}</span>
+
+    <span class="kd">static</span> <span class="kd">class</span> <span class="nc">Resource</span> <span class="o">{</span>
+    <span class="o">}</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>再Hack一点，弄个懒加载：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="nd">@ThreadSafe</span>
+<span class="kd">public</span> <span class="kd">class</span> <span class="nc">ResourceFactory</span> <span class="o">{</span>
+    <span class="kd">private</span> <span class="kd">static</span> <span class="kd">class</span> <span class="nc">ResourceHolder</span> <span class="o">{</span>
+        <span class="kd">public</span> <span class="kd">static</span> <span class="n">Resource</span> <span class="n">resource</span> <span class="o">=</span> <span class="k">new</span> <span class="n">Resource</span><span class="o">();</span>
+    <span class="o">}</span>
+
+    <span class="kd">public</span> <span class="kd">static</span> <span class="n">Resource</span> <span class="nf">getResource</span><span class="o">()</span> <span class="o">{</span>
+        <span class="k">return</span> <span class="n">ResourceFactory</span><span class="o">.</span><span class="na">ResourceHolder</span><span class="o">.</span><span class="na">resource</span><span class="o">;</span>
+    <span class="o">}</span>
+
+    <span class="kd">static</span> <span class="kd">class</span> <span class="nc">Resource</span> <span class="o">{</span>
+    <span class="o">}</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><h3 id="double-checked-locking">Double-checked locking<a class="anchor ms-1" href="#double-checked-locking"><i class="fas fa-link"></i></a></h3>
 <p>下面这段代码就是臭名昭著的DCL：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln"> 1</span><span class="nd">@NotThreadSafe</span>
-<span class="ln"> 2</span><span class="kd">public</span> <span class="kd">class</span> <span class="nc">DoubleCheckedLocking</span> <span class="o">{</span>
-<span class="ln"> 3</span>    <span class="kd">private</span> <span class="kd">static</span> <span class="n">Resource</span> <span class="n">resource</span><span class="o">;</span>
-<span class="ln"> 4</span>
-<span class="ln"> 5</span>    <span class="kd">public</span> <span class="kd">static</span> <span class="n">Resource</span> <span class="nf">getInstance</span><span class="o">()</span> <span class="o">{</span>
-<span class="ln"> 6</span>        <span class="k">if</span> <span class="o">(</span><span class="n">resource</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>  <span class="c1">// 这行代码并未同步，因此会看到构造不完全的对象
-</span><span class="ln"> 7</span><span class="c1"></span>            <span class="kd">synchronized</span> <span class="o">(</span><span class="n">DoubleCheckedLocking</span><span class="o">.</span><span class="na">class</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 8</span>                <span class="k">if</span> <span class="o">(</span><span class="n">resource</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span>
-<span class="ln"> 9</span>                    <span class="n">resource</span> <span class="o">=</span> <span class="k">new</span> <span class="n">Resource</span><span class="o">();</span>
-<span class="ln">10</span>            <span class="o">}</span>
-<span class="ln">11</span>        <span class="o">}</span>
-<span class="ln">12</span>        <span class="k">return</span> <span class="n">resource</span><span class="o">;</span>
-<span class="ln">13</span>    <span class="o">}</span>
-<span class="ln">14</span>
-<span class="ln">15</span>    <span class="kd">static</span> <span class="kd">class</span> <span class="nc">Resource</span> <span class="o">{</span>
-<span class="ln">16</span>
-<span class="ln">17</span>    <span class="o">}</span>
-<span class="ln">18</span><span class="o">}</span>
-</code></pre></div><p>JDK 1.5之后，可以把resource变量变成<code>volatile</code>解决这个问题（因为有了Happens-before）</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="nd">@NotThreadSafe</span>
+<span class="kd">public</span> <span class="kd">class</span> <span class="nc">DoubleCheckedLocking</span> <span class="o">{</span>
+    <span class="kd">private</span> <span class="kd">static</span> <span class="n">Resource</span> <span class="n">resource</span><span class="o">;</span>
+
+    <span class="kd">public</span> <span class="kd">static</span> <span class="n">Resource</span> <span class="nf">getInstance</span><span class="o">()</span> <span class="o">{</span>
+        <span class="k">if</span> <span class="o">(</span><span class="n">resource</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>  <span class="c1">// 这行代码并未同步，因此会看到构造不完全的对象
+</span><span class="c1"></span>            <span class="kd">synchronized</span> <span class="o">(</span><span class="n">DoubleCheckedLocking</span><span class="o">.</span><span class="na">class</span><span class="o">)</span> <span class="o">{</span>
+                <span class="k">if</span> <span class="o">(</span><span class="n">resource</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span>
+                    <span class="n">resource</span> <span class="o">=</span> <span class="k">new</span> <span class="n">Resource</span><span class="o">();</span>
+            <span class="o">}</span>
+        <span class="o">}</span>
+        <span class="k">return</span> <span class="n">resource</span><span class="o">;</span>
+    <span class="o">}</span>
+
+    <span class="kd">static</span> <span class="kd">class</span> <span class="nc">Resource</span> <span class="o">{</span>
+
+    <span class="o">}</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>JDK 1.5之后，可以把resource变量变成<code>volatile</code>解决这个问题（因为有了Happens-before）</p>
 <h3 id="初始化安全">初始化安全<a class="anchor ms-1" href="#初始化安全"><i class="fas fa-link"></i></a></h3>
 <p>“初始化安全”的保证，允许正确构建的不可变对象，安全的在线程间共享，而不需要同步，且不用考虑这个对象是如何发布的。也就是说如果上面代码<code>Resource</code>是不可变的，那就没有DCL的问题。</p>
 <p>对于对象的final属性，初始化安全机制禁止对任何构造函数的代码和初始加载该对象引用做重排序。例外：</p>
@@ -460,23 +662,45 @@
 <li>这个保证只针对于可以通过final属性得到的值有效，可认为具有传递性</li>
 </ul>
 <p>下面代码是安全发布的，可以看到<code>SafeStates</code>是不可变的，<code>states</code>也只不过是<code>HashMap</code>，但<code>SafeStates</code>依然能够以和前面的<code>Resource</code>一样的形式安全发布：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln"> 1</span><span class="nd">@ThreadSafe</span>
-<span class="ln"> 2</span><span class="kd">public</span> <span class="kd">class</span> <span class="nc">SafeStates</span> <span class="o">{</span>
-<span class="ln"> 3</span>    <span class="kd">private</span> <span class="kd">final</span> <span class="n">Map</span><span class="o">&lt;</span><span class="n">String</span><span class="o">,</span> <span class="n">String</span><span class="o">&gt;</span> <span class="n">states</span><span class="o">;</span>
-<span class="ln"> 4</span>
-<span class="ln"> 5</span>    <span class="kd">public</span> <span class="nf">SafeStates</span><span class="o">()</span> <span class="o">{</span>
-<span class="ln"> 6</span>        <span class="n">states</span> <span class="o">=</span> <span class="k">new</span> <span class="n">HashMap</span><span class="o">&lt;</span><span class="n">String</span><span class="o">,</span> <span class="n">String</span><span class="o">&gt;();</span>
-<span class="ln"> 7</span>        <span class="n">states</span><span class="o">.</span><span class="na">put</span><span class="o">(</span><span class="s">&#34;alaska&#34;</span><span class="o">,</span> <span class="s">&#34;AK&#34;</span><span class="o">);</span>
-<span class="ln"> 8</span>        <span class="n">states</span><span class="o">.</span><span class="na">put</span><span class="o">(</span><span class="s">&#34;alabama&#34;</span><span class="o">,</span> <span class="s">&#34;AL&#34;</span><span class="o">);</span>
-<span class="ln"> 9</span>        <span class="cm">/*...*/</span>
-<span class="ln">10</span>        <span class="n">states</span><span class="o">.</span><span class="na">put</span><span class="o">(</span><span class="s">&#34;wyoming&#34;</span><span class="o">,</span> <span class="s">&#34;WY&#34;</span><span class="o">);</span>
-<span class="ln">11</span>    <span class="o">}</span>
-<span class="ln">12</span>
-<span class="ln">13</span>    <span class="kd">public</span> <span class="n">String</span> <span class="nf">getAbbreviation</span><span class="o">(</span><span class="n">String</span> <span class="n">s</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">14</span>        <span class="k">return</span> <span class="n">states</span><span class="o">.</span><span class="na">get</span><span class="o">(</span><span class="n">s</span><span class="o">);</span>
-<span class="ln">15</span>    <span class="o">}</span>
-<span class="ln">16</span><span class="o">}</span>
-</code></pre></div></div></div>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="nd">@ThreadSafe</span>
+<span class="kd">public</span> <span class="kd">class</span> <span class="nc">SafeStates</span> <span class="o">{</span>
+    <span class="kd">private</span> <span class="kd">final</span> <span class="n">Map</span><span class="o">&lt;</span><span class="n">String</span><span class="o">,</span> <span class="n">String</span><span class="o">&gt;</span> <span class="n">states</span><span class="o">;</span>
+
+    <span class="kd">public</span> <span class="nf">SafeStates</span><span class="o">()</span> <span class="o">{</span>
+        <span class="n">states</span> <span class="o">=</span> <span class="k">new</span> <span class="n">HashMap</span><span class="o">&lt;</span><span class="n">String</span><span class="o">,</span> <span class="n">String</span><span class="o">&gt;();</span>
+        <span class="n">states</span><span class="o">.</span><span class="na">put</span><span class="o">(</span><span class="s">&#34;alaska&#34;</span><span class="o">,</span> <span class="s">&#34;AK&#34;</span><span class="o">);</span>
+        <span class="n">states</span><span class="o">.</span><span class="na">put</span><span class="o">(</span><span class="s">&#34;alabama&#34;</span><span class="o">,</span> <span class="s">&#34;AL&#34;</span><span class="o">);</span>
+        <span class="cm">/*...*/</span>
+        <span class="n">states</span><span class="o">.</span><span class="na">put</span><span class="o">(</span><span class="s">&#34;wyoming&#34;</span><span class="o">,</span> <span class="s">&#34;WY&#34;</span><span class="o">);</span>
+    <span class="o">}</span>
+
+    <span class="kd">public</span> <span class="n">String</span> <span class="nf">getAbbreviation</span><span class="o">(</span><span class="n">String</span> <span class="n">s</span><span class="o">)</span> <span class="o">{</span>
+        <span class="k">return</span> <span class="n">states</span><span class="o">.</span><span class="na">get</span><span class="o">(</span><span class="n">s</span><span class="o">);</span>
+    <span class="o">}</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div></div></div>
   <div class="card-footer"><div class="post-navs d-flex justify-content-evenly">
   <div class="post-nav post-prev"><i class="fas fa-fw fa-chevron-left"></i>
     <a href="/post/concurrent-programming/atomic-vars-and-nonblocking-synchronization/">Atomic Variables and Nonblocking Synchronization

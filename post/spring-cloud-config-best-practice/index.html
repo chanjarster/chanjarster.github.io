@@ -12,7 +12,7 @@
 <meta name="description" content="大多数Spring Cloud项目都会使用Spring Cloud Config来管理应用启动时的配置文件，同时开发人员面临着多样化的程序启动方式：操作系统进程启动、docker启动、k8s启动。那么如何规划这些配置文件以适应多种启动方式呢？本文尝试给出一些建议" /><meta itemprop="name" content="Spring Cloud Config配置文件最佳实践">
 <meta itemprop="description" content="大多数Spring Cloud项目都会使用Spring Cloud Config来管理应用启动时的配置文件，同时开发人员面临着多样化的程序启动方式：操作系统进程启动、docker启动、k8s启动。那么如何规划这些配置文件以适应多种启动方式呢？本文尝试给出一些建议"><meta itemprop="datePublished" content="2018-09-10T19:51:11+08:00" />
 <meta itemprop="dateModified" content="2018-09-10T19:51:11+08:00" />
-<meta itemprop="wordCount" content="1435">
+<meta itemprop="wordCount" content="1400">
 <meta itemprop="keywords" content="微服务,Spring Cloud,k8s," /><meta property="og:title" content="Spring Cloud Config配置文件最佳实践" />
 <meta property="og:description" content="大多数Spring Cloud项目都会使用Spring Cloud Config来管理应用启动时的配置文件，同时开发人员面临着多样化的程序启动方式：操作系统进程启动、docker启动、k8s启动。那么如何规划这些配置文件以适应多种启动方式呢？本文尝试给出一些建议" />
 <meta property="og:type" content="article" />
@@ -236,20 +236,38 @@
 <p>这句话对应<a href="https://12factor.net/config" target="_blank" rel="noopener noreferrer">The 12-factor App的Config章节</a>
 。具体做法是在配置文件里使用<a href="https://docs.spring.io/spring-boot/docs/current/reference/htmlsingle/#boot-features-external-config-placeholders-in-properties" target="_blank" rel="noopener noreferrer">placeholder</a>
 。下面是两种方式：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="ln">1</span>app.name=${APP_NAME}
-<span class="ln">2</span>app.description=${APP_DESC:Default description}
-</code></pre></div><p>第一种方式Spring Boot/Cloud应用在启动时，会根据<a href="https://docs.spring.io/spring-boot/docs/current/reference/htmlsingle/#boot-features-external-config" target="_blank" rel="noopener noreferrer">这个顺序</a>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback">app.name=${APP_NAME}
+app.description=${APP_DESC:Default description}
+</code></pre></td></tr></table>
+</div>
+</div><p>第一种方式Spring Boot/Cloud应用在启动时，会根据<a href="https://docs.spring.io/spring-boot/docs/current/reference/htmlsingle/#boot-features-external-config" target="_blank" rel="noopener noreferrer">这个顺序</a>
 找<code>APP_NAME</code>的值，如果找不到程序启动会报错。</p>
 <p>第二种方式和第一种方式的不同在于如果找不到，则使用<code>application.properties</code>里定义的默认值。</p>
 <p>而程序在启动时应该通过环境变量的方式将这些值传递进去。</p>
 <p>在真实应用中应该尽量多的使用第二种方式，只有少数的配置才是程序启动时必须提供的，一般来说都是一些数据库连接字符串、用户名密码等信息。</p>
 <h3 id="spring-cloud应用关于config-server的配置要放在bootstrapproperties里并且要做环境变量化">Spring Cloud应用关于Config Server的配置要放在bootstrap.properties里，并且要做环境变量化<a class="anchor ms-1" href="#spring-cloud应用关于config-server的配置要放在bootstrapproperties里并且要做环境变量化"><i class="fas fa-link"></i></a></h3>
 <p>比如这样：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="ln">1</span>spring.cloud.config.enabled=${CONFIG_ENABLED:true}
-<span class="ln">2</span>spring.cloud.config.profile=${CONFIG_PROFILE:production}
-<span class="ln">3</span>spring.cloud.config.label=${CONFIG_LABEL:master}
-<span class="ln">4</span>spring.cloud.config.uri=${CONFIG_SERVER_URL:http://config-server:8080/}
-</code></pre></div><p>上面这个配置可以控制是否连接config server，因为在开发环境下我们可能并不需要config server。也提供了可以config server启动程序的可能。
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback">spring.cloud.config.enabled=${CONFIG_ENABLED:true}
+spring.cloud.config.profile=${CONFIG_PROFILE:production}
+spring.cloud.config.label=${CONFIG_LABEL:master}
+spring.cloud.config.uri=${CONFIG_SERVER_URL:http://config-server:8080/}
+</code></pre></td></tr></table>
+</div>
+</div><p>上面这个配置可以控制是否连接config server，因为在开发环境下我们可能并不需要config server。也提供了可以config server启动程序的可能。
 同时也控制了如果连接config server，应该使用哪个<code>application.properties</code>。</p>
 <p>需要注意的是，如果我们选择程序启动的时候连接config server，那么在程序启动时提供的环境变量就只能是和config server相关的环境变量（在这个例子里就是上面的<code>CONFIG_*</code>），这些配置用来控制如何获得<code>application.properties</code>。</p>
 <p>因为此时程序所使用的配置都来自于config server，如果config server提供一些，环境变量又提供一些则会造成运维上的混乱。</p>
@@ -257,44 +275,94 @@
 <p>下面讲讲各种启动方式如何传递环境变量。</p>
 <h3 id="以操作系统进程启动">以操作系统进程启动<a class="anchor ms-1" href="#以操作系统进程启动"><i class="fas fa-link"></i></a></h3>
 <p>直接以操作系统进程启动的方法是类似于这样的：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="ln">1</span>APP_NAME=my-app APP_DESC=&#34;My App Desc&#34; java -jar spring-cloud-app.jar
-</code></pre></div><h3 id="用docker启动">用Docker启动<a class="anchor ms-1" href="#用docker启动"><i class="fas fa-link"></i></a></h3>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback">APP_NAME=my-app APP_DESC=&#34;My App Desc&#34; java -jar spring-cloud-app.jar
+</code></pre></td></tr></table>
+</div>
+</div><h3 id="用docker启动">用Docker启动<a class="anchor ms-1" href="#用docker启动"><i class="fas fa-link"></i></a></h3>
 <p>用docker启动则是这样的，参见<a href="https://docs.docker.com/engine/reference/run/#env-environment-variables" target="_blank" rel="noopener noreferrer">Docker ENV (environment variables)</a>
 ：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="ln">1</span>docker run --name my-app -e APP_NAME=my-app -e APP_DESC=&#34;My App Desc&#34; spring-cloud-app:latest
-</code></pre></div><h3 id="在k8s里启动">在K8S里启动<a class="anchor ms-1" href="#在k8s里启动"><i class="fas fa-link"></i></a></h3>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback">docker run --name my-app -e APP_NAME=my-app -e APP_DESC=&#34;My App Desc&#34; spring-cloud-app:latest
+</code></pre></td></tr></table>
+</div>
+</div><h3 id="在k8s里启动">在K8S里启动<a class="anchor ms-1" href="#在k8s里启动"><i class="fas fa-link"></i></a></h3>
 <p>定义ConfigMap或Secret（用在密码类配置上），然后在Deployment spec里使用<code>configMapRef</code>或者<code>secretRef</code>或者<code>configMapKeyRef </code>或者<code>secretKeyRef</code>，比如下面的例子：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-yaml" data-lang="yaml"><span class="ln"> 1</span><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l">apps/v1</span><span class="w">
-</span><span class="ln"> 2</span><span class="w"></span><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l">Deployment</span><span class="w">
-</span><span class="ln"> 3</span><span class="w"></span><span class="nt">metadata</span><span class="p">:</span><span class="w">
-</span><span class="ln"> 4</span><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">my-app</span><span class="w">
-</span><span class="ln"> 5</span><span class="w">  </span><span class="nt">namespace</span><span class="p">:</span><span class="w"> </span><span class="l">&lt;namespace&gt;</span><span class="w">
-</span><span class="ln"> 6</span><span class="w"></span><span class="nt">spec</span><span class="p">:</span><span class="w">
-</span><span class="ln"> 7</span><span class="w">  </span><span class="l">...</span><span class="w">
-</span><span class="ln"> 8</span><span class="w">  </span><span class="nt">template</span><span class="p">:</span><span class="w">
-</span><span class="ln"> 9</span><span class="w">    </span><span class="l">...</span><span class="w">
-</span><span class="ln">10</span><span class="w">    </span><span class="nt">spec</span><span class="p">:</span><span class="w">
-</span><span class="ln">11</span><span class="w">      </span><span class="nt">containers</span><span class="p">:</span><span class="w">
-</span><span class="ln">12</span><span class="w">      </span>- <span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">my-app</span><span class="w">
-</span><span class="ln">13</span><span class="w">        </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l">&lt;image repository&gt;</span><span class="w">
-</span><span class="ln">14</span><span class="w">        </span><span class="l">...</span><span class="w">
-</span><span class="ln">15</span><span class="w">        </span><span class="nt">envFrom</span><span class="p">:</span><span class="w">
-</span><span class="ln">16</span><span class="w">        </span>- <span class="nt">configMapRef</span><span class="p">:</span><span class="w">
-</span><span class="ln">17</span><span class="w">            </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">my-app-config</span><span class="w">
-</span><span class="ln">18</span><span class="w">        </span>- <span class="nt">secretRef</span><span class="p">:</span><span class="w">
-</span><span class="ln">19</span><span class="w">            </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">my-app-secret</span><span class="w">
-</span><span class="ln">20</span><span class="w">        </span><span class="nt">env</span><span class="p">:</span><span class="w">
-</span><span class="ln">21</span><span class="w">        </span>- <span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">APP_NAME</span><span class="w">
-</span><span class="ln">22</span><span class="w">          </span><span class="nt">valueFrom</span><span class="p">:</span><span class="w">
-</span><span class="ln">23</span><span class="w">            </span><span class="nt">configMapKeyRef</span><span class="p">:</span><span class="w">
-</span><span class="ln">24</span><span class="w">              </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">my-app-config</span><span class="w">
-</span><span class="ln">25</span><span class="w">              </span><span class="nt">key</span><span class="p">:</span><span class="w"> </span><span class="l">APP_NAME</span><span class="w">
-</span><span class="ln">26</span><span class="w">        </span>- <span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">APP_DESC</span><span class="w">
-</span><span class="ln">27</span><span class="w">          </span><span class="nt">valueFrom</span><span class="p">:</span><span class="w">
-</span><span class="ln">28</span><span class="w">            </span><span class="nt">secretKeyRef</span><span class="p">:</span><span class="w">
-</span><span class="ln">29</span><span class="w">              </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">my-app-secret</span><span class="w">
-</span><span class="ln">30</span><span class="w">              </span><span class="nt">key</span><span class="p">:</span><span class="w"> </span><span class="l">APP_DESC</span><span class="w">
-</span></code></pre></div><p>详见<a href="https://kubernetes.io/docs/tasks/configure-pod-container/configure-pod-configmap/" target="_blank" rel="noopener noreferrer">Configure a Pod to Use a ConfigMap</a>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-yaml" data-lang="yaml"><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l">apps/v1</span><span class="w">
+</span><span class="w"></span><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l">Deployment</span><span class="w">
+</span><span class="w"></span><span class="nt">metadata</span><span class="p">:</span><span class="w">
+</span><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">my-app</span><span class="w">
+</span><span class="w">  </span><span class="nt">namespace</span><span class="p">:</span><span class="w"> </span><span class="l">&lt;namespace&gt;</span><span class="w">
+</span><span class="w"></span><span class="nt">spec</span><span class="p">:</span><span class="w">
+</span><span class="w">  </span><span class="l">...</span><span class="w">
+</span><span class="w">  </span><span class="nt">template</span><span class="p">:</span><span class="w">
+</span><span class="w">    </span><span class="l">...</span><span class="w">
+</span><span class="w">    </span><span class="nt">spec</span><span class="p">:</span><span class="w">
+</span><span class="w">      </span><span class="nt">containers</span><span class="p">:</span><span class="w">
+</span><span class="w">      </span>- <span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">my-app</span><span class="w">
+</span><span class="w">        </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l">&lt;image repository&gt;</span><span class="w">
+</span><span class="w">        </span><span class="l">...</span><span class="w">
+</span><span class="w">        </span><span class="nt">envFrom</span><span class="p">:</span><span class="w">
+</span><span class="w">        </span>- <span class="nt">configMapRef</span><span class="p">:</span><span class="w">
+</span><span class="w">            </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">my-app-config</span><span class="w">
+</span><span class="w">        </span>- <span class="nt">secretRef</span><span class="p">:</span><span class="w">
+</span><span class="w">            </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">my-app-secret</span><span class="w">
+</span><span class="w">        </span><span class="nt">env</span><span class="p">:</span><span class="w">
+</span><span class="w">        </span>- <span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">APP_NAME</span><span class="w">
+</span><span class="w">          </span><span class="nt">valueFrom</span><span class="p">:</span><span class="w">
+</span><span class="w">            </span><span class="nt">configMapKeyRef</span><span class="p">:</span><span class="w">
+</span><span class="w">              </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">my-app-config</span><span class="w">
+</span><span class="w">              </span><span class="nt">key</span><span class="p">:</span><span class="w"> </span><span class="l">APP_NAME</span><span class="w">
+</span><span class="w">        </span>- <span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">APP_DESC</span><span class="w">
+</span><span class="w">          </span><span class="nt">valueFrom</span><span class="p">:</span><span class="w">
+</span><span class="w">            </span><span class="nt">secretKeyRef</span><span class="p">:</span><span class="w">
+</span><span class="w">              </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">my-app-secret</span><span class="w">
+</span><span class="w">              </span><span class="nt">key</span><span class="p">:</span><span class="w"> </span><span class="l">APP_DESC</span><span class="w">
+</span></code></pre></td></tr></table>
+</div>
+</div><p>详见<a href="https://kubernetes.io/docs/tasks/configure-pod-container/configure-pod-configmap/" target="_blank" rel="noopener noreferrer">Configure a Pod to Use a ConfigMap</a>
 、<a href="https://kubernetes.io/docs/concepts/configuration/secret/#using-secrets-as-files-from-a-pod" target="_blank" rel="noopener noreferrer">Secrets</a>
 和<a href="https://dchua.com/2017/04/21/load-env-variables-from-configmaps-and-secrets-upon-pod-boot/" target="_blank" rel="noopener noreferrer">Load env variables from ConfigMaps and Secrets upon Pod boot</a>
 。</p></div></div>

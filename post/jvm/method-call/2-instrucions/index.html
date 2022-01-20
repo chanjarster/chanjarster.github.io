@@ -12,7 +12,7 @@
 <meta name="description" content="" /><meta itemprop="name" content="JVM执行方法调用（二）- 指令">
 <meta itemprop="description" content=""><meta itemprop="datePublished" content="2020-05-11T21:10:52+08:00" />
 <meta itemprop="dateModified" content="2020-05-11T21:10:52+08:00" />
-<meta itemprop="wordCount" content="995">
+<meta itemprop="wordCount" content="1021">
 <meta itemprop="keywords" content="JVM," /><meta property="og:title" content="JVM执行方法调用（二）- 指令" />
 <meta property="og:description" content="" />
 <meta property="og:type" content="article" />
@@ -218,7 +218,7 @@
   <span class="post-date" title="创建于 2020-05-11 21:10:52 &#43;0800 CST。">
     2020-05-11
   </span><span class="post-reading-time">
-    2 分钟阅读
+    3 分钟阅读
   </span><span class="post-taxonomies"><a href="/tags/jvm/" class="badge post-taxonomy">jvm</a></span>
 </div>
 <div class="post-content mb-3"><p>JVM Spec中关于方法调用的指令有：</p>
@@ -230,168 +230,345 @@
 <li>invokevirtual，用于调用对象的实例方法，根据对象的实际类型进行分派</li>
 </ul>
 <p>例子代码：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln"> 1</span><span class="kn">import</span> <span class="nn">java.lang.invoke.MethodHandle</span><span class="o">;</span>
-<span class="ln"> 2</span><span class="kn">import</span> <span class="nn">java.lang.invoke.MethodHandles</span><span class="o">;</span>
-<span class="ln"> 3</span><span class="kn">import</span> <span class="nn">java.lang.invoke.MethodType</span><span class="o">;</span>
-<span class="ln"> 4</span><span class="kn">import</span> <span class="nn">java.util.Arrays</span><span class="o">;</span>
-<span class="ln"> 5</span><span class="kn">import</span> <span class="nn">java.util.List</span><span class="o">;</span>
-<span class="ln"> 6</span>
-<span class="ln"> 7</span><span class="kd">public</span> <span class="kd">class</span> <span class="nc">JVMMethodInstruction</span> <span class="kd">implements</span> <span class="n">Runnable</span> <span class="o">{</span>
-<span class="ln"> 8</span>
-<span class="ln"> 9</span>    <span class="kd">static</span> <span class="o">{</span>
-<span class="ln">10</span>        <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">&#34;&lt;clinit&gt;&#34;</span><span class="o">);</span>
-<span class="ln">11</span>    <span class="o">}</span>
-<span class="ln">12</span>
-<span class="ln">13</span>    <span class="o">{</span>
-<span class="ln">14</span>        <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">&#34;&lt;init block&gt;&#34;</span><span class="o">);</span>
-<span class="ln">15</span>    <span class="o">}</span>
-<span class="ln">16</span>
-<span class="ln">17</span>    <span class="kd">public</span> <span class="nf">JVMMethodInstruction</span><span class="o">()</span> <span class="o">{}</span>
-<span class="ln">18</span>    <span class="kd">static</span> <span class="kt">void</span> <span class="nf">staticMethod</span><span class="o">()</span> <span class="o">{}</span>
-<span class="ln">19</span>    <span class="kd">static</span> <span class="kt">void</span> <span class="nf">staticForMethodHandle</span><span class="o">(</span><span class="n">String</span> <span class="n">str</span><span class="o">)</span> <span class="o">{}</span>
-<span class="ln">20</span>    <span class="kd">private</span> <span class="kt">void</span> <span class="nf">privateMethod</span><span class="o">()</span> <span class="o">{}</span>
-<span class="ln">21</span>    <span class="kt">void</span> <span class="nf">instanceMethod</span><span class="o">()</span> <span class="o">{}</span>
-<span class="ln">22</span>    <span class="kd">public</span> <span class="kt">void</span> <span class="nf">forMethodHandle</span><span class="o">(</span><span class="n">String</span> <span class="n">str</span><span class="o">)</span> <span class="o">{}</span>
-<span class="ln">23</span>
-<span class="ln">24</span>    <span class="nd">@Override</span>
-<span class="ln">25</span>    <span class="kd">public</span> <span class="kt">void</span> <span class="nf">run</span><span class="o">()</span> <span class="o">{}</span>
-<span class="ln">26</span>
-<span class="ln">27</span>    <span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">main</span><span class="o">(</span><span class="n">String</span><span class="o">[]</span> <span class="n">args</span><span class="o">)</span> <span class="kd">throws</span> <span class="n">Throwable</span> <span class="o">{</span>
-<span class="ln">28</span>        <span class="cm">/**
-</span><span class="ln">29</span><span class="cm">         * invoke special
-</span><span class="ln">30</span><span class="cm">         */</span>
-<span class="ln">31</span>        <span class="n">JVMMethodInstruction</span> <span class="n">test</span> <span class="o">=</span> <span class="k">new</span> <span class="n">JVMMethodInstruction</span><span class="o">();</span>
-<span class="ln">32</span>        <span class="cm">/**
-</span><span class="ln">33</span><span class="cm">         * invoke special
-</span><span class="ln">34</span><span class="cm">         */</span>
-<span class="ln">35</span>        <span class="n">test</span><span class="o">.</span><span class="na">privateMethod</span><span class="o">();</span>
-<span class="ln">36</span>        <span class="cm">/**
-</span><span class="ln">37</span><span class="cm">         * invoke virtual
-</span><span class="ln">38</span><span class="cm">         */</span>
-<span class="ln">39</span>        <span class="n">test</span><span class="o">.</span><span class="na">instanceMethod</span><span class="o">();</span>
-<span class="ln">40</span>        <span class="cm">/**
-</span><span class="ln">41</span><span class="cm">         * invoke static
-</span><span class="ln">42</span><span class="cm">         */</span>
-<span class="ln">43</span>        <span class="n">staticMethod</span><span class="o">();</span>
-<span class="ln">44</span>        <span class="cm">/**
-</span><span class="ln">45</span><span class="cm">         * invoke interface
-</span><span class="ln">46</span><span class="cm">         */</span>
-<span class="ln">47</span>        <span class="n">Runnable</span> <span class="n">r</span> <span class="o">=</span> <span class="n">test</span><span class="o">;</span>
-<span class="ln">48</span>        <span class="n">r</span><span class="o">.</span><span class="na">run</span><span class="o">();</span>
-<span class="ln">49</span>        <span class="cm">/**
-</span><span class="ln">50</span><span class="cm">         * invoke dynamic instance method
-</span><span class="ln">51</span><span class="cm">         */</span>
-<span class="ln">52</span>        <span class="n">MethodHandles</span><span class="o">.</span><span class="na">Lookup</span> <span class="n">lookup</span> <span class="o">=</span> <span class="n">MethodHandles</span><span class="o">.</span><span class="na">lookup</span><span class="o">();</span>
-<span class="ln">53</span>        <span class="n">MethodHandle</span> <span class="n">mh</span> <span class="o">=</span> <span class="n">lookup</span>
-<span class="ln">54</span>            <span class="o">.</span><span class="na">findVirtual</span><span class="o">(</span><span class="n">JVMMethodInstruction</span><span class="o">.</span><span class="na">class</span><span class="o">,</span> <span class="s">&#34;forMethodHandle&#34;</span><span class="o">,</span>
-<span class="ln">55</span>                <span class="n">MethodType</span><span class="o">.</span><span class="na">methodType</span><span class="o">(</span><span class="kt">void</span><span class="o">.</span><span class="na">class</span><span class="o">,</span> <span class="n">String</span><span class="o">.</span><span class="na">class</span><span class="o">));</span>
-<span class="ln">56</span>        <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="n">mh</span><span class="o">);</span>
-<span class="ln">57</span>        <span class="n">mh</span><span class="o">.</span><span class="na">bindTo</span><span class="o">(</span><span class="n">test</span><span class="o">).</span><span class="na">invoke</span><span class="o">(</span><span class="s">&#34;a&#34;</span><span class="o">);</span>
-<span class="ln">58</span>        <span class="cm">/**
-</span><span class="ln">59</span><span class="cm">         * invoke dynamic static method
-</span><span class="ln">60</span><span class="cm">         */</span>
-<span class="ln">61</span>        <span class="n">mh</span> <span class="o">=</span> <span class="n">lookup</span><span class="o">.</span><span class="na">findStatic</span><span class="o">(</span><span class="n">JVMMethodInstruction</span><span class="o">.</span><span class="na">class</span><span class="o">,</span> <span class="s">&#34;staticForMethodHandle&#34;</span><span class="o">,</span>
-<span class="ln">62</span>            <span class="n">MethodType</span><span class="o">.</span><span class="na">methodType</span><span class="o">(</span><span class="kt">void</span><span class="o">.</span><span class="na">class</span><span class="o">,</span> <span class="n">String</span><span class="o">.</span><span class="na">class</span><span class="o">));</span>
-<span class="ln">63</span>        <span class="n">mh</span><span class="o">.</span><span class="na">invoke</span><span class="o">(</span><span class="s">&#34;static&#34;</span><span class="o">);</span>
-<span class="ln">64</span>        <span class="cm">/**
-</span><span class="ln">65</span><span class="cm">         * Java 8中，lambda表达式和默认方法时，底层会生成和使用invoke dynamic
-</span><span class="ln">66</span><span class="cm">         * invoke dynamic
-</span><span class="ln">67</span><span class="cm">         */</span>
-<span class="ln">68</span>        <span class="n">List</span><span class="o">&lt;</span><span class="n">Integer</span><span class="o">&gt;</span> <span class="n">list</span> <span class="o">=</span> <span class="n">Arrays</span><span class="o">.</span><span class="na">asList</span><span class="o">(</span><span class="n">1</span><span class="o">,</span> <span class="n">2</span><span class="o">,</span> <span class="n">3</span><span class="o">,</span> <span class="n">4</span><span class="o">);</span>
-<span class="ln">69</span>        <span class="n">list</span><span class="o">.</span><span class="na">stream</span><span class="o">().</span><span class="na">forEach</span><span class="o">(</span><span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">::</span><span class="n">println</span><span class="o">);</span>
-<span class="ln">70</span>
-<span class="ln">71</span>    <span class="o">}</span>
-<span class="ln">72</span><span class="o">}</span>
-</code></pre></div><p>编译然后反编译：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>javac JVMMethodInstruction.java
-<span class="ln">2</span>javap -c JVMMethodInstruction
-</code></pre></div><p>得到反编译结果：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln"> 1</span>  <span class="kd">public</span> <span class="nf">JVMMethodInstruction</span><span class="o">();</span>
-<span class="ln"> 2</span>    <span class="n">Code</span><span class="o">:</span>
-<span class="ln"> 3</span>       <span class="n">0</span><span class="o">:</span> <span class="n">aload_0</span>
-<span class="ln"> 4</span>       <span class="n">1</span><span class="o">:</span> <span class="n">invokespecial</span> <span class="err">#</span><span class="n">1</span>                  <span class="c1">// Method java/lang/Object.&#34;&lt;init&gt;&#34;:()V
-</span><span class="ln"> 5</span><span class="c1"></span>       <span class="n">4</span><span class="o">:</span> <span class="n">getstatic</span>     <span class="err">#</span><span class="n">2</span>                  <span class="c1">// Field java/lang/System.out:Ljava/io/PrintStream;
-</span><span class="ln"> 6</span><span class="c1"></span>       <span class="n">7</span><span class="o">:</span> <span class="n">ldc</span>           <span class="err">#</span><span class="n">3</span>                  <span class="c1">// String &lt;init block&gt;
-</span><span class="ln"> 7</span><span class="c1"></span>       <span class="n">9</span><span class="o">:</span> <span class="n">invokevirtual</span> <span class="err">#</span><span class="n">4</span>                  <span class="c1">// Method java/io/PrintStream.println:(Ljava/lang/String;)V
-</span><span class="ln"> 8</span><span class="c1"></span>      <span class="n">12</span><span class="o">:</span> <span class="k">return</span>
-<span class="ln"> 9</span>  <span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">main</span><span class="o">(</span><span class="n">java</span><span class="o">.</span><span class="na">lang</span><span class="o">.</span><span class="na">String</span><span class="o">[])</span> <span class="kd">throws</span> <span class="n">java</span><span class="o">.</span><span class="na">lang</span><span class="o">.</span><span class="na">Throwable</span><span class="o">;</span>
-<span class="ln">10</span>    <span class="n">Code</span><span class="o">:</span>
-<span class="ln">11</span>       <span class="n">0</span><span class="o">:</span> <span class="k">new</span>           <span class="err">#</span><span class="n">5</span>                  <span class="c1">// class JVMMethodInstruction
-</span><span class="ln">12</span><span class="c1"></span>       <span class="n">3</span><span class="o">:</span> <span class="n">dup</span>
-<span class="ln">13</span>       <span class="n">4</span><span class="o">:</span> <span class="n">invokespecial</span> <span class="err">#</span><span class="n">6</span>                  <span class="c1">// Method &#34;&lt;init&gt;&#34;:()V
-</span><span class="ln">14</span><span class="c1"></span>       <span class="n">7</span><span class="o">:</span> <span class="n">astore_1</span>
-<span class="ln">15</span>       <span class="n">8</span><span class="o">:</span> <span class="n">aload_1</span>
-<span class="ln">16</span>       <span class="n">9</span><span class="o">:</span> <span class="n">invokespecial</span> <span class="err">#</span><span class="n">7</span>                  <span class="c1">// Method privateMethod:()V
-</span><span class="ln">17</span><span class="c1"></span>      <span class="n">12</span><span class="o">:</span> <span class="n">aload_1</span>
-<span class="ln">18</span>      <span class="n">13</span><span class="o">:</span> <span class="n">invokevirtual</span> <span class="err">#</span><span class="n">8</span>                  <span class="c1">// Method instanceMethod:()V
-</span><span class="ln">19</span><span class="c1"></span>      <span class="n">16</span><span class="o">:</span> <span class="n">invokestatic</span>  <span class="err">#</span><span class="n">9</span>                  <span class="c1">// Method staticMethod:()V
-</span><span class="ln">20</span><span class="c1"></span>      <span class="n">19</span><span class="o">:</span> <span class="n">aload_1</span>
-<span class="ln">21</span>      <span class="n">20</span><span class="o">:</span> <span class="n">astore_2</span>
-<span class="ln">22</span>      <span class="n">21</span><span class="o">:</span> <span class="n">aload_2</span>
-<span class="ln">23</span>      <span class="n">22</span><span class="o">:</span> <span class="n">invokeinterface</span> <span class="err">#</span><span class="n">10</span><span class="o">,</span>  <span class="n">1</span>           <span class="c1">// InterfaceMethod java/lang/Runnable.run:()V
-</span><span class="ln">24</span><span class="c1"></span>      <span class="n">27</span><span class="o">:</span> <span class="n">invokestatic</span>  <span class="err">#</span><span class="n">11</span>                 <span class="c1">// Method java/lang/invoke/MethodHandles.lookup:()Ljava/lang/invoke/MethodHandles$Lookup;
-</span><span class="ln">25</span><span class="c1"></span>      <span class="n">30</span><span class="o">:</span> <span class="n">astore_3</span>
-<span class="ln">26</span>      <span class="n">31</span><span class="o">:</span> <span class="n">aload_3</span>
-<span class="ln">27</span>      <span class="n">32</span><span class="o">:</span> <span class="n">ldc</span>           <span class="err">#</span><span class="n">5</span>                  <span class="c1">// class JVMMethodInstruction
-</span><span class="ln">28</span><span class="c1"></span>      <span class="n">34</span><span class="o">:</span> <span class="n">ldc</span>           <span class="err">#</span><span class="n">12</span>                 <span class="c1">// String forMethodHandle
-</span><span class="ln">29</span><span class="c1"></span>      <span class="n">36</span><span class="o">:</span> <span class="n">getstatic</span>     <span class="err">#</span><span class="n">13</span>                 <span class="c1">// Field java/lang/Void.TYPE:Ljava/lang/Class;
-</span><span class="ln">30</span><span class="c1"></span>      <span class="n">39</span><span class="o">:</span> <span class="n">ldc</span>           <span class="err">#</span><span class="n">14</span>                 <span class="c1">// class java/lang/String
-</span><span class="ln">31</span><span class="c1"></span>      <span class="n">41</span><span class="o">:</span> <span class="n">invokestatic</span>  <span class="err">#</span><span class="n">15</span>                 <span class="c1">// Method java/lang/invoke/MethodType.methodType:(Ljava/lang/Class;Ljava/lang/Class;)Ljava/lang/invoke/MethodType;
-</span><span class="ln">32</span><span class="c1"></span>      <span class="n">44</span><span class="o">:</span> <span class="n">invokevirtual</span> <span class="err">#</span><span class="n">16</span>                 <span class="c1">// Method java/lang/invoke/MethodHandles$Lookup.findVirtual:(Ljava/lang/Class;Ljava/lang/String;Ljava/lang/invoke/MethodType;)Ljava/lang/invoke/MethodHandle;
-</span><span class="ln">33</span><span class="c1"></span>      <span class="n">47</span><span class="o">:</span> <span class="n">astore</span>        <span class="n">4</span>
-<span class="ln">34</span>      <span class="n">49</span><span class="o">:</span> <span class="n">getstatic</span>     <span class="err">#</span><span class="n">2</span>                  <span class="c1">// Field java/lang/System.out:Ljava/io/PrintStream;
-</span><span class="ln">35</span><span class="c1"></span>      <span class="n">52</span><span class="o">:</span> <span class="n">aload</span>         <span class="n">4</span>
-<span class="ln">36</span>      <span class="n">54</span><span class="o">:</span> <span class="n">invokevirtual</span> <span class="err">#</span><span class="n">17</span>                 <span class="c1">// Method java/io/PrintStream.println:(Ljava/lang/Object;)V
-</span><span class="ln">37</span><span class="c1"></span>      <span class="n">57</span><span class="o">:</span> <span class="n">aload</span>         <span class="n">4</span>
-<span class="ln">38</span>      <span class="n">59</span><span class="o">:</span> <span class="n">aload_1</span>
-<span class="ln">39</span>      <span class="n">60</span><span class="o">:</span> <span class="n">invokevirtual</span> <span class="err">#</span><span class="n">18</span>                 <span class="c1">// Method java/lang/invoke/MethodHandle.bindTo:(Ljava/lang/Object;)Ljava/lang/invoke/MethodHandle;
-</span><span class="ln">40</span><span class="c1"></span>      <span class="n">63</span><span class="o">:</span> <span class="n">ldc</span>           <span class="err">#</span><span class="n">19</span>                 <span class="c1">// String a
-</span><span class="ln">41</span><span class="c1"></span>      <span class="n">65</span><span class="o">:</span> <span class="n">invokevirtual</span> <span class="err">#</span><span class="n">20</span>                 <span class="c1">// Method java/lang/invoke/MethodHandle.invoke:(Ljava/lang/String;)V
-</span><span class="ln">42</span><span class="c1"></span>      <span class="n">68</span><span class="o">:</span> <span class="n">aload_3</span>
-<span class="ln">43</span>      <span class="n">69</span><span class="o">:</span> <span class="n">ldc</span>           <span class="err">#</span><span class="n">5</span>                  <span class="c1">// class JVMMethodInstruction
-</span><span class="ln">44</span><span class="c1"></span>      <span class="n">71</span><span class="o">:</span> <span class="n">ldc</span>           <span class="err">#</span><span class="n">21</span>                 <span class="c1">// String staticForMethodHandle
-</span><span class="ln">45</span><span class="c1"></span>      <span class="n">73</span><span class="o">:</span> <span class="n">getstatic</span>     <span class="err">#</span><span class="n">13</span>                 <span class="c1">// Field java/lang/Void.TYPE:Ljava/lang/Class;
-</span><span class="ln">46</span><span class="c1"></span>      <span class="n">76</span><span class="o">:</span> <span class="n">ldc</span>           <span class="err">#</span><span class="n">14</span>                 <span class="c1">// class java/lang/String
-</span><span class="ln">47</span><span class="c1"></span>      <span class="n">78</span><span class="o">:</span> <span class="n">invokestatic</span>  <span class="err">#</span><span class="n">15</span>                 <span class="c1">// Method java/lang/invoke/MethodType.methodType:(Ljava/lang/Class;Ljava/lang/Class;)Ljava/lang/invoke/MethodType;
-</span><span class="ln">48</span><span class="c1"></span>      <span class="n">81</span><span class="o">:</span> <span class="n">invokevirtual</span> <span class="err">#</span><span class="n">22</span>                 <span class="c1">// Method java/lang/invoke/MethodHandles$Lookup.findStatic:(Ljava/lang/Class;Ljava/lang/String;Ljava/lang/invoke/MethodType;)Ljava/lang/invoke/MethodHandle;
-</span><span class="ln">49</span><span class="c1"></span>      <span class="n">84</span><span class="o">:</span> <span class="n">astore</span>        <span class="n">4</span>
-<span class="ln">50</span>      <span class="n">86</span><span class="o">:</span> <span class="n">aload</span>         <span class="n">4</span>
-<span class="ln">51</span>      <span class="n">88</span><span class="o">:</span> <span class="n">ldc</span>           <span class="err">#</span><span class="n">23</span>                 <span class="c1">// String static
-</span><span class="ln">52</span><span class="c1"></span>      <span class="n">90</span><span class="o">:</span> <span class="n">invokevirtual</span> <span class="err">#</span><span class="n">20</span>                 <span class="c1">// Method java/lang/invoke/MethodHandle.invoke:(Ljava/lang/String;)V
-</span><span class="ln">53</span><span class="c1"></span>      <span class="n">93</span><span class="o">:</span> <span class="n">iconst_4</span>
-<span class="ln">54</span>      <span class="n">94</span><span class="o">:</span> <span class="n">anewarray</span>     <span class="err">#</span><span class="n">24</span>                 <span class="c1">// class java/lang/Integer
-</span><span class="ln">55</span><span class="c1"></span>      <span class="n">97</span><span class="o">:</span> <span class="n">dup</span>
-<span class="ln">56</span>      <span class="n">98</span><span class="o">:</span> <span class="n">iconst_0</span>
-<span class="ln">57</span>      <span class="n">99</span><span class="o">:</span> <span class="n">iconst_1</span>
-<span class="ln">58</span>     <span class="n">100</span><span class="o">:</span> <span class="n">invokestatic</span>  <span class="err">#</span><span class="n">25</span>                 <span class="c1">// Method java/lang/Integer.valueOf:(I)Ljava/lang/Integer;
-</span><span class="ln">59</span><span class="c1"></span>     <span class="n">103</span><span class="o">:</span> <span class="n">aastore</span>
-<span class="ln">60</span>     <span class="n">104</span><span class="o">:</span> <span class="n">dup</span>
-<span class="ln">61</span>     <span class="n">105</span><span class="o">:</span> <span class="n">iconst_1</span>
-<span class="ln">62</span>     <span class="n">106</span><span class="o">:</span> <span class="n">iconst_2</span>
-<span class="ln">63</span>     <span class="n">107</span><span class="o">:</span> <span class="n">invokestatic</span>  <span class="err">#</span><span class="n">25</span>                 <span class="c1">// Method java/lang/Integer.valueOf:(I)Ljava/lang/Integer;
-</span><span class="ln">64</span><span class="c1"></span>     <span class="n">110</span><span class="o">:</span> <span class="n">aastore</span>
-<span class="ln">65</span>     <span class="n">111</span><span class="o">:</span> <span class="n">dup</span>
-<span class="ln">66</span>     <span class="n">112</span><span class="o">:</span> <span class="n">iconst_2</span>
-<span class="ln">67</span>     <span class="n">113</span><span class="o">:</span> <span class="n">iconst_3</span>
-<span class="ln">68</span>     <span class="n">114</span><span class="o">:</span> <span class="n">invokestatic</span>  <span class="err">#</span><span class="n">25</span>                 <span class="c1">// Method java/lang/Integer.valueOf:(I)Ljava/lang/Integer;
-</span><span class="ln">69</span><span class="c1"></span>     <span class="n">117</span><span class="o">:</span> <span class="n">aastore</span>
-<span class="ln">70</span>     <span class="n">118</span><span class="o">:</span> <span class="n">dup</span>
-<span class="ln">71</span>     <span class="n">119</span><span class="o">:</span> <span class="n">iconst_3</span>
-<span class="ln">72</span>     <span class="n">120</span><span class="o">:</span> <span class="n">iconst_4</span>
-<span class="ln">73</span>     <span class="n">121</span><span class="o">:</span> <span class="n">invokestatic</span>  <span class="err">#</span><span class="n">25</span>                 <span class="c1">// Method java/lang/Integer.valueOf:(I)Ljava/lang/Integer;
-</span><span class="ln">74</span><span class="c1"></span>     <span class="n">124</span><span class="o">:</span> <span class="n">aastore</span>
-<span class="ln">75</span>     <span class="n">125</span><span class="o">:</span> <span class="n">invokestatic</span>  <span class="err">#</span><span class="n">26</span>                 <span class="c1">// Method java/util/Arrays.asList:([Ljava/lang/Object;)Ljava/util/List;
-</span><span class="ln">76</span><span class="c1"></span>     <span class="n">128</span><span class="o">:</span> <span class="n">astore</span>        <span class="n">5</span>
-<span class="ln">77</span>     <span class="n">130</span><span class="o">:</span> <span class="n">aload</span>         <span class="n">5</span>
-<span class="ln">78</span>     <span class="n">132</span><span class="o">:</span> <span class="n">invokeinterface</span> <span class="err">#</span><span class="n">27</span><span class="o">,</span>  <span class="n">1</span>           <span class="c1">// InterfaceMethod java/util/List.stream:()Ljava/util/stream/Stream;
-</span><span class="ln">79</span><span class="c1"></span>     <span class="n">137</span><span class="o">:</span> <span class="n">getstatic</span>     <span class="err">#</span><span class="n">2</span>                  <span class="c1">// Field java/lang/System.out:Ljava/io/PrintStream;
-</span><span class="ln">80</span><span class="c1"></span>     <span class="n">140</span><span class="o">:</span> <span class="n">dup</span>
-<span class="ln">81</span>     <span class="n">141</span><span class="o">:</span> <span class="n">invokevirtual</span> <span class="err">#</span><span class="n">28</span>                 <span class="c1">// Method java/lang/Object.getClass:()Ljava/lang/Class;
-</span><span class="ln">82</span><span class="c1"></span>     <span class="n">144</span><span class="o">:</span> <span class="n">pop</span>
-<span class="ln">83</span>     <span class="n">145</span><span class="o">:</span> <span class="n">invokedynamic</span> <span class="err">#</span><span class="n">29</span><span class="o">,</span>  <span class="n">0</span>             <span class="c1">// InvokeDynamic #0🉑(Ljava/io/PrintStream;)Ljava/util/function/Consumer;
-</span><span class="ln">84</span><span class="c1"></span>     <span class="n">150</span><span class="o">:</span> <span class="n">invokeinterface</span> <span class="err">#</span><span class="n">30</span><span class="o">,</span>  <span class="n">2</span>           <span class="c1">// InterfaceMethod java/util/stream/Stream.forEach:(Ljava/util/function/Consumer;)V
-</span><span class="ln">85</span><span class="c1"></span>     <span class="n">155</span><span class="o">:</span> <span class="k">return</span>
-</code></pre></div></div></div>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span><span class="lnt">46
+</span><span class="lnt">47
+</span><span class="lnt">48
+</span><span class="lnt">49
+</span><span class="lnt">50
+</span><span class="lnt">51
+</span><span class="lnt">52
+</span><span class="lnt">53
+</span><span class="lnt">54
+</span><span class="lnt">55
+</span><span class="lnt">56
+</span><span class="lnt">57
+</span><span class="lnt">58
+</span><span class="lnt">59
+</span><span class="lnt">60
+</span><span class="lnt">61
+</span><span class="lnt">62
+</span><span class="lnt">63
+</span><span class="lnt">64
+</span><span class="lnt">65
+</span><span class="lnt">66
+</span><span class="lnt">67
+</span><span class="lnt">68
+</span><span class="lnt">69
+</span><span class="lnt">70
+</span><span class="lnt">71
+</span><span class="lnt">72
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="kn">import</span> <span class="nn">java.lang.invoke.MethodHandle</span><span class="o">;</span>
+<span class="kn">import</span> <span class="nn">java.lang.invoke.MethodHandles</span><span class="o">;</span>
+<span class="kn">import</span> <span class="nn">java.lang.invoke.MethodType</span><span class="o">;</span>
+<span class="kn">import</span> <span class="nn">java.util.Arrays</span><span class="o">;</span>
+<span class="kn">import</span> <span class="nn">java.util.List</span><span class="o">;</span>
+
+<span class="kd">public</span> <span class="kd">class</span> <span class="nc">JVMMethodInstruction</span> <span class="kd">implements</span> <span class="n">Runnable</span> <span class="o">{</span>
+
+    <span class="kd">static</span> <span class="o">{</span>
+        <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">&#34;&lt;clinit&gt;&#34;</span><span class="o">);</span>
+    <span class="o">}</span>
+
+    <span class="o">{</span>
+        <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">&#34;&lt;init block&gt;&#34;</span><span class="o">);</span>
+    <span class="o">}</span>
+
+    <span class="kd">public</span> <span class="nf">JVMMethodInstruction</span><span class="o">()</span> <span class="o">{}</span>
+    <span class="kd">static</span> <span class="kt">void</span> <span class="nf">staticMethod</span><span class="o">()</span> <span class="o">{}</span>
+    <span class="kd">static</span> <span class="kt">void</span> <span class="nf">staticForMethodHandle</span><span class="o">(</span><span class="n">String</span> <span class="n">str</span><span class="o">)</span> <span class="o">{}</span>
+    <span class="kd">private</span> <span class="kt">void</span> <span class="nf">privateMethod</span><span class="o">()</span> <span class="o">{}</span>
+    <span class="kt">void</span> <span class="nf">instanceMethod</span><span class="o">()</span> <span class="o">{}</span>
+    <span class="kd">public</span> <span class="kt">void</span> <span class="nf">forMethodHandle</span><span class="o">(</span><span class="n">String</span> <span class="n">str</span><span class="o">)</span> <span class="o">{}</span>
+
+    <span class="nd">@Override</span>
+    <span class="kd">public</span> <span class="kt">void</span> <span class="nf">run</span><span class="o">()</span> <span class="o">{}</span>
+
+    <span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">main</span><span class="o">(</span><span class="n">String</span><span class="o">[]</span> <span class="n">args</span><span class="o">)</span> <span class="kd">throws</span> <span class="n">Throwable</span> <span class="o">{</span>
+        <span class="cm">/**
+</span><span class="cm">         * invoke special
+</span><span class="cm">         */</span>
+        <span class="n">JVMMethodInstruction</span> <span class="n">test</span> <span class="o">=</span> <span class="k">new</span> <span class="n">JVMMethodInstruction</span><span class="o">();</span>
+        <span class="cm">/**
+</span><span class="cm">         * invoke special
+</span><span class="cm">         */</span>
+        <span class="n">test</span><span class="o">.</span><span class="na">privateMethod</span><span class="o">();</span>
+        <span class="cm">/**
+</span><span class="cm">         * invoke virtual
+</span><span class="cm">         */</span>
+        <span class="n">test</span><span class="o">.</span><span class="na">instanceMethod</span><span class="o">();</span>
+        <span class="cm">/**
+</span><span class="cm">         * invoke static
+</span><span class="cm">         */</span>
+        <span class="n">staticMethod</span><span class="o">();</span>
+        <span class="cm">/**
+</span><span class="cm">         * invoke interface
+</span><span class="cm">         */</span>
+        <span class="n">Runnable</span> <span class="n">r</span> <span class="o">=</span> <span class="n">test</span><span class="o">;</span>
+        <span class="n">r</span><span class="o">.</span><span class="na">run</span><span class="o">();</span>
+        <span class="cm">/**
+</span><span class="cm">         * invoke dynamic instance method
+</span><span class="cm">         */</span>
+        <span class="n">MethodHandles</span><span class="o">.</span><span class="na">Lookup</span> <span class="n">lookup</span> <span class="o">=</span> <span class="n">MethodHandles</span><span class="o">.</span><span class="na">lookup</span><span class="o">();</span>
+        <span class="n">MethodHandle</span> <span class="n">mh</span> <span class="o">=</span> <span class="n">lookup</span>
+            <span class="o">.</span><span class="na">findVirtual</span><span class="o">(</span><span class="n">JVMMethodInstruction</span><span class="o">.</span><span class="na">class</span><span class="o">,</span> <span class="s">&#34;forMethodHandle&#34;</span><span class="o">,</span>
+                <span class="n">MethodType</span><span class="o">.</span><span class="na">methodType</span><span class="o">(</span><span class="kt">void</span><span class="o">.</span><span class="na">class</span><span class="o">,</span> <span class="n">String</span><span class="o">.</span><span class="na">class</span><span class="o">));</span>
+        <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="n">mh</span><span class="o">);</span>
+        <span class="n">mh</span><span class="o">.</span><span class="na">bindTo</span><span class="o">(</span><span class="n">test</span><span class="o">).</span><span class="na">invoke</span><span class="o">(</span><span class="s">&#34;a&#34;</span><span class="o">);</span>
+        <span class="cm">/**
+</span><span class="cm">         * invoke dynamic static method
+</span><span class="cm">         */</span>
+        <span class="n">mh</span> <span class="o">=</span> <span class="n">lookup</span><span class="o">.</span><span class="na">findStatic</span><span class="o">(</span><span class="n">JVMMethodInstruction</span><span class="o">.</span><span class="na">class</span><span class="o">,</span> <span class="s">&#34;staticForMethodHandle&#34;</span><span class="o">,</span>
+            <span class="n">MethodType</span><span class="o">.</span><span class="na">methodType</span><span class="o">(</span><span class="kt">void</span><span class="o">.</span><span class="na">class</span><span class="o">,</span> <span class="n">String</span><span class="o">.</span><span class="na">class</span><span class="o">));</span>
+        <span class="n">mh</span><span class="o">.</span><span class="na">invoke</span><span class="o">(</span><span class="s">&#34;static&#34;</span><span class="o">);</span>
+        <span class="cm">/**
+</span><span class="cm">         * Java 8中，lambda表达式和默认方法时，底层会生成和使用invoke dynamic
+</span><span class="cm">         * invoke dynamic
+</span><span class="cm">         */</span>
+        <span class="n">List</span><span class="o">&lt;</span><span class="n">Integer</span><span class="o">&gt;</span> <span class="n">list</span> <span class="o">=</span> <span class="n">Arrays</span><span class="o">.</span><span class="na">asList</span><span class="o">(</span><span class="n">1</span><span class="o">,</span> <span class="n">2</span><span class="o">,</span> <span class="n">3</span><span class="o">,</span> <span class="n">4</span><span class="o">);</span>
+        <span class="n">list</span><span class="o">.</span><span class="na">stream</span><span class="o">().</span><span class="na">forEach</span><span class="o">(</span><span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">::</span><span class="n">println</span><span class="o">);</span>
+
+    <span class="o">}</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>编译然后反编译：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">javac JVMMethodInstruction.java
+javap -c JVMMethodInstruction
+</code></pre></td></tr></table>
+</div>
+</div><p>得到反编译结果：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span><span class="lnt">46
+</span><span class="lnt">47
+</span><span class="lnt">48
+</span><span class="lnt">49
+</span><span class="lnt">50
+</span><span class="lnt">51
+</span><span class="lnt">52
+</span><span class="lnt">53
+</span><span class="lnt">54
+</span><span class="lnt">55
+</span><span class="lnt">56
+</span><span class="lnt">57
+</span><span class="lnt">58
+</span><span class="lnt">59
+</span><span class="lnt">60
+</span><span class="lnt">61
+</span><span class="lnt">62
+</span><span class="lnt">63
+</span><span class="lnt">64
+</span><span class="lnt">65
+</span><span class="lnt">66
+</span><span class="lnt">67
+</span><span class="lnt">68
+</span><span class="lnt">69
+</span><span class="lnt">70
+</span><span class="lnt">71
+</span><span class="lnt">72
+</span><span class="lnt">73
+</span><span class="lnt">74
+</span><span class="lnt">75
+</span><span class="lnt">76
+</span><span class="lnt">77
+</span><span class="lnt">78
+</span><span class="lnt">79
+</span><span class="lnt">80
+</span><span class="lnt">81
+</span><span class="lnt">82
+</span><span class="lnt">83
+</span><span class="lnt">84
+</span><span class="lnt">85
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java">  <span class="kd">public</span> <span class="nf">JVMMethodInstruction</span><span class="o">();</span>
+    <span class="n">Code</span><span class="o">:</span>
+       <span class="n">0</span><span class="o">:</span> <span class="n">aload_0</span>
+       <span class="n">1</span><span class="o">:</span> <span class="n">invokespecial</span> <span class="err">#</span><span class="n">1</span>                  <span class="c1">// Method java/lang/Object.&#34;&lt;init&gt;&#34;:()V
+</span><span class="c1"></span>       <span class="n">4</span><span class="o">:</span> <span class="n">getstatic</span>     <span class="err">#</span><span class="n">2</span>                  <span class="c1">// Field java/lang/System.out:Ljava/io/PrintStream;
+</span><span class="c1"></span>       <span class="n">7</span><span class="o">:</span> <span class="n">ldc</span>           <span class="err">#</span><span class="n">3</span>                  <span class="c1">// String &lt;init block&gt;
+</span><span class="c1"></span>       <span class="n">9</span><span class="o">:</span> <span class="n">invokevirtual</span> <span class="err">#</span><span class="n">4</span>                  <span class="c1">// Method java/io/PrintStream.println:(Ljava/lang/String;)V
+</span><span class="c1"></span>      <span class="n">12</span><span class="o">:</span> <span class="k">return</span>
+  <span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">main</span><span class="o">(</span><span class="n">java</span><span class="o">.</span><span class="na">lang</span><span class="o">.</span><span class="na">String</span><span class="o">[])</span> <span class="kd">throws</span> <span class="n">java</span><span class="o">.</span><span class="na">lang</span><span class="o">.</span><span class="na">Throwable</span><span class="o">;</span>
+    <span class="n">Code</span><span class="o">:</span>
+       <span class="n">0</span><span class="o">:</span> <span class="k">new</span>           <span class="err">#</span><span class="n">5</span>                  <span class="c1">// class JVMMethodInstruction
+</span><span class="c1"></span>       <span class="n">3</span><span class="o">:</span> <span class="n">dup</span>
+       <span class="n">4</span><span class="o">:</span> <span class="n">invokespecial</span> <span class="err">#</span><span class="n">6</span>                  <span class="c1">// Method &#34;&lt;init&gt;&#34;:()V
+</span><span class="c1"></span>       <span class="n">7</span><span class="o">:</span> <span class="n">astore_1</span>
+       <span class="n">8</span><span class="o">:</span> <span class="n">aload_1</span>
+       <span class="n">9</span><span class="o">:</span> <span class="n">invokespecial</span> <span class="err">#</span><span class="n">7</span>                  <span class="c1">// Method privateMethod:()V
+</span><span class="c1"></span>      <span class="n">12</span><span class="o">:</span> <span class="n">aload_1</span>
+      <span class="n">13</span><span class="o">:</span> <span class="n">invokevirtual</span> <span class="err">#</span><span class="n">8</span>                  <span class="c1">// Method instanceMethod:()V
+</span><span class="c1"></span>      <span class="n">16</span><span class="o">:</span> <span class="n">invokestatic</span>  <span class="err">#</span><span class="n">9</span>                  <span class="c1">// Method staticMethod:()V
+</span><span class="c1"></span>      <span class="n">19</span><span class="o">:</span> <span class="n">aload_1</span>
+      <span class="n">20</span><span class="o">:</span> <span class="n">astore_2</span>
+      <span class="n">21</span><span class="o">:</span> <span class="n">aload_2</span>
+      <span class="n">22</span><span class="o">:</span> <span class="n">invokeinterface</span> <span class="err">#</span><span class="n">10</span><span class="o">,</span>  <span class="n">1</span>           <span class="c1">// InterfaceMethod java/lang/Runnable.run:()V
+</span><span class="c1"></span>      <span class="n">27</span><span class="o">:</span> <span class="n">invokestatic</span>  <span class="err">#</span><span class="n">11</span>                 <span class="c1">// Method java/lang/invoke/MethodHandles.lookup:()Ljava/lang/invoke/MethodHandles$Lookup;
+</span><span class="c1"></span>      <span class="n">30</span><span class="o">:</span> <span class="n">astore_3</span>
+      <span class="n">31</span><span class="o">:</span> <span class="n">aload_3</span>
+      <span class="n">32</span><span class="o">:</span> <span class="n">ldc</span>           <span class="err">#</span><span class="n">5</span>                  <span class="c1">// class JVMMethodInstruction
+</span><span class="c1"></span>      <span class="n">34</span><span class="o">:</span> <span class="n">ldc</span>           <span class="err">#</span><span class="n">12</span>                 <span class="c1">// String forMethodHandle
+</span><span class="c1"></span>      <span class="n">36</span><span class="o">:</span> <span class="n">getstatic</span>     <span class="err">#</span><span class="n">13</span>                 <span class="c1">// Field java/lang/Void.TYPE:Ljava/lang/Class;
+</span><span class="c1"></span>      <span class="n">39</span><span class="o">:</span> <span class="n">ldc</span>           <span class="err">#</span><span class="n">14</span>                 <span class="c1">// class java/lang/String
+</span><span class="c1"></span>      <span class="n">41</span><span class="o">:</span> <span class="n">invokestatic</span>  <span class="err">#</span><span class="n">15</span>                 <span class="c1">// Method java/lang/invoke/MethodType.methodType:(Ljava/lang/Class;Ljava/lang/Class;)Ljava/lang/invoke/MethodType;
+</span><span class="c1"></span>      <span class="n">44</span><span class="o">:</span> <span class="n">invokevirtual</span> <span class="err">#</span><span class="n">16</span>                 <span class="c1">// Method java/lang/invoke/MethodHandles$Lookup.findVirtual:(Ljava/lang/Class;Ljava/lang/String;Ljava/lang/invoke/MethodType;)Ljava/lang/invoke/MethodHandle;
+</span><span class="c1"></span>      <span class="n">47</span><span class="o">:</span> <span class="n">astore</span>        <span class="n">4</span>
+      <span class="n">49</span><span class="o">:</span> <span class="n">getstatic</span>     <span class="err">#</span><span class="n">2</span>                  <span class="c1">// Field java/lang/System.out:Ljava/io/PrintStream;
+</span><span class="c1"></span>      <span class="n">52</span><span class="o">:</span> <span class="n">aload</span>         <span class="n">4</span>
+      <span class="n">54</span><span class="o">:</span> <span class="n">invokevirtual</span> <span class="err">#</span><span class="n">17</span>                 <span class="c1">// Method java/io/PrintStream.println:(Ljava/lang/Object;)V
+</span><span class="c1"></span>      <span class="n">57</span><span class="o">:</span> <span class="n">aload</span>         <span class="n">4</span>
+      <span class="n">59</span><span class="o">:</span> <span class="n">aload_1</span>
+      <span class="n">60</span><span class="o">:</span> <span class="n">invokevirtual</span> <span class="err">#</span><span class="n">18</span>                 <span class="c1">// Method java/lang/invoke/MethodHandle.bindTo:(Ljava/lang/Object;)Ljava/lang/invoke/MethodHandle;
+</span><span class="c1"></span>      <span class="n">63</span><span class="o">:</span> <span class="n">ldc</span>           <span class="err">#</span><span class="n">19</span>                 <span class="c1">// String a
+</span><span class="c1"></span>      <span class="n">65</span><span class="o">:</span> <span class="n">invokevirtual</span> <span class="err">#</span><span class="n">20</span>                 <span class="c1">// Method java/lang/invoke/MethodHandle.invoke:(Ljava/lang/String;)V
+</span><span class="c1"></span>      <span class="n">68</span><span class="o">:</span> <span class="n">aload_3</span>
+      <span class="n">69</span><span class="o">:</span> <span class="n">ldc</span>           <span class="err">#</span><span class="n">5</span>                  <span class="c1">// class JVMMethodInstruction
+</span><span class="c1"></span>      <span class="n">71</span><span class="o">:</span> <span class="n">ldc</span>           <span class="err">#</span><span class="n">21</span>                 <span class="c1">// String staticForMethodHandle
+</span><span class="c1"></span>      <span class="n">73</span><span class="o">:</span> <span class="n">getstatic</span>     <span class="err">#</span><span class="n">13</span>                 <span class="c1">// Field java/lang/Void.TYPE:Ljava/lang/Class;
+</span><span class="c1"></span>      <span class="n">76</span><span class="o">:</span> <span class="n">ldc</span>           <span class="err">#</span><span class="n">14</span>                 <span class="c1">// class java/lang/String
+</span><span class="c1"></span>      <span class="n">78</span><span class="o">:</span> <span class="n">invokestatic</span>  <span class="err">#</span><span class="n">15</span>                 <span class="c1">// Method java/lang/invoke/MethodType.methodType:(Ljava/lang/Class;Ljava/lang/Class;)Ljava/lang/invoke/MethodType;
+</span><span class="c1"></span>      <span class="n">81</span><span class="o">:</span> <span class="n">invokevirtual</span> <span class="err">#</span><span class="n">22</span>                 <span class="c1">// Method java/lang/invoke/MethodHandles$Lookup.findStatic:(Ljava/lang/Class;Ljava/lang/String;Ljava/lang/invoke/MethodType;)Ljava/lang/invoke/MethodHandle;
+</span><span class="c1"></span>      <span class="n">84</span><span class="o">:</span> <span class="n">astore</span>        <span class="n">4</span>
+      <span class="n">86</span><span class="o">:</span> <span class="n">aload</span>         <span class="n">4</span>
+      <span class="n">88</span><span class="o">:</span> <span class="n">ldc</span>           <span class="err">#</span><span class="n">23</span>                 <span class="c1">// String static
+</span><span class="c1"></span>      <span class="n">90</span><span class="o">:</span> <span class="n">invokevirtual</span> <span class="err">#</span><span class="n">20</span>                 <span class="c1">// Method java/lang/invoke/MethodHandle.invoke:(Ljava/lang/String;)V
+</span><span class="c1"></span>      <span class="n">93</span><span class="o">:</span> <span class="n">iconst_4</span>
+      <span class="n">94</span><span class="o">:</span> <span class="n">anewarray</span>     <span class="err">#</span><span class="n">24</span>                 <span class="c1">// class java/lang/Integer
+</span><span class="c1"></span>      <span class="n">97</span><span class="o">:</span> <span class="n">dup</span>
+      <span class="n">98</span><span class="o">:</span> <span class="n">iconst_0</span>
+      <span class="n">99</span><span class="o">:</span> <span class="n">iconst_1</span>
+     <span class="n">100</span><span class="o">:</span> <span class="n">invokestatic</span>  <span class="err">#</span><span class="n">25</span>                 <span class="c1">// Method java/lang/Integer.valueOf:(I)Ljava/lang/Integer;
+</span><span class="c1"></span>     <span class="n">103</span><span class="o">:</span> <span class="n">aastore</span>
+     <span class="n">104</span><span class="o">:</span> <span class="n">dup</span>
+     <span class="n">105</span><span class="o">:</span> <span class="n">iconst_1</span>
+     <span class="n">106</span><span class="o">:</span> <span class="n">iconst_2</span>
+     <span class="n">107</span><span class="o">:</span> <span class="n">invokestatic</span>  <span class="err">#</span><span class="n">25</span>                 <span class="c1">// Method java/lang/Integer.valueOf:(I)Ljava/lang/Integer;
+</span><span class="c1"></span>     <span class="n">110</span><span class="o">:</span> <span class="n">aastore</span>
+     <span class="n">111</span><span class="o">:</span> <span class="n">dup</span>
+     <span class="n">112</span><span class="o">:</span> <span class="n">iconst_2</span>
+     <span class="n">113</span><span class="o">:</span> <span class="n">iconst_3</span>
+     <span class="n">114</span><span class="o">:</span> <span class="n">invokestatic</span>  <span class="err">#</span><span class="n">25</span>                 <span class="c1">// Method java/lang/Integer.valueOf:(I)Ljava/lang/Integer;
+</span><span class="c1"></span>     <span class="n">117</span><span class="o">:</span> <span class="n">aastore</span>
+     <span class="n">118</span><span class="o">:</span> <span class="n">dup</span>
+     <span class="n">119</span><span class="o">:</span> <span class="n">iconst_3</span>
+     <span class="n">120</span><span class="o">:</span> <span class="n">iconst_4</span>
+     <span class="n">121</span><span class="o">:</span> <span class="n">invokestatic</span>  <span class="err">#</span><span class="n">25</span>                 <span class="c1">// Method java/lang/Integer.valueOf:(I)Ljava/lang/Integer;
+</span><span class="c1"></span>     <span class="n">124</span><span class="o">:</span> <span class="n">aastore</span>
+     <span class="n">125</span><span class="o">:</span> <span class="n">invokestatic</span>  <span class="err">#</span><span class="n">26</span>                 <span class="c1">// Method java/util/Arrays.asList:([Ljava/lang/Object;)Ljava/util/List;
+</span><span class="c1"></span>     <span class="n">128</span><span class="o">:</span> <span class="n">astore</span>        <span class="n">5</span>
+     <span class="n">130</span><span class="o">:</span> <span class="n">aload</span>         <span class="n">5</span>
+     <span class="n">132</span><span class="o">:</span> <span class="n">invokeinterface</span> <span class="err">#</span><span class="n">27</span><span class="o">,</span>  <span class="n">1</span>           <span class="c1">// InterfaceMethod java/util/List.stream:()Ljava/util/stream/Stream;
+</span><span class="c1"></span>     <span class="n">137</span><span class="o">:</span> <span class="n">getstatic</span>     <span class="err">#</span><span class="n">2</span>                  <span class="c1">// Field java/lang/System.out:Ljava/io/PrintStream;
+</span><span class="c1"></span>     <span class="n">140</span><span class="o">:</span> <span class="n">dup</span>
+     <span class="n">141</span><span class="o">:</span> <span class="n">invokevirtual</span> <span class="err">#</span><span class="n">28</span>                 <span class="c1">// Method java/lang/Object.getClass:()Ljava/lang/Class;
+</span><span class="c1"></span>     <span class="n">144</span><span class="o">:</span> <span class="n">pop</span>
+     <span class="n">145</span><span class="o">:</span> <span class="n">invokedynamic</span> <span class="err">#</span><span class="n">29</span><span class="o">,</span>  <span class="n">0</span>             <span class="c1">// InvokeDynamic #0🉑(Ljava/io/PrintStream;)Ljava/util/function/Consumer;
+</span><span class="c1"></span>     <span class="n">150</span><span class="o">:</span> <span class="n">invokeinterface</span> <span class="err">#</span><span class="n">30</span><span class="o">,</span>  <span class="n">2</span>           <span class="c1">// InterfaceMethod java/util/stream/Stream.forEach:(Ljava/util/function/Consumer;)V
+</span><span class="c1"></span>     <span class="n">155</span><span class="o">:</span> <span class="k">return</span>
+</code></pre></td></tr></table>
+</div>
+</div></div></div>
   <div class="card-footer"><div class="post-navs d-flex justify-content-evenly">
   <div class="post-nav post-prev"><i class="fas fa-fw fa-chevron-left"></i>
     <a href="/post/jvm/object-layout/">JVM - 对象内存布局

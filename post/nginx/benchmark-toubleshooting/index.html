@@ -12,7 +12,7 @@
 <meta name="description" content="" /><meta itemprop="name" content="某次压力测试中对Nginx的排障">
 <meta itemprop="description" content=""><meta itemprop="datePublished" content="2021-09-07T08:02:45+08:00" />
 <meta itemprop="dateModified" content="2021-09-07T08:02:45+08:00" />
-<meta itemprop="wordCount" content="725">
+<meta itemprop="wordCount" content="732">
 <meta itemprop="keywords" content="nginx,troubleshooting,性能调优," /><meta property="og:title" content="某次压力测试中对Nginx的排障" />
 <meta property="og:description" content="" />
 <meta property="og:type" content="article" />
@@ -225,8 +225,15 @@
 </div>
 <div class="post-content mb-3"><p>某次压力测试时，Jmeter得到大量connection reset、connect timeout的错误。</p>
 <h2 id="拓扑">拓扑<a class="anchor ms-1" href="#拓扑"><i class="fas fa-link"></i></a></h2>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="ln">1</span>Jmeter -&gt; nginx[:9001] -&gt; k8s worker[:80](ingress-nginx) -&gt; k8s pod[:10080]
-</code></pre></div><h2 id="观察nginx">观察nginx<a class="anchor ms-1" href="#观察nginx"><i class="fas fa-link"></i></a></h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback">Jmeter -&gt; nginx[:9001] -&gt; k8s worker[:80](ingress-nginx) -&gt; k8s pod[:10080]
+</code></pre></td></tr></table>
+</div>
+</div><h2 id="观察nginx">观察nginx<a class="anchor ms-1" href="#观察nginx"><i class="fas fa-link"></i></a></h2>
 <p>nginx采用的是四层代理，用的是<a href="http://nginx.org/en/docs/stream/ngx_stream_core_module.html" target="_blank" rel="noopener noreferrer">stream模块</a>
 </p>
 <p>查看 <code>/var/log/nginx/error.log</code>，看到大量<code>too many open files</code>的错误。</p>
@@ -236,24 +243,60 @@
 <p>再优化nginx，调整 <code>/etc/nginx/nginx.conf</code> 。</p>
 <p>调整<a href="http://nginx.org/en/docs/ngx_core_module.html#worker_processes" target="_blank" rel="noopener noreferrer">worker_processes</a>
 ，默认值是 1，改为auto。</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="ln">1</span>worker_processes  auto;
-</code></pre></div><p>调整<a href="http://nginx.org/en/docs/ngx_core_module.html#worker_connections" target="_blank" rel="noopener noreferrer">worker_connections</a>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback">worker_processes  auto;
+</code></pre></td></tr></table>
+</div>
+</div><p>调整<a href="http://nginx.org/en/docs/ngx_core_module.html#worker_connections" target="_blank" rel="noopener noreferrer">worker_connections</a>
 ，默认值是512太小了，压测并发有15000，因为服务器有10核，woker_processes的实际值是10，所以调整到1600，那么总共就是16000。</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="ln">1</span>worker_connections 1600;
-</code></pre></div><p>调整<a href="http://nginx.org/en/docs/ngx_core_module.html#worker_rlimit_nofile" target="_blank" rel="noopener noreferrer">worker_rlimit_nofile</a>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback">worker_connections 1600;
+</code></pre></td></tr></table>
+</div>
+</div><p>调整<a href="http://nginx.org/en/docs/ngx_core_module.html#worker_rlimit_nofile" target="_blank" rel="noopener noreferrer">worker_rlimit_nofile</a>
 到16000，该值小于不能总的worker_connections：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="ln">1</span>worker_rlimit_nofile 16000;
-</code></pre></div><p>再次压测后，Jmeter得到502 bad gateway等错误。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback">worker_rlimit_nofile 16000;
+</code></pre></td></tr></table>
+</div>
+</div><p>再次压测后，Jmeter得到502 bad gateway等错误。</p>
 <p>观察nginx的 <code>/var/log/nginx/error.log</code> ，没有新的错误日志产生。</p>
 <h2 id="观察ingress-nginx">观察ingress nginx<a class="anchor ms-1" href="#观察ingress-nginx"><i class="fas fa-link"></i></a></h2>
 <p>先设置ingress nginx配置 <a href="https://kubernetes.github.io/ingress-nginx/user-guide/nginx-configuration/configmap/#disable-access-log" target="_blank" rel="noopener noreferrer">disable-access-log=true</a>
  ，关闭access log打印，可以让我们专注在错误日志上。</p>
 <p>观察ingress nginx日志，发现先有大量Connection timed out错误：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="ln">1</span>[error] 46#46: *7495 upstream timed out (110: Connection timed out) while connecting to upstream
-<span class="ln">2</span>....
-</code></pre></div><p>然后出现大量Cannot assign requested address的错误：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="ln">1</span>[crit] 46#46: *10527 connect() to 10.42.5.220:10080 failed (99: Cannot assign requested address) while connecting to upstream
-</code></pre></div><p>看来是ingress nginx和Pod的连接超时了，根据<a href="https://kubernetes.github.io/ingress-nginx/user-guide/nginx-configuration/configmap/" target="_blank" rel="noopener noreferrer">ingress nginx文档</a>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback">[error] 46#46: *7495 upstream timed out (110: Connection timed out) while connecting to upstream
+....
+</code></pre></td></tr></table>
+</div>
+</div><p>然后出现大量Cannot assign requested address的错误：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback">[crit] 46#46: *10527 connect() to 10.42.5.220:10080 failed (99: Cannot assign requested address) while connecting to upstream
+</code></pre></td></tr></table>
+</div>
+</div><p>看来是ingress nginx和Pod的连接超时了，根据<a href="https://kubernetes.github.io/ingress-nginx/user-guide/nginx-configuration/configmap/" target="_blank" rel="noopener noreferrer">ingress nginx文档</a>
 ，<code>proxy-connection-timeout</code>默认值5秒，太短了，调整到60秒。</p>
 <p>再次压测后Connection timed out问题没有了，而且Cannot assign requested address也没有了。</p></div></div>
   <div class="card-footer"><div class="post-navs d-flex justify-content-evenly">

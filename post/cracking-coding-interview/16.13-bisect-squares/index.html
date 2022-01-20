@@ -12,7 +12,7 @@
 <meta name="description" content="" /><meta itemprop="name" content="Cracking Coding Interview - 16.13 Bisect Squares">
 <meta itemprop="description" content=""><meta itemprop="datePublished" content="2019-09-11T11:00:11+08:00" />
 <meta itemprop="dateModified" content="2019-09-11T11:00:11+08:00" />
-<meta itemprop="wordCount" content="447">
+<meta itemprop="wordCount" content="458">
 <meta itemprop="keywords" content="ARTS-A," /><meta property="og:title" content="Cracking Coding Interview - 16.13 Bisect Squares" />
 <meta property="og:description" content="" />
 <meta property="og:type" content="article" />
@@ -226,18 +226,35 @@
 <div class="post-content mb-3"><p><strong>Bisect Squares</strong>: Given two squares on a two-dimensional plane, find a line that would cut these two squares in half. Assume that the top and the bottom sides of the square run parallel to the x-axis.</p>
 <p>Hints: #468, #479, #528, #560</p>
 <h2 id="解法">解法<a class="anchor ms-1" href="#解法"><i class="fas fa-link"></i></a></h2>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln"> 1</span>^
-<span class="ln"> 2</span>│  ┌──────┐
-<span class="ln"> 3</span>│  │      │
-<span class="ln"> 4</span>│  │      │
-<span class="ln"> 5</span>│  └──────┘
-<span class="ln"> 6</span>│
-<span class="ln"> 7</span>│            ┌────┐
-<span class="ln"> 8</span>│            │    │
-<span class="ln"> 9</span>│            └────┘
-<span class="ln">10</span>│
-<span class="ln">11</span>└─────────────────────────────────────&gt;
-</code></pre></div><p>如上图，画一根线能够让两个正方形都被等分地一切为二。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt">^
+│  ┌──────┐
+│  │      │
+│  │      │
+│  └──────┘
+│
+│            ┌────┐
+│            │    │
+│            └────┘
+│
+└─────────────────────────────────────&gt;
+</code></pre></td></tr></table>
+</div>
+</div><p>如上图，画一根线能够让两个正方形都被等分地一切为二。</p>
 <p>先看如何把一个正方形等分地一切为二，当然是从它的中心开始切啦，只要一条线经过正方形的中心，那么肯定等分的把正方形一切为二。</p>
 <p>那么把两个正方形一切为二就是把两个正方形的中心点连接起来，得到的延长线就行啦。</p>
 <p>问题变成了两个子问题：</p>
@@ -246,39 +263,77 @@
 <li>如何给定两个点，求得线条的几何公式</li>
 </ol>
 <p>代码：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln"> 1</span><span class="kd">public</span> <span class="kd">class</span> <span class="nc">Point</span> <span class="o">{</span>
-<span class="ln"> 2</span>  <span class="kd">private</span> <span class="kt">int</span> <span class="n">x</span><span class="o">;</span>
-<span class="ln"> 3</span>  <span class="kd">private</span> <span class="kt">int</span> <span class="n">y</span><span class="o">;</span>
-<span class="ln"> 4</span><span class="o">}</span>
-<span class="ln"> 5</span><span class="kd">public</span> <span class="kd">class</span> <span class="nc">Square</span> <span class="o">{</span>
-<span class="ln"> 6</span>  <span class="kd">private</span> <span class="n">Point</span> <span class="n">leftTop</span><span class="o">;</span>
-<span class="ln"> 7</span>  <span class="kd">private</span> <span class="kt">int</span> <span class="n">size</span><span class="o">;</span>
-<span class="ln"> 8</span>  <span class="kd">public</span> <span class="n">Point</span> <span class="nf">getCenterPoint</span><span class="o">()</span> <span class="o">{</span>
-<span class="ln"> 9</span>    <span class="k">return</span> <span class="k">new</span> <span class="n">Point</span><span class="o">(</span><span class="n">leftTop</span><span class="o">.</span><span class="na">x</span> <span class="o">+</span> <span class="n">size</span> <span class="o">/</span> <span class="n">2</span><span class="o">,</span> <span class="n">leftTop</span><span class="o">.</span><span class="na">y</span> <span class="o">-</span> <span class="n">size</span> <span class="o">/</span> <span class="n">2</span><span class="o">);</span>
-<span class="ln">10</span>  <span class="o">}</span>
-<span class="ln">11</span><span class="o">}</span>
-<span class="ln">12</span><span class="kd">public</span> <span class="kd">class</span> <span class="nc">Line</span> <span class="o">{</span>
-<span class="ln">13</span>  <span class="kd">private</span> <span class="kt">double</span> <span class="n">slope</span><span class="o">;</span>
-<span class="ln">14</span>  <span class="kd">private</span> <span class="kt">double</span> <span class="n">c</span><span class="o">;</span>
-<span class="ln">15</span><span class="o">}</span>
-<span class="ln">16</span><span class="kd">public</span> <span class="kd">class</span> <span class="nc">VerticalLine</span> <span class="o">{</span>
-<span class="ln">17</span>  <span class="kd">private</span> <span class="n">x</span><span class="o">;</span>
-<span class="ln">18</span><span class="o">}</span>
-<span class="ln">19</span><span class="kd">public</span> <span class="n">Line</span> <span class="nf">findLine</span><span class="o">(</span><span class="n">Square</span> <span class="n">s1</span><span class="o">,</span> <span class="n">Square</span> <span class="n">s2</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">20</span>  <span class="n">Point</span> <span class="n">c1</span> <span class="o">=</span> <span class="n">s1</span><span class="o">.</span><span class="na">getCenterPoint</span><span class="o">();</span>
-<span class="ln">21</span>  <span class="n">Point</span> <span class="n">c2</span> <span class="o">=</span> <span class="n">s2</span><span class="o">.</span><span class="na">getCenterPoint</span><span class="o">();</span>
-<span class="ln">22</span>  <span class="k">return</span> <span class="n">makeLine</span><span class="o">(</span><span class="n">c1</span><span class="o">,</span> <span class="n">c2</span><span class="o">);</span>
-<span class="ln">23</span><span class="o">}</span>
-<span class="ln">24</span><span class="kd">private</span> <span class="n">Line</span> <span class="nf">makeLine</span><span class="o">(</span><span class="n">Point</span> <span class="n">p1</span><span class="o">,</span> <span class="n">Point</span> <span class="n">p2</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">25</span>  <span class="k">if</span> <span class="o">(</span><span class="n">p1</span><span class="o">.</span><span class="na">x</span> <span class="o">==</span> <span class="n">p2</span><span class="o">.</span><span class="na">x</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">26</span>    <span class="c1">// 垂直线
-</span><span class="ln">27</span><span class="c1"></span>    <span class="k">return</span> <span class="k">new</span> <span class="n">VerticalLine</span><span class="o">(</span><span class="n">p1</span><span class="o">.</span><span class="na">x</span><span class="o">);</span>
-<span class="ln">28</span>  <span class="o">}</span>
-<span class="ln">29</span>  <span class="kt">double</span> <span class="n">slope</span> <span class="o">=</span> <span class="o">(</span><span class="kt">double</span><span class="o">)(</span><span class="n">p2</span><span class="o">.</span><span class="na">y</span> <span class="o">-</span> <span class="n">p1</span><span class="o">.</span><span class="na">y</span><span class="o">)</span> <span class="o">/</span> <span class="o">(</span><span class="n">p2</span><span class="o">.</span><span class="na">x</span> <span class="o">-</span> <span class="n">p1</span><span class="o">.</span><span class="na">x</span><span class="o">);</span>
-<span class="ln">30</span>  <span class="kt">double</span> <span class="n">c</span> <span class="o">=</span> <span class="n">p2</span><span class="o">.</span><span class="na">y</span> <span class="o">-</span> <span class="n">slope</span> <span class="o">*</span> <span class="n">p2</span><span class="o">.</span><span class="na">x</span><span class="o">;</span>
-<span class="ln">31</span>  <span class="k">return</span> <span class="k">new</span> <span class="n">Line</span><span class="o">(</span><span class="n">slope</span><span class="o">,</span> <span class="n">c</span><span class="o">);</span>
-<span class="ln">32</span><span class="o">}</span>
-</code></pre></div></div></div>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="kd">public</span> <span class="kd">class</span> <span class="nc">Point</span> <span class="o">{</span>
+  <span class="kd">private</span> <span class="kt">int</span> <span class="n">x</span><span class="o">;</span>
+  <span class="kd">private</span> <span class="kt">int</span> <span class="n">y</span><span class="o">;</span>
+<span class="o">}</span>
+<span class="kd">public</span> <span class="kd">class</span> <span class="nc">Square</span> <span class="o">{</span>
+  <span class="kd">private</span> <span class="n">Point</span> <span class="n">leftTop</span><span class="o">;</span>
+  <span class="kd">private</span> <span class="kt">int</span> <span class="n">size</span><span class="o">;</span>
+  <span class="kd">public</span> <span class="n">Point</span> <span class="nf">getCenterPoint</span><span class="o">()</span> <span class="o">{</span>
+    <span class="k">return</span> <span class="k">new</span> <span class="n">Point</span><span class="o">(</span><span class="n">leftTop</span><span class="o">.</span><span class="na">x</span> <span class="o">+</span> <span class="n">size</span> <span class="o">/</span> <span class="n">2</span><span class="o">,</span> <span class="n">leftTop</span><span class="o">.</span><span class="na">y</span> <span class="o">-</span> <span class="n">size</span> <span class="o">/</span> <span class="n">2</span><span class="o">);</span>
+  <span class="o">}</span>
+<span class="o">}</span>
+<span class="kd">public</span> <span class="kd">class</span> <span class="nc">Line</span> <span class="o">{</span>
+  <span class="kd">private</span> <span class="kt">double</span> <span class="n">slope</span><span class="o">;</span>
+  <span class="kd">private</span> <span class="kt">double</span> <span class="n">c</span><span class="o">;</span>
+<span class="o">}</span>
+<span class="kd">public</span> <span class="kd">class</span> <span class="nc">VerticalLine</span> <span class="o">{</span>
+  <span class="kd">private</span> <span class="n">x</span><span class="o">;</span>
+<span class="o">}</span>
+<span class="kd">public</span> <span class="n">Line</span> <span class="nf">findLine</span><span class="o">(</span><span class="n">Square</span> <span class="n">s1</span><span class="o">,</span> <span class="n">Square</span> <span class="n">s2</span><span class="o">)</span> <span class="o">{</span>
+  <span class="n">Point</span> <span class="n">c1</span> <span class="o">=</span> <span class="n">s1</span><span class="o">.</span><span class="na">getCenterPoint</span><span class="o">();</span>
+  <span class="n">Point</span> <span class="n">c2</span> <span class="o">=</span> <span class="n">s2</span><span class="o">.</span><span class="na">getCenterPoint</span><span class="o">();</span>
+  <span class="k">return</span> <span class="n">makeLine</span><span class="o">(</span><span class="n">c1</span><span class="o">,</span> <span class="n">c2</span><span class="o">);</span>
+<span class="o">}</span>
+<span class="kd">private</span> <span class="n">Line</span> <span class="nf">makeLine</span><span class="o">(</span><span class="n">Point</span> <span class="n">p1</span><span class="o">,</span> <span class="n">Point</span> <span class="n">p2</span><span class="o">)</span> <span class="o">{</span>
+  <span class="k">if</span> <span class="o">(</span><span class="n">p1</span><span class="o">.</span><span class="na">x</span> <span class="o">==</span> <span class="n">p2</span><span class="o">.</span><span class="na">x</span><span class="o">)</span> <span class="o">{</span>
+    <span class="c1">// 垂直线
+</span><span class="c1"></span>    <span class="k">return</span> <span class="k">new</span> <span class="n">VerticalLine</span><span class="o">(</span><span class="n">p1</span><span class="o">.</span><span class="na">x</span><span class="o">);</span>
+  <span class="o">}</span>
+  <span class="kt">double</span> <span class="n">slope</span> <span class="o">=</span> <span class="o">(</span><span class="kt">double</span><span class="o">)(</span><span class="n">p2</span><span class="o">.</span><span class="na">y</span> <span class="o">-</span> <span class="n">p1</span><span class="o">.</span><span class="na">y</span><span class="o">)</span> <span class="o">/</span> <span class="o">(</span><span class="n">p2</span><span class="o">.</span><span class="na">x</span> <span class="o">-</span> <span class="n">p1</span><span class="o">.</span><span class="na">x</span><span class="o">);</span>
+  <span class="kt">double</span> <span class="n">c</span> <span class="o">=</span> <span class="n">p2</span><span class="o">.</span><span class="na">y</span> <span class="o">-</span> <span class="n">slope</span> <span class="o">*</span> <span class="n">p2</span><span class="o">.</span><span class="na">x</span><span class="o">;</span>
+  <span class="k">return</span> <span class="k">new</span> <span class="n">Line</span><span class="o">(</span><span class="n">slope</span><span class="o">,</span> <span class="n">c</span><span class="o">);</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div></div></div>
   <div class="card-footer"><div class="post-navs d-flex justify-content-evenly">
   <div class="post-nav post-prev"><i class="fas fa-fw fa-chevron-left"></i>
     <a href="/post/cracking-coding-interview/16.12-xml-encoding/">Cracking Coding Interview - 16.12 XML Encoding

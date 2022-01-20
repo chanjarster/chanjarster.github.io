@@ -12,7 +12,7 @@
 <meta name="description" content="" /><meta itemprop="name" content="docker/K8S故障排查Cheatsheet">
 <meta itemprop="description" content=""><meta itemprop="datePublished" content="2020-12-04T14:24:45+08:00" />
 <meta itemprop="dateModified" content="2020-12-04T14:24:45+08:00" />
-<meta itemprop="wordCount" content="359">
+<meta itemprop="wordCount" content="366">
 <meta itemprop="keywords" content="k8s,docker,cheatsheet," /><meta property="og:title" content="docker/K8S故障排查Cheatsheet" />
 <meta property="og:description" content="" />
 <meta property="og:type" content="article" />
@@ -226,32 +226,81 @@
 <div class="post-content mb-3"><h2 id="docker">docker<a class="anchor ms-1" href="#docker"><i class="fas fa-link"></i></a></h2>
 <h3 id="拿到dockerd的thread-dump">拿到dockerd的thread dump<a class="anchor ms-1" href="#拿到dockerd的thread-dump"><i class="fas fa-link"></i></a></h3>
 <p>执行下列命令（不会kill掉进程）：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span><span class="nb">kill</span> -SIGUSR1 <span class="k">$(</span>pidof dockerd<span class="k">)</span>
-</code></pre></div><p>用<code>journalctl -u docker.service</code>可以看到输出到哪里：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="ln">1</span>Dec 04 07:08:11 docker-learn-5 dockerd[2090]: time=&#34;2020-12-04T07:08:11.362055588Z&#34; level=info msg=&#34;goroutine stacks written to /var/run/docker/goroutine-stacks-2020-12-04T070811Z.log&#34;
-</code></pre></div><p><a href="https://docs.docker.com/config/daemon/#force-a-stack-trace-to-be-logged" target="_blank" rel="noopener noreferrer">参考文档</a>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="nb">kill</span> -SIGUSR1 <span class="k">$(</span>pidof dockerd<span class="k">)</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>用<code>journalctl -u docker.service</code>可以看到输出到哪里：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback">Dec 04 07:08:11 docker-learn-5 dockerd[2090]: time=&#34;2020-12-04T07:08:11.362055588Z&#34; level=info msg=&#34;goroutine stacks written to /var/run/docker/goroutine-stacks-2020-12-04T070811Z.log&#34;
+</code></pre></td></tr></table>
+</div>
+</div><p><a href="https://docs.docker.com/config/daemon/#force-a-stack-trace-to-be-logged" target="_blank" rel="noopener noreferrer">参考文档</a>
 </p>
 <h2 id="containerd">containerd<a class="anchor ms-1" href="#containerd"><i class="fas fa-link"></i></a></h2>
 <h3 id="拿到thread-dump">拿到thread dump<a class="anchor ms-1" href="#拿到thread-dump"><i class="fas fa-link"></i></a></h3>
 <p>执行下列命令（不会kill掉进程）：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span><span class="nb">kill</span> -SIGUSR1 <span class="k">$(</span>pidof containerd<span class="k">)</span>
-</code></pre></div><p>用<code>journalctl -u containerd.service</code>直接查看thread dump。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="nb">kill</span> -SIGUSR1 <span class="k">$(</span>pidof containerd<span class="k">)</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>用<code>journalctl -u containerd.service</code>直接查看thread dump。</p>
 <p>如果是containerd-shim，则需要先启用<code>shim_debug</code>，然后</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span><span class="nb">kill</span> -SIGUSR1 <span class="k">$(</span>pidof containerd-shim<span class="k">)</span>
-</code></pre></div><p><a href="https://github.com/containerd/containerd/issues/2744#issuecomment-453614175" target="_blank" rel="noopener noreferrer">参考文档</a>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="nb">kill</span> -SIGUSR1 <span class="k">$(</span>pidof containerd-shim<span class="k">)</span>
+</code></pre></td></tr></table>
+</div>
+</div><p><a href="https://github.com/containerd/containerd/issues/2744#issuecomment-453614175" target="_blank" rel="noopener noreferrer">参考文档</a>
 </p>
 <h2 id="k8s">k8s<a class="anchor ms-1" href="#k8s"><i class="fas fa-link"></i></a></h2>
 <h3 id="拿到kubelet的thread-dump">拿到kubelet的thread dump<a class="anchor ms-1" href="#拿到kubelet的thread-dump"><i class="fas fa-link"></i></a></h3>
 <p><strong>方法一（不会kill进程）：</strong></p>
 <p>在一个终端执行：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>kubectl proxy
-</code></pre></div><p>如果是rancher，则使用直接连接到某台master的context配置。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">kubectl proxy
+</code></pre></td></tr></table>
+</div>
+</div><p>如果是rancher，则使用直接连接到某台master的context配置。</p>
 <p>在另一个终端执行：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>curl <span class="s1">&#39;http://localhost:8001/api/v1/nodes/&lt;node name&gt;/proxy/debug/pprof/goroutine?debug=2&#39;</span>
-</code></pre></div><p>实际上这个方法就是go的pprof，你可以利用这个做很多事情。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">curl <span class="s1">&#39;http://localhost:8001/api/v1/nodes/&lt;node name&gt;/proxy/debug/pprof/goroutine?debug=2&#39;</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>实际上这个方法就是go的pprof，你可以利用这个做很多事情。</p>
 <p><strong>方法二（会kill进程）：</strong></p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span><span class="nb">kill</span> -SIGABRT <span class="k">$(</span>pidof kubelet<span class="k">)</span>
-</code></pre></div><p><a href="https://stackoverflow.com/a/56648851/1287790" target="_blank" rel="noopener noreferrer">参考文档</a>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="nb">kill</span> -SIGABRT <span class="k">$(</span>pidof kubelet<span class="k">)</span>
+</code></pre></td></tr></table>
+</div>
+</div><p><a href="https://stackoverflow.com/a/56648851/1287790" target="_blank" rel="noopener noreferrer">参考文档</a>
 </p></div></div>
   <div class="card-footer"><div class="post-navs d-flex justify-content-evenly">
   <div class="post-nav post-prev"><i class="fas fa-fw fa-chevron-left"></i>

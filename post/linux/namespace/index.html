@@ -12,7 +12,7 @@
 <meta name="description" content="" /><meta itemprop="name" content="Linux命名空间一些笔记">
 <meta itemprop="description" content=""><meta itemprop="datePublished" content="2021-12-07T16:35:45+08:00" />
 <meta itemprop="dateModified" content="2021-12-07T16:35:45+08:00" />
-<meta itemprop="wordCount" content="606">
+<meta itemprop="wordCount" content="619">
 <meta itemprop="keywords" content="linux,kernel,docker," /><meta property="og:title" content="Linux命名空间一些笔记" />
 <meta property="og:description" content="" />
 <meta property="og:type" content="article" />
@@ -230,32 +230,87 @@
 ），如果以 bar 用户 操作这个目录下需要foo 用户的文件/目录也是完全没有任何问题的，因为 bar的foo的UID相同。</p>
 <p><strong>下面是一些脚本</strong></p>
 <p>得到容器在Host上的PID：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>docker inspect <span class="nv">$container_id</span> -f <span class="s1">&#39;{{.State.Pid}}&#39;</span>
-</code></pre></div><p>探测容器用户、UID、用户组、GID：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span><span class="c1"># 先touch个一文件</span>
-<span class="ln">2</span>$ docker <span class="nb">exec</span> <span class="nv">$container_id</span> touch /tmp/.pod_jvm_tools
-<span class="ln">3</span><span class="c1"># stat这个文件</span>
-<span class="ln">4</span>$ docker <span class="nb">exec</span> <span class="nv">$container_id</span> stat -c <span class="s1">&#39;%u %U %g %G&#39;</span> /tmp/.pod_jvm_tools<span class="o">)</span>
-<span class="ln">5</span><span class="m">1000</span>  java-app <span class="m">65535</span> nogroup
-<span class="ln">6</span><span class="o">[</span>uid<span class="o">]</span> <span class="o">[</span>usr<span class="o">]</span>    <span class="o">[</span>gid<span class="o">]</span> <span class="o">[</span>group<span class="o">]</span>
-</code></pre></div><p>检查当前系统有没有用户、用户组：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>getent passwd <span class="o">[</span>uid<span class="o">]</span>
-<span class="ln">2</span>getent group <span class="o">[</span>gid<span class="o">]</span>
-</code></pre></div><p><a href="https://man7.org/linux/man-pages/man1/nsenter.1.html" target="_blank" rel="noopener noreferrer">nsenter</a>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">docker inspect <span class="nv">$container_id</span> -f <span class="s1">&#39;{{.State.Pid}}&#39;</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>探测容器用户、UID、用户组、GID：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="c1"># 先touch个一文件</span>
+$ docker <span class="nb">exec</span> <span class="nv">$container_id</span> touch /tmp/.pod_jvm_tools
+<span class="c1"># stat这个文件</span>
+$ docker <span class="nb">exec</span> <span class="nv">$container_id</span> stat -c <span class="s1">&#39;%u %U %g %G&#39;</span> /tmp/.pod_jvm_tools<span class="o">)</span>
+<span class="m">1000</span>  java-app <span class="m">65535</span> nogroup
+<span class="o">[</span>uid<span class="o">]</span> <span class="o">[</span>usr<span class="o">]</span>    <span class="o">[</span>gid<span class="o">]</span> <span class="o">[</span>group<span class="o">]</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>检查当前系统有没有用户、用户组：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">getent passwd <span class="o">[</span>uid<span class="o">]</span>
+getent group <span class="o">[</span>gid<span class="o">]</span>
+</code></pre></td></tr></table>
+</div>
+</div><p><a href="https://man7.org/linux/man-pages/man1/nsenter.1.html" target="_blank" rel="noopener noreferrer">nsenter</a>
 ，进入某个PID的Namesapce，然后执行某些命令:</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>nsenter -t &lt;pid&gt; -a -r
-</code></pre></div><p><a href="https://man7.org/linux/man-pages/man1/runuser.1.html" target="_blank" rel="noopener noreferrer">runuser</a>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">nsenter -t &lt;pid&gt; -a -r
+</code></pre></td></tr></table>
+</div>
+</div><p><a href="https://man7.org/linux/man-pages/man1/runuser.1.html" target="_blank" rel="noopener noreferrer">runuser</a>
 ，以某用户某group身份执行某些命令：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>runuser -u &lt;usr&gt; -g &lt;group&gt; -m -- cat /proc/&lt;pid&gt;/root/path/to/file
-</code></pre></div><p><a href="https://man7.org/linux/man-pages/man1/pgrep.1.html" target="_blank" rel="noopener noreferrer">pgrep</a>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">runuser -u &lt;usr&gt; -g &lt;group&gt; -m -- cat /proc/&lt;pid&gt;/root/path/to/file
+</code></pre></td></tr></table>
+</div>
+</div><p><a href="https://man7.org/linux/man-pages/man1/pgrep.1.html" target="_blank" rel="noopener noreferrer">pgrep</a>
 ，列出同属某进程Namespace的所有其他进程：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>pgrep --ns &lt;pid&gt; -a
-</code></pre></div><p><a href="https://man7.org/linux/man-pages/man8/lsns.8.html" target="_blank" rel="noopener noreferrer">lsns</a>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">pgrep --ns &lt;pid&gt; -a
+</code></pre></td></tr></table>
+</div>
+</div><p><a href="https://man7.org/linux/man-pages/man8/lsns.8.html" target="_blank" rel="noopener noreferrer">lsns</a>
 ，显示每个容器的根namesapce，但实际用下来没有搞明白（可以参考<a href="https://www.redhat.com/sysadmin/linux-pid-namespaces" target="_blank" rel="noopener noreferrer">这个</a>
 和<a href="https://unix.stackexchange.com/questions/105403/how-to-list-namespaces-in-linux" target="_blank" rel="noopener noreferrer">这个</a>
 ），没有nsenter好用：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>lsns -t pid
-</code></pre></div></div></div>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">lsns -t pid
+</code></pre></td></tr></table>
+</div>
+</div></div></div>
   <div class="card-footer"><div class="post-navs d-flex justify-content-evenly">
   <div class="post-nav post-prev"><i class="fas fa-fw fa-chevron-left"></i>
     <a href="/post/jvm-tools/">Jps Jstat Jstack...的工作原理

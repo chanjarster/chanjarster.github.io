@@ -12,7 +12,7 @@
 <meta name="description" content="" /><meta itemprop="name" content="Atomic Variables and Nonblocking Synchronization">
 <meta itemprop="description" content=""><meta itemprop="datePublished" content="2019-11-24T22:06:29+08:00" />
 <meta itemprop="dateModified" content="2019-11-24T22:06:29+08:00" />
-<meta itemprop="wordCount" content="2717">
+<meta itemprop="wordCount" content="2734">
 <meta itemprop="keywords" content="并发编程," /><meta property="og:title" content="Atomic Variables and Nonblocking Synchronization" />
 <meta property="og:description" content="" />
 <meta property="og:type" content="article" />
@@ -278,102 +278,206 @@
 <p>返回值：V中的值</p>
 <p>CAS操作失败的线程不会阻塞，它可自行决定是否重试，或者其他措施。</p>
 <p>下面是一个模拟的CAS：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln"> 1</span><span class="nd">@ThreadSafe</span>
-<span class="ln"> 2</span><span class="kd">public</span> <span class="kd">class</span> <span class="nc">SimulatedCAS</span> <span class="o">{</span>
-<span class="ln"> 3</span>  <span class="nd">@GuardedBy</span><span class="o">(</span><span class="s">&#34;this&#34;</span><span class="o">)</span> <span class="kd">private</span> <span class="kt">int</span> <span class="n">value</span><span class="o">;</span>
-<span class="ln"> 4</span>
-<span class="ln"> 5</span>  <span class="kd">public</span> <span class="kd">synchronized</span> <span class="kt">int</span> <span class="nf">get</span><span class="o">()</span> <span class="o">{</span>
-<span class="ln"> 6</span>    <span class="k">return</span> <span class="n">value</span><span class="o">;</span>
-<span class="ln"> 7</span>  <span class="o">}</span>
-<span class="ln"> 8</span>
-<span class="ln"> 9</span>  <span class="kd">public</span> <span class="kd">synchronized</span> <span class="kt">int</span> <span class="nf">compareAndSwap</span><span class="o">(</span><span class="kt">int</span> <span class="n">expectedValue</span><span class="o">,</span>
-<span class="ln">10</span>                       <span class="kt">int</span> <span class="n">newValue</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">11</span>    <span class="kt">int</span> <span class="n">oldValue</span> <span class="o">=</span> <span class="n">value</span><span class="o">;</span>
-<span class="ln">12</span>    <span class="k">if</span> <span class="o">(</span><span class="n">oldValue</span> <span class="o">==</span> <span class="n">expectedValue</span><span class="o">)</span>
-<span class="ln">13</span>      <span class="n">value</span> <span class="o">=</span> <span class="n">newValue</span><span class="o">;</span>
-<span class="ln">14</span>    <span class="k">return</span> <span class="n">oldValue</span><span class="o">;</span>
-<span class="ln">15</span>  <span class="o">}</span>
-<span class="ln">16</span>
-<span class="ln">17</span>  <span class="kd">public</span> <span class="kd">synchronized</span> <span class="kt">boolean</span> <span class="nf">compareAndSet</span><span class="o">(</span><span class="kt">int</span> <span class="n">expectedValue</span><span class="o">,</span>
-<span class="ln">18</span>                        <span class="kt">int</span> <span class="n">newValue</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">19</span>    <span class="k">return</span> <span class="o">(</span><span class="n">expectedValue</span>
-<span class="ln">20</span>        <span class="o">==</span> <span class="n">compareAndSwap</span><span class="o">(</span><span class="n">expectedValue</span><span class="o">,</span> <span class="n">newValue</span><span class="o">));</span>
-<span class="ln">21</span>  <span class="o">}</span>
-<span class="ln">22</span><span class="o">}</span>
-</code></pre></div><h3 id="一个非阻塞的计数器">一个非阻塞的计数器<a class="anchor ms-1" href="#一个非阻塞的计数器"><i class="fas fa-link"></i></a></h3>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="nd">@ThreadSafe</span>
+<span class="kd">public</span> <span class="kd">class</span> <span class="nc">SimulatedCAS</span> <span class="o">{</span>
+  <span class="nd">@GuardedBy</span><span class="o">(</span><span class="s">&#34;this&#34;</span><span class="o">)</span> <span class="kd">private</span> <span class="kt">int</span> <span class="n">value</span><span class="o">;</span>
+
+  <span class="kd">public</span> <span class="kd">synchronized</span> <span class="kt">int</span> <span class="nf">get</span><span class="o">()</span> <span class="o">{</span>
+    <span class="k">return</span> <span class="n">value</span><span class="o">;</span>
+  <span class="o">}</span>
+
+  <span class="kd">public</span> <span class="kd">synchronized</span> <span class="kt">int</span> <span class="nf">compareAndSwap</span><span class="o">(</span><span class="kt">int</span> <span class="n">expectedValue</span><span class="o">,</span>
+                       <span class="kt">int</span> <span class="n">newValue</span><span class="o">)</span> <span class="o">{</span>
+    <span class="kt">int</span> <span class="n">oldValue</span> <span class="o">=</span> <span class="n">value</span><span class="o">;</span>
+    <span class="k">if</span> <span class="o">(</span><span class="n">oldValue</span> <span class="o">==</span> <span class="n">expectedValue</span><span class="o">)</span>
+      <span class="n">value</span> <span class="o">=</span> <span class="n">newValue</span><span class="o">;</span>
+    <span class="k">return</span> <span class="n">oldValue</span><span class="o">;</span>
+  <span class="o">}</span>
+
+  <span class="kd">public</span> <span class="kd">synchronized</span> <span class="kt">boolean</span> <span class="nf">compareAndSet</span><span class="o">(</span><span class="kt">int</span> <span class="n">expectedValue</span><span class="o">,</span>
+                        <span class="kt">int</span> <span class="n">newValue</span><span class="o">)</span> <span class="o">{</span>
+    <span class="k">return</span> <span class="o">(</span><span class="n">expectedValue</span>
+        <span class="o">==</span> <span class="n">compareAndSwap</span><span class="o">(</span><span class="n">expectedValue</span><span class="o">,</span> <span class="n">newValue</span><span class="o">));</span>
+  <span class="o">}</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><h3 id="一个非阻塞的计数器">一个非阻塞的计数器<a class="anchor ms-1" href="#一个非阻塞的计数器"><i class="fas fa-link"></i></a></h3>
 <p>下面是一个非阻塞的计数器的例子：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln"> 1</span><span class="nd">@ThreadSafe</span>
-<span class="ln"> 2</span><span class="kd">public</span> <span class="kd">class</span> <span class="nc">CasCounter</span> <span class="o">{</span>
-<span class="ln"> 3</span>  <span class="kd">private</span> <span class="n">SimulatedCAS</span> <span class="n">value</span><span class="o">;</span>
-<span class="ln"> 4</span>
-<span class="ln"> 5</span>  <span class="kd">public</span> <span class="kt">int</span> <span class="nf">getValue</span><span class="o">()</span> <span class="o">{</span>
-<span class="ln"> 6</span>    <span class="k">return</span> <span class="n">value</span><span class="o">.</span><span class="na">get</span><span class="o">();</span>
-<span class="ln"> 7</span>  <span class="o">}</span>
-<span class="ln"> 8</span>
-<span class="ln"> 9</span>  <span class="kd">public</span> <span class="kt">int</span> <span class="nf">increment</span><span class="o">()</span> <span class="o">{</span>
-<span class="ln">10</span>    <span class="kt">int</span> <span class="n">v</span><span class="o">;</span>
-<span class="ln">11</span>    <span class="k">do</span> <span class="o">{</span>
-<span class="ln">12</span>      <span class="n">v</span> <span class="o">=</span> <span class="n">value</span><span class="o">.</span><span class="na">get</span><span class="o">();</span>
-<span class="ln">13</span>    <span class="o">}</span> <span class="k">while</span> <span class="o">(</span><span class="n">v</span> <span class="o">!=</span> <span class="n">value</span><span class="o">.</span><span class="na">compareAndSwap</span><span class="o">(</span><span class="n">v</span><span class="o">,</span> <span class="n">v</span> <span class="o">+</span> <span class="n">1</span><span class="o">));</span>
-<span class="ln">14</span>    <span class="k">return</span> <span class="n">v</span> <span class="o">+</span> <span class="n">1</span><span class="o">;</span>
-<span class="ln">15</span>  <span class="o">}</span>
-<span class="ln">16</span><span class="o">}</span>
-</code></pre></div><h2 id="atomic-variable-classes">Atomic Variable classes<a class="anchor ms-1" href="#atomic-variable-classes"><i class="fas fa-link"></i></a></h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="nd">@ThreadSafe</span>
+<span class="kd">public</span> <span class="kd">class</span> <span class="nc">CasCounter</span> <span class="o">{</span>
+  <span class="kd">private</span> <span class="n">SimulatedCAS</span> <span class="n">value</span><span class="o">;</span>
+
+  <span class="kd">public</span> <span class="kt">int</span> <span class="nf">getValue</span><span class="o">()</span> <span class="o">{</span>
+    <span class="k">return</span> <span class="n">value</span><span class="o">.</span><span class="na">get</span><span class="o">();</span>
+  <span class="o">}</span>
+
+  <span class="kd">public</span> <span class="kt">int</span> <span class="nf">increment</span><span class="o">()</span> <span class="o">{</span>
+    <span class="kt">int</span> <span class="n">v</span><span class="o">;</span>
+    <span class="k">do</span> <span class="o">{</span>
+      <span class="n">v</span> <span class="o">=</span> <span class="n">value</span><span class="o">.</span><span class="na">get</span><span class="o">();</span>
+    <span class="o">}</span> <span class="k">while</span> <span class="o">(</span><span class="n">v</span> <span class="o">!=</span> <span class="n">value</span><span class="o">.</span><span class="na">compareAndSwap</span><span class="o">(</span><span class="n">v</span><span class="o">,</span> <span class="n">v</span> <span class="o">+</span> <span class="n">1</span><span class="o">));</span>
+    <span class="k">return</span> <span class="n">v</span> <span class="o">+</span> <span class="n">1</span><span class="o">;</span>
+  <span class="o">}</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><h2 id="atomic-variable-classes">Atomic Variable classes<a class="anchor ms-1" href="#atomic-variable-classes"><i class="fas fa-link"></i></a></h2>
 <p>更新一个原子变量的</p>
 <ul>
 <li>fast path（无竞争）不比获得锁的fast path慢，并且通常更快。</li>
 <li>slow path（有竞争）绝对比获得锁的slow path快，因为没有线程挂起和调度开销。</li>
 </ul>
 <h3 id="atomics-vs-better-volatiles">Atomics vs “better volatiles”<a class="anchor ms-1" href="#atomics-vs-better-volatiles"><i class="fas fa-link"></i></a></h3>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln"> 1</span><span class="nd">@ThreadSafe</span>
-<span class="ln"> 2</span><span class="kd">public</span> <span class="kd">class</span> <span class="nc">CasNumberRange</span> <span class="o">{</span>
-<span class="ln"> 3</span>  <span class="nd">@Immutable</span>
-<span class="ln"> 4</span>  <span class="kd">private</span> <span class="kd">static</span> <span class="kd">class</span> <span class="nc">IntPair</span> <span class="o">{</span>
-<span class="ln"> 5</span>    <span class="c1">// INVARIANT: lower &lt;= upper
-</span><span class="ln"> 6</span><span class="c1"></span>    <span class="kd">final</span> <span class="kt">int</span> <span class="n">lower</span><span class="o">;</span>
-<span class="ln"> 7</span>    <span class="kd">final</span> <span class="kt">int</span> <span class="n">upper</span><span class="o">;</span>
-<span class="ln"> 8</span>
-<span class="ln"> 9</span>    <span class="kd">public</span> <span class="nf">IntPair</span><span class="o">(</span><span class="kt">int</span> <span class="n">lower</span><span class="o">,</span> <span class="kt">int</span> <span class="n">upper</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">10</span>      <span class="k">this</span><span class="o">.</span><span class="na">lower</span> <span class="o">=</span> <span class="n">lower</span><span class="o">;</span>
-<span class="ln">11</span>      <span class="k">this</span><span class="o">.</span><span class="na">upper</span> <span class="o">=</span> <span class="n">upper</span><span class="o">;</span>
-<span class="ln">12</span>    <span class="o">}</span>
-<span class="ln">13</span>  <span class="o">}</span>
-<span class="ln">14</span>
-<span class="ln">15</span>  <span class="kd">private</span> <span class="kd">final</span> <span class="n">AtomicReference</span><span class="o">&lt;</span><span class="n">IntPair</span><span class="o">&gt;</span> <span class="n">values</span> <span class="o">=</span>
-<span class="ln">16</span>      <span class="k">new</span> <span class="n">AtomicReference</span><span class="o">&lt;</span><span class="n">IntPair</span><span class="o">&gt;(</span><span class="k">new</span> <span class="n">IntPair</span><span class="o">(</span><span class="n">0</span><span class="o">,</span> <span class="n">0</span><span class="o">));</span>
-<span class="ln">17</span>
-<span class="ln">18</span>  <span class="kd">public</span> <span class="kt">int</span> <span class="nf">getLower</span><span class="o">()</span> <span class="o">{</span>
-<span class="ln">19</span>    <span class="k">return</span> <span class="n">values</span><span class="o">.</span><span class="na">get</span><span class="o">().</span><span class="na">lower</span><span class="o">;</span>
-<span class="ln">20</span>  <span class="o">}</span>
-<span class="ln">21</span>
-<span class="ln">22</span>  <span class="kd">public</span> <span class="kt">int</span> <span class="nf">getUpper</span><span class="o">()</span> <span class="o">{</span>
-<span class="ln">23</span>    <span class="k">return</span> <span class="n">values</span><span class="o">.</span><span class="na">get</span><span class="o">().</span><span class="na">upper</span><span class="o">;</span>
-<span class="ln">24</span>  <span class="o">}</span>
-<span class="ln">25</span>  
-<span class="ln">26</span>  <span class="c1">// 单改lower，所以用AtomicReference
-</span><span class="ln">27</span><span class="c1"></span>  <span class="kd">public</span> <span class="kt">void</span> <span class="nf">setLower</span><span class="o">(</span><span class="kt">int</span> <span class="n">i</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">28</span>    <span class="k">while</span> <span class="o">(</span><span class="kc">true</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">29</span>  <span class="cm">/*see*/</span> <span class="n">IntPair</span> <span class="n">oldv</span> <span class="o">=</span> <span class="n">values</span><span class="o">.</span><span class="na">get</span><span class="o">();</span>
-<span class="ln">30</span>      <span class="k">if</span> <span class="o">(</span><span class="n">i</span> <span class="o">&gt;</span> <span class="n">oldv</span><span class="o">.</span><span class="na">upper</span><span class="o">)</span>
-<span class="ln">31</span>        <span class="k">throw</span> <span class="k">new</span> <span class="n">IllegalArgumentException</span><span class="o">(</span><span class="s">&#34;Can&#39;t set lower to &#34;</span> <span class="o">+</span> <span class="n">i</span> <span class="o">+</span> <span class="s">&#34; &gt; upper&#34;</span><span class="o">);</span>
-<span class="ln">32</span>  <span class="cm">/*see*/</span> <span class="n">IntPair</span> <span class="n">newv</span> <span class="o">=</span> <span class="k">new</span> <span class="n">IntPair</span><span class="o">(</span><span class="n">i</span><span class="o">,</span> <span class="n">oldv</span><span class="o">.</span><span class="na">upper</span><span class="o">);</span>
-<span class="ln">33</span>  <span class="cm">/*see*/</span> <span class="k">if</span> <span class="o">(</span><span class="n">values</span><span class="o">.</span><span class="na">compareAndSet</span><span class="o">(</span><span class="n">oldv</span><span class="o">,</span> <span class="n">newv</span><span class="o">))</span>
-<span class="ln">34</span>        <span class="k">return</span><span class="o">;</span>
-<span class="ln">35</span>    <span class="o">}</span>
-<span class="ln">36</span>  <span class="o">}</span>
-<span class="ln">37</span>
-<span class="ln">38</span>  <span class="kd">public</span> <span class="kt">void</span> <span class="nf">setUpper</span><span class="o">(</span><span class="kt">int</span> <span class="n">i</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">39</span>    <span class="k">while</span> <span class="o">(</span><span class="kc">true</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">40</span>      <span class="n">IntPair</span> <span class="n">oldv</span> <span class="o">=</span> <span class="n">values</span><span class="o">.</span><span class="na">get</span><span class="o">();</span>
-<span class="ln">41</span>      <span class="k">if</span> <span class="o">(</span><span class="n">i</span> <span class="o">&lt;</span> <span class="n">oldv</span><span class="o">.</span><span class="na">lower</span><span class="o">)</span>
-<span class="ln">42</span>        <span class="k">throw</span> <span class="k">new</span> <span class="n">IllegalArgumentException</span><span class="o">(</span><span class="s">&#34;Can&#39;t set upper to &#34;</span> <span class="o">+</span> <span class="n">i</span> <span class="o">+</span> <span class="s">&#34; &lt; lower&#34;</span><span class="o">);</span>
-<span class="ln">43</span>      <span class="n">IntPair</span> <span class="n">newv</span> <span class="o">=</span> <span class="k">new</span> <span class="n">IntPair</span><span class="o">(</span><span class="n">oldv</span><span class="o">.</span><span class="na">lower</span><span class="o">,</span> <span class="n">i</span><span class="o">);</span>
-<span class="ln">44</span>      <span class="k">if</span> <span class="o">(</span><span class="n">values</span><span class="o">.</span><span class="na">compareAndSet</span><span class="o">(</span><span class="n">oldv</span><span class="o">,</span> <span class="n">newv</span><span class="o">))</span>
-<span class="ln">45</span>        <span class="k">return</span><span class="o">;</span>
-<span class="ln">46</span>    <span class="o">}</span>
-<span class="ln">47</span>  <span class="o">}</span>
-<span class="ln">48</span><span class="o">}</span>
-</code></pre></div><h3 id="锁和原子变量">锁和原子变量<a class="anchor ms-1" href="#锁和原子变量"><i class="fas fa-link"></i></a></h3>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span><span class="lnt">46
+</span><span class="lnt">47
+</span><span class="lnt">48
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="nd">@ThreadSafe</span>
+<span class="kd">public</span> <span class="kd">class</span> <span class="nc">CasNumberRange</span> <span class="o">{</span>
+  <span class="nd">@Immutable</span>
+  <span class="kd">private</span> <span class="kd">static</span> <span class="kd">class</span> <span class="nc">IntPair</span> <span class="o">{</span>
+    <span class="c1">// INVARIANT: lower &lt;= upper
+</span><span class="c1"></span>    <span class="kd">final</span> <span class="kt">int</span> <span class="n">lower</span><span class="o">;</span>
+    <span class="kd">final</span> <span class="kt">int</span> <span class="n">upper</span><span class="o">;</span>
+
+    <span class="kd">public</span> <span class="nf">IntPair</span><span class="o">(</span><span class="kt">int</span> <span class="n">lower</span><span class="o">,</span> <span class="kt">int</span> <span class="n">upper</span><span class="o">)</span> <span class="o">{</span>
+      <span class="k">this</span><span class="o">.</span><span class="na">lower</span> <span class="o">=</span> <span class="n">lower</span><span class="o">;</span>
+      <span class="k">this</span><span class="o">.</span><span class="na">upper</span> <span class="o">=</span> <span class="n">upper</span><span class="o">;</span>
+    <span class="o">}</span>
+  <span class="o">}</span>
+
+  <span class="kd">private</span> <span class="kd">final</span> <span class="n">AtomicReference</span><span class="o">&lt;</span><span class="n">IntPair</span><span class="o">&gt;</span> <span class="n">values</span> <span class="o">=</span>
+      <span class="k">new</span> <span class="n">AtomicReference</span><span class="o">&lt;</span><span class="n">IntPair</span><span class="o">&gt;(</span><span class="k">new</span> <span class="n">IntPair</span><span class="o">(</span><span class="n">0</span><span class="o">,</span> <span class="n">0</span><span class="o">));</span>
+
+  <span class="kd">public</span> <span class="kt">int</span> <span class="nf">getLower</span><span class="o">()</span> <span class="o">{</span>
+    <span class="k">return</span> <span class="n">values</span><span class="o">.</span><span class="na">get</span><span class="o">().</span><span class="na">lower</span><span class="o">;</span>
+  <span class="o">}</span>
+
+  <span class="kd">public</span> <span class="kt">int</span> <span class="nf">getUpper</span><span class="o">()</span> <span class="o">{</span>
+    <span class="k">return</span> <span class="n">values</span><span class="o">.</span><span class="na">get</span><span class="o">().</span><span class="na">upper</span><span class="o">;</span>
+  <span class="o">}</span>
+  
+  <span class="c1">// 单改lower，所以用AtomicReference
+</span><span class="c1"></span>  <span class="kd">public</span> <span class="kt">void</span> <span class="nf">setLower</span><span class="o">(</span><span class="kt">int</span> <span class="n">i</span><span class="o">)</span> <span class="o">{</span>
+    <span class="k">while</span> <span class="o">(</span><span class="kc">true</span><span class="o">)</span> <span class="o">{</span>
+  <span class="cm">/*see*/</span> <span class="n">IntPair</span> <span class="n">oldv</span> <span class="o">=</span> <span class="n">values</span><span class="o">.</span><span class="na">get</span><span class="o">();</span>
+      <span class="k">if</span> <span class="o">(</span><span class="n">i</span> <span class="o">&gt;</span> <span class="n">oldv</span><span class="o">.</span><span class="na">upper</span><span class="o">)</span>
+        <span class="k">throw</span> <span class="k">new</span> <span class="n">IllegalArgumentException</span><span class="o">(</span><span class="s">&#34;Can&#39;t set lower to &#34;</span> <span class="o">+</span> <span class="n">i</span> <span class="o">+</span> <span class="s">&#34; &gt; upper&#34;</span><span class="o">);</span>
+  <span class="cm">/*see*/</span> <span class="n">IntPair</span> <span class="n">newv</span> <span class="o">=</span> <span class="k">new</span> <span class="n">IntPair</span><span class="o">(</span><span class="n">i</span><span class="o">,</span> <span class="n">oldv</span><span class="o">.</span><span class="na">upper</span><span class="o">);</span>
+  <span class="cm">/*see*/</span> <span class="k">if</span> <span class="o">(</span><span class="n">values</span><span class="o">.</span><span class="na">compareAndSet</span><span class="o">(</span><span class="n">oldv</span><span class="o">,</span> <span class="n">newv</span><span class="o">))</span>
+        <span class="k">return</span><span class="o">;</span>
+    <span class="o">}</span>
+  <span class="o">}</span>
+
+  <span class="kd">public</span> <span class="kt">void</span> <span class="nf">setUpper</span><span class="o">(</span><span class="kt">int</span> <span class="n">i</span><span class="o">)</span> <span class="o">{</span>
+    <span class="k">while</span> <span class="o">(</span><span class="kc">true</span><span class="o">)</span> <span class="o">{</span>
+      <span class="n">IntPair</span> <span class="n">oldv</span> <span class="o">=</span> <span class="n">values</span><span class="o">.</span><span class="na">get</span><span class="o">();</span>
+      <span class="k">if</span> <span class="o">(</span><span class="n">i</span> <span class="o">&lt;</span> <span class="n">oldv</span><span class="o">.</span><span class="na">lower</span><span class="o">)</span>
+        <span class="k">throw</span> <span class="k">new</span> <span class="n">IllegalArgumentException</span><span class="o">(</span><span class="s">&#34;Can&#39;t set upper to &#34;</span> <span class="o">+</span> <span class="n">i</span> <span class="o">+</span> <span class="s">&#34; &lt; lower&#34;</span><span class="o">);</span>
+      <span class="n">IntPair</span> <span class="n">newv</span> <span class="o">=</span> <span class="k">new</span> <span class="n">IntPair</span><span class="o">(</span><span class="n">oldv</span><span class="o">.</span><span class="na">lower</span><span class="o">,</span> <span class="n">i</span><span class="o">);</span>
+      <span class="k">if</span> <span class="o">(</span><span class="n">values</span><span class="o">.</span><span class="na">compareAndSet</span><span class="o">(</span><span class="n">oldv</span><span class="o">,</span> <span class="n">newv</span><span class="o">))</span>
+        <span class="k">return</span><span class="o">;</span>
+    <span class="o">}</span>
+  <span class="o">}</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><h3 id="锁和原子变量">锁和原子变量<a class="anchor ms-1" href="#锁和原子变量"><i class="fas fa-link"></i></a></h3>
 <p>代码就不贴了，说结论：</p>
 <ul>
 <li>在高竞争等级下，锁要比原子变量好那么一点点（吞吐量）。为什么？因为原子变量的版本在失败后立马又重试了，反而加剧了竞争。</li>
@@ -389,41 +493,81 @@
 <p>如果一个算法是“无锁”的，那么在每一步上，总有一些线程可以取得进展。</p>
 <h3 id="一个非阻塞栈">一个非阻塞栈<a class="anchor ms-1" href="#一个非阻塞栈"><i class="fas fa-link"></i></a></h3>
 <p>注意：<code>compareAndSet</code>同时提供了可见性和原子性。</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln"> 1</span><span class="nd">@ThreadSafe</span>
-<span class="ln"> 2</span>  <span class="kd">public</span> <span class="kd">class</span> <span class="nc">ConcurrentStack</span> <span class="o">&lt;</span><span class="n">E</span><span class="o">&gt;</span> <span class="o">{</span>
-<span class="ln"> 3</span>  <span class="n">AtomicReference</span><span class="o">&lt;</span><span class="n">Node</span><span class="o">&lt;</span><span class="n">E</span><span class="o">&gt;&gt;</span> <span class="n">top</span> <span class="o">=</span> <span class="k">new</span> <span class="n">AtomicReference</span><span class="o">&lt;</span><span class="n">Node</span><span class="o">&lt;</span><span class="n">E</span><span class="o">&gt;&gt;();</span>
-<span class="ln"> 4</span>
-<span class="ln"> 5</span>  <span class="kd">public</span> <span class="kt">void</span> <span class="nf">push</span><span class="o">(</span><span class="n">E</span> <span class="n">item</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 6</span>    <span class="n">Node</span><span class="o">&lt;</span><span class="n">E</span><span class="o">&gt;</span> <span class="n">newHead</span> <span class="o">=</span> <span class="k">new</span> <span class="n">Node</span><span class="o">&lt;</span><span class="n">E</span><span class="o">&gt;(</span><span class="n">item</span><span class="o">);</span>
-<span class="ln"> 7</span>    <span class="n">Node</span><span class="o">&lt;</span><span class="n">E</span><span class="o">&gt;</span> <span class="n">oldHead</span><span class="o">;</span>
-<span class="ln"> 8</span>    <span class="k">do</span> <span class="o">{</span>
-<span class="ln"> 9</span>      <span class="n">oldHead</span> <span class="o">=</span> <span class="n">top</span><span class="o">.</span><span class="na">get</span><span class="o">();</span>
-<span class="ln">10</span>      <span class="n">newHead</span><span class="o">.</span><span class="na">next</span> <span class="o">=</span> <span class="n">oldHead</span><span class="o">;</span>
-<span class="ln">11</span>    <span class="o">}</span> <span class="k">while</span> <span class="o">(!</span><span class="n">top</span><span class="o">.</span><span class="na">compareAndSet</span><span class="o">(</span><span class="n">oldHead</span><span class="o">,</span> <span class="n">newHead</span><span class="o">));</span>
-<span class="ln">12</span>  <span class="o">}</span>
-<span class="ln">13</span>
-<span class="ln">14</span>  <span class="kd">public</span> <span class="n">E</span> <span class="nf">pop</span><span class="o">()</span> <span class="o">{</span>
-<span class="ln">15</span>    <span class="n">Node</span><span class="o">&lt;</span><span class="n">E</span><span class="o">&gt;</span> <span class="n">oldHead</span><span class="o">;</span>
-<span class="ln">16</span>    <span class="n">Node</span><span class="o">&lt;</span><span class="n">E</span><span class="o">&gt;</span> <span class="n">newHead</span><span class="o">;</span>
-<span class="ln">17</span>    <span class="k">do</span> <span class="o">{</span>
-<span class="ln">18</span>      <span class="n">oldHead</span> <span class="o">=</span> <span class="n">top</span><span class="o">.</span><span class="na">get</span><span class="o">();</span>
-<span class="ln">19</span>      <span class="k">if</span> <span class="o">(</span><span class="n">oldHead</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span>
-<span class="ln">20</span>        <span class="k">return</span> <span class="kc">null</span><span class="o">;</span>
-<span class="ln">21</span>      <span class="n">newHead</span> <span class="o">=</span> <span class="n">oldHead</span><span class="o">.</span><span class="na">next</span><span class="o">;</span>
-<span class="ln">22</span>    <span class="o">}</span> <span class="k">while</span> <span class="o">(!</span><span class="n">top</span><span class="o">.</span><span class="na">compareAndSet</span><span class="o">(</span><span class="n">oldHead</span><span class="o">,</span> <span class="n">newHead</span><span class="o">));</span> <span class="c1">// 看top是否变更过
-</span><span class="ln">23</span><span class="c1"></span>    <span class="k">return</span> <span class="n">oldHead</span><span class="o">.</span><span class="na">item</span><span class="o">;</span>
-<span class="ln">24</span>  <span class="o">}</span>
-<span class="ln">25</span>
-<span class="ln">26</span>  <span class="kd">private</span> <span class="kd">static</span> <span class="kd">class</span> <span class="nc">Node</span> <span class="o">&lt;</span><span class="n">E</span><span class="o">&gt;</span> <span class="o">{</span>
-<span class="ln">27</span>    <span class="kd">public</span> <span class="kd">final</span> <span class="n">E</span> <span class="n">item</span><span class="o">;</span>
-<span class="ln">28</span>    <span class="kd">public</span> <span class="n">Node</span><span class="o">&lt;</span><span class="n">E</span><span class="o">&gt;</span> <span class="n">next</span><span class="o">;</span>
-<span class="ln">29</span>
-<span class="ln">30</span>    <span class="kd">public</span> <span class="nf">Node</span><span class="o">(</span><span class="n">E</span> <span class="n">item</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">31</span>      <span class="k">this</span><span class="o">.</span><span class="na">item</span> <span class="o">=</span> <span class="n">item</span><span class="o">;</span>
-<span class="ln">32</span>    <span class="o">}</span>
-<span class="ln">33</span>  <span class="o">}</span>
-<span class="ln">34</span><span class="o">}</span>
-</code></pre></div><h3 id="一个非阻塞链表">一个非阻塞链表<a class="anchor ms-1" href="#一个非阻塞链表"><i class="fas fa-link"></i></a></h3>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="nd">@ThreadSafe</span>
+  <span class="kd">public</span> <span class="kd">class</span> <span class="nc">ConcurrentStack</span> <span class="o">&lt;</span><span class="n">E</span><span class="o">&gt;</span> <span class="o">{</span>
+  <span class="n">AtomicReference</span><span class="o">&lt;</span><span class="n">Node</span><span class="o">&lt;</span><span class="n">E</span><span class="o">&gt;&gt;</span> <span class="n">top</span> <span class="o">=</span> <span class="k">new</span> <span class="n">AtomicReference</span><span class="o">&lt;</span><span class="n">Node</span><span class="o">&lt;</span><span class="n">E</span><span class="o">&gt;&gt;();</span>
+
+  <span class="kd">public</span> <span class="kt">void</span> <span class="nf">push</span><span class="o">(</span><span class="n">E</span> <span class="n">item</span><span class="o">)</span> <span class="o">{</span>
+    <span class="n">Node</span><span class="o">&lt;</span><span class="n">E</span><span class="o">&gt;</span> <span class="n">newHead</span> <span class="o">=</span> <span class="k">new</span> <span class="n">Node</span><span class="o">&lt;</span><span class="n">E</span><span class="o">&gt;(</span><span class="n">item</span><span class="o">);</span>
+    <span class="n">Node</span><span class="o">&lt;</span><span class="n">E</span><span class="o">&gt;</span> <span class="n">oldHead</span><span class="o">;</span>
+    <span class="k">do</span> <span class="o">{</span>
+      <span class="n">oldHead</span> <span class="o">=</span> <span class="n">top</span><span class="o">.</span><span class="na">get</span><span class="o">();</span>
+      <span class="n">newHead</span><span class="o">.</span><span class="na">next</span> <span class="o">=</span> <span class="n">oldHead</span><span class="o">;</span>
+    <span class="o">}</span> <span class="k">while</span> <span class="o">(!</span><span class="n">top</span><span class="o">.</span><span class="na">compareAndSet</span><span class="o">(</span><span class="n">oldHead</span><span class="o">,</span> <span class="n">newHead</span><span class="o">));</span>
+  <span class="o">}</span>
+
+  <span class="kd">public</span> <span class="n">E</span> <span class="nf">pop</span><span class="o">()</span> <span class="o">{</span>
+    <span class="n">Node</span><span class="o">&lt;</span><span class="n">E</span><span class="o">&gt;</span> <span class="n">oldHead</span><span class="o">;</span>
+    <span class="n">Node</span><span class="o">&lt;</span><span class="n">E</span><span class="o">&gt;</span> <span class="n">newHead</span><span class="o">;</span>
+    <span class="k">do</span> <span class="o">{</span>
+      <span class="n">oldHead</span> <span class="o">=</span> <span class="n">top</span><span class="o">.</span><span class="na">get</span><span class="o">();</span>
+      <span class="k">if</span> <span class="o">(</span><span class="n">oldHead</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span>
+        <span class="k">return</span> <span class="kc">null</span><span class="o">;</span>
+      <span class="n">newHead</span> <span class="o">=</span> <span class="n">oldHead</span><span class="o">.</span><span class="na">next</span><span class="o">;</span>
+    <span class="o">}</span> <span class="k">while</span> <span class="o">(!</span><span class="n">top</span><span class="o">.</span><span class="na">compareAndSet</span><span class="o">(</span><span class="n">oldHead</span><span class="o">,</span> <span class="n">newHead</span><span class="o">));</span> <span class="c1">// 看top是否变更过
+</span><span class="c1"></span>    <span class="k">return</span> <span class="n">oldHead</span><span class="o">.</span><span class="na">item</span><span class="o">;</span>
+  <span class="o">}</span>
+
+  <span class="kd">private</span> <span class="kd">static</span> <span class="kd">class</span> <span class="nc">Node</span> <span class="o">&lt;</span><span class="n">E</span><span class="o">&gt;</span> <span class="o">{</span>
+    <span class="kd">public</span> <span class="kd">final</span> <span class="n">E</span> <span class="n">item</span><span class="o">;</span>
+    <span class="kd">public</span> <span class="n">Node</span><span class="o">&lt;</span><span class="n">E</span><span class="o">&gt;</span> <span class="n">next</span><span class="o">;</span>
+
+    <span class="kd">public</span> <span class="nf">Node</span><span class="o">(</span><span class="n">E</span> <span class="n">item</span><span class="o">)</span> <span class="o">{</span>
+      <span class="k">this</span><span class="o">.</span><span class="na">item</span> <span class="o">=</span> <span class="n">item</span><span class="o">;</span>
+    <span class="o">}</span>
+  <span class="o">}</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><h3 id="一个非阻塞链表">一个非阻塞链表<a class="anchor ms-1" href="#一个非阻塞链表"><i class="fas fa-link"></i></a></h3>
 <p>构建非阻塞的算法的关键在于限定原子性变更仅限定在单个变量上，如果有多个变量要原子性更新，那么需要一些技巧：</p>
 <p>第一个技巧，保证数据结构总是处于一致性的状态下，就算在一个多步骤更新的当中也是如此。如果A更新到一半B进来了，B可以知道这个情况，并且不会立即做自己的更新，B可以等待A完成，这样两个就不会互相影响了。</p>
 <p>如果A操作在半当中失败了，那么B操作就永远没法获得进展，这个时候就可以有第二个技巧来确保一个线程的失败不会导致另一个线程无法进展。</p>
@@ -433,55 +577,113 @@
 <li>当结构处在完整状态时，tail.next是不为null的</li>
 <li>当结构处在中间状态时，tail.next是为null的</li>
 </ul>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln"> 1</span><span class="nd">@ThreadSafe</span>
-<span class="ln"> 2</span><span class="kd">public</span> <span class="kd">class</span> <span class="nc">LinkedQueue</span> <span class="o">&lt;</span><span class="n">E</span><span class="o">&gt;</span> <span class="o">{</span>
-<span class="ln"> 3</span>
-<span class="ln"> 4</span>  <span class="kd">private</span> <span class="kd">static</span> <span class="kd">class</span> <span class="nc">Node</span> <span class="o">&lt;</span><span class="n">E</span><span class="o">&gt;</span> <span class="o">{</span>
-<span class="ln"> 5</span>    <span class="kd">final</span> <span class="n">E</span> <span class="n">item</span><span class="o">;</span>
-<span class="ln"> 6</span>    <span class="kd">final</span> <span class="n">AtomicReference</span><span class="o">&lt;</span><span class="n">LinkedQueue</span><span class="o">.</span><span class="na">Node</span><span class="o">&lt;</span><span class="n">E</span><span class="o">&gt;&gt;</span> <span class="n">next</span><span class="o">;</span>
-<span class="ln"> 7</span>
-<span class="ln"> 8</span>    <span class="kd">public</span> <span class="nf">Node</span><span class="o">(</span><span class="n">E</span> <span class="n">item</span><span class="o">,</span> <span class="n">LinkedQueue</span><span class="o">.</span><span class="na">Node</span><span class="o">&lt;</span><span class="n">E</span><span class="o">&gt;</span> <span class="n">next</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 9</span>      <span class="k">this</span><span class="o">.</span><span class="na">item</span> <span class="o">=</span> <span class="n">item</span><span class="o">;</span>
-<span class="ln">10</span>      <span class="k">this</span><span class="o">.</span><span class="na">next</span> <span class="o">=</span> <span class="k">new</span> <span class="n">AtomicReference</span><span class="o">&lt;</span><span class="n">LinkedQueue</span><span class="o">.</span><span class="na">Node</span><span class="o">&lt;</span><span class="n">E</span><span class="o">&gt;&gt;(</span><span class="n">next</span><span class="o">);</span>
-<span class="ln">11</span>    <span class="o">}</span>
-<span class="ln">12</span>  <span class="o">}</span>
-<span class="ln">13</span>
-<span class="ln">14</span>  <span class="kd">private</span> <span class="kd">final</span> <span class="n">LinkedQueue</span><span class="o">.</span><span class="na">Node</span><span class="o">&lt;</span><span class="n">E</span><span class="o">&gt;</span> <span class="n">dummy</span> <span class="o">=</span> <span class="k">new</span> <span class="n">LinkedQueue</span><span class="o">.</span><span class="na">Node</span><span class="o">&lt;</span><span class="n">E</span><span class="o">&gt;(</span><span class="kc">null</span><span class="o">,</span> <span class="kc">null</span><span class="o">);</span>
-<span class="ln">15</span>  <span class="kd">private</span> <span class="kd">final</span> <span class="n">AtomicReference</span><span class="o">&lt;</span><span class="n">LinkedQueue</span><span class="o">.</span><span class="na">Node</span><span class="o">&lt;</span><span class="n">E</span><span class="o">&gt;&gt;</span> <span class="n">head</span>
-<span class="ln">16</span>      <span class="o">=</span> <span class="k">new</span> <span class="n">AtomicReference</span><span class="o">&lt;</span><span class="n">LinkedQueue</span><span class="o">.</span><span class="na">Node</span><span class="o">&lt;</span><span class="n">E</span><span class="o">&gt;&gt;(</span><span class="n">dummy</span><span class="o">);</span>
-<span class="ln">17</span>  <span class="kd">private</span> <span class="kd">final</span> <span class="n">AtomicReference</span><span class="o">&lt;</span><span class="n">LinkedQueue</span><span class="o">.</span><span class="na">Node</span><span class="o">&lt;</span><span class="n">E</span><span class="o">&gt;&gt;</span> <span class="n">tail</span>
-<span class="ln">18</span>      <span class="o">=</span> <span class="k">new</span> <span class="n">AtomicReference</span><span class="o">&lt;</span><span class="n">LinkedQueue</span><span class="o">.</span><span class="na">Node</span><span class="o">&lt;</span><span class="n">E</span><span class="o">&gt;&gt;(</span><span class="n">dummy</span><span class="o">);</span>
-<span class="ln">19</span>
-<span class="ln">20</span>  <span class="kd">public</span> <span class="kt">boolean</span> <span class="nf">put</span><span class="o">(</span><span class="n">E</span> <span class="n">item</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">21</span>    <span class="n">LinkedQueue</span><span class="o">.</span><span class="na">Node</span><span class="o">&lt;</span><span class="n">E</span><span class="o">&gt;</span> <span class="n">newNode</span> <span class="o">=</span> <span class="k">new</span> <span class="n">LinkedQueue</span><span class="o">.</span><span class="na">Node</span><span class="o">&lt;</span><span class="n">E</span><span class="o">&gt;(</span><span class="n">item</span><span class="o">,</span> <span class="kc">null</span><span class="o">);</span>
-<span class="ln">22</span>    <span class="k">while</span> <span class="o">(</span><span class="kc">true</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">23</span>      <span class="n">LinkedQueue</span><span class="o">.</span><span class="na">Node</span><span class="o">&lt;</span><span class="n">E</span><span class="o">&gt;</span> <span class="n">curTail</span> <span class="o">=</span> <span class="n">tail</span><span class="o">.</span><span class="na">get</span><span class="o">();</span>
-<span class="ln">24</span>      <span class="n">LinkedQueue</span><span class="o">.</span><span class="na">Node</span><span class="o">&lt;</span><span class="n">E</span><span class="o">&gt;</span> <span class="n">tailNext</span> <span class="o">=</span> <span class="n">curTail</span><span class="o">.</span><span class="na">next</span><span class="o">.</span><span class="na">get</span><span class="o">();</span>
-<span class="ln">25</span>      <span class="k">if</span> <span class="o">(</span><span class="n">curTail</span> <span class="o">==</span> <span class="n">tail</span><span class="o">.</span><span class="na">get</span><span class="o">())</span> <span class="o">{</span>
-<span class="ln">26</span> <span class="cm">/*A*/</span>  <span class="k">if</span> <span class="o">(</span><span class="n">tailNext</span> <span class="o">!=</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">27</span>          <span class="c1">// Queue in intermediate state, advance tail
-</span><span class="ln">28</span><span class="c1"></span> <span class="cm">/*B*/</span>    <span class="n">tail</span><span class="o">.</span><span class="na">compareAndSet</span><span class="o">(</span><span class="n">curTail</span><span class="o">,</span> <span class="n">tailNext</span><span class="o">);</span>
-<span class="ln">29</span>        <span class="o">}</span> <span class="k">else</span> <span class="o">{</span>
-<span class="ln">30</span>          <span class="c1">// In quiescent state, try inserting new node
-</span><span class="ln">31</span><span class="c1"></span> <span class="cm">/*C*/</span>    <span class="k">if</span> <span class="o">(</span><span class="n">curTail</span><span class="o">.</span><span class="na">next</span><span class="o">.</span><span class="na">compareAndSet</span><span class="o">(</span><span class="kc">null</span><span class="o">,</span> <span class="n">newNode</span><span class="o">))</span> <span class="o">{</span>
-<span class="ln">32</span>            <span class="c1">// Insertion succeeded, try advancing tail
-</span><span class="ln">33</span><span class="c1"></span> <span class="cm">/*D*/</span>      <span class="n">tail</span><span class="o">.</span><span class="na">compareAndSet</span><span class="o">(</span><span class="n">curTail</span><span class="o">,</span> <span class="n">newNode</span><span class="o">);</span>
-<span class="ln">34</span>            <span class="k">return</span> <span class="kc">true</span><span class="o">;</span>
-<span class="ln">35</span>          <span class="o">}</span>
-<span class="ln">36</span>        <span class="o">}</span>
-<span class="ln">37</span>      <span class="o">}</span>
-<span class="ln">38</span>    <span class="o">}</span>
-<span class="ln">39</span>  <span class="o">}</span>
-<span class="ln">40</span><span class="o">}</span>
-</code></pre></div><h3 id="atomic-field-updaters">Atomic field updaters<a class="anchor ms-1" href="#atomic-field-updaters"><i class="fas fa-link"></i></a></h3>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="nd">@ThreadSafe</span>
+<span class="kd">public</span> <span class="kd">class</span> <span class="nc">LinkedQueue</span> <span class="o">&lt;</span><span class="n">E</span><span class="o">&gt;</span> <span class="o">{</span>
+
+  <span class="kd">private</span> <span class="kd">static</span> <span class="kd">class</span> <span class="nc">Node</span> <span class="o">&lt;</span><span class="n">E</span><span class="o">&gt;</span> <span class="o">{</span>
+    <span class="kd">final</span> <span class="n">E</span> <span class="n">item</span><span class="o">;</span>
+    <span class="kd">final</span> <span class="n">AtomicReference</span><span class="o">&lt;</span><span class="n">LinkedQueue</span><span class="o">.</span><span class="na">Node</span><span class="o">&lt;</span><span class="n">E</span><span class="o">&gt;&gt;</span> <span class="n">next</span><span class="o">;</span>
+
+    <span class="kd">public</span> <span class="nf">Node</span><span class="o">(</span><span class="n">E</span> <span class="n">item</span><span class="o">,</span> <span class="n">LinkedQueue</span><span class="o">.</span><span class="na">Node</span><span class="o">&lt;</span><span class="n">E</span><span class="o">&gt;</span> <span class="n">next</span><span class="o">)</span> <span class="o">{</span>
+      <span class="k">this</span><span class="o">.</span><span class="na">item</span> <span class="o">=</span> <span class="n">item</span><span class="o">;</span>
+      <span class="k">this</span><span class="o">.</span><span class="na">next</span> <span class="o">=</span> <span class="k">new</span> <span class="n">AtomicReference</span><span class="o">&lt;</span><span class="n">LinkedQueue</span><span class="o">.</span><span class="na">Node</span><span class="o">&lt;</span><span class="n">E</span><span class="o">&gt;&gt;(</span><span class="n">next</span><span class="o">);</span>
+    <span class="o">}</span>
+  <span class="o">}</span>
+
+  <span class="kd">private</span> <span class="kd">final</span> <span class="n">LinkedQueue</span><span class="o">.</span><span class="na">Node</span><span class="o">&lt;</span><span class="n">E</span><span class="o">&gt;</span> <span class="n">dummy</span> <span class="o">=</span> <span class="k">new</span> <span class="n">LinkedQueue</span><span class="o">.</span><span class="na">Node</span><span class="o">&lt;</span><span class="n">E</span><span class="o">&gt;(</span><span class="kc">null</span><span class="o">,</span> <span class="kc">null</span><span class="o">);</span>
+  <span class="kd">private</span> <span class="kd">final</span> <span class="n">AtomicReference</span><span class="o">&lt;</span><span class="n">LinkedQueue</span><span class="o">.</span><span class="na">Node</span><span class="o">&lt;</span><span class="n">E</span><span class="o">&gt;&gt;</span> <span class="n">head</span>
+      <span class="o">=</span> <span class="k">new</span> <span class="n">AtomicReference</span><span class="o">&lt;</span><span class="n">LinkedQueue</span><span class="o">.</span><span class="na">Node</span><span class="o">&lt;</span><span class="n">E</span><span class="o">&gt;&gt;(</span><span class="n">dummy</span><span class="o">);</span>
+  <span class="kd">private</span> <span class="kd">final</span> <span class="n">AtomicReference</span><span class="o">&lt;</span><span class="n">LinkedQueue</span><span class="o">.</span><span class="na">Node</span><span class="o">&lt;</span><span class="n">E</span><span class="o">&gt;&gt;</span> <span class="n">tail</span>
+      <span class="o">=</span> <span class="k">new</span> <span class="n">AtomicReference</span><span class="o">&lt;</span><span class="n">LinkedQueue</span><span class="o">.</span><span class="na">Node</span><span class="o">&lt;</span><span class="n">E</span><span class="o">&gt;&gt;(</span><span class="n">dummy</span><span class="o">);</span>
+
+  <span class="kd">public</span> <span class="kt">boolean</span> <span class="nf">put</span><span class="o">(</span><span class="n">E</span> <span class="n">item</span><span class="o">)</span> <span class="o">{</span>
+    <span class="n">LinkedQueue</span><span class="o">.</span><span class="na">Node</span><span class="o">&lt;</span><span class="n">E</span><span class="o">&gt;</span> <span class="n">newNode</span> <span class="o">=</span> <span class="k">new</span> <span class="n">LinkedQueue</span><span class="o">.</span><span class="na">Node</span><span class="o">&lt;</span><span class="n">E</span><span class="o">&gt;(</span><span class="n">item</span><span class="o">,</span> <span class="kc">null</span><span class="o">);</span>
+    <span class="k">while</span> <span class="o">(</span><span class="kc">true</span><span class="o">)</span> <span class="o">{</span>
+      <span class="n">LinkedQueue</span><span class="o">.</span><span class="na">Node</span><span class="o">&lt;</span><span class="n">E</span><span class="o">&gt;</span> <span class="n">curTail</span> <span class="o">=</span> <span class="n">tail</span><span class="o">.</span><span class="na">get</span><span class="o">();</span>
+      <span class="n">LinkedQueue</span><span class="o">.</span><span class="na">Node</span><span class="o">&lt;</span><span class="n">E</span><span class="o">&gt;</span> <span class="n">tailNext</span> <span class="o">=</span> <span class="n">curTail</span><span class="o">.</span><span class="na">next</span><span class="o">.</span><span class="na">get</span><span class="o">();</span>
+      <span class="k">if</span> <span class="o">(</span><span class="n">curTail</span> <span class="o">==</span> <span class="n">tail</span><span class="o">.</span><span class="na">get</span><span class="o">())</span> <span class="o">{</span>
+ <span class="cm">/*A*/</span>  <span class="k">if</span> <span class="o">(</span><span class="n">tailNext</span> <span class="o">!=</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
+          <span class="c1">// Queue in intermediate state, advance tail
+</span><span class="c1"></span> <span class="cm">/*B*/</span>    <span class="n">tail</span><span class="o">.</span><span class="na">compareAndSet</span><span class="o">(</span><span class="n">curTail</span><span class="o">,</span> <span class="n">tailNext</span><span class="o">);</span>
+        <span class="o">}</span> <span class="k">else</span> <span class="o">{</span>
+          <span class="c1">// In quiescent state, try inserting new node
+</span><span class="c1"></span> <span class="cm">/*C*/</span>    <span class="k">if</span> <span class="o">(</span><span class="n">curTail</span><span class="o">.</span><span class="na">next</span><span class="o">.</span><span class="na">compareAndSet</span><span class="o">(</span><span class="kc">null</span><span class="o">,</span> <span class="n">newNode</span><span class="o">))</span> <span class="o">{</span>
+            <span class="c1">// Insertion succeeded, try advancing tail
+</span><span class="c1"></span> <span class="cm">/*D*/</span>      <span class="n">tail</span><span class="o">.</span><span class="na">compareAndSet</span><span class="o">(</span><span class="n">curTail</span><span class="o">,</span> <span class="n">newNode</span><span class="o">);</span>
+            <span class="k">return</span> <span class="kc">true</span><span class="o">;</span>
+          <span class="o">}</span>
+        <span class="o">}</span>
+      <span class="o">}</span>
+    <span class="o">}</span>
+  <span class="o">}</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><h3 id="atomic-field-updaters">Atomic field updaters<a class="anchor ms-1" href="#atomic-field-updaters"><i class="fas fa-link"></i></a></h3>
 <p><code>AtomicReferenceFieldUpdater</code>：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln">1</span><span class="kd">private</span> <span class="kd">class</span> <span class="nc">Node</span><span class="o">&lt;</span><span class="n">E</span><span class="o">&gt;</span> <span class="o">{</span>
-<span class="ln">2</span>  <span class="kd">private</span> <span class="kd">final</span> <span class="n">E</span> <span class="n">item</span><span class="o">;</span>
-<span class="ln">3</span>  <span class="kd">private</span> <span class="kd">volatile</span> <span class="n">Node</span><span class="o">&lt;</span><span class="n">E</span><span class="o">&gt;</span> <span class="n">next</span><span class="o">;</span>
-<span class="ln">4</span><span class="o">}</span>
-<span class="ln">5</span><span class="kd">private</span> <span class="kd">static</span> <span class="n">AtomicReferenceFieldUpdater</span><span class="o">&lt;</span><span class="n">Node</span><span class="o">,</span> <span class="n">Node</span><span class="o">&gt;</span> <span class="n">nextUpdater</span>
-<span class="ln">6</span>  <span class="o">=</span> <span class="n">AtomicReferenceFieldUpdater</span><span class="o">.</span><span class="na">newUpdater</span><span class="o">(</span><span class="n">Node</span><span class="o">.</span><span class="na">class</span><span class="o">,</span> <span class="n">Node</span><span class="o">.</span><span class="na">class</span><span class="o">,</span> <span class="s">&#34;next&#34;</span><span class="o">);</span>
-</code></pre></div><p>Atomic field updater代表了一个对volatile字段的反射视图，然后你可以利用它使用CAS。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="kd">private</span> <span class="kd">class</span> <span class="nc">Node</span><span class="o">&lt;</span><span class="n">E</span><span class="o">&gt;</span> <span class="o">{</span>
+  <span class="kd">private</span> <span class="kd">final</span> <span class="n">E</span> <span class="n">item</span><span class="o">;</span>
+  <span class="kd">private</span> <span class="kd">volatile</span> <span class="n">Node</span><span class="o">&lt;</span><span class="n">E</span><span class="o">&gt;</span> <span class="n">next</span><span class="o">;</span>
+<span class="o">}</span>
+<span class="kd">private</span> <span class="kd">static</span> <span class="n">AtomicReferenceFieldUpdater</span><span class="o">&lt;</span><span class="n">Node</span><span class="o">,</span> <span class="n">Node</span><span class="o">&gt;</span> <span class="n">nextUpdater</span>
+  <span class="o">=</span> <span class="n">AtomicReferenceFieldUpdater</span><span class="o">.</span><span class="na">newUpdater</span><span class="o">(</span><span class="n">Node</span><span class="o">.</span><span class="na">class</span><span class="o">,</span> <span class="n">Node</span><span class="o">.</span><span class="na">class</span><span class="o">,</span> <span class="s">&#34;next&#34;</span><span class="o">);</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>Atomic field updater代表了一个对volatile字段的反射视图，然后你可以利用它使用CAS。</p>
 <p>为何要用Atomic field updater是因为性能原因：</p>
 <ul>
 <li>对于频繁创建的，短命的对象（比如队列的Node），每次都创建<code>AtomicReference</code>是一笔开销，用Atomic field updater则免去了这个开销。</li>

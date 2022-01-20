@@ -12,7 +12,7 @@
 <meta name="description" content="" /><meta itemprop="name" content="JVM - String Interning">
 <meta itemprop="description" content=""><meta itemprop="datePublished" content="2019-02-24T19:55:08+08:00" />
 <meta itemprop="dateModified" content="2019-02-24T19:55:08+08:00" />
-<meta itemprop="wordCount" content="728">
+<meta itemprop="wordCount" content="735">
 <meta itemprop="keywords" content="jvm," /><meta property="og:title" content="JVM - String Interning" />
 <meta property="og:description" content="" />
 <meta property="og:type" content="article" />
@@ -227,24 +227,58 @@
 （字符串拘留？），是一项把相同字符串值只保存一份copy的方法，比如 <code>&quot;abc&quot;</code>和<code>&quot;abc&quot;</code>虽然是两个字符串，但是因为其值相同，所以只存留一份copy。String interning能够使得处理字符串的任务在时间上或空间上更有效率。不同字符串值保存在所谓<strong>string intern pool</strong>里。</p>
 <p>Java语言规定所有字符串字面量（string literals）和所有结果为字符串的常量表达式（string-valued constant expression）都被自动interned。或者也可以通过调用<code>String#intern()</code>方法来手动interned。而interened字符串具有这个特性：当且仅当<code>a.equals(b)==true</code>，那么<code>a.intern() == b.intern()</code>。</p>
 <p>下面是一个例子来说明：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln"> 1</span><span class="kn">package</span> <span class="nn">testPackage</span><span class="o">;</span>
-<span class="ln"> 2</span><span class="kd">class</span> <span class="nc">Test</span> <span class="o">{</span>
-<span class="ln"> 3</span>    <span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">main</span><span class="o">(</span><span class="n">String</span><span class="o">[]</span> <span class="n">args</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 4</span>        <span class="n">String</span> <span class="n">hello</span> <span class="o">=</span> <span class="s">&#34;Hello&#34;</span><span class="o">,</span> <span class="n">lo</span> <span class="o">=</span> <span class="s">&#34;lo&#34;</span><span class="o">;</span>
-<span class="ln"> 5</span>        <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">print</span><span class="o">((</span><span class="n">hello</span> <span class="o">==</span> <span class="s">&#34;Hello&#34;</span><span class="o">)</span> <span class="o">+</span> <span class="s">&#34; &#34;</span><span class="o">);</span>
-<span class="ln"> 6</span>        <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">print</span><span class="o">((</span><span class="n">Other</span><span class="o">.</span><span class="na">hello</span> <span class="o">==</span> <span class="n">hello</span><span class="o">)</span> <span class="o">+</span> <span class="s">&#34; &#34;</span><span class="o">);</span>
-<span class="ln"> 7</span>        <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">print</span><span class="o">((</span><span class="n">other</span><span class="o">.</span><span class="na">Other</span><span class="o">.</span><span class="na">hello</span> <span class="o">==</span> <span class="n">hello</span><span class="o">)</span> <span class="o">+</span> <span class="s">&#34; &#34;</span><span class="o">);</span>
-<span class="ln"> 8</span>        <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">print</span><span class="o">((</span><span class="n">hello</span> <span class="o">==</span> <span class="o">(</span><span class="s">&#34;Hel&#34;</span><span class="o">+</span><span class="s">&#34;lo&#34;</span><span class="o">))</span> <span class="o">+</span> <span class="s">&#34; &#34;</span><span class="o">);</span>
-<span class="ln"> 9</span>        <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">print</span><span class="o">((</span><span class="n">hello</span> <span class="o">==</span> <span class="o">(</span><span class="s">&#34;Hel&#34;</span><span class="o">+</span><span class="n">lo</span><span class="o">))</span> <span class="o">+</span> <span class="s">&#34; &#34;</span><span class="o">);</span>
-<span class="ln">10</span>        <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="n">hello</span> <span class="o">==</span> <span class="o">(</span><span class="s">&#34;Hel&#34;</span><span class="o">+</span><span class="n">lo</span><span class="o">).</span><span class="na">intern</span><span class="o">());</span>
-<span class="ln">11</span>    <span class="o">}</span>
-<span class="ln">12</span><span class="o">}</span>
-<span class="ln">13</span><span class="kd">class</span> <span class="nc">Other</span> <span class="o">{</span> <span class="kd">static</span> <span class="n">String</span> <span class="n">hello</span> <span class="o">=</span> <span class="s">&#34;Hello&#34;</span><span class="o">;</span> <span class="o">}</span>
-</code></pre></div><div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln">1</span><span class="kn">package</span> <span class="nn">other</span><span class="o">;</span>
-<span class="ln">2</span><span class="kd">public</span> <span class="kd">class</span> <span class="nc">Other</span> <span class="o">{</span> <span class="kd">public</span> <span class="kd">static</span> <span class="n">String</span> <span class="n">hello</span> <span class="o">=</span> <span class="s">&#34;Hello&#34;</span><span class="o">;</span> <span class="o">}</span>
-</code></pre></div><p>运行结果是：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln">1</span>true true true true false true
-</code></pre></div><ul>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="kn">package</span> <span class="nn">testPackage</span><span class="o">;</span>
+<span class="kd">class</span> <span class="nc">Test</span> <span class="o">{</span>
+    <span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">main</span><span class="o">(</span><span class="n">String</span><span class="o">[]</span> <span class="n">args</span><span class="o">)</span> <span class="o">{</span>
+        <span class="n">String</span> <span class="n">hello</span> <span class="o">=</span> <span class="s">&#34;Hello&#34;</span><span class="o">,</span> <span class="n">lo</span> <span class="o">=</span> <span class="s">&#34;lo&#34;</span><span class="o">;</span>
+        <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">print</span><span class="o">((</span><span class="n">hello</span> <span class="o">==</span> <span class="s">&#34;Hello&#34;</span><span class="o">)</span> <span class="o">+</span> <span class="s">&#34; &#34;</span><span class="o">);</span>
+        <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">print</span><span class="o">((</span><span class="n">Other</span><span class="o">.</span><span class="na">hello</span> <span class="o">==</span> <span class="n">hello</span><span class="o">)</span> <span class="o">+</span> <span class="s">&#34; &#34;</span><span class="o">);</span>
+        <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">print</span><span class="o">((</span><span class="n">other</span><span class="o">.</span><span class="na">Other</span><span class="o">.</span><span class="na">hello</span> <span class="o">==</span> <span class="n">hello</span><span class="o">)</span> <span class="o">+</span> <span class="s">&#34; &#34;</span><span class="o">);</span>
+        <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">print</span><span class="o">((</span><span class="n">hello</span> <span class="o">==</span> <span class="o">(</span><span class="s">&#34;Hel&#34;</span><span class="o">+</span><span class="s">&#34;lo&#34;</span><span class="o">))</span> <span class="o">+</span> <span class="s">&#34; &#34;</span><span class="o">);</span>
+        <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">print</span><span class="o">((</span><span class="n">hello</span> <span class="o">==</span> <span class="o">(</span><span class="s">&#34;Hel&#34;</span><span class="o">+</span><span class="n">lo</span><span class="o">))</span> <span class="o">+</span> <span class="s">&#34; &#34;</span><span class="o">);</span>
+        <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="n">hello</span> <span class="o">==</span> <span class="o">(</span><span class="s">&#34;Hel&#34;</span><span class="o">+</span><span class="n">lo</span><span class="o">).</span><span class="na">intern</span><span class="o">());</span>
+    <span class="o">}</span>
+<span class="o">}</span>
+<span class="kd">class</span> <span class="nc">Other</span> <span class="o">{</span> <span class="kd">static</span> <span class="n">String</span> <span class="n">hello</span> <span class="o">=</span> <span class="s">&#34;Hello&#34;</span><span class="o">;</span> <span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="kn">package</span> <span class="nn">other</span><span class="o">;</span>
+<span class="kd">public</span> <span class="kd">class</span> <span class="nc">Other</span> <span class="o">{</span> <span class="kd">public</span> <span class="kd">static</span> <span class="n">String</span> <span class="n">hello</span> <span class="o">=</span> <span class="s">&#34;Hello&#34;</span><span class="o">;</span> <span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>运行结果是：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt">true true true true false true
+</code></pre></td></tr></table>
+</div>
+</div><ul>
 <li>同类、同包的string literals引用相同的<code>String</code>对象。</li>
 <li>不同类、同包的string literals指向相同的<code>String</code>对象。</li>
 <li>不同类、不同包的string literals指向相同的<code>String</code>对象。</li>

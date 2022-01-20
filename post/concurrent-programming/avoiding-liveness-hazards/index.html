@@ -12,7 +12,7 @@
 <meta name="description" content="" /><meta itemprop="name" content="Avoiding Liveness Hazards">
 <meta itemprop="description" content=""><meta itemprop="datePublished" content="2019-10-21T21:40:29+08:00" />
 <meta itemprop="dateModified" content="2019-10-21T21:40:29+08:00" />
-<meta itemprop="wordCount" content="560">
+<meta itemprop="wordCount" content="575">
 <meta itemprop="keywords" content="并发编程," /><meta property="og:title" content="Avoiding Liveness Hazards" />
 <meta property="og:description" content="" />
 <meta property="og:type" content="article" />
@@ -226,124 +226,264 @@
 <div class="post-content mb-3"><img src="avoiding-liveness-hazards.png" style="zoom:50%" />
 <h3 id="lock-ordering-deadlocks">Lock-ordering deadlocks<a class="anchor ms-1" href="#lock-ordering-deadlocks"><i class="fas fa-link"></i></a></h3>
 <p>不同线程，获得获得相同多个锁的顺序不同导致死锁：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln"> 1</span><span class="kd">public</span> <span class="kd">class</span> <span class="nc">LeftRightDeadlock</span> <span class="o">{</span>
-<span class="ln"> 2</span>  <span class="kd">private</span> <span class="kd">final</span> <span class="n">Object</span> <span class="n">left</span> <span class="o">=</span> <span class="k">new</span> <span class="n">Object</span><span class="o">();</span>
-<span class="ln"> 3</span>  <span class="kd">private</span> <span class="kd">final</span> <span class="n">Object</span> <span class="n">right</span> <span class="o">=</span> <span class="k">new</span> <span class="n">Object</span><span class="o">();</span>
-<span class="ln"> 4</span>  <span class="kd">public</span> <span class="kt">void</span> <span class="nf">leftRight</span><span class="o">()</span> <span class="o">{</span>
-<span class="ln"> 5</span>    <span class="kd">synchronized</span> <span class="o">(</span><span class="n">left</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 6</span>      <span class="kd">synchronized</span> <span class="o">(</span><span class="n">right</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 7</span>        <span class="n">doSomething</span><span class="o">();</span>
-<span class="ln"> 8</span>      <span class="o">}</span>
-<span class="ln"> 9</span>    <span class="o">}</span>
-<span class="ln">10</span>  <span class="o">}</span>
-<span class="ln">11</span>  <span class="kd">public</span> <span class="kt">void</span> <span class="nf">rightLeft</span><span class="o">()</span> <span class="o">{</span>
-<span class="ln">12</span>    <span class="kd">synchronized</span> <span class="o">(</span><span class="n">right</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">13</span>      <span class="kd">synchronized</span> <span class="o">(</span><span class="n">left</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">14</span>        <span class="n">doSomething</span><span class="o">();</span>
-<span class="ln">15</span>      <span class="o">}</span>
-<span class="ln">16</span>    <span class="o">}</span>
-<span class="ln">17</span>  <span class="o">}</span>
-<span class="ln">18</span><span class="o">}</span>
-</code></pre></div><h3 id="dynamic-lock-order-deadlocks">Dynamic lock order deadlocks<a class="anchor ms-1" href="#dynamic-lock-order-deadlocks"><i class="fas fa-link"></i></a></h3>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="kd">public</span> <span class="kd">class</span> <span class="nc">LeftRightDeadlock</span> <span class="o">{</span>
+  <span class="kd">private</span> <span class="kd">final</span> <span class="n">Object</span> <span class="n">left</span> <span class="o">=</span> <span class="k">new</span> <span class="n">Object</span><span class="o">();</span>
+  <span class="kd">private</span> <span class="kd">final</span> <span class="n">Object</span> <span class="n">right</span> <span class="o">=</span> <span class="k">new</span> <span class="n">Object</span><span class="o">();</span>
+  <span class="kd">public</span> <span class="kt">void</span> <span class="nf">leftRight</span><span class="o">()</span> <span class="o">{</span>
+    <span class="kd">synchronized</span> <span class="o">(</span><span class="n">left</span><span class="o">)</span> <span class="o">{</span>
+      <span class="kd">synchronized</span> <span class="o">(</span><span class="n">right</span><span class="o">)</span> <span class="o">{</span>
+        <span class="n">doSomething</span><span class="o">();</span>
+      <span class="o">}</span>
+    <span class="o">}</span>
+  <span class="o">}</span>
+  <span class="kd">public</span> <span class="kt">void</span> <span class="nf">rightLeft</span><span class="o">()</span> <span class="o">{</span>
+    <span class="kd">synchronized</span> <span class="o">(</span><span class="n">right</span><span class="o">)</span> <span class="o">{</span>
+      <span class="kd">synchronized</span> <span class="o">(</span><span class="n">left</span><span class="o">)</span> <span class="o">{</span>
+        <span class="n">doSomething</span><span class="o">();</span>
+      <span class="o">}</span>
+    <span class="o">}</span>
+  <span class="o">}</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><h3 id="dynamic-lock-order-deadlocks">Dynamic lock order deadlocks<a class="anchor ms-1" href="#dynamic-lock-order-deadlocks"><i class="fas fa-link"></i></a></h3>
 <p>根据参数来决定locking顺序同样有死锁风险：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln">1</span><span class="kd">public</span> <span class="kt">void</span> <span class="nf">transferMoney</span><span class="o">(</span><span class="n">Account</span> <span class="n">from</span><span class="o">,</span> <span class="n">Account</span> <span class="n">to</span><span class="o">,</span> <span class="kt">double</span> <span class="n">amount</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">2</span>  <span class="kd">synchronized</span> <span class="o">(</span><span class="n">from</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">3</span>    <span class="kd">synchronized</span> <span class="o">(</span><span class="n">to</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">4</span>      <span class="n">doSomething</span><span class="o">();</span>
-<span class="ln">5</span>    <span class="o">}</span>
-<span class="ln">6</span>  <span class="o">}</span>
-<span class="ln">7</span><span class="o">}</span>
-</code></pre></div><p>解决办法：根据参数来推导出固定的locking顺序：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln"> 1</span><span class="n">priate</span> <span class="kd">static</span> <span class="kd">final</span> <span class="n">Object</span> <span class="n">tieLock</span> <span class="o">=</span> <span class="k">new</span> <span class="n">Object</span><span class="o">();</span>
-<span class="ln"> 2</span>
-<span class="ln"> 3</span><span class="kd">public</span> <span class="kt">void</span> <span class="nf">transferMoney</span><span class="o">(</span><span class="n">Account</span> <span class="n">from</span><span class="o">,</span> <span class="n">Account</span> <span class="n">to</span><span class="o">,</span> <span class="kt">double</span> <span class="n">amount</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 4</span>  <span class="kt">long</span> <span class="n">fromHash</span> <span class="o">=</span> <span class="n">System</span><span class="o">.</span><span class="na">identityHashCode</span><span class="o">(</span><span class="n">from</span><span class="o">);</span>
-<span class="ln"> 5</span>  <span class="kt">long</span> <span class="n">toHash</span> <span class="o">=</span> <span class="n">System</span><span class="o">.</span><span class="na">identityHashCode</span><span class="o">(</span><span class="n">to</span><span class="o">);</span>
-<span class="ln"> 6</span>  <span class="k">if</span> <span class="o">(</span><span class="n">fromHash</span> <span class="o">&lt;</span> <span class="n">toHash</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 7</span>    <span class="kd">synchronized</span> <span class="o">(</span><span class="n">from</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 8</span>      <span class="kd">synchronized</span> <span class="o">(</span><span class="n">to</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 9</span>        <span class="n">doSomething</span><span class="o">();</span>
-<span class="ln">10</span>      <span class="o">}</span>
-<span class="ln">11</span>    <span class="o">}</span>
-<span class="ln">12</span>  <span class="o">}</span> <span class="k">else</span> <span class="k">if</span> <span class="o">(</span><span class="n">toHash</span> <span class="o">&lt;</span> <span class="n">fromHash</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">13</span>    <span class="kd">synchronized</span> <span class="o">(</span><span class="n">to</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">14</span>      <span class="kd">synchronized</span> <span class="o">(</span><span class="n">from</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">15</span>        <span class="n">doSomething</span><span class="o">();</span>
-<span class="ln">16</span>      <span class="o">}</span>
-<span class="ln">17</span>    <span class="o">}</span>
-<span class="ln">18</span>  <span class="o">}</span> <span class="k">else</span> <span class="o">{</span>
-<span class="ln">19</span>    <span class="kd">synchronized</span> <span class="o">(</span><span class="n">tieLock</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">20</span>      <span class="c1">// 当出现hash相同的情况时，全部都穿行到tieLock下执行
-</span><span class="ln">21</span><span class="c1"></span>      <span class="kd">synchronized</span> <span class="o">(</span><span class="n">from</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">22</span>        <span class="kd">synchronized</span> <span class="o">(</span><span class="n">to</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">23</span>          <span class="n">doSomething</span><span class="o">();</span>
-<span class="ln">24</span>        <span class="o">}</span>
-<span class="ln">25</span>      <span class="o">}</span>
-<span class="ln">26</span>    <span class="o">}</span>
-<span class="ln">27</span>  <span class="o">}</span>
-<span class="ln">28</span><span class="o">}</span>
-</code></pre></div><h3 id="deadlocks-between-cooperating-object">Deadlocks between cooperating object<a class="anchor ms-1" href="#deadlocks-between-cooperating-object"><i class="fas fa-link"></i></a></h3>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="kd">public</span> <span class="kt">void</span> <span class="nf">transferMoney</span><span class="o">(</span><span class="n">Account</span> <span class="n">from</span><span class="o">,</span> <span class="n">Account</span> <span class="n">to</span><span class="o">,</span> <span class="kt">double</span> <span class="n">amount</span><span class="o">)</span> <span class="o">{</span>
+  <span class="kd">synchronized</span> <span class="o">(</span><span class="n">from</span><span class="o">)</span> <span class="o">{</span>
+    <span class="kd">synchronized</span> <span class="o">(</span><span class="n">to</span><span class="o">)</span> <span class="o">{</span>
+      <span class="n">doSomething</span><span class="o">();</span>
+    <span class="o">}</span>
+  <span class="o">}</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>解决办法：根据参数来推导出固定的locking顺序：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="n">priate</span> <span class="kd">static</span> <span class="kd">final</span> <span class="n">Object</span> <span class="n">tieLock</span> <span class="o">=</span> <span class="k">new</span> <span class="n">Object</span><span class="o">();</span>
+
+<span class="kd">public</span> <span class="kt">void</span> <span class="nf">transferMoney</span><span class="o">(</span><span class="n">Account</span> <span class="n">from</span><span class="o">,</span> <span class="n">Account</span> <span class="n">to</span><span class="o">,</span> <span class="kt">double</span> <span class="n">amount</span><span class="o">)</span> <span class="o">{</span>
+  <span class="kt">long</span> <span class="n">fromHash</span> <span class="o">=</span> <span class="n">System</span><span class="o">.</span><span class="na">identityHashCode</span><span class="o">(</span><span class="n">from</span><span class="o">);</span>
+  <span class="kt">long</span> <span class="n">toHash</span> <span class="o">=</span> <span class="n">System</span><span class="o">.</span><span class="na">identityHashCode</span><span class="o">(</span><span class="n">to</span><span class="o">);</span>
+  <span class="k">if</span> <span class="o">(</span><span class="n">fromHash</span> <span class="o">&lt;</span> <span class="n">toHash</span><span class="o">)</span> <span class="o">{</span>
+    <span class="kd">synchronized</span> <span class="o">(</span><span class="n">from</span><span class="o">)</span> <span class="o">{</span>
+      <span class="kd">synchronized</span> <span class="o">(</span><span class="n">to</span><span class="o">)</span> <span class="o">{</span>
+        <span class="n">doSomething</span><span class="o">();</span>
+      <span class="o">}</span>
+    <span class="o">}</span>
+  <span class="o">}</span> <span class="k">else</span> <span class="k">if</span> <span class="o">(</span><span class="n">toHash</span> <span class="o">&lt;</span> <span class="n">fromHash</span><span class="o">)</span> <span class="o">{</span>
+    <span class="kd">synchronized</span> <span class="o">(</span><span class="n">to</span><span class="o">)</span> <span class="o">{</span>
+      <span class="kd">synchronized</span> <span class="o">(</span><span class="n">from</span><span class="o">)</span> <span class="o">{</span>
+        <span class="n">doSomething</span><span class="o">();</span>
+      <span class="o">}</span>
+    <span class="o">}</span>
+  <span class="o">}</span> <span class="k">else</span> <span class="o">{</span>
+    <span class="kd">synchronized</span> <span class="o">(</span><span class="n">tieLock</span><span class="o">)</span> <span class="o">{</span>
+      <span class="c1">// 当出现hash相同的情况时，全部都穿行到tieLock下执行
+</span><span class="c1"></span>      <span class="kd">synchronized</span> <span class="o">(</span><span class="n">from</span><span class="o">)</span> <span class="o">{</span>
+        <span class="kd">synchronized</span> <span class="o">(</span><span class="n">to</span><span class="o">)</span> <span class="o">{</span>
+          <span class="n">doSomething</span><span class="o">();</span>
+        <span class="o">}</span>
+      <span class="o">}</span>
+    <span class="o">}</span>
+  <span class="o">}</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><h3 id="deadlocks-between-cooperating-object">Deadlocks between cooperating object<a class="anchor ms-1" href="#deadlocks-between-cooperating-object"><i class="fas fa-link"></i></a></h3>
 <p>因为多个对象的协作导致的比较隐蔽的死锁：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln"> 1</span><span class="kd">class</span> <span class="nc">Taxi</span> <span class="o">{</span>
-<span class="ln"> 2</span>  <span class="kd">private</span> <span class="kd">final</span> <span class="n">Dispatcher</span> <span class="n">dispatcher</span><span class="o">;</span>
-<span class="ln"> 3</span>  <span class="kd">public</span> <span class="kd">synchronized</span> <span class="n">Point</span> <span class="nf">getLocation</span><span class="o">()</span> <span class="o">{</span>
-<span class="ln"> 4</span>    <span class="c1">// ...
-</span><span class="ln"> 5</span><span class="c1"></span>  <span class="o">}</span>
-<span class="ln"> 6</span>  <span class="kd">public</span> <span class="kd">synchronized</span> <span class="kt">void</span> <span class="nf">setLocation</span><span class="o">(</span><span class="n">Point</span> <span class="n">location</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 7</span>    <span class="k">this</span><span class="o">.</span><span class="na">location</span> <span class="o">=</span> <span class="n">location</span><span class="o">;</span>
-<span class="ln"> 8</span>    <span class="c1">// alien method
-</span><span class="ln"> 9</span><span class="c1"></span>    <span class="n">dispatcher</span><span class="o">.</span><span class="na">notifyAvailable</span><span class="o">(</span><span class="k">this</span><span class="o">);</span>
-<span class="ln">10</span>  <span class="o">}</span>
-<span class="ln">11</span><span class="o">}</span>
-<span class="ln">12</span><span class="kd">class</span> <span class="nc">Dispatcher</span> <span class="o">{</span>
-<span class="ln">13</span>  <span class="kd">private</span> <span class="kd">final</span> <span class="n">Set</span><span class="o">&lt;</span><span class="n">Taxi</span><span class="o">&gt;</span> <span class="n">taxis</span><span class="o">;</span>
-<span class="ln">14</span>  <span class="kd">public</span> <span class="kd">synchronized</span> <span class="kt">void</span> <span class="nf">notifyAvailable</span><span class="o">(</span><span class="n">Taxi</span> <span class="n">taxi</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">15</span>    <span class="c1">// ...
-</span><span class="ln">16</span><span class="c1"></span>  <span class="o">}</span>
-<span class="ln">17</span>  <span class="kd">public</span> <span class="kd">synchronized</span> <span class="n">Image</span> <span class="nf">getImage</span><span class="o">()</span> <span class="o">{</span>
-<span class="ln">18</span>    <span class="n">Image</span> <span class="n">image</span> <span class="o">=</span> <span class="k">new</span> <span class="n">Image</span><span class="o">();</span>
-<span class="ln">19</span>    <span class="k">for</span> <span class="o">(</span><span class="n">Taxi</span> <span class="n">taxi</span> <span class="o">:</span> <span class="n">taxis</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">20</span>      <span class="c1">// alien method
-</span><span class="ln">21</span><span class="c1"></span>      <span class="n">image</span><span class="o">.</span><span class="na">drawMarker</span><span class="o">(</span><span class="n">taxi</span><span class="o">.</span><span class="na">getLocation</span><span class="o">());</span>
-<span class="ln">22</span>    <span class="o">}</span>
-<span class="ln">23</span>    <span class="k">return</span> <span class="n">image</span><span class="o">;</span>
-<span class="ln">24</span>  <span class="o">}</span>
-<span class="ln">25</span><span class="o">}</span>
-</code></pre></div><h3 id="open-calls">Open calls<a class="anchor ms-1" href="#open-calls"><i class="fas fa-link"></i></a></h3>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="kd">class</span> <span class="nc">Taxi</span> <span class="o">{</span>
+  <span class="kd">private</span> <span class="kd">final</span> <span class="n">Dispatcher</span> <span class="n">dispatcher</span><span class="o">;</span>
+  <span class="kd">public</span> <span class="kd">synchronized</span> <span class="n">Point</span> <span class="nf">getLocation</span><span class="o">()</span> <span class="o">{</span>
+    <span class="c1">// ...
+</span><span class="c1"></span>  <span class="o">}</span>
+  <span class="kd">public</span> <span class="kd">synchronized</span> <span class="kt">void</span> <span class="nf">setLocation</span><span class="o">(</span><span class="n">Point</span> <span class="n">location</span><span class="o">)</span> <span class="o">{</span>
+    <span class="k">this</span><span class="o">.</span><span class="na">location</span> <span class="o">=</span> <span class="n">location</span><span class="o">;</span>
+    <span class="c1">// alien method
+</span><span class="c1"></span>    <span class="n">dispatcher</span><span class="o">.</span><span class="na">notifyAvailable</span><span class="o">(</span><span class="k">this</span><span class="o">);</span>
+  <span class="o">}</span>
+<span class="o">}</span>
+<span class="kd">class</span> <span class="nc">Dispatcher</span> <span class="o">{</span>
+  <span class="kd">private</span> <span class="kd">final</span> <span class="n">Set</span><span class="o">&lt;</span><span class="n">Taxi</span><span class="o">&gt;</span> <span class="n">taxis</span><span class="o">;</span>
+  <span class="kd">public</span> <span class="kd">synchronized</span> <span class="kt">void</span> <span class="nf">notifyAvailable</span><span class="o">(</span><span class="n">Taxi</span> <span class="n">taxi</span><span class="o">)</span> <span class="o">{</span>
+    <span class="c1">// ...
+</span><span class="c1"></span>  <span class="o">}</span>
+  <span class="kd">public</span> <span class="kd">synchronized</span> <span class="n">Image</span> <span class="nf">getImage</span><span class="o">()</span> <span class="o">{</span>
+    <span class="n">Image</span> <span class="n">image</span> <span class="o">=</span> <span class="k">new</span> <span class="n">Image</span><span class="o">();</span>
+    <span class="k">for</span> <span class="o">(</span><span class="n">Taxi</span> <span class="n">taxi</span> <span class="o">:</span> <span class="n">taxis</span><span class="o">)</span> <span class="o">{</span>
+      <span class="c1">// alien method
+</span><span class="c1"></span>      <span class="n">image</span><span class="o">.</span><span class="na">drawMarker</span><span class="o">(</span><span class="n">taxi</span><span class="o">.</span><span class="na">getLocation</span><span class="o">());</span>
+    <span class="o">}</span>
+    <span class="k">return</span> <span class="n">image</span><span class="o">;</span>
+  <span class="o">}</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><h3 id="open-calls">Open calls<a class="anchor ms-1" href="#open-calls"><i class="fas fa-link"></i></a></h3>
 <p>用Open calls改造，</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln"> 1</span><span class="kd">class</span> <span class="nc">Taxi</span> <span class="o">{</span>
-<span class="ln"> 2</span>  <span class="kd">private</span> <span class="kd">final</span> <span class="n">Dispatcher</span> <span class="n">dispatcher</span><span class="o">;</span>
-<span class="ln"> 3</span>  <span class="kd">public</span> <span class="kd">synchronized</span> <span class="n">Point</span> <span class="nf">getLocation</span><span class="o">()</span> <span class="o">{</span>
-<span class="ln"> 4</span>    <span class="c1">// ...
-</span><span class="ln"> 5</span><span class="c1"></span>  <span class="o">}</span>
-<span class="ln"> 6</span>  <span class="kd">public</span> <span class="kt">void</span> <span class="nf">setLocation</span><span class="o">(</span><span class="n">Point</span> <span class="n">location</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 7</span>    <span class="kd">synchronized</span> <span class="o">(</span><span class="k">this</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 8</span>      <span class="k">this</span><span class="o">.</span><span class="na">location</span> <span class="o">=</span> <span class="n">location</span><span class="o">;</span>      
-<span class="ln"> 9</span>    <span class="o">}</span>
-<span class="ln">10</span>    <span class="c1">// alien method
-</span><span class="ln">11</span><span class="c1"></span>    <span class="n">dispatcher</span><span class="o">.</span><span class="na">notifyAvailable</span><span class="o">(</span><span class="k">this</span><span class="o">);</span>
-<span class="ln">12</span>  <span class="o">}</span>
-<span class="ln">13</span><span class="o">}</span>
-<span class="ln">14</span><span class="kd">class</span> <span class="nc">Dispatcher</span> <span class="o">{</span>
-<span class="ln">15</span>  <span class="kd">private</span> <span class="kd">final</span> <span class="n">Set</span><span class="o">&lt;</span><span class="n">Taxi</span><span class="o">&gt;</span> <span class="n">taxis</span><span class="o">;</span>
-<span class="ln">16</span>  <span class="kd">public</span> <span class="kd">synchronized</span> <span class="kt">void</span> <span class="nf">notifyAvailable</span><span class="o">(</span><span class="n">Taxi</span> <span class="n">taxi</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">17</span>    <span class="c1">// ...
-</span><span class="ln">18</span><span class="c1"></span>  <span class="o">}</span>
-<span class="ln">19</span>  <span class="kd">public</span> <span class="n">Image</span> <span class="nf">getImage</span><span class="o">()</span> <span class="o">{</span>
-<span class="ln">20</span>		<span class="n">Set</span><span class="o">&lt;</span><span class="n">Taxi</span><span class="o">&gt;</span> <span class="n">copy</span><span class="o">;</span>
-<span class="ln">21</span>    <span class="c1">// 限制了在调用alien方法时，本身不持有锁
-</span><span class="ln">22</span><span class="c1"></span>    <span class="kd">synchronized</span> <span class="o">(</span><span class="k">this</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">23</span>      <span class="n">copy</span> <span class="o">=</span> <span class="k">new</span> <span class="n">HashSet</span><span class="o">&lt;&gt;(</span><span class="n">taxis</span><span class="o">);</span>
-<span class="ln">24</span>    <span class="o">}</span>
-<span class="ln">25</span>    <span class="n">Image</span> <span class="n">image</span> <span class="o">=</span> <span class="k">new</span> <span class="n">Image</span><span class="o">();</span>
-<span class="ln">26</span>    <span class="k">for</span> <span class="o">(</span><span class="n">Taxi</span> <span class="n">taxi</span> <span class="o">:</span> <span class="n">copy</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">27</span>      <span class="c1">// alien method
-</span><span class="ln">28</span><span class="c1"></span>      <span class="n">image</span><span class="o">.</span><span class="na">drawMarker</span><span class="o">(</span><span class="n">taxi</span><span class="o">.</span><span class="na">getLocation</span><span class="o">());</span>
-<span class="ln">29</span>    <span class="o">}</span>
-<span class="ln">30</span>    <span class="k">return</span> <span class="n">image</span><span class="o">;</span>
-<span class="ln">31</span>  <span class="o">}</span>
-<span class="ln">32</span><span class="o">}</span>
-</code></pre></div></div></div>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="kd">class</span> <span class="nc">Taxi</span> <span class="o">{</span>
+  <span class="kd">private</span> <span class="kd">final</span> <span class="n">Dispatcher</span> <span class="n">dispatcher</span><span class="o">;</span>
+  <span class="kd">public</span> <span class="kd">synchronized</span> <span class="n">Point</span> <span class="nf">getLocation</span><span class="o">()</span> <span class="o">{</span>
+    <span class="c1">// ...
+</span><span class="c1"></span>  <span class="o">}</span>
+  <span class="kd">public</span> <span class="kt">void</span> <span class="nf">setLocation</span><span class="o">(</span><span class="n">Point</span> <span class="n">location</span><span class="o">)</span> <span class="o">{</span>
+    <span class="kd">synchronized</span> <span class="o">(</span><span class="k">this</span><span class="o">)</span> <span class="o">{</span>
+      <span class="k">this</span><span class="o">.</span><span class="na">location</span> <span class="o">=</span> <span class="n">location</span><span class="o">;</span>      
+    <span class="o">}</span>
+    <span class="c1">// alien method
+</span><span class="c1"></span>    <span class="n">dispatcher</span><span class="o">.</span><span class="na">notifyAvailable</span><span class="o">(</span><span class="k">this</span><span class="o">);</span>
+  <span class="o">}</span>
+<span class="o">}</span>
+<span class="kd">class</span> <span class="nc">Dispatcher</span> <span class="o">{</span>
+  <span class="kd">private</span> <span class="kd">final</span> <span class="n">Set</span><span class="o">&lt;</span><span class="n">Taxi</span><span class="o">&gt;</span> <span class="n">taxis</span><span class="o">;</span>
+  <span class="kd">public</span> <span class="kd">synchronized</span> <span class="kt">void</span> <span class="nf">notifyAvailable</span><span class="o">(</span><span class="n">Taxi</span> <span class="n">taxi</span><span class="o">)</span> <span class="o">{</span>
+    <span class="c1">// ...
+</span><span class="c1"></span>  <span class="o">}</span>
+  <span class="kd">public</span> <span class="n">Image</span> <span class="nf">getImage</span><span class="o">()</span> <span class="o">{</span>
+		<span class="n">Set</span><span class="o">&lt;</span><span class="n">Taxi</span><span class="o">&gt;</span> <span class="n">copy</span><span class="o">;</span>
+    <span class="c1">// 限制了在调用alien方法时，本身不持有锁
+</span><span class="c1"></span>    <span class="kd">synchronized</span> <span class="o">(</span><span class="k">this</span><span class="o">)</span> <span class="o">{</span>
+      <span class="n">copy</span> <span class="o">=</span> <span class="k">new</span> <span class="n">HashSet</span><span class="o">&lt;&gt;(</span><span class="n">taxis</span><span class="o">);</span>
+    <span class="o">}</span>
+    <span class="n">Image</span> <span class="n">image</span> <span class="o">=</span> <span class="k">new</span> <span class="n">Image</span><span class="o">();</span>
+    <span class="k">for</span> <span class="o">(</span><span class="n">Taxi</span> <span class="n">taxi</span> <span class="o">:</span> <span class="n">copy</span><span class="o">)</span> <span class="o">{</span>
+      <span class="c1">// alien method
+</span><span class="c1"></span>      <span class="n">image</span><span class="o">.</span><span class="na">drawMarker</span><span class="o">(</span><span class="n">taxi</span><span class="o">.</span><span class="na">getLocation</span><span class="o">());</span>
+    <span class="o">}</span>
+    <span class="k">return</span> <span class="n">image</span><span class="o">;</span>
+  <span class="o">}</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div></div></div>
   <div class="card-footer"><div class="post-navs d-flex justify-content-evenly">
   <div class="post-nav post-prev"><i class="fas fa-fw fa-chevron-left"></i>
     <a href="/post/k8s/k8s-service-fqdn/">K8S中Service的FQDN

@@ -12,7 +12,7 @@
 <meta name="description" content="" /><meta itemprop="name" content="为何把日志打印到控制台很慢？">
 <meta itemprop="description" content=""><meta itemprop="datePublished" content="2019-02-22T15:42:48+08:00" />
 <meta itemprop="dateModified" content="2019-02-22T15:42:48+08:00" />
-<meta itemprop="wordCount" content="2057">
+<meta itemprop="wordCount" content="2089">
 <meta itemprop="keywords" content="linux,java,日志,docker," /><meta property="og:title" content="为何把日志打印到控制台很慢？" />
 <meta property="og:description" content="" />
 <meta property="og:type" content="article" />
@@ -291,14 +291,27 @@ GNU libc (glibc) uses the following rules for buffering”:</p>
 <p>同时也给了我们另一个思路，不将<code>stdout</code>指向终端，那么就能够用到<code>fully-buffered</code>，比起<code>line-buffered</code>能够带来更大提速效果（想想极端情况下每行只有一个字符）。</p>
 <p>我写了一段小代码来做测试（<a href="https://gist.github.com/chanjarster/4598cb15bac03662c1dd66c8097c8282" target="_blank" rel="noopener noreferrer">gist</a>
 ）。先试一下<code>stdout</code>指向终端的情况：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>$ javac ConsolePrint.java
-<span class="ln">2</span>$ java ConsolePrint <span class="m">100000</span>
-<span class="ln">3</span>...
-<span class="ln">4</span>lines: 100,000
-<span class="ln">5</span>System.out.println: 1,270 ms
-<span class="ln">6</span>file: <span class="m">72</span> ms
-<span class="ln">7</span>/dev/stdout: 1,153 ms
-</code></pre></div><p>代码测试了三种用法：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">$ javac ConsolePrint.java
+$ java ConsolePrint <span class="m">100000</span>
+...
+lines: 100,000
+System.out.println: 1,270 ms
+file: <span class="m">72</span> ms
+/dev/stdout: 1,153 ms
+</code></pre></td></tr></table>
+</div>
+</div><p>代码测试了三种用法：</p>
 <ul>
 <li><code>System.out.println</code> 指的是使用<code>System.out.println</code>所花费的时间</li>
 <li><code>file</code> 指的是用4k BufferedOutputStream 写到一个文件所花费的时间</li>
@@ -306,46 +319,99 @@ GNU libc (glibc) uses the following rules for buffering”:</p>
 </ul>
 <p>发现写到文件花费速度最快，用<code>System.out.println</code>和写到<code>/dev/stdout</code>所花时间在一个数量级上。</p>
 <p>如果我们将输出重定向到文件：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>$ java ConsolePrint <span class="m">100000</span> &gt; a
-<span class="ln">2</span>$ tail -n <span class="m">5</span> a
-<span class="ln">3</span>...
-<span class="ln">4</span>System.out.println: <span class="m">920</span> ms
-<span class="ln">5</span>file: <span class="m">76</span> ms
-<span class="ln">6</span>/dev/stdout: <span class="m">31</span> ms
-</code></pre></div><p>则会发现<code>/dev/stdout</code>速度提升到<code>file</code>一个档次，而<code>System.out.println</code>并没有提升多少。之前不是说<code>stdout</code>不指向终端能够带来性能提升吗，为何<code>System.out.println</code>没有变化呢？这就要Java对于<code>System.out</code>的实现说起了。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">$ java ConsolePrint <span class="m">100000</span> &gt; a
+$ tail -n <span class="m">5</span> a
+...
+System.out.println: <span class="m">920</span> ms
+file: <span class="m">76</span> ms
+/dev/stdout: <span class="m">31</span> ms
+</code></pre></td></tr></table>
+</div>
+</div><p>则会发现<code>/dev/stdout</code>速度提升到<code>file</code>一个档次，而<code>System.out.println</code>并没有提升多少。之前不是说<code>stdout</code>不指向终端能够带来性能提升吗，为何<code>System.out.println</code>没有变化呢？这就要Java对于<code>System.out</code>的实现说起了。</p>
 <h2 id="java程序角度">Java程序角度<a class="anchor ms-1" href="#java程序角度"><i class="fas fa-link"></i></a></h2>
 <p>下面是<code>System</code>的源码：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln"> 1</span><span class="kd">public</span> <span class="kd">final</span> <span class="kd">static</span> <span class="n">PrintStream</span> <span class="n">out</span> <span class="o">=</span> <span class="kc">null</span><span class="o">;</span>
-<span class="ln"> 2</span><span class="o">...</span>
-<span class="ln"> 3</span><span class="kd">private</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">initializeSystemClass</span><span class="o">()</span> <span class="o">{</span>
-<span class="ln"> 4</span>  <span class="n">FileOutputStream</span> <span class="n">fdOut</span> <span class="o">=</span> <span class="k">new</span> <span class="n">FileOutputStream</span><span class="o">(</span><span class="n">FileDescriptor</span><span class="o">.</span><span class="na">out</span><span class="o">);</span>
-<span class="ln"> 5</span>  <span class="n">setOut0</span><span class="o">(</span><span class="n">newPrintStream</span><span class="o">(</span><span class="n">fdOut</span><span class="o">,</span> <span class="n">props</span><span class="o">.</span><span class="na">getProperty</span><span class="o">(</span><span class="s">&#34;sun.stdout.encoding&#34;</span><span class="o">)));</span>
-<span class="ln"> 6</span><span class="o">}</span>
-<span class="ln"> 7</span><span class="o">...</span>
-<span class="ln"> 8</span><span class="kd">private</span> <span class="kd">static</span> <span class="kd">native</span> <span class="kt">void</span> <span class="nf">setOut0</span><span class="o">(</span><span class="n">PrintStream</span> <span class="n">out</span><span class="o">);</span>
-<span class="ln"> 9</span><span class="o">...</span>
-<span class="ln">10</span><span class="kd">private</span> <span class="kd">static</span> <span class="n">PrintStream</span> <span class="nf">newPrintStream</span><span class="o">(</span><span class="n">FileOutputStream</span> <span class="n">fos</span><span class="o">,</span> <span class="n">String</span> <span class="n">enc</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">11</span>  <span class="o">...</span>
-<span class="ln">12</span>  <span class="k">return</span> <span class="k">new</span> <span class="n">PrintStream</span><span class="o">(</span><span class="k">new</span> <span class="n">BufferedOutputStream</span><span class="o">(</span><span class="n">fos</span><span class="o">,</span> <span class="n">128</span><span class="o">),</span> <span class="kc">true</span><span class="o">);</span>
-<span class="ln">13</span><span class="o">}</span>
-</code></pre></div><p>可以看到<code>System.out</code>是<code>PrintStream</code>类型，下面是<code>PrintStream</code>的源码：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln"> 1</span><span class="kd">private</span> <span class="kt">void</span> <span class="nf">write</span><span class="o">(</span><span class="n">String</span> <span class="n">s</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 2</span>  <span class="k">try</span> <span class="o">{</span>
-<span class="ln"> 3</span>    <span class="kd">synchronized</span> <span class="o">(</span><span class="k">this</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 4</span>      <span class="n">ensureOpen</span><span class="o">();</span>
-<span class="ln"> 5</span>      <span class="n">textOut</span><span class="o">.</span><span class="na">write</span><span class="o">(</span><span class="n">s</span><span class="o">);</span>
-<span class="ln"> 6</span>      <span class="n">textOut</span><span class="o">.</span><span class="na">flushBuffer</span><span class="o">();</span>
-<span class="ln"> 7</span>      <span class="n">charOut</span><span class="o">.</span><span class="na">flushBuffer</span><span class="o">();</span>
-<span class="ln"> 8</span>      <span class="k">if</span> <span class="o">(</span><span class="n">autoFlush</span> <span class="o">&amp;&amp;</span> <span class="o">(</span><span class="n">s</span><span class="o">.</span><span class="na">indexOf</span><span class="o">(</span><span class="sc">&#39;\n&#39;</span><span class="o">)</span> <span class="o">&gt;=</span> <span class="n">0</span><span class="o">))</span>
-<span class="ln"> 9</span>        <span class="n">out</span><span class="o">.</span><span class="na">flush</span><span class="o">();</span>
-<span class="ln">10</span>    <span class="o">}</span>
-<span class="ln">11</span>  <span class="o">}</span> <span class="k">catch</span> <span class="o">(</span><span class="n">InterruptedIOException</span> <span class="n">x</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">12</span>    <span class="n">Thread</span><span class="o">.</span><span class="na">currentThread</span><span class="o">().</span><span class="na">interrupt</span><span class="o">();</span>
-<span class="ln">13</span>  <span class="o">}</span> <span class="k">catch</span> <span class="o">(</span><span class="n">IOException</span> <span class="n">x</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">14</span>    <span class="n">trouble</span> <span class="o">=</span> <span class="kc">true</span><span class="o">;</span>
-<span class="ln">15</span>  <span class="o">}</span>
-<span class="ln">16</span><span class="o">}</span>
-</code></pre></div><p>可以看到：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="kd">public</span> <span class="kd">final</span> <span class="kd">static</span> <span class="n">PrintStream</span> <span class="n">out</span> <span class="o">=</span> <span class="kc">null</span><span class="o">;</span>
+<span class="o">...</span>
+<span class="kd">private</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">initializeSystemClass</span><span class="o">()</span> <span class="o">{</span>
+  <span class="n">FileOutputStream</span> <span class="n">fdOut</span> <span class="o">=</span> <span class="k">new</span> <span class="n">FileOutputStream</span><span class="o">(</span><span class="n">FileDescriptor</span><span class="o">.</span><span class="na">out</span><span class="o">);</span>
+  <span class="n">setOut0</span><span class="o">(</span><span class="n">newPrintStream</span><span class="o">(</span><span class="n">fdOut</span><span class="o">,</span> <span class="n">props</span><span class="o">.</span><span class="na">getProperty</span><span class="o">(</span><span class="s">&#34;sun.stdout.encoding&#34;</span><span class="o">)));</span>
+<span class="o">}</span>
+<span class="o">...</span>
+<span class="kd">private</span> <span class="kd">static</span> <span class="kd">native</span> <span class="kt">void</span> <span class="nf">setOut0</span><span class="o">(</span><span class="n">PrintStream</span> <span class="n">out</span><span class="o">);</span>
+<span class="o">...</span>
+<span class="kd">private</span> <span class="kd">static</span> <span class="n">PrintStream</span> <span class="nf">newPrintStream</span><span class="o">(</span><span class="n">FileOutputStream</span> <span class="n">fos</span><span class="o">,</span> <span class="n">String</span> <span class="n">enc</span><span class="o">)</span> <span class="o">{</span>
+  <span class="o">...</span>
+  <span class="k">return</span> <span class="k">new</span> <span class="n">PrintStream</span><span class="o">(</span><span class="k">new</span> <span class="n">BufferedOutputStream</span><span class="o">(</span><span class="n">fos</span><span class="o">,</span> <span class="n">128</span><span class="o">),</span> <span class="kc">true</span><span class="o">);</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>可以看到<code>System.out</code>是<code>PrintStream</code>类型，下面是<code>PrintStream</code>的源码：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="kd">private</span> <span class="kt">void</span> <span class="nf">write</span><span class="o">(</span><span class="n">String</span> <span class="n">s</span><span class="o">)</span> <span class="o">{</span>
+  <span class="k">try</span> <span class="o">{</span>
+    <span class="kd">synchronized</span> <span class="o">(</span><span class="k">this</span><span class="o">)</span> <span class="o">{</span>
+      <span class="n">ensureOpen</span><span class="o">();</span>
+      <span class="n">textOut</span><span class="o">.</span><span class="na">write</span><span class="o">(</span><span class="n">s</span><span class="o">);</span>
+      <span class="n">textOut</span><span class="o">.</span><span class="na">flushBuffer</span><span class="o">();</span>
+      <span class="n">charOut</span><span class="o">.</span><span class="na">flushBuffer</span><span class="o">();</span>
+      <span class="k">if</span> <span class="o">(</span><span class="n">autoFlush</span> <span class="o">&amp;&amp;</span> <span class="o">(</span><span class="n">s</span><span class="o">.</span><span class="na">indexOf</span><span class="o">(</span><span class="sc">&#39;\n&#39;</span><span class="o">)</span> <span class="o">&gt;=</span> <span class="n">0</span><span class="o">))</span>
+        <span class="n">out</span><span class="o">.</span><span class="na">flush</span><span class="o">();</span>
+    <span class="o">}</span>
+  <span class="o">}</span> <span class="k">catch</span> <span class="o">(</span><span class="n">InterruptedIOException</span> <span class="n">x</span><span class="o">)</span> <span class="o">{</span>
+    <span class="n">Thread</span><span class="o">.</span><span class="na">currentThread</span><span class="o">().</span><span class="na">interrupt</span><span class="o">();</span>
+  <span class="o">}</span> <span class="k">catch</span> <span class="o">(</span><span class="n">IOException</span> <span class="n">x</span><span class="o">)</span> <span class="o">{</span>
+    <span class="n">trouble</span> <span class="o">=</span> <span class="kc">true</span><span class="o">;</span>
+  <span class="o">}</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>可以看到：</p>
 <ol>
 <li><code>System.out</code>使用的缓冲大小仅为128字节。大部分情况下够用。</li>
 <li><code>System.out</code>开启了autoFlush，即每次write都会立即flush。这保证了输出的及时性。</li>
@@ -355,15 +421,29 @@ GNU libc (glibc) uses the following rules for buffering”:</p>
 <p>这解释了为何<code>System.out</code>慢的原因，同时也告诉了我们就算把<code>System.out</code>包到BufferedOutputStream里也不会有性能提升。</p>
 <h2 id="docker容器角度">Docker容器角度<a class="anchor ms-1" href="#docker容器角度"><i class="fas fa-link"></i></a></h2>
 <p>那么把测试代码放到Docker容器内运行会怎样呢？把gist里的Dockerfile和ConsolePrint.java放到同一个目录里然后这样运行：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>$ docker build -t console-print .
-<span class="ln">2</span>$ docker run -d --name console-print console-print <span class="m">100000</span>
-<span class="ln">3</span>$ docker logs --tail <span class="m">5</span> console-print
-<span class="ln">4</span>...
-<span class="ln">5</span>lines: 100,000
-<span class="ln">6</span>System.out.println: 2,563 ms
-<span class="ln">7</span>file: <span class="m">27</span> ms
-<span class="ln">8</span>/dev/stdout: 2,685 ms
-</code></pre></div><p>可以发现<code>System.out.println</code>和<code>/dev/stdout</code>的速度又变回一样慢了。因此可以怀疑<code>stdout</code>使用的是<code>line-buffered</code>模式。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">$ docker build -t console-print .
+$ docker run -d --name console-print console-print <span class="m">100000</span>
+$ docker logs --tail <span class="m">5</span> console-print
+...
+lines: 100,000
+System.out.println: 2,563 ms
+file: <span class="m">27</span> ms
+/dev/stdout: 2,685 ms
+</code></pre></td></tr></table>
+</div>
+</div><p>可以发现<code>System.out.println</code>和<code>/dev/stdout</code>的速度又变回一样慢了。因此可以怀疑<code>stdout</code>使用的是<code>line-buffered</code>模式。</p>
 <p>为何容器内的<code>stdout</code>不使用<code>fully-buffered</code>模式呢？下面是我的两个猜测:</p>
 <ul>
 <li>不论你是<code>docker run -t</code>分配<code>tty</code>启动，还是<code>docker run -d</code>不非配tty启动，docker都会给容器内的<code>stdout</code>分配一个<code>tty</code>。</li>

@@ -12,7 +12,7 @@
 <meta name="description" content="" /><meta itemprop="name" content="Applying Thread Pools">
 <meta itemprop="description" content=""><meta itemprop="datePublished" content="2019-10-16T13:40:29+08:00" />
 <meta itemprop="dateModified" content="2019-10-16T13:40:29+08:00" />
-<meta itemprop="wordCount" content="181">
+<meta itemprop="wordCount" content="191">
 <meta itemprop="keywords" content="并发编程," /><meta property="og:title" content="Applying Thread Pools" />
 <meta property="og:description" content="" />
 <meta property="og:type" content="article" />
@@ -234,44 +234,92 @@
 <h2 id="递归算法平行化">递归算法平行化<a class="anchor ms-1" href="#递归算法平行化"><i class="fas fa-link"></i></a></h2>
 <img src="parallelize-algo.png" style="zoom:50%" />
 <h3 id="循环平行化">循环平行化<a class="anchor ms-1" href="#循环平行化"><i class="fas fa-link"></i></a></h3>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln"> 1</span><span class="kt">void</span> <span class="nf">processCollection</span><span class="o">(</span><span class="n">List</span><span class="o">&lt;</span><span class="n">Element</span><span class="o">&gt;</span> <span class="n">elements</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 2</span>  <span class="k">for</span> <span class="o">(</span><span class="n">Element</span> <span class="n">e</span> <span class="o">:</span> <span class="n">elements</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 3</span>    <span class="n">process</span><span class="o">(</span><span class="n">e</span><span class="o">);</span>
-<span class="ln"> 4</span>  <span class="o">}</span>
-<span class="ln"> 5</span><span class="o">}</span>
-<span class="ln"> 6</span>
-<span class="ln"> 7</span><span class="kt">void</span> <span class="nf">processCollectionParallel</span><span class="o">(</span><span class="n">Executor</span> <span class="n">exec</span><span class="o">,</span> <span class="n">List</span><span class="o">&lt;</span><span class="n">Element</span><span class="o">&gt;</span> <span class="n">elements</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 8</span>  <span class="k">for</span> <span class="o">(</span><span class="kd">final</span> <span class="n">Element</span> <span class="n">e</span> <span class="o">:</span> <span class="n">elements</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 9</span>    <span class="n">exec</span><span class="o">.</span><span class="na">execute</span><span class="o">(()</span> <span class="o">-&gt;</span> <span class="n">process</span><span class="o">(</span><span class="n">e</span><span class="o">));</span>
-<span class="ln">10</span>  <span class="o">}</span>
-<span class="ln">11</span><span class="o">}</span>
-</code></pre></div><h3 id="递归平行化">递归平行化<a class="anchor ms-1" href="#递归平行化"><i class="fas fa-link"></i></a></h3>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln"> 1</span><span class="kd">public</span> <span class="kt">void</span> <span class="nf">sequencialRecursive</span><span class="o">(</span><span class="n">List</span><span class="o">&lt;</span><span class="n">Node</span><span class="o">&gt;</span> <span class="n">nodes</span><span class="o">,</span> <span class="n">Collection</span> <span class="n">results</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 2</span>  <span class="k">for</span> <span class="o">(</span><span class="n">Node</span> <span class="n">n</span> <span class="o">:</span> <span class="n">nodes</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 3</span>    <span class="n">results</span><span class="o">.</span><span class="na">add</span><span class="o">(</span><span class="n">node</span><span class="o">.</span><span class="na">compute</span><span class="o">());</span>
-<span class="ln"> 4</span>    <span class="n">sequencialRecursive</span><span class="o">(</span><span class="n">n</span><span class="o">.</span><span class="na">getChildren</span><span class="o">(),</span> <span class="n">results</span><span class="o">);</span>
-<span class="ln"> 5</span>  <span class="o">}</span>
-<span class="ln"> 6</span><span class="o">}</span>
-<span class="ln"> 7</span>
-<span class="ln"> 8</span><span class="kd">public</span> <span class="kt">void</span> <span class="nf">parallelRecursive</span><span class="o">(</span><span class="kd">final</span> <span class="n">Executor</span> <span class="n">exec</span><span class="o">,</span> 
-<span class="ln"> 9</span>                              <span class="n">List</span><span class="o">&lt;</span><span class="n">Node</span><span class="o">&gt;</span> <span class="n">nodes</span><span class="o">,</span>
-<span class="ln">10</span>                              <span class="kd">final</span> <span class="n">Collection</span> <span class="n">results</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">11</span>  <span class="k">for</span> <span class="o">(</span><span class="n">Node</span> <span class="n">n</span> <span class="o">:</span> <span class="n">nodes</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">12</span>    <span class="n">exec</span><span class="o">.</span><span class="na">submit</span><span class="o">(()</span> <span class="o">-&gt;</span> <span class="n">results</span><span class="o">.</span><span class="na">add</span><span class="o">(</span><span class="n">n</span><span class="o">.</span><span class="na">compute</span><span class="o">()));</span>
-<span class="ln">13</span>    <span class="n">parallelRecursive</span><span class="o">(</span><span class="n">exec</span><span class="o">,</span> <span class="n">n</span><span class="o">.</span><span class="na">getChildren</span><span class="o">(),</span> <span class="n">results</span><span class="o">);</span>
-<span class="ln">14</span>  <span class="o">}</span>
-<span class="ln">15</span><span class="o">}</span>
-<span class="ln">16</span>
-<span class="ln">17</span><span class="kd">public</span> <span class="n">Collection</span> <span class="nf">getParallelResults</span><span class="o">(</span><span class="n">List</span><span class="o">&lt;</span><span class="n">Node</span><span class="o">&gt;</span> <span class="n">nodes</span><span class="o">)</span> <span class="kd">throws</span> <span class="n">InterruptedException</span> <span class="o">{</span>
-<span class="ln">18</span>  <span class="n">ExecutorService</span> <span class="n">exec</span> <span class="o">=</span> <span class="n">Executors</span><span class="o">.</span><span class="na">newCachedThreadPool</span><span class="o">();</span>
-<span class="ln">19</span>  <span class="n">Queue</span> <span class="n">resultQueue</span> <span class="o">=</span> <span class="k">new</span> <span class="n">ConcurrentLinkedQueue</span><span class="o">();</span>
-<span class="ln">20</span>  <span class="n">parallelRecursive</span><span class="o">(</span><span class="n">exec</span><span class="o">,</span> <span class="n">nodes</span><span class="o">,</span> <span class="n">resultQueue</span><span class="o">);</span>
-<span class="ln">21</span>  <span class="n">exec</span><span class="o">.</span><span class="na">shutdown</span><span class="o">();</span>
-<span class="ln">22</span>  <span class="c1">// 等到所有任务执行完毕
-</span><span class="ln">23</span><span class="c1"></span>  <span class="n">exec</span><span class="o">.</span><span class="na">awaitTermination</span><span class="o">(</span><span class="n">Long</span><span class="o">.</span><span class="na">MAX_VALUE</span><span class="o">,</span> <span class="n">TimeUnits</span><span class="o">.</span><span class="na">SECONDS</span><span class="o">);</span>
-<span class="ln">24</span>  <span class="k">return</span> <span class="n">resultQueue</span><span class="o">;</span>
-<span class="ln">25</span><span class="o">}</span>
-</code></pre></div></div></div>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="kt">void</span> <span class="nf">processCollection</span><span class="o">(</span><span class="n">List</span><span class="o">&lt;</span><span class="n">Element</span><span class="o">&gt;</span> <span class="n">elements</span><span class="o">)</span> <span class="o">{</span>
+  <span class="k">for</span> <span class="o">(</span><span class="n">Element</span> <span class="n">e</span> <span class="o">:</span> <span class="n">elements</span><span class="o">)</span> <span class="o">{</span>
+    <span class="n">process</span><span class="o">(</span><span class="n">e</span><span class="o">);</span>
+  <span class="o">}</span>
+<span class="o">}</span>
+
+<span class="kt">void</span> <span class="nf">processCollectionParallel</span><span class="o">(</span><span class="n">Executor</span> <span class="n">exec</span><span class="o">,</span> <span class="n">List</span><span class="o">&lt;</span><span class="n">Element</span><span class="o">&gt;</span> <span class="n">elements</span><span class="o">)</span> <span class="o">{</span>
+  <span class="k">for</span> <span class="o">(</span><span class="kd">final</span> <span class="n">Element</span> <span class="n">e</span> <span class="o">:</span> <span class="n">elements</span><span class="o">)</span> <span class="o">{</span>
+    <span class="n">exec</span><span class="o">.</span><span class="na">execute</span><span class="o">(()</span> <span class="o">-&gt;</span> <span class="n">process</span><span class="o">(</span><span class="n">e</span><span class="o">));</span>
+  <span class="o">}</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><h3 id="递归平行化">递归平行化<a class="anchor ms-1" href="#递归平行化"><i class="fas fa-link"></i></a></h3>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="kd">public</span> <span class="kt">void</span> <span class="nf">sequencialRecursive</span><span class="o">(</span><span class="n">List</span><span class="o">&lt;</span><span class="n">Node</span><span class="o">&gt;</span> <span class="n">nodes</span><span class="o">,</span> <span class="n">Collection</span> <span class="n">results</span><span class="o">)</span> <span class="o">{</span>
+  <span class="k">for</span> <span class="o">(</span><span class="n">Node</span> <span class="n">n</span> <span class="o">:</span> <span class="n">nodes</span><span class="o">)</span> <span class="o">{</span>
+    <span class="n">results</span><span class="o">.</span><span class="na">add</span><span class="o">(</span><span class="n">node</span><span class="o">.</span><span class="na">compute</span><span class="o">());</span>
+    <span class="n">sequencialRecursive</span><span class="o">(</span><span class="n">n</span><span class="o">.</span><span class="na">getChildren</span><span class="o">(),</span> <span class="n">results</span><span class="o">);</span>
+  <span class="o">}</span>
+<span class="o">}</span>
+
+<span class="kd">public</span> <span class="kt">void</span> <span class="nf">parallelRecursive</span><span class="o">(</span><span class="kd">final</span> <span class="n">Executor</span> <span class="n">exec</span><span class="o">,</span> 
+                              <span class="n">List</span><span class="o">&lt;</span><span class="n">Node</span><span class="o">&gt;</span> <span class="n">nodes</span><span class="o">,</span>
+                              <span class="kd">final</span> <span class="n">Collection</span> <span class="n">results</span><span class="o">)</span> <span class="o">{</span>
+  <span class="k">for</span> <span class="o">(</span><span class="n">Node</span> <span class="n">n</span> <span class="o">:</span> <span class="n">nodes</span><span class="o">)</span> <span class="o">{</span>
+    <span class="n">exec</span><span class="o">.</span><span class="na">submit</span><span class="o">(()</span> <span class="o">-&gt;</span> <span class="n">results</span><span class="o">.</span><span class="na">add</span><span class="o">(</span><span class="n">n</span><span class="o">.</span><span class="na">compute</span><span class="o">()));</span>
+    <span class="n">parallelRecursive</span><span class="o">(</span><span class="n">exec</span><span class="o">,</span> <span class="n">n</span><span class="o">.</span><span class="na">getChildren</span><span class="o">(),</span> <span class="n">results</span><span class="o">);</span>
+  <span class="o">}</span>
+<span class="o">}</span>
+
+<span class="kd">public</span> <span class="n">Collection</span> <span class="nf">getParallelResults</span><span class="o">(</span><span class="n">List</span><span class="o">&lt;</span><span class="n">Node</span><span class="o">&gt;</span> <span class="n">nodes</span><span class="o">)</span> <span class="kd">throws</span> <span class="n">InterruptedException</span> <span class="o">{</span>
+  <span class="n">ExecutorService</span> <span class="n">exec</span> <span class="o">=</span> <span class="n">Executors</span><span class="o">.</span><span class="na">newCachedThreadPool</span><span class="o">();</span>
+  <span class="n">Queue</span> <span class="n">resultQueue</span> <span class="o">=</span> <span class="k">new</span> <span class="n">ConcurrentLinkedQueue</span><span class="o">();</span>
+  <span class="n">parallelRecursive</span><span class="o">(</span><span class="n">exec</span><span class="o">,</span> <span class="n">nodes</span><span class="o">,</span> <span class="n">resultQueue</span><span class="o">);</span>
+  <span class="n">exec</span><span class="o">.</span><span class="na">shutdown</span><span class="o">();</span>
+  <span class="c1">// 等到所有任务执行完毕
+</span><span class="c1"></span>  <span class="n">exec</span><span class="o">.</span><span class="na">awaitTermination</span><span class="o">(</span><span class="n">Long</span><span class="o">.</span><span class="na">MAX_VALUE</span><span class="o">,</span> <span class="n">TimeUnits</span><span class="o">.</span><span class="na">SECONDS</span><span class="o">);</span>
+  <span class="k">return</span> <span class="n">resultQueue</span><span class="o">;</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div></div></div>
   <div class="card-footer"><div class="post-navs d-flex justify-content-evenly">
   <div class="post-nav post-prev"><i class="fas fa-fw fa-chevron-left"></i>
     <a href="/post/concurrent-programming/cancellation-and-shutdown/">Cancellation and Shutdown

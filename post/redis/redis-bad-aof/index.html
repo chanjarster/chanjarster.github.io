@@ -12,7 +12,7 @@
 <meta name="description" content="" /><meta itemprop="name" content="K8S中Redis损坏的AOF文件排查">
 <meta itemprop="description" content=""><meta itemprop="datePublished" content="2021-09-07T10:25:23+08:00" />
 <meta itemprop="dateModified" content="2021-09-07T10:25:23+08:00" />
-<meta itemprop="wordCount" content="217">
+<meta itemprop="wordCount" content="227">
 <meta itemprop="keywords" content="redis,k8s,troubleshooting," /><meta property="og:title" content="K8S中Redis损坏的AOF文件排查" />
 <meta property="og:description" content="" />
 <meta property="og:type" content="article" />
@@ -226,23 +226,53 @@
 <div class="post-content mb-3"><h2 id="现象">现象<a class="anchor ms-1" href="#现象"><i class="fas fa-link"></i></a></h2>
 <p>redis-server Pod启动不起来。</p>
 <p>观察Pod日志，看到：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>Bad file format reading the append only file: make a backup of your AOF file, <span class="k">then</span> use ./redis-check-aof --fix &lt;filename&gt;
-</code></pre></div><h2 id="修复">修复<a class="anchor ms-1" href="#修复"><i class="fas fa-link"></i></a></h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">Bad file format reading the append only file: make a backup of your AOF file, <span class="k">then</span> use ./redis-check-aof --fix &lt;filename&gt;
+</code></pre></td></tr></table>
+</div>
+</div><h2 id="修复">修复<a class="anchor ms-1" href="#修复"><i class="fas fa-link"></i></a></h2>
 <p>错误很明确了，AOF文件破损，了解到之前因为Node出问题，把Pod强制删除过，应该是这个原因造成的。</p>
 <p>修改Yaml，设置启动命令为<code>/bin/sh</code>，开启tty和stdin，注释掉所有Probe：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-yaml" data-lang="yaml"><span class="ln">1</span><span class="w">   </span><span class="l">...</span><span class="w">
-</span><span class="ln">2</span><span class="w">   </span><span class="nt">tty</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w">
-</span><span class="ln">3</span><span class="w">   </span><span class="nt">stdin</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w">
-</span><span class="ln">4</span><span class="w">   </span><span class="nt">command</span><span class="p">:</span><span class="w">
-</span><span class="ln">5</span><span class="w">   </span>- <span class="l">/bin/sh</span><span class="w">
-</span><span class="ln">6</span><span class="w">   </span><span class="l">...</span><span class="w">
-</span><span class="ln">7</span><span class="w">   </span><span class="c"># livenessProbe: ...</span><span class="w">
-</span><span class="ln">8</span><span class="w">   </span><span class="c"># readinessProbe: ...</span><span class="w">
-</span></code></pre></div><p>容器启动后，因为用的是bitnami redis镜像，所以进入容器shell执行：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>redis-check-aof /bitnami/redis/data/appendonly.aof
-<span class="ln">2</span>...
-<span class="ln">3</span>Continue <span class="o">[</span>y/N<span class="o">]</span>: y
-</code></pre></div><p>然后再把上述修改撤回，重启Pod，问题修复。</p></div></div>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-yaml" data-lang="yaml"><span class="w">   </span><span class="l">...</span><span class="w">
+</span><span class="w">   </span><span class="nt">tty</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w">
+</span><span class="w">   </span><span class="nt">stdin</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w">
+</span><span class="w">   </span><span class="nt">command</span><span class="p">:</span><span class="w">
+</span><span class="w">   </span>- <span class="l">/bin/sh</span><span class="w">
+</span><span class="w">   </span><span class="l">...</span><span class="w">
+</span><span class="w">   </span><span class="c"># livenessProbe: ...</span><span class="w">
+</span><span class="w">   </span><span class="c"># readinessProbe: ...</span><span class="w">
+</span></code></pre></td></tr></table>
+</div>
+</div><p>容器启动后，因为用的是bitnami redis镜像，所以进入容器shell执行：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">redis-check-aof /bitnami/redis/data/appendonly.aof
+...
+Continue <span class="o">[</span>y/N<span class="o">]</span>: y
+</code></pre></td></tr></table>
+</div>
+</div><p>然后再把上述修改撤回，重启Pod，问题修复。</p></div></div>
   <div class="card-footer"><div class="post-navs d-flex justify-content-evenly">
   <div class="post-nav post-prev"><i class="fas fa-fw fa-chevron-left"></i>
     <a href="/post/k8s/pod-not-evicted-from-notready-nodes/">Pod没有从NotReady节点迁出的排查

@@ -12,7 +12,7 @@
 <meta name="description" content="" /><meta itemprop="name" content="调用API时如何做JOIN查询">
 <meta itemprop="description" content=""><meta itemprop="datePublished" content="2020-02-19T14:21:24+08:00" />
 <meta itemprop="dateModified" content="2020-02-19T14:21:24+08:00" />
-<meta itemprop="wordCount" content="1032">
+<meta itemprop="wordCount" content="1044">
 <meta itemprop="keywords" content="微服务," /><meta property="og:title" content="调用API时如何做JOIN查询" />
 <meta property="og:description" content="" />
 <meta property="og:type" content="article" />
@@ -262,58 +262,140 @@
 <li>返回订单详情对象</li>
 </ol>
 <p>OderDetailService，负责查询订单详情：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln"> 1</span><span class="kd">public</span> <span class="kd">class</span> <span class="nc">OrderDetailService</span> <span class="o">{</span>
-<span class="ln"> 2</span>
-<span class="ln"> 3</span>  <span class="kd">private</span> <span class="n">UserService</span> <span class="n">userService</span><span class="o">;</span>
-<span class="ln"> 4</span>
-<span class="ln"> 5</span>  <span class="kd">private</span> <span class="n">OrderService</span> <span class="n">orderService</span><span class="o">;</span>
-<span class="ln"> 6</span>
-<span class="ln"> 7</span>  <span class="kd">public</span> <span class="n">List</span><span class="o">&lt;</span><span class="n">OrderDetailDto</span><span class="o">&gt;</span> <span class="nf">findByUserId</span><span class="o">(</span><span class="n">String</span> <span class="n">userId</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 8</span>    <span class="n">List</span><span class="o">&lt;</span><span class="n">Order</span><span class="o">&gt;</span> <span class="n">orders</span> <span class="o">=</span> <span class="n">orderService</span><span class="o">.</span><span class="na">findByUserId</span><span class="o">(</span><span class="n">userId</span><span class="o">);</span>
-<span class="ln"> 9</span>    <span class="c1">// 收集订单中的用户Id
-</span><span class="ln">10</span><span class="c1"></span>    <span class="n">Set</span><span class="o">&lt;</span><span class="n">String</span><span class="o">&gt;</span> <span class="n">userIds</span> <span class="o">=</span> <span class="n">orders</span><span class="o">.</span><span class="na">stream</span><span class="o">().</span><span class="na">map</span><span class="o">(</span><span class="n">Order</span><span class="o">::</span><span class="n">getUserId</span><span class="o">).</span><span class="na">collect</span><span class="o">(</span><span class="n">Collectors</span><span class="o">.</span><span class="na">toSet</span><span class="o">());</span>
-<span class="ln">11</span>    <span class="c1">// 查询到用户
-</span><span class="ln">12</span><span class="c1"></span>    <span class="n">List</span><span class="o">&lt;</span><span class="n">User</span><span class="o">&gt;</span> <span class="n">users</span> <span class="o">=</span> <span class="n">userService</span><span class="o">.</span><span class="na">findByIds</span><span class="o">(</span><span class="n">userIds</span><span class="o">);</span>
-<span class="ln">13</span>    <span class="c1">// 构建用户id-&gt;用户的map
-</span><span class="ln">14</span><span class="c1"></span>    <span class="n">Map</span><span class="o">&lt;</span><span class="n">String</span><span class="o">,</span> <span class="n">User</span><span class="o">&gt;</span> <span class="n">userId2UserMap</span> <span class="o">=</span> <span class="n">users</span><span class="o">.</span><span class="na">stream</span><span class="o">().</span><span class="na">collect</span><span class="o">(</span><span class="n">Collectors</span><span class="o">.</span><span class="na">toMap</span><span class="o">(</span><span class="n">User</span><span class="o">::</span><span class="n">getId</span><span class="o">,</span> <span class="n">Function</span><span class="o">.</span><span class="na">identity</span><span class="o">()));</span>
-<span class="ln">15</span>    <span class="c1">// 构建订单详情对象
-</span><span class="ln">16</span><span class="c1"></span>    <span class="k">return</span> <span class="n">orders</span><span class="o">.</span><span class="na">stream</span><span class="o">().</span><span class="na">map</span><span class="o">(</span><span class="n">order</span> <span class="o">-&gt;</span> <span class="o">{</span>
-<span class="ln">17</span>      <span class="n">User</span> <span class="n">user</span> <span class="o">=</span> <span class="n">userId2UserMap</span><span class="o">.</span><span class="na">get</span><span class="o">(</span><span class="n">order</span><span class="o">.</span><span class="na">getUserId</span><span class="o">());</span>
-<span class="ln">18</span>      <span class="n">OrderDetailDto</span> <span class="n">orderDetail</span> <span class="o">=</span> <span class="k">new</span> <span class="n">OrderDetailDto</span><span class="o">();</span>
-<span class="ln">19</span>      <span class="n">orderDetail</span><span class="o">.</span><span class="na">setOrder</span><span class="o">(</span><span class="n">order</span><span class="o">);</span>
-<span class="ln">20</span>      <span class="n">orderDetail</span><span class="o">.</span><span class="na">setUser</span><span class="o">(</span><span class="n">user</span><span class="o">);</span>
-<span class="ln">21</span>      <span class="k">return</span> <span class="n">orderDetail</span><span class="o">;</span>
-<span class="ln">22</span>    <span class="o">}).</span><span class="na">collect</span><span class="o">(</span><span class="n">Collectors</span><span class="o">.</span><span class="na">toList</span><span class="o">());</span>
-<span class="ln">23</span>  <span class="o">}</span>
-<span class="ln">24</span>
-<span class="ln">25</span><span class="o">}</span>
-</code></pre></div><p>订单详情对象：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln">1</span><span class="kd">public</span> <span class="kd">class</span> <span class="nc">OrderDetailDto</span> <span class="o">{</span>
-<span class="ln">2</span>  <span class="kd">private</span> <span class="n">Order</span> <span class="n">order</span><span class="o">;</span>
-<span class="ln">3</span>  <span class="kd">private</span> <span class="n">User</span> <span class="n">user</span><span class="o">;</span>
-<span class="ln">4</span><span class="o">}</span>
-</code></pre></div><p>订单对象：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln">1</span><span class="kd">public</span> <span class="kd">class</span> <span class="nc">Order</span> <span class="o">{</span>
-<span class="ln">2</span>  <span class="kd">private</span> <span class="n">String</span> <span class="n">userId</span><span class="o">;</span>
-<span class="ln">3</span>  <span class="kd">private</span> <span class="n">Date</span> <span class="n">createdAt</span><span class="o">;</span>
-<span class="ln">4</span>  <span class="kd">private</span> <span class="n">Double</span> <span class="n">price</span><span class="o">;</span>
-<span class="ln">5</span>  <span class="kd">private</span> <span class="n">String</span> <span class="n">productName</span><span class="o">;</span>
-<span class="ln">6</span>  <span class="kd">private</span> <span class="n">String</span> <span class="n">productUrl</span><span class="o">;</span>
-<span class="ln">7</span><span class="o">}</span>
-</code></pre></div><p>用户对象：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln">1</span><span class="kd">public</span> <span class="kd">class</span> <span class="nc">User</span> <span class="o">{</span>
-<span class="ln">2</span>  <span class="kd">private</span> <span class="n">String</span> <span class="n">name</span><span class="o">;</span>
-<span class="ln">3</span>  <span class="kd">private</span> <span class="n">String</span> <span class="n">id</span><span class="o">;</span>
-<span class="ln">4</span><span class="o">}</span>
-</code></pre></div><p>订单Service接口：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln">1</span><span class="kd">public</span> <span class="kd">interface</span> <span class="nc">OrderService</span> <span class="o">{</span>
-<span class="ln">2</span>   <span class="n">List</span><span class="o">&lt;</span><span class="n">Order</span><span class="o">&gt;</span> <span class="nf">findByUserId</span><span class="o">(</span><span class="n">String</span> <span class="n">userId</span><span class="o">);</span>
-<span class="ln">3</span><span class="o">}</span>
-</code></pre></div><p>用户Service接口，你可以提供一个调用API的实现：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln">1</span><span class="kd">public</span> <span class="kd">interface</span> <span class="nc">UserService</span> <span class="o">{</span>
-<span class="ln">2</span>  <span class="n">List</span><span class="o">&lt;</span><span class="n">User</span><span class="o">&gt;</span> <span class="nf">findByIds</span><span class="o">(</span><span class="n">Set</span><span class="o">&lt;</span><span class="n">String</span><span class="o">&gt;</span> <span class="n">userIds</span><span class="o">);</span>
-<span class="ln">3</span><span class="o">}</span>
-</code></pre></div><p>事实上只要你是基于接口编程的，你可以很方便的把任意Service改成调用API，只要它们的接收参数和返回结果一致就行了。</p></div></div>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="kd">public</span> <span class="kd">class</span> <span class="nc">OrderDetailService</span> <span class="o">{</span>
+
+  <span class="kd">private</span> <span class="n">UserService</span> <span class="n">userService</span><span class="o">;</span>
+
+  <span class="kd">private</span> <span class="n">OrderService</span> <span class="n">orderService</span><span class="o">;</span>
+
+  <span class="kd">public</span> <span class="n">List</span><span class="o">&lt;</span><span class="n">OrderDetailDto</span><span class="o">&gt;</span> <span class="nf">findByUserId</span><span class="o">(</span><span class="n">String</span> <span class="n">userId</span><span class="o">)</span> <span class="o">{</span>
+    <span class="n">List</span><span class="o">&lt;</span><span class="n">Order</span><span class="o">&gt;</span> <span class="n">orders</span> <span class="o">=</span> <span class="n">orderService</span><span class="o">.</span><span class="na">findByUserId</span><span class="o">(</span><span class="n">userId</span><span class="o">);</span>
+    <span class="c1">// 收集订单中的用户Id
+</span><span class="c1"></span>    <span class="n">Set</span><span class="o">&lt;</span><span class="n">String</span><span class="o">&gt;</span> <span class="n">userIds</span> <span class="o">=</span> <span class="n">orders</span><span class="o">.</span><span class="na">stream</span><span class="o">().</span><span class="na">map</span><span class="o">(</span><span class="n">Order</span><span class="o">::</span><span class="n">getUserId</span><span class="o">).</span><span class="na">collect</span><span class="o">(</span><span class="n">Collectors</span><span class="o">.</span><span class="na">toSet</span><span class="o">());</span>
+    <span class="c1">// 查询到用户
+</span><span class="c1"></span>    <span class="n">List</span><span class="o">&lt;</span><span class="n">User</span><span class="o">&gt;</span> <span class="n">users</span> <span class="o">=</span> <span class="n">userService</span><span class="o">.</span><span class="na">findByIds</span><span class="o">(</span><span class="n">userIds</span><span class="o">);</span>
+    <span class="c1">// 构建用户id-&gt;用户的map
+</span><span class="c1"></span>    <span class="n">Map</span><span class="o">&lt;</span><span class="n">String</span><span class="o">,</span> <span class="n">User</span><span class="o">&gt;</span> <span class="n">userId2UserMap</span> <span class="o">=</span> <span class="n">users</span><span class="o">.</span><span class="na">stream</span><span class="o">().</span><span class="na">collect</span><span class="o">(</span><span class="n">Collectors</span><span class="o">.</span><span class="na">toMap</span><span class="o">(</span><span class="n">User</span><span class="o">::</span><span class="n">getId</span><span class="o">,</span> <span class="n">Function</span><span class="o">.</span><span class="na">identity</span><span class="o">()));</span>
+    <span class="c1">// 构建订单详情对象
+</span><span class="c1"></span>    <span class="k">return</span> <span class="n">orders</span><span class="o">.</span><span class="na">stream</span><span class="o">().</span><span class="na">map</span><span class="o">(</span><span class="n">order</span> <span class="o">-&gt;</span> <span class="o">{</span>
+      <span class="n">User</span> <span class="n">user</span> <span class="o">=</span> <span class="n">userId2UserMap</span><span class="o">.</span><span class="na">get</span><span class="o">(</span><span class="n">order</span><span class="o">.</span><span class="na">getUserId</span><span class="o">());</span>
+      <span class="n">OrderDetailDto</span> <span class="n">orderDetail</span> <span class="o">=</span> <span class="k">new</span> <span class="n">OrderDetailDto</span><span class="o">();</span>
+      <span class="n">orderDetail</span><span class="o">.</span><span class="na">setOrder</span><span class="o">(</span><span class="n">order</span><span class="o">);</span>
+      <span class="n">orderDetail</span><span class="o">.</span><span class="na">setUser</span><span class="o">(</span><span class="n">user</span><span class="o">);</span>
+      <span class="k">return</span> <span class="n">orderDetail</span><span class="o">;</span>
+    <span class="o">}).</span><span class="na">collect</span><span class="o">(</span><span class="n">Collectors</span><span class="o">.</span><span class="na">toList</span><span class="o">());</span>
+  <span class="o">}</span>
+
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>订单详情对象：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="kd">public</span> <span class="kd">class</span> <span class="nc">OrderDetailDto</span> <span class="o">{</span>
+  <span class="kd">private</span> <span class="n">Order</span> <span class="n">order</span><span class="o">;</span>
+  <span class="kd">private</span> <span class="n">User</span> <span class="n">user</span><span class="o">;</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>订单对象：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="kd">public</span> <span class="kd">class</span> <span class="nc">Order</span> <span class="o">{</span>
+  <span class="kd">private</span> <span class="n">String</span> <span class="n">userId</span><span class="o">;</span>
+  <span class="kd">private</span> <span class="n">Date</span> <span class="n">createdAt</span><span class="o">;</span>
+  <span class="kd">private</span> <span class="n">Double</span> <span class="n">price</span><span class="o">;</span>
+  <span class="kd">private</span> <span class="n">String</span> <span class="n">productName</span><span class="o">;</span>
+  <span class="kd">private</span> <span class="n">String</span> <span class="n">productUrl</span><span class="o">;</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>用户对象：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="kd">public</span> <span class="kd">class</span> <span class="nc">User</span> <span class="o">{</span>
+  <span class="kd">private</span> <span class="n">String</span> <span class="n">name</span><span class="o">;</span>
+  <span class="kd">private</span> <span class="n">String</span> <span class="n">id</span><span class="o">;</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>订单Service接口：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="kd">public</span> <span class="kd">interface</span> <span class="nc">OrderService</span> <span class="o">{</span>
+   <span class="n">List</span><span class="o">&lt;</span><span class="n">Order</span><span class="o">&gt;</span> <span class="nf">findByUserId</span><span class="o">(</span><span class="n">String</span> <span class="n">userId</span><span class="o">);</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>用户Service接口，你可以提供一个调用API的实现：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="kd">public</span> <span class="kd">interface</span> <span class="nc">UserService</span> <span class="o">{</span>
+  <span class="n">List</span><span class="o">&lt;</span><span class="n">User</span><span class="o">&gt;</span> <span class="nf">findByIds</span><span class="o">(</span><span class="n">Set</span><span class="o">&lt;</span><span class="n">String</span><span class="o">&gt;</span> <span class="n">userIds</span><span class="o">);</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>事实上只要你是基于接口编程的，你可以很方便的把任意Service改成调用API，只要它们的接收参数和返回结果一致就行了。</p></div></div>
   <div class="card-footer"><div class="post-navs d-flex justify-content-evenly">
   <div class="post-nav post-prev"><i class="fas fa-fw fa-chevron-left"></i>
     <a href="/post/go/go-java/">Go和Java的区别

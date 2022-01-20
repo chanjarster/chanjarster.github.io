@@ -12,7 +12,7 @@
 <meta name="description" content="" /><meta itemprop="name" content="Cracking Coding Interview - 16.15 Master Mind">
 <meta itemprop="description" content=""><meta itemprop="datePublished" content="2019-09-11T13:00:11+08:00" />
 <meta itemprop="dateModified" content="2019-09-11T13:00:11+08:00" />
-<meta itemprop="wordCount" content="625">
+<meta itemprop="wordCount" content="629">
 <meta itemprop="keywords" content="ARTS-A," /><meta property="og:title" content="Cracking Coding Interview - 16.15 Master Mind" />
 <meta property="og:description" content="" />
 <meta property="og:type" content="article" />
@@ -233,79 +233,167 @@
 <p>关键字，4个slot，4种颜色</p>
 <p>hit容易计算，相同位置相同颜色的则+1；</p>
 <p>peseudoHit可以这样计算：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln"> 1</span>           v
-<span class="ln"> 2</span>solution: RGBY
-<span class="ln"> 3</span>guess   : GGRR
-<span class="ln"> 4</span>
-<span class="ln"> 5</span>上面指向的G的位置跳过，记录solution中RGBY出现的次数：
-<span class="ln"> 6</span>R=1, G=0, B=1, Y=1
-<span class="ln"> 7</span>通用计算guess中RGBY出现的次数：
-<span class="ln"> 8</span>R=2, G=1, B=0, Y=0
-<span class="ln"> 9</span>
-<span class="ln">10</span>那么
-<span class="ln">11</span>R的pseudoHit = min(1, 2) = 1
-<span class="ln">12</span>G的pseudoHit = min(0, 1) = 0
-<span class="ln">13</span>B的pseudoHit = min(1, 0) = 0
-<span class="ln">14</span>Y的pseudoHit = min(1, 0) = 0
-<span class="ln">15</span>所以，总pseudoHit = 1
-</code></pre></div><p>代码：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln"> 1</span><span class="kd">public</span> <span class="kt">void</span> <span class="nf">check</span><span class="o">(</span><span class="kt">char</span><span class="o">[]</span> <span class="n">solution</span><span class="o">,</span> <span class="kt">char</span><span class="o">[]</span> <span class="n">guess</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 2</span>  <span class="kt">int</span> <span class="n">hits</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span>
-<span class="ln"> 3</span>  <span class="n">Map</span><span class="o">&lt;</span><span class="n">Char</span><span class="o">,</span> <span class="n">Integer</span><span class="o">&gt;</span> <span class="n">solutionColor</span> <span class="o">=</span> <span class="k">new</span> <span class="n">HashMap</span><span class="o">&lt;&gt;();</span>
-<span class="ln"> 4</span>  <span class="n">Map</span><span class="o">&lt;</span><span class="n">Char</span><span class="o">,</span> <span class="n">Integer</span><span class="o">&gt;</span> <span class="n">guessColor</span> <span class="o">=</span> <span class="k">new</span> <span class="n">HashMap</span><span class="o">&lt;&gt;();</span>
-<span class="ln"> 5</span>  <span class="n">initialize</span><span class="o">(</span><span class="n">solutionColor</span><span class="o">);</span> <span class="c1">// 把R、G、B、Y初始化为0
-</span><span class="ln"> 6</span><span class="c1"></span>  <span class="n">initialize</span><span class="o">(</span><span class="n">guessColor</span><span class="o">);</span>
-<span class="ln"> 7</span>  
-<span class="ln"> 8</span>  <span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">solution</span><span class="o">.</span><span class="na">length</span><span class="o">;</span> <span class="n">i</span><span class="o">++)</span> <span class="o">{</span>
-<span class="ln"> 9</span>    <span class="k">if</span> <span class="o">(</span><span class="n">solution</span><span class="o">[</span><span class="n">i</span><span class="o">]</span> <span class="o">==</span> <span class="n">guess</span><span class="o">[</span><span class="n">i</span><span class="o">])</span> <span class="o">{</span>
-<span class="ln">10</span>      <span class="n">hits</span><span class="o">++;</span>
-<span class="ln">11</span>      <span class="k">continue</span><span class="o">;</span>
-<span class="ln">12</span>    <span class="o">}</span>
-<span class="ln">13</span>    <span class="n">countForColor</span><span class="o">(</span><span class="n">solutionColor</span><span class="o">,</span> <span class="n">solution</span><span class="o">[</span><span class="n">i</span><span class="o">]);</span>
-<span class="ln">14</span>    <span class="n">countForColor</span><span class="o">(</span><span class="n">guessColor</span><span class="o">,</span> <span class="n">guess</span><span class="o">[</span><span class="n">i</span><span class="o">]);</span>
-<span class="ln">15</span>  <span class="o">}</span>
-<span class="ln">16</span>  
-<span class="ln">17</span>  <span class="kt">int</span> <span class="n">pseudoHit</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span>
-<span class="ln">18</span>  <span class="k">for</span> <span class="o">(</span><span class="n">Char</span> <span class="n">c</span> <span class="o">:</span> <span class="n">solutionColor</span><span class="o">.</span><span class="na">keySet</span><span class="o">())</span> <span class="o">{</span>
-<span class="ln">19</span>    <span class="n">pseudoHit</span> <span class="o">+=</span> <span class="n">Math</span><span class="o">.</span><span class="na">min</span><span class="o">(</span><span class="n">solutionColor</span><span class="o">.</span><span class="na">get</span><span class="o">(</span><span class="n">c</span><span class="o">),</span> <span class="n">guessColor</span><span class="o">.</span><span class="na">get</span><span class="o">(</span><span class="n">c</span><span class="o">));</span>
-<span class="ln">20</span>  <span class="o">}</span>
-<span class="ln">21</span>  <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">&#34;Hits: &#34;</span> <span class="o">+</span> <span class="n">hits</span> <span class="o">+</span> <span class="s">&#34;, Pseudo hits: &#34;</span> <span class="o">+</span> <span class="n">pseudoHits</span><span class="o">);</span>
-<span class="ln">22</span><span class="o">}</span>
-</code></pre></div><p>也可以不用Map：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln"> 1</span><span class="kd">private</span> <span class="kt">int</span> <span class="nf">index</span><span class="o">(</span><span class="kt">char</span> <span class="n">c</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 2</span>  <span class="k">switch</span> <span class="o">(</span><span class="n">c</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 3</span>    <span class="k">case</span> <span class="sc">&#39;B&#39;</span><span class="o">:</span>
-<span class="ln"> 4</span>      <span class="k">return</span> <span class="n">0</span><span class="o">;</span>
-<span class="ln"> 5</span>    <span class="k">case</span> <span class="sc">&#39;G&#39;</span><span class="o">:</span>
-<span class="ln"> 6</span>      <span class="k">return</span> <span class="n">1</span><span class="o">;</span>
-<span class="ln"> 7</span>    <span class="k">case</span> <span class="sc">&#39;R&#39;</span><span class="o">:</span>
-<span class="ln"> 8</span>      <span class="k">return</span> <span class="n">2</span><span class="o">;</span>
-<span class="ln"> 9</span>    <span class="k">case</span> <span class="sc">&#39;Y&#39;</span><span class="o">:</span>
-<span class="ln">10</span>      <span class="k">return</span> <span class="n">3</span><span class="o">;</span>
-<span class="ln">11</span>  <span class="o">}</span>
-<span class="ln">12</span>  <span class="k">return</span> <span class="o">-</span><span class="n">1</span><span class="o">;</span>
-<span class="ln">13</span><span class="o">}</span>
-<span class="ln">14</span><span class="kd">public</span> <span class="kt">void</span> <span class="nf">check</span><span class="o">(</span><span class="kt">char</span><span class="o">[]</span> <span class="n">solution</span><span class="o">,</span> <span class="kt">char</span><span class="o">[]</span> <span class="n">guess</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">15</span>  <span class="kt">int</span> <span class="n">hits</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span>
-<span class="ln">16</span>  <span class="kt">int</span><span class="o">[]</span> <span class="n">solutionColor</span> <span class="o">=</span> <span class="k">new</span> <span class="kt">int</span><span class="o">[</span><span class="n">4</span><span class="o">];</span>
-<span class="ln">17</span>  <span class="kt">int</span><span class="o">[]</span> <span class="n">guessColor</span> <span class="o">=</span> <span class="k">new</span> <span class="kt">int</span><span class="o">[</span><span class="n">4</span><span class="o">];</span>
-<span class="ln">18</span>  
-<span class="ln">19</span>  <span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">solution</span><span class="o">.</span><span class="na">length</span><span class="o">;</span> <span class="n">i</span><span class="o">++)</span> <span class="o">{</span>
-<span class="ln">20</span>    <span class="k">if</span> <span class="o">(</span><span class="n">solution</span><span class="o">[</span><span class="n">i</span><span class="o">]</span> <span class="o">==</span> <span class="n">guess</span><span class="o">[</span><span class="n">i</span><span class="o">])</span> <span class="o">{</span>
-<span class="ln">21</span>      <span class="n">hits</span><span class="o">++;</span>
-<span class="ln">22</span>      <span class="k">continue</span><span class="o">;</span>
-<span class="ln">23</span>    <span class="o">}</span>
-<span class="ln">24</span>    <span class="n">solutionColor</span><span class="o">[</span><span class="n">index</span><span class="o">(</span><span class="n">solution</span><span class="o">[</span><span class="n">i</span><span class="o">])]++;</span>
-<span class="ln">25</span>    <span class="n">guessColor</span><span class="o">[</span><span class="n">index</span><span class="o">(</span><span class="n">guess</span><span class="o">[</span><span class="n">i</span><span class="o">])]++;</span>
-<span class="ln">26</span>  <span class="o">}</span>
-<span class="ln">27</span>  
-<span class="ln">28</span>  <span class="kt">int</span> <span class="n">pseudoHit</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span>
-<span class="ln">29</span>  <span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span> <span class="n">i</span> <span class="o">&lt;</span>  <span class="n">solutionColor</span><span class="o">.</span><span class="na">length</span><span class="o">;</span> <span class="n">i</span><span class="o">++)</span> <span class="o">{</span>
-<span class="ln">30</span>    <span class="n">pseudoHit</span> <span class="o">+=</span> <span class="n">Math</span><span class="o">.</span><span class="na">min</span><span class="o">(</span><span class="n">solutionColor</span><span class="o">[</span><span class="n">i</span><span class="o">],</span> <span class="n">guessColor</span><span class="o">[</span><span class="n">i</span><span class="o">]);</span>
-<span class="ln">31</span>  <span class="o">}</span>
-<span class="ln">32</span>  <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">&#34;Hits: &#34;</span> <span class="o">+</span> <span class="n">hits</span> <span class="o">+</span> <span class="s">&#34;, Pseudo hits: &#34;</span> <span class="o">+</span> <span class="n">pseudoHits</span><span class="o">);</span>
-<span class="ln">33</span><span class="o">}</span>
-</code></pre></div></div></div>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt">           v
+solution: RGBY
+guess   : GGRR
+
+上面指向的G的位置跳过，记录solution中RGBY出现的次数：
+R=1, G=0, B=1, Y=1
+通用计算guess中RGBY出现的次数：
+R=2, G=1, B=0, Y=0
+
+那么
+R的pseudoHit = min(1, 2) = 1
+G的pseudoHit = min(0, 1) = 0
+B的pseudoHit = min(1, 0) = 0
+Y的pseudoHit = min(1, 0) = 0
+所以，总pseudoHit = 1
+</code></pre></td></tr></table>
+</div>
+</div><p>代码：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="kd">public</span> <span class="kt">void</span> <span class="nf">check</span><span class="o">(</span><span class="kt">char</span><span class="o">[]</span> <span class="n">solution</span><span class="o">,</span> <span class="kt">char</span><span class="o">[]</span> <span class="n">guess</span><span class="o">)</span> <span class="o">{</span>
+  <span class="kt">int</span> <span class="n">hits</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span>
+  <span class="n">Map</span><span class="o">&lt;</span><span class="n">Char</span><span class="o">,</span> <span class="n">Integer</span><span class="o">&gt;</span> <span class="n">solutionColor</span> <span class="o">=</span> <span class="k">new</span> <span class="n">HashMap</span><span class="o">&lt;&gt;();</span>
+  <span class="n">Map</span><span class="o">&lt;</span><span class="n">Char</span><span class="o">,</span> <span class="n">Integer</span><span class="o">&gt;</span> <span class="n">guessColor</span> <span class="o">=</span> <span class="k">new</span> <span class="n">HashMap</span><span class="o">&lt;&gt;();</span>
+  <span class="n">initialize</span><span class="o">(</span><span class="n">solutionColor</span><span class="o">);</span> <span class="c1">// 把R、G、B、Y初始化为0
+</span><span class="c1"></span>  <span class="n">initialize</span><span class="o">(</span><span class="n">guessColor</span><span class="o">);</span>
+  
+  <span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">solution</span><span class="o">.</span><span class="na">length</span><span class="o">;</span> <span class="n">i</span><span class="o">++)</span> <span class="o">{</span>
+    <span class="k">if</span> <span class="o">(</span><span class="n">solution</span><span class="o">[</span><span class="n">i</span><span class="o">]</span> <span class="o">==</span> <span class="n">guess</span><span class="o">[</span><span class="n">i</span><span class="o">])</span> <span class="o">{</span>
+      <span class="n">hits</span><span class="o">++;</span>
+      <span class="k">continue</span><span class="o">;</span>
+    <span class="o">}</span>
+    <span class="n">countForColor</span><span class="o">(</span><span class="n">solutionColor</span><span class="o">,</span> <span class="n">solution</span><span class="o">[</span><span class="n">i</span><span class="o">]);</span>
+    <span class="n">countForColor</span><span class="o">(</span><span class="n">guessColor</span><span class="o">,</span> <span class="n">guess</span><span class="o">[</span><span class="n">i</span><span class="o">]);</span>
+  <span class="o">}</span>
+  
+  <span class="kt">int</span> <span class="n">pseudoHit</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span>
+  <span class="k">for</span> <span class="o">(</span><span class="n">Char</span> <span class="n">c</span> <span class="o">:</span> <span class="n">solutionColor</span><span class="o">.</span><span class="na">keySet</span><span class="o">())</span> <span class="o">{</span>
+    <span class="n">pseudoHit</span> <span class="o">+=</span> <span class="n">Math</span><span class="o">.</span><span class="na">min</span><span class="o">(</span><span class="n">solutionColor</span><span class="o">.</span><span class="na">get</span><span class="o">(</span><span class="n">c</span><span class="o">),</span> <span class="n">guessColor</span><span class="o">.</span><span class="na">get</span><span class="o">(</span><span class="n">c</span><span class="o">));</span>
+  <span class="o">}</span>
+  <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">&#34;Hits: &#34;</span> <span class="o">+</span> <span class="n">hits</span> <span class="o">+</span> <span class="s">&#34;, Pseudo hits: &#34;</span> <span class="o">+</span> <span class="n">pseudoHits</span><span class="o">);</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>也可以不用Map：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="kd">private</span> <span class="kt">int</span> <span class="nf">index</span><span class="o">(</span><span class="kt">char</span> <span class="n">c</span><span class="o">)</span> <span class="o">{</span>
+  <span class="k">switch</span> <span class="o">(</span><span class="n">c</span><span class="o">)</span> <span class="o">{</span>
+    <span class="k">case</span> <span class="sc">&#39;B&#39;</span><span class="o">:</span>
+      <span class="k">return</span> <span class="n">0</span><span class="o">;</span>
+    <span class="k">case</span> <span class="sc">&#39;G&#39;</span><span class="o">:</span>
+      <span class="k">return</span> <span class="n">1</span><span class="o">;</span>
+    <span class="k">case</span> <span class="sc">&#39;R&#39;</span><span class="o">:</span>
+      <span class="k">return</span> <span class="n">2</span><span class="o">;</span>
+    <span class="k">case</span> <span class="sc">&#39;Y&#39;</span><span class="o">:</span>
+      <span class="k">return</span> <span class="n">3</span><span class="o">;</span>
+  <span class="o">}</span>
+  <span class="k">return</span> <span class="o">-</span><span class="n">1</span><span class="o">;</span>
+<span class="o">}</span>
+<span class="kd">public</span> <span class="kt">void</span> <span class="nf">check</span><span class="o">(</span><span class="kt">char</span><span class="o">[]</span> <span class="n">solution</span><span class="o">,</span> <span class="kt">char</span><span class="o">[]</span> <span class="n">guess</span><span class="o">)</span> <span class="o">{</span>
+  <span class="kt">int</span> <span class="n">hits</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span>
+  <span class="kt">int</span><span class="o">[]</span> <span class="n">solutionColor</span> <span class="o">=</span> <span class="k">new</span> <span class="kt">int</span><span class="o">[</span><span class="n">4</span><span class="o">];</span>
+  <span class="kt">int</span><span class="o">[]</span> <span class="n">guessColor</span> <span class="o">=</span> <span class="k">new</span> <span class="kt">int</span><span class="o">[</span><span class="n">4</span><span class="o">];</span>
+  
+  <span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">solution</span><span class="o">.</span><span class="na">length</span><span class="o">;</span> <span class="n">i</span><span class="o">++)</span> <span class="o">{</span>
+    <span class="k">if</span> <span class="o">(</span><span class="n">solution</span><span class="o">[</span><span class="n">i</span><span class="o">]</span> <span class="o">==</span> <span class="n">guess</span><span class="o">[</span><span class="n">i</span><span class="o">])</span> <span class="o">{</span>
+      <span class="n">hits</span><span class="o">++;</span>
+      <span class="k">continue</span><span class="o">;</span>
+    <span class="o">}</span>
+    <span class="n">solutionColor</span><span class="o">[</span><span class="n">index</span><span class="o">(</span><span class="n">solution</span><span class="o">[</span><span class="n">i</span><span class="o">])]++;</span>
+    <span class="n">guessColor</span><span class="o">[</span><span class="n">index</span><span class="o">(</span><span class="n">guess</span><span class="o">[</span><span class="n">i</span><span class="o">])]++;</span>
+  <span class="o">}</span>
+  
+  <span class="kt">int</span> <span class="n">pseudoHit</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span>
+  <span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span> <span class="n">i</span> <span class="o">&lt;</span>  <span class="n">solutionColor</span><span class="o">.</span><span class="na">length</span><span class="o">;</span> <span class="n">i</span><span class="o">++)</span> <span class="o">{</span>
+    <span class="n">pseudoHit</span> <span class="o">+=</span> <span class="n">Math</span><span class="o">.</span><span class="na">min</span><span class="o">(</span><span class="n">solutionColor</span><span class="o">[</span><span class="n">i</span><span class="o">],</span> <span class="n">guessColor</span><span class="o">[</span><span class="n">i</span><span class="o">]);</span>
+  <span class="o">}</span>
+  <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">&#34;Hits: &#34;</span> <span class="o">+</span> <span class="n">hits</span> <span class="o">+</span> <span class="s">&#34;, Pseudo hits: &#34;</span> <span class="o">+</span> <span class="n">pseudoHits</span><span class="o">);</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div></div></div>
   <div class="card-footer"><div class="post-navs d-flex justify-content-evenly">
   <div class="post-nav post-prev"><i class="fas fa-fw fa-chevron-left"></i>
     <a href="/post/cracking-coding-interview/16.14-best-line/">Cracking Coding Interview - 16.14 Best Line

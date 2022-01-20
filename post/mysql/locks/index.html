@@ -12,7 +12,7 @@
 <meta name="description" content="" /><meta itemprop="name" content="MySQL - 锁">
 <meta itemprop="description" content=""><meta itemprop="datePublished" content="2019-12-20T14:03:02+08:00" />
 <meta itemprop="dateModified" content="2019-12-20T14:03:02+08:00" />
-<meta itemprop="wordCount" content="2247">
+<meta itemprop="wordCount" content="2147">
 <meta itemprop="keywords" content="mysql," /><meta property="og:title" content="MySQL - 锁" />
 <meta property="og:description" content="" />
 <meta property="og:type" content="article" />
@@ -239,17 +239,36 @@
 <p><strong>全局锁的典型使用场景是MyISAM引擎做全库逻辑备份，为的是解决备份时数据不一致的问题。</strong></p>
 <p>如果是InnoDB引擎的表，因为支持MVCC，可以通过<code>mysqldump --single-transaction</code>来解决备份时数据一致性问题。</p>
 <p>释放方法：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="ln">1</span><span class="n">UNLOCK</span><span class="w"> </span><span class="n">TABLES</span><span class="p">;</span><span class="w">
-</span></code></pre></div><h2 id="表级锁">表级锁<a class="anchor ms-1" href="#表级锁"><i class="fas fa-link"></i></a></h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="n">UNLOCK</span><span class="w"> </span><span class="n">TABLES</span><span class="p">;</span><span class="w">
+</span></code></pre></td></tr></table>
+</div>
+</div><h2 id="表级锁">表级锁<a class="anchor ms-1" href="#表级锁"><i class="fas fa-link"></i></a></h2>
 <h3 id="表锁">表锁<a class="anchor ms-1" href="#表锁"><i class="fas fa-link"></i></a></h3>
 <p>通过下面语句给表加上读锁或写锁，还有释放：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="ln">1</span><span class="c1">-- 加锁
-</span><span class="ln">2</span><span class="c1"></span><span class="k">LOCK</span><span class="w"> </span><span class="n">TABLES</span><span class="w"> </span><span class="p">...</span><span class="w"> </span><span class="k">read</span><span class="o">/</span><span class="k">write</span><span class="w">
-</span><span class="ln">3</span><span class="w"></span><span class="c1">-- 释放
-</span><span class="ln">4</span><span class="c1"></span><span class="n">UNLOCK</span><span class="w"> </span><span class="n">TABLES</span><span class="w">
-</span><span class="ln">5</span><span class="w"></span><span class="c1">-- 例如
-</span><span class="ln">6</span><span class="c1"></span><span class="k">LOCK</span><span class="w"> </span><span class="n">TABLES</span><span class="w"> </span><span class="n">t1</span><span class="w"> </span><span class="k">read</span><span class="p">,</span><span class="w"> </span><span class="n">t2</span><span class="w"> </span><span class="k">write</span><span class="w">
-</span></code></pre></div><p>MySQL的锁不是可重入的，即加锁之后，当前连接/session也受制于这个锁。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="c1">-- 加锁
+</span><span class="c1"></span><span class="k">LOCK</span><span class="w"> </span><span class="n">TABLES</span><span class="w"> </span><span class="p">...</span><span class="w"> </span><span class="k">read</span><span class="o">/</span><span class="k">write</span><span class="w">
+</span><span class="w"></span><span class="c1">-- 释放
+</span><span class="c1"></span><span class="n">UNLOCK</span><span class="w"> </span><span class="n">TABLES</span><span class="w">
+</span><span class="w"></span><span class="c1">-- 例如
+</span><span class="c1"></span><span class="k">LOCK</span><span class="w"> </span><span class="n">TABLES</span><span class="w"> </span><span class="n">t1</span><span class="w"> </span><span class="k">read</span><span class="p">,</span><span class="w"> </span><span class="n">t2</span><span class="w"> </span><span class="k">write</span><span class="w">
+</span></code></pre></td></tr></table>
+</div>
+</div><p>MySQL的锁不是可重入的，即加锁之后，当前连接/session也受制于这个锁。</p>
 <p>如果加的是读锁：</p>
 <ul>
 <li>本session：可以读，不可写（直接报错）</li>
@@ -283,9 +302,17 @@
 <p>问题的本质在于一个MDL写锁在等待MDL读锁的释放，而读锁却在一个长事务里，导致后续的MDL读锁堆积。</p>
 <p>所以可以在执行DDL之前看有没有长事务在跑，如果有，Kill掉这个长事务，或者等待长事务结束再DDL。</p>
 <p>还可以给DDL添加超时时间，如果等待超时则放弃，然后人工再重试（MariaDB和AliSQL支持下面语法）：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="ln">1</span><span class="k">ALTER</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">tbl_name</span><span class="w"> </span><span class="n">NOWAIT</span><span class="w"> </span><span class="k">add</span><span class="w"> </span><span class="k">column</span><span class="w"> </span><span class="p">...</span><span class="w">
-</span><span class="ln">2</span><span class="w"></span><span class="k">ALTER</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">tbl_name</span><span class="w"> </span><span class="n">WAIT</span><span class="w"> </span><span class="n">N</span><span class="w"> </span><span class="k">add</span><span class="w"> </span><span class="k">column</span><span class="w"> </span><span class="p">...</span><span class="w"> 
-</span></code></pre></div><h2 id="行锁">行锁<a class="anchor ms-1" href="#行锁"><i class="fas fa-link"></i></a></h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="k">ALTER</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">tbl_name</span><span class="w"> </span><span class="n">NOWAIT</span><span class="w"> </span><span class="k">add</span><span class="w"> </span><span class="k">column</span><span class="w"> </span><span class="p">...</span><span class="w">
+</span><span class="w"></span><span class="k">ALTER</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">tbl_name</span><span class="w"> </span><span class="n">WAIT</span><span class="w"> </span><span class="n">N</span><span class="w"> </span><span class="k">add</span><span class="w"> </span><span class="k">column</span><span class="w"> </span><span class="p">...</span><span class="w"> 
+</span></code></pre></td></tr></table>
+</div>
+</div><h2 id="行锁">行锁<a class="anchor ms-1" href="#行锁"><i class="fas fa-link"></i></a></h2>
 <p>InnoDB支持行锁，MyISAM不支持。所以行锁是做在存储引擎上的。</p>
 <p>比如下面：</p>
 <table>

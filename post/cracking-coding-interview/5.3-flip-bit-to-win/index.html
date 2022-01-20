@@ -12,7 +12,7 @@
 <meta name="description" content="" /><meta itemprop="name" content="Cracking Coding Interview - 5.3 Flip Bit to Win">
 <meta itemprop="description" content=""><meta itemprop="datePublished" content="2019-08-19T11:50:11+08:00" />
 <meta itemprop="dateModified" content="2019-08-19T11:50:11+08:00" />
-<meta itemprop="wordCount" content="1149">
+<meta itemprop="wordCount" content="1166">
 <meta itemprop="keywords" content="ARTS-A," /><meta property="og:title" content="Cracking Coding Interview - 5.3 Flip Bit to Win" />
 <meta property="og:description" content="" />
 <meta property="og:type" content="article" />
@@ -225,135 +225,278 @@
 </div>
 <div class="post-content mb-3"><p><strong>Flip Bit to Win</strong>: You have an integer and you can flip exactly one bit from a <code>0</code> to a <code>1</code>. Write code to find the length of the longest sequence of ls you could create.</p>
 <p>EXAMPLE</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln">1</span>Input:  11001101111
-<span class="ln">2</span>               ^
-<span class="ln">3</span>Output: 7
-</code></pre></div><p>Hints: #159, #226, #314,#352</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt">Input:  11001101111
+               ^
+Output: 7
+</code></pre></td></tr></table>
+</div>
+</div><p>Hints: #159, #226, #314,#352</p>
 <h2 id="解法1">解法1<a class="anchor ms-1" href="#解法1"><i class="fas fa-link"></i></a></h2>
 <p>暴力解法：</p>
 <ul>
 <li>从右到左找<code>0</code>在哪个位置</li>
 <li>记住这个位置，在数字中数连续1的数量</li>
 </ul>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln"> 1</span><span class="kd">public</span> <span class="kt">int</span> <span class="nf">flipToWin</span><span class="o">(</span><span class="kt">int</span> <span class="n">num</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 2</span>  <span class="kt">int</span> <span class="n">zeroIndex</span> <span class="o">=</span> <span class="n">zeroIndex</span><span class="o">(</span><span class="n">num</span><span class="o">,</span> <span class="n">0</span><span class="o">);</span>
-<span class="ln"> 3</span>  <span class="kt">int</span> <span class="n">maxLength</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span>
-<span class="ln"> 4</span>  <span class="k">while</span> <span class="o">(</span><span class="n">zeroIndex</span> <span class="o">!=</span> <span class="o">-</span><span class="n">1</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 5</span>    <span class="kt">int</span> <span class="n">length</span> <span class="o">=</span> <span class="n">maxContinousOne</span><span class="o">(</span><span class="n">num</span><span class="o">,</span> <span class="n">zeroIndex</span><span class="o">);</span>
-<span class="ln"> 6</span>    <span class="k">if</span> <span class="o">(</span><span class="n">length</span> <span class="o">&gt;</span> <span class="n">maxLength</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 7</span>      <span class="n">maxLength</span> <span class="o">=</span> <span class="n">length</span><span class="o">;</span>
-<span class="ln"> 8</span>    <span class="o">}</span>
-<span class="ln"> 9</span>    <span class="n">zeroIndex</span> <span class="o">=</span> <span class="n">zeroIndex</span><span class="o">(</span><span class="n">num</span><span class="o">,</span> <span class="n">zeroIndex</span> <span class="o">+</span> <span class="n">1</span><span class="o">);</span>
-<span class="ln">10</span>  <span class="o">}</span>
-<span class="ln">11</span>  <span class="k">return</span> <span class="n">maxLength</span><span class="o">;</span>
-<span class="ln">12</span><span class="o">}</span>
-<span class="ln">13</span>
-<span class="ln">14</span><span class="c1">// 找0的下标
-</span><span class="ln">15</span><span class="c1"></span><span class="kd">private</span> <span class="kt">int</span> <span class="nf">zeroIndex</span><span class="o">(</span><span class="kt">int</span> <span class="n">num</span><span class="o">,</span> <span class="kt">int</span> <span class="n">start</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">16</span>  <span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="n">start</span><span class="o">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">32</span><span class="o">;</span> <span class="n">i</span><span class="o">++)</span> <span class="o">{</span>
-<span class="ln">17</span>    <span class="kt">int</span> <span class="n">bit</span> <span class="o">=</span> <span class="n">1</span> <span class="o">&lt;&lt;</span> <span class="n">i</span><span class="o">;</span>
-<span class="ln">18</span>    <span class="k">if</span> <span class="o">(</span><span class="n">num</span> <span class="o">&amp;</span> <span class="n">bit</span> <span class="o">==</span> <span class="n">0</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">19</span>      <span class="k">return</span> <span class="n">i</span><span class="o">;</span>
-<span class="ln">20</span>    <span class="o">}</span>
-<span class="ln">21</span>  <span class="o">}</span>
-<span class="ln">22</span>  <span class="k">return</span> <span class="o">-</span><span class="n">1</span><span class="o">;</span>
-<span class="ln">23</span><span class="o">}</span>
-<span class="ln">24</span>
-<span class="ln">25</span><span class="c1">// 返回最大连续1的长度，当碰到zeroIndex的时候，当作是1
-</span><span class="ln">26</span><span class="c1"></span><span class="kd">private</span> <span class="kt">int</span> <span class="nf">maxContinousOne</span><span class="o">(</span><span class="kt">int</span> <span class="n">num</span><span class="o">,</span> <span class="kt">int</span> <span class="n">zeroIndex</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">27</span>  <span class="kt">int</span> <span class="n">length</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span>
-<span class="ln">28</span>  <span class="kt">int</span> <span class="n">maxLength</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span>
-<span class="ln">29</span>  <span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">32</span><span class="o">;</span> <span class="n">i</span><span class="o">++)</span> <span class="o">{</span>
-<span class="ln">30</span>    <span class="kt">int</span> <span class="n">bit</span> <span class="o">=</span> <span class="n">1</span> <span class="o">&lt;&lt;</span> <span class="n">i</span><span class="o">;</span>
-<span class="ln">31</span>    <span class="k">if</span> <span class="o">(</span><span class="n">num</span> <span class="o">&amp;</span> <span class="n">bit</span> <span class="o">!=</span> <span class="n">0</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">32</span>      <span class="n">length</span><span class="o">++;</span>
-<span class="ln">33</span>    <span class="o">}</span> <span class="k">else</span> <span class="k">if</span> <span class="o">(</span><span class="n">i</span> <span class="o">==</span> <span class="n">zeroIndex</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">34</span>      <span class="n">length</span><span class="o">++;</span>
-<span class="ln">35</span>    <span class="o">}</span> <span class="k">else</span> <span class="o">{</span>
-<span class="ln">36</span>      <span class="c1">// 遇到0了
-</span><span class="ln">37</span><span class="c1"></span>      <span class="k">if</span> <span class="o">(</span><span class="n">length</span> <span class="o">&gt;</span> <span class="n">maxLength</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">38</span>        <span class="n">maxLength</span> <span class="o">=</span> <span class="n">length</span><span class="o">;</span>
-<span class="ln">39</span>      <span class="o">}</span>
-<span class="ln">40</span>      <span class="n">length</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span>
-<span class="ln">41</span>    <span class="o">}</span>
-<span class="ln">42</span>  <span class="o">}</span>
-<span class="ln">43</span>  <span class="k">return</span> <span class="n">maxLength</span><span class="o">;</span>
-<span class="ln">44</span><span class="o">}</span>
-</code></pre></div><p>时间复杂度：O(d * b)，d代表0的数量，b代表num的比特数。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="kd">public</span> <span class="kt">int</span> <span class="nf">flipToWin</span><span class="o">(</span><span class="kt">int</span> <span class="n">num</span><span class="o">)</span> <span class="o">{</span>
+  <span class="kt">int</span> <span class="n">zeroIndex</span> <span class="o">=</span> <span class="n">zeroIndex</span><span class="o">(</span><span class="n">num</span><span class="o">,</span> <span class="n">0</span><span class="o">);</span>
+  <span class="kt">int</span> <span class="n">maxLength</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span>
+  <span class="k">while</span> <span class="o">(</span><span class="n">zeroIndex</span> <span class="o">!=</span> <span class="o">-</span><span class="n">1</span><span class="o">)</span> <span class="o">{</span>
+    <span class="kt">int</span> <span class="n">length</span> <span class="o">=</span> <span class="n">maxContinousOne</span><span class="o">(</span><span class="n">num</span><span class="o">,</span> <span class="n">zeroIndex</span><span class="o">);</span>
+    <span class="k">if</span> <span class="o">(</span><span class="n">length</span> <span class="o">&gt;</span> <span class="n">maxLength</span><span class="o">)</span> <span class="o">{</span>
+      <span class="n">maxLength</span> <span class="o">=</span> <span class="n">length</span><span class="o">;</span>
+    <span class="o">}</span>
+    <span class="n">zeroIndex</span> <span class="o">=</span> <span class="n">zeroIndex</span><span class="o">(</span><span class="n">num</span><span class="o">,</span> <span class="n">zeroIndex</span> <span class="o">+</span> <span class="n">1</span><span class="o">);</span>
+  <span class="o">}</span>
+  <span class="k">return</span> <span class="n">maxLength</span><span class="o">;</span>
+<span class="o">}</span>
+
+<span class="c1">// 找0的下标
+</span><span class="c1"></span><span class="kd">private</span> <span class="kt">int</span> <span class="nf">zeroIndex</span><span class="o">(</span><span class="kt">int</span> <span class="n">num</span><span class="o">,</span> <span class="kt">int</span> <span class="n">start</span><span class="o">)</span> <span class="o">{</span>
+  <span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="n">start</span><span class="o">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">32</span><span class="o">;</span> <span class="n">i</span><span class="o">++)</span> <span class="o">{</span>
+    <span class="kt">int</span> <span class="n">bit</span> <span class="o">=</span> <span class="n">1</span> <span class="o">&lt;&lt;</span> <span class="n">i</span><span class="o">;</span>
+    <span class="k">if</span> <span class="o">(</span><span class="n">num</span> <span class="o">&amp;</span> <span class="n">bit</span> <span class="o">==</span> <span class="n">0</span><span class="o">)</span> <span class="o">{</span>
+      <span class="k">return</span> <span class="n">i</span><span class="o">;</span>
+    <span class="o">}</span>
+  <span class="o">}</span>
+  <span class="k">return</span> <span class="o">-</span><span class="n">1</span><span class="o">;</span>
+<span class="o">}</span>
+
+<span class="c1">// 返回最大连续1的长度，当碰到zeroIndex的时候，当作是1
+</span><span class="c1"></span><span class="kd">private</span> <span class="kt">int</span> <span class="nf">maxContinousOne</span><span class="o">(</span><span class="kt">int</span> <span class="n">num</span><span class="o">,</span> <span class="kt">int</span> <span class="n">zeroIndex</span><span class="o">)</span> <span class="o">{</span>
+  <span class="kt">int</span> <span class="n">length</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span>
+  <span class="kt">int</span> <span class="n">maxLength</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span>
+  <span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">32</span><span class="o">;</span> <span class="n">i</span><span class="o">++)</span> <span class="o">{</span>
+    <span class="kt">int</span> <span class="n">bit</span> <span class="o">=</span> <span class="n">1</span> <span class="o">&lt;&lt;</span> <span class="n">i</span><span class="o">;</span>
+    <span class="k">if</span> <span class="o">(</span><span class="n">num</span> <span class="o">&amp;</span> <span class="n">bit</span> <span class="o">!=</span> <span class="n">0</span><span class="o">)</span> <span class="o">{</span>
+      <span class="n">length</span><span class="o">++;</span>
+    <span class="o">}</span> <span class="k">else</span> <span class="k">if</span> <span class="o">(</span><span class="n">i</span> <span class="o">==</span> <span class="n">zeroIndex</span><span class="o">)</span> <span class="o">{</span>
+      <span class="n">length</span><span class="o">++;</span>
+    <span class="o">}</span> <span class="k">else</span> <span class="o">{</span>
+      <span class="c1">// 遇到0了
+</span><span class="c1"></span>      <span class="k">if</span> <span class="o">(</span><span class="n">length</span> <span class="o">&gt;</span> <span class="n">maxLength</span><span class="o">)</span> <span class="o">{</span>
+        <span class="n">maxLength</span> <span class="o">=</span> <span class="n">length</span><span class="o">;</span>
+      <span class="o">}</span>
+      <span class="n">length</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span>
+    <span class="o">}</span>
+  <span class="o">}</span>
+  <span class="k">return</span> <span class="n">maxLength</span><span class="o">;</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>时间复杂度：O(d * b)，d代表0的数量，b代表num的比特数。</p>
 <p>空间复杂度：O(d)，d代表0的数量</p>
 <h2 id="解法2">解法2<a class="anchor ms-1" href="#解法2"><i class="fas fa-link"></i></a></h2>
 <p>构建一个数组，里面记录连续0和连续1的长度，数组的构建是从低位到高位的，比如<code>11001101111</code>的数组是<code>[0, 4, 1, 2, 2, 2, 21]</code>，数组的第1个元素总是代表0的数量，后面每增加一个元素则反转代表0或1：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln">1</span>[0, 4,    1, 2,  2,  2,  21]
-<span class="ln">2</span> ^  ^     ^  ^   ^   ^   ^
-<span class="ln">3</span> 0  1111  0  11  00  11  000000000000000000000
-</code></pre></div><p>因为第一个元素总是代表0，并且下一个元素反转为1，那么就意味着每隔两个元素就又是0。我们只需要看这个0的数量是否 == 1，如果是1则可以把左右两边的元素相加再加1（两边的1可以合并），如果 &gt; 1则要么左边的加1，要么右边的加1（可以借用一个0），如果 == 0则等于右边的数，然后取最大值就行了。</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln"> 1</span><span class="kd">public</span> <span class="n">List</span><span class="o">&lt;</span><span class="n">Integer</span><span class="o">&gt;</span> <span class="nf">makeCount</span><span class="o">(</span><span class="kt">int</span> <span class="n">num</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 2</span>  <span class="n">List</span><span class="o">&lt;</span><span class="n">Integer</span><span class="o">&gt;</span> <span class="n">result</span> <span class="o">=</span> <span class="k">new</span> <span class="n">ArrayList</span><span class="o">&lt;&gt;();</span>
-<span class="ln"> 3</span>  <span class="kt">int</span> <span class="n">count</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span>
-<span class="ln"> 4</span>  <span class="kt">int</span> <span class="n">seek</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span>
-<span class="ln"> 5</span>  <span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">32</span><span class="o">;</span> <span class="n">i</span><span class="o">++)</span> <span class="o">{</span>
-<span class="ln"> 6</span>    <span class="k">if</span> <span class="o">(</span><span class="n">num</span> <span class="o">&amp;</span> <span class="n">1</span> <span class="o">==</span> <span class="n">seek</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 7</span>      <span class="n">count</span><span class="o">++;</span>
-<span class="ln"> 8</span>    <span class="o">}</span> <span class="k">else</span> <span class="o">{</span>
-<span class="ln"> 9</span>      <span class="n">result</span><span class="o">.</span><span class="na">add</span><span class="o">(</span><span class="n">count</span><span class="o">);</span>
-<span class="ln">10</span>      <span class="n">seek</span> <span class="o">=</span> <span class="n">num</span> <span class="o">&amp;</span> <span class="n">1</span><span class="o">;</span> <span class="c1">// 翻转为0或1
-</span><span class="ln">11</span><span class="c1"></span>      <span class="n">count</span> <span class="o">=</span> <span class="n">1</span><span class="o">;</span>
-<span class="ln">12</span>    <span class="o">}</span>
-<span class="ln">13</span>    <span class="n">num</span> <span class="o">=</span> <span class="n">num</span> <span class="o">&gt;&gt;&gt;</span> <span class="n">1</span><span class="o">;</span>
-<span class="ln">14</span>  <span class="o">}</span>
-<span class="ln">15</span>  <span class="n">result</span><span class="o">.</span><span class="na">add</span><span class="o">(</span><span class="n">count</span><span class="o">);</span>
-<span class="ln">16</span>  <span class="k">return</span> <span class="n">result</span><span class="o">;</span>
-<span class="ln">17</span><span class="o">}</span>
-<span class="ln">18</span>
-<span class="ln">19</span><span class="kd">public</span> <span class="kt">int</span> <span class="nf">flipToWin</span><span class="o">(</span><span class="kt">int</span> <span class="n">num</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">20</span>  <span class="k">if</span> <span class="o">(~</span><span class="n">num</span> <span class="o">==</span> <span class="n">0</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">21</span>    <span class="c1">// 已经全都是1了
-</span><span class="ln">22</span><span class="c1"></span>    <span class="k">return</span> <span class="n">32</span><span class="o">;</span>
-<span class="ln">23</span>  <span class="o">}</span>
-<span class="ln">24</span>  <span class="n">List</span><span class="o">&lt;</span><span class="n">Integer</span><span class="o">&gt;</span> <span class="n">result</span> <span class="o">=</span> <span class="n">makeCount</span><span class="o">(</span><span class="n">num</span><span class="o">);</span>
-<span class="ln">25</span>  <span class="kt">int</span> <span class="n">maxLength</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span>
-<span class="ln">26</span>  <span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">result</span><span class="o">.</span><span class="na">size</span><span class="o">();</span> <span class="n">i</span> <span class="o">+=</span> <span class="n">2</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">27</span>    <span class="kt">int</span> <span class="n">zeros</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="na">get</span><span class="o">(</span><span class="n">i</span><span class="o">);</span>
-<span class="ln">28</span>    <span class="kt">int</span> <span class="n">leftOnes</span> <span class="o">=</span> <span class="n">i</span> <span class="o">&gt;</span> <span class="n">0</span> <span class="o">?</span> <span class="n">result</span><span class="o">.</span><span class="na">get</span><span class="o">(</span><span class="n">i</span> <span class="o">-</span> <span class="n">1</span><span class="o">)</span> <span class="o">:</span> <span class="n">0</span><span class="o">;</span>
-<span class="ln">29</span>    <span class="kt">int</span> <span class="n">rightOnes</span> <span class="o">=</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">result</span><span class="o">.</span><span class="na">size</span><span class="o">()</span> <span class="o">-</span> <span class="n">1</span> <span class="o">?</span> <span class="n">result</span><span class="o">.</span><span class="na">get</span><span class="o">(</span><span class="n">i</span> <span class="o">+</span> <span class="n">1</span><span class="o">)</span> <span class="o">:</span> <span class="n">0</span><span class="o">;</span>
-<span class="ln">30</span>    <span class="kt">int</span> <span class="n">seq</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span>
-<span class="ln">31</span>    <span class="k">if</span> <span class="o">(</span><span class="n">zeros</span> <span class="o">==</span> <span class="n">1</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">32</span>      <span class="n">seq</span> <span class="o">=</span> <span class="n">leftOnes</span> <span class="o">+</span> <span class="n">1</span> <span class="o">+</span> <span class="n">rightOnes</span><span class="o">;</span>
-<span class="ln">33</span>    <span class="o">}</span> <span class="k">else</span> <span class="k">if</span> <span class="o">(</span><span class="n">zeros</span> <span class="o">&gt;</span> <span class="n">1</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">34</span>      <span class="n">seq</span> <span class="o">=</span> <span class="n">Math</span><span class="o">.</span><span class="na">max</span><span class="o">(</span><span class="n">leftOnes</span> <span class="o">+</span> <span class="n">1</span><span class="o">,</span> <span class="n">rightOnes</span> <span class="o">+</span> <span class="n">1</span><span class="o">);</span>
-<span class="ln">35</span>    <span class="o">}</span> <span class="k">else</span> <span class="o">{</span>
-<span class="ln">36</span>      <span class="n">seq</span> <span class="o">=</span> <span class="n">rightOnes</span><span class="o">;</span>
-<span class="ln">37</span>    <span class="o">}</span>
-<span class="ln">38</span>    <span class="n">maxLength</span> <span class="o">=</span> <span class="n">Math</span><span class="o">.</span><span class="na">max</span><span class="o">(</span><span class="n">maxLength</span><span class="o">,</span> <span class="n">seq</span><span class="o">);</span>
-<span class="ln">39</span>  <span class="o">}</span>
-<span class="ln">40</span>  <span class="k">return</span> <span class="n">maxLength</span><span class="o">;</span>
-<span class="ln">41</span><span class="o">}</span>
-</code></pre></div><p>时间复杂度：<code>makeCount</code>=O(1)，实际上是循环了32次。<code>flipToWin</code>则是O(b)，b代表了数组的数量。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt">[0, 4,    1, 2,  2,  2,  21]
+ ^  ^     ^  ^   ^   ^   ^
+ 0  1111  0  11  00  11  000000000000000000000
+</code></pre></td></tr></table>
+</div>
+</div><p>因为第一个元素总是代表0，并且下一个元素反转为1，那么就意味着每隔两个元素就又是0。我们只需要看这个0的数量是否 == 1，如果是1则可以把左右两边的元素相加再加1（两边的1可以合并），如果 &gt; 1则要么左边的加1，要么右边的加1（可以借用一个0），如果 == 0则等于右边的数，然后取最大值就行了。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="kd">public</span> <span class="n">List</span><span class="o">&lt;</span><span class="n">Integer</span><span class="o">&gt;</span> <span class="nf">makeCount</span><span class="o">(</span><span class="kt">int</span> <span class="n">num</span><span class="o">)</span> <span class="o">{</span>
+  <span class="n">List</span><span class="o">&lt;</span><span class="n">Integer</span><span class="o">&gt;</span> <span class="n">result</span> <span class="o">=</span> <span class="k">new</span> <span class="n">ArrayList</span><span class="o">&lt;&gt;();</span>
+  <span class="kt">int</span> <span class="n">count</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span>
+  <span class="kt">int</span> <span class="n">seek</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span>
+  <span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">32</span><span class="o">;</span> <span class="n">i</span><span class="o">++)</span> <span class="o">{</span>
+    <span class="k">if</span> <span class="o">(</span><span class="n">num</span> <span class="o">&amp;</span> <span class="n">1</span> <span class="o">==</span> <span class="n">seek</span><span class="o">)</span> <span class="o">{</span>
+      <span class="n">count</span><span class="o">++;</span>
+    <span class="o">}</span> <span class="k">else</span> <span class="o">{</span>
+      <span class="n">result</span><span class="o">.</span><span class="na">add</span><span class="o">(</span><span class="n">count</span><span class="o">);</span>
+      <span class="n">seek</span> <span class="o">=</span> <span class="n">num</span> <span class="o">&amp;</span> <span class="n">1</span><span class="o">;</span> <span class="c1">// 翻转为0或1
+</span><span class="c1"></span>      <span class="n">count</span> <span class="o">=</span> <span class="n">1</span><span class="o">;</span>
+    <span class="o">}</span>
+    <span class="n">num</span> <span class="o">=</span> <span class="n">num</span> <span class="o">&gt;&gt;&gt;</span> <span class="n">1</span><span class="o">;</span>
+  <span class="o">}</span>
+  <span class="n">result</span><span class="o">.</span><span class="na">add</span><span class="o">(</span><span class="n">count</span><span class="o">);</span>
+  <span class="k">return</span> <span class="n">result</span><span class="o">;</span>
+<span class="o">}</span>
+
+<span class="kd">public</span> <span class="kt">int</span> <span class="nf">flipToWin</span><span class="o">(</span><span class="kt">int</span> <span class="n">num</span><span class="o">)</span> <span class="o">{</span>
+  <span class="k">if</span> <span class="o">(~</span><span class="n">num</span> <span class="o">==</span> <span class="n">0</span><span class="o">)</span> <span class="o">{</span>
+    <span class="c1">// 已经全都是1了
+</span><span class="c1"></span>    <span class="k">return</span> <span class="n">32</span><span class="o">;</span>
+  <span class="o">}</span>
+  <span class="n">List</span><span class="o">&lt;</span><span class="n">Integer</span><span class="o">&gt;</span> <span class="n">result</span> <span class="o">=</span> <span class="n">makeCount</span><span class="o">(</span><span class="n">num</span><span class="o">);</span>
+  <span class="kt">int</span> <span class="n">maxLength</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span>
+  <span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">result</span><span class="o">.</span><span class="na">size</span><span class="o">();</span> <span class="n">i</span> <span class="o">+=</span> <span class="n">2</span><span class="o">)</span> <span class="o">{</span>
+    <span class="kt">int</span> <span class="n">zeros</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="na">get</span><span class="o">(</span><span class="n">i</span><span class="o">);</span>
+    <span class="kt">int</span> <span class="n">leftOnes</span> <span class="o">=</span> <span class="n">i</span> <span class="o">&gt;</span> <span class="n">0</span> <span class="o">?</span> <span class="n">result</span><span class="o">.</span><span class="na">get</span><span class="o">(</span><span class="n">i</span> <span class="o">-</span> <span class="n">1</span><span class="o">)</span> <span class="o">:</span> <span class="n">0</span><span class="o">;</span>
+    <span class="kt">int</span> <span class="n">rightOnes</span> <span class="o">=</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">result</span><span class="o">.</span><span class="na">size</span><span class="o">()</span> <span class="o">-</span> <span class="n">1</span> <span class="o">?</span> <span class="n">result</span><span class="o">.</span><span class="na">get</span><span class="o">(</span><span class="n">i</span> <span class="o">+</span> <span class="n">1</span><span class="o">)</span> <span class="o">:</span> <span class="n">0</span><span class="o">;</span>
+    <span class="kt">int</span> <span class="n">seq</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span>
+    <span class="k">if</span> <span class="o">(</span><span class="n">zeros</span> <span class="o">==</span> <span class="n">1</span><span class="o">)</span> <span class="o">{</span>
+      <span class="n">seq</span> <span class="o">=</span> <span class="n">leftOnes</span> <span class="o">+</span> <span class="n">1</span> <span class="o">+</span> <span class="n">rightOnes</span><span class="o">;</span>
+    <span class="o">}</span> <span class="k">else</span> <span class="k">if</span> <span class="o">(</span><span class="n">zeros</span> <span class="o">&gt;</span> <span class="n">1</span><span class="o">)</span> <span class="o">{</span>
+      <span class="n">seq</span> <span class="o">=</span> <span class="n">Math</span><span class="o">.</span><span class="na">max</span><span class="o">(</span><span class="n">leftOnes</span> <span class="o">+</span> <span class="n">1</span><span class="o">,</span> <span class="n">rightOnes</span> <span class="o">+</span> <span class="n">1</span><span class="o">);</span>
+    <span class="o">}</span> <span class="k">else</span> <span class="o">{</span>
+      <span class="n">seq</span> <span class="o">=</span> <span class="n">rightOnes</span><span class="o">;</span>
+    <span class="o">}</span>
+    <span class="n">maxLength</span> <span class="o">=</span> <span class="n">Math</span><span class="o">.</span><span class="na">max</span><span class="o">(</span><span class="n">maxLength</span><span class="o">,</span> <span class="n">seq</span><span class="o">);</span>
+  <span class="o">}</span>
+  <span class="k">return</span> <span class="n">maxLength</span><span class="o">;</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>时间复杂度：<code>makeCount</code>=O(1)，实际上是循环了32次。<code>flipToWin</code>则是O(b)，b代表了数组的数量。</p>
 <p>空间复杂度：O(b)，b代表数组的数量。</p>
 <h2 id="解法3">解法3<a class="anchor ms-1" href="#解法3"><i class="fas fa-link"></i></a></h2>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln"> 1</span><span class="kd">public</span> <span class="kt">int</span> <span class="nf">flipToWin</span><span class="o">(</span><span class="kt">int</span> <span class="n">num</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 2</span>  <span class="k">if</span> <span class="o">(~</span><span class="n">num</span> <span class="o">==</span> <span class="n">0</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 3</span>    <span class="k">return</span> <span class="n">32</span><span class="o">;</span>
-<span class="ln"> 4</span>  <span class="o">}</span>
-<span class="ln"> 5</span>  <span class="kt">int</span> <span class="n">currentLength</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span>  <span class="c1">// 记录当前连续1的数量
-</span><span class="ln"> 6</span><span class="c1"></span>  <span class="kt">int</span> <span class="n">previousLength</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span> <span class="c1">// 记录上一次连续1的数量
-</span><span class="ln"> 7</span><span class="c1"></span>  <span class="kt">int</span> <span class="n">maxLength</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span>
-<span class="ln"> 8</span>  <span class="k">while</span> <span class="o">(</span><span class="n">a</span> <span class="o">!=</span> <span class="n">0</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 9</span>    <span class="k">if</span> <span class="o">((</span><span class="n">a</span> <span class="o">&amp;</span> <span class="n">1</span><span class="o">)</span> <span class="o">==</span> <span class="n">1</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">10</span>      <span class="c1">// 当前是1
-</span><span class="ln">11</span><span class="c1"></span>      <span class="n">currentLength</span><span class="o">++;</span>
-<span class="ln">12</span>    <span class="o">}</span> <span class="k">else</span> <span class="o">{</span>
-<span class="ln">13</span>      <span class="c1">// 当前是0
-</span><span class="ln">14</span><span class="c1"></span>      <span class="c1">// 看下一个bit是0还是1，如果是0，那么说明可以连接，否则不能连接
-</span><span class="ln">15</span><span class="c1"></span>      <span class="c1">// 两段连续1可以连接时，previousLength和currentLength都不为0
-</span><span class="ln">16</span><span class="c1"></span>      <span class="n">previousLength</span> <span class="o">=</span> <span class="o">(</span><span class="n">a</span> <span class="o">&amp;</span> <span class="n">2</span><span class="o">)</span> <span class="o">==</span> <span class="n">0</span> <span class="o">?</span> <span class="n">0</span> <span class="o">:</span> <span class="n">currentLength</span><span class="o">;</span>
-<span class="ln">17</span>      <span class="n">currentLength</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span>
-<span class="ln">18</span>    <span class="o">}</span>
-<span class="ln">19</span>    <span class="n">maxLength</span> <span class="o">=</span> <span class="n">Math</span><span class="o">.</span><span class="na">max</span><span class="o">(</span><span class="n">previousLength</span> <span class="o">+</span> <span class="n">currentLength</span> <span class="o">+</span> <span class="n">1</span><span class="o">,</span> <span class="n">maxLength</span><span class="o">);</span>
-<span class="ln">20</span>    <span class="n">a</span> <span class="o">&gt;&gt;&gt;=</span> <span class="n">1</span><span class="o">;</span>
-<span class="ln">21</span>  <span class="o">}</span>
-<span class="ln">22</span><span class="o">}</span>
-</code></pre></div><p>时间复杂度：O(b)</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="kd">public</span> <span class="kt">int</span> <span class="nf">flipToWin</span><span class="o">(</span><span class="kt">int</span> <span class="n">num</span><span class="o">)</span> <span class="o">{</span>
+  <span class="k">if</span> <span class="o">(~</span><span class="n">num</span> <span class="o">==</span> <span class="n">0</span><span class="o">)</span> <span class="o">{</span>
+    <span class="k">return</span> <span class="n">32</span><span class="o">;</span>
+  <span class="o">}</span>
+  <span class="kt">int</span> <span class="n">currentLength</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span>  <span class="c1">// 记录当前连续1的数量
+</span><span class="c1"></span>  <span class="kt">int</span> <span class="n">previousLength</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span> <span class="c1">// 记录上一次连续1的数量
+</span><span class="c1"></span>  <span class="kt">int</span> <span class="n">maxLength</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span>
+  <span class="k">while</span> <span class="o">(</span><span class="n">a</span> <span class="o">!=</span> <span class="n">0</span><span class="o">)</span> <span class="o">{</span>
+    <span class="k">if</span> <span class="o">((</span><span class="n">a</span> <span class="o">&amp;</span> <span class="n">1</span><span class="o">)</span> <span class="o">==</span> <span class="n">1</span><span class="o">)</span> <span class="o">{</span>
+      <span class="c1">// 当前是1
+</span><span class="c1"></span>      <span class="n">currentLength</span><span class="o">++;</span>
+    <span class="o">}</span> <span class="k">else</span> <span class="o">{</span>
+      <span class="c1">// 当前是0
+</span><span class="c1"></span>      <span class="c1">// 看下一个bit是0还是1，如果是0，那么说明可以连接，否则不能连接
+</span><span class="c1"></span>      <span class="c1">// 两段连续1可以连接时，previousLength和currentLength都不为0
+</span><span class="c1"></span>      <span class="n">previousLength</span> <span class="o">=</span> <span class="o">(</span><span class="n">a</span> <span class="o">&amp;</span> <span class="n">2</span><span class="o">)</span> <span class="o">==</span> <span class="n">0</span> <span class="o">?</span> <span class="n">0</span> <span class="o">:</span> <span class="n">currentLength</span><span class="o">;</span>
+      <span class="n">currentLength</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span>
+    <span class="o">}</span>
+    <span class="n">maxLength</span> <span class="o">=</span> <span class="n">Math</span><span class="o">.</span><span class="na">max</span><span class="o">(</span><span class="n">previousLength</span> <span class="o">+</span> <span class="n">currentLength</span> <span class="o">+</span> <span class="n">1</span><span class="o">,</span> <span class="n">maxLength</span><span class="o">);</span>
+    <span class="n">a</span> <span class="o">&gt;&gt;&gt;=</span> <span class="n">1</span><span class="o">;</span>
+  <span class="o">}</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>时间复杂度：O(b)</p>
 <p>空间复杂度：O(1)</p></div></div>
   <div class="card-footer"><div class="post-navs d-flex justify-content-evenly">
   <div class="post-nav post-prev"><i class="fas fa-fw fa-chevron-left"></i>

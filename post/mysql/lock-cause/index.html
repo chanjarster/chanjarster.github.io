@@ -12,7 +12,7 @@
 <meta name="description" content="" /><meta itemprop="name" content="MySQL - 诊断锁的方法">
 <meta itemprop="description" content=""><meta itemprop="datePublished" content="2021-10-09T14:03:02+08:00" />
 <meta itemprop="dateModified" content="2021-10-09T14:03:02+08:00" />
-<meta itemprop="wordCount" content="1962">
+<meta itemprop="wordCount" content="1443">
 <meta itemprop="keywords" content="mysql," /><meta property="og:title" content="MySQL - 诊断锁的方法" />
 <meta property="og:description" content="" />
 <meta property="og:type" content="article" />
@@ -220,13 +220,20 @@
   <span class="post-date" title="创建于 2021-10-09 14:03:02 &#43;0800 CST。">
     2021-10-09
   </span><span class="post-reading-time">
-    4 分钟阅读
+    3 分钟阅读
   </span><span class="post-taxonomies"><a href="/tags/mysql/" class="badge post-taxonomy">mysql</a></span>
 </div>
 <div class="post-content mb-3"><h2 id="等mdl锁">等MDL锁<a class="anchor ms-1" href="#等mdl锁"><i class="fas fa-link"></i></a></h2>
 <p>下面语句长时间不返回，被锁住了：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="ln">1</span><span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">t</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">id</span><span class="o">=</span><span class="mi">1</span><span class="p">;</span><span class="w">
-</span></code></pre></div><p>先用<code>show processlist</code>查看：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">t</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">id</span><span class="o">=</span><span class="mi">1</span><span class="p">;</span><span class="w">
+</span></code></pre></td></tr></table>
+</div>
+</div><p>先用<code>show processlist</code>查看：</p>
 <p><img class="img-fluid" alt="" src="/post/mysql/lock-cause/mdl-1.webp" loading="lazy"
   
    />
@@ -234,21 +241,43 @@
 </p>
 <p>可以看到<code>Waiting for table metadata lock</code>，但是没法看到另一个线程在干什么，值看到Command是Sleep。</p>
 <p>MySQL启动时设置performance_schema=on，相比于设置为 off 会有 10% 左右的性能损失，然后：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="ln">1</span><span class="k">select</span><span class="w"> </span><span class="n">blocking_pid</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">sys</span><span class="p">.</span><span class="n">schema_table_lock_waits</span><span class="p">;</span><span class="w">
-</span></code></pre></div><p>找到造成阻塞的process id，把这个连接用 kill 命令断开即可。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="k">select</span><span class="w"> </span><span class="n">blocking_pid</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">sys</span><span class="p">.</span><span class="n">schema_table_lock_waits</span><span class="p">;</span><span class="w">
+</span></code></pre></td></tr></table>
+</div>
+</div><p>找到造成阻塞的process id，把这个连接用 kill 命令断开即可。</p>
 <h2 id="等flush">等flush<a class="anchor ms-1" href="#等flush"><i class="fas fa-link"></i></a></h2>
 <p>下面语句长时间不返回：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="ln">1</span><span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">t</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">id</span><span class="o">=</span><span class="mi">1</span><span class="p">;</span><span class="w">
-</span></code></pre></div><p>用<code>select * from information_schema.processlist where id=?;</code>查看：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">t</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">id</span><span class="o">=</span><span class="mi">1</span><span class="p">;</span><span class="w">
+</span></code></pre></td></tr></table>
+</div>
+</div><p>用<code>select * from information_schema.processlist where id=?;</code>查看：</p>
 <p><img class="img-fluid" alt="" src="/post/mysql/lock-cause/flush-wait.webp" loading="lazy"
   
    />
 
 </p>
 <p>看到状态是<code>Waiting for table flush</code>，表示的是现在有一个线程<strong>正要</strong>对表 t 做 flush 操作。MySQL 里面对表做 flush 操作的用法，一般有以下两个：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="ln">1</span><span class="n">flush</span><span class="w"> </span><span class="n">tables</span><span class="w"> </span><span class="n">t</span><span class="w"> </span><span class="k">with</span><span class="w"> </span><span class="k">read</span><span class="w"> </span><span class="k">lock</span><span class="p">;</span><span class="w">
-</span><span class="ln">2</span><span class="w"></span><span class="n">flush</span><span class="w"> </span><span class="n">tables</span><span class="w"> </span><span class="k">with</span><span class="w"> </span><span class="k">read</span><span class="w"> </span><span class="k">lock</span><span class="p">;</span><span class="w">
-</span></code></pre></div><p>注意，这都是读锁，应该是不会阻塞我们的SQL的，除非它们也被别的线程堵住了。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="n">flush</span><span class="w"> </span><span class="n">tables</span><span class="w"> </span><span class="n">t</span><span class="w"> </span><span class="k">with</span><span class="w"> </span><span class="k">read</span><span class="w"> </span><span class="k">lock</span><span class="p">;</span><span class="w">
+</span><span class="w"></span><span class="n">flush</span><span class="w"> </span><span class="n">tables</span><span class="w"> </span><span class="k">with</span><span class="w"> </span><span class="k">read</span><span class="w"> </span><span class="k">lock</span><span class="p">;</span><span class="w">
+</span></code></pre></td></tr></table>
+</div>
+</div><p>注意，这都是读锁，应该是不会阻塞我们的SQL的，除非它们也被别的线程堵住了。</p>
 <p>我们用<code>show processlist</code>查看：</p>
 <p><img class="img-fluid" alt="" src="/post/mysql/lock-cause/flush-wait-2.webp" loading="lazy"
   
@@ -258,8 +287,15 @@
 <p><code>select sleep(1) from t</code>把表t打开，但是<code>flush table ...</code>需要把表t关闭，于是就这么阻塞了。</p>
 <h2 id="等行锁">等行锁<a class="anchor ms-1" href="#等行锁"><i class="fas fa-link"></i></a></h2>
 <p>下列语句对某行记录添加了读锁：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="ln">1</span><span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">t</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">id</span><span class="o">=</span><span class="mi">1</span><span class="w"> </span><span class="k">lock</span><span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="k">share</span><span class="w"> </span><span class="k">mode</span><span class="p">;</span><span class="w"> 
-</span></code></pre></div><p>如果此时这行记录上已经持有了一个写锁，这条sql就会阻塞，比如：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">t</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">id</span><span class="o">=</span><span class="mi">1</span><span class="w"> </span><span class="k">lock</span><span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="k">share</span><span class="w"> </span><span class="k">mode</span><span class="p">;</span><span class="w"> 
+</span></code></pre></td></tr></table>
+</div>
+</div><p>如果此时这行记录上已经持有了一个写锁，这条sql就会阻塞，比如：</p>
 <p><img class="img-fluid" alt="" src="/post/mysql/lock-cause/row-wait-1.webp" loading="lazy"
   
    />
@@ -272,8 +308,15 @@
 
 </p>
 <p>所以要通过<code>sys.innodb_lock_waits</code>查询谁占着写锁：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="ln">1</span><span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">sys</span><span class="p">.</span><span class="n">innodb_lock_waits</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">locked_table</span><span class="o">=</span><span class="s1">&#39;`test`.`t`&#39;</span><span class="p">;</span><span class="w">
-</span></code></pre></div><p>得到结果：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">sys</span><span class="p">.</span><span class="n">innodb_lock_waits</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">locked_table</span><span class="o">=</span><span class="s1">&#39;`test`.`t`&#39;</span><span class="p">;</span><span class="w">
+</span></code></pre></td></tr></table>
+</div>
+</div><p>得到结果：</p>
 <p><img class="img-fluid" alt="" src="/post/mysql/lock-cause/row-wait-3.webp" loading="lazy"
   
    />
@@ -282,8 +325,15 @@
 <p>可以看到，4 号线程是造成堵塞的罪魁祸首，干掉它的方式 KILL QUERY 4 或 KILL 4。</p>
 <p>其实KILL QUERY 4是不对的，因为<code>update</code>语句已经执行完毕了，只是事务没有提交，这也是为什么blocking_query: NULL的原因。</p>
 <h2 id="死锁">死锁<a class="anchor ms-1" href="#死锁"><i class="fas fa-link"></i></a></h2>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="ln">1</span><span class="k">show</span><span class="w"> </span><span class="n">engine</span><span class="w"> </span><span class="n">innodb</span><span class="w"> </span><span class="n">status</span><span class="w">
-</span></code></pre></div><p>看LATESTDETECTED DEADLOCK小节，就是记录的最后一次死锁信息：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="k">show</span><span class="w"> </span><span class="n">engine</span><span class="w"> </span><span class="n">innodb</span><span class="w"> </span><span class="n">status</span><span class="w">
+</span></code></pre></td></tr></table>
+</div>
+</div><p>看LATESTDETECTED DEADLOCK小节，就是记录的最后一次死锁信息：</p>
 <p><img class="img-fluid" alt="" src="/post/mysql/lock-cause/deadlock.webp" loading="lazy"
   
    />
@@ -333,26 +383,61 @@
 </ol>
 <h2 id="快捷sql">快捷SQL<a class="anchor ms-1" href="#快捷sql"><i class="fas fa-link"></i></a></h2>
 <p>查慢SQL（慢于5秒）：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="ln">1</span><span class="k">select</span><span class="w"> </span><span class="n">COMMAND</span><span class="p">,</span><span class="w"> </span><span class="n">TIME</span><span class="p">,</span><span class="w"> </span><span class="k">STATE</span><span class="p">,</span><span class="w"> </span><span class="n">substr</span><span class="p">(</span><span class="n">INFO</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">100</span><span class="p">),</span><span class="w"> </span><span class="k">length</span><span class="p">(</span><span class="n">INFO</span><span class="p">)</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">information_schema</span><span class="p">.</span><span class="n">processlist</span><span class="w"> 
-</span><span class="ln">2</span><span class="w"></span><span class="k">where</span><span class="w"> 
-</span><span class="ln">3</span><span class="w">  </span><span class="n">COMMAND</span><span class="o">&lt;&gt;</span><span class="s1">&#39;Sleep&#39;</span><span class="w"> 
-</span><span class="ln">4</span><span class="w">  </span><span class="k">and</span><span class="w"> </span><span class="n">db</span><span class="o">=</span><span class="s1">&#39;&lt;db&gt;&#39;</span><span class="w"> 
-</span><span class="ln">5</span><span class="w">  </span><span class="k">and</span><span class="w"> </span><span class="n">TIME</span><span class="w"> </span><span class="o">&gt;=</span><span class="w"> </span><span class="mi">5</span><span class="w">
-</span><span class="ln">6</span><span class="w"></span><span class="k">order</span><span class="w"> </span><span class="k">by</span><span class="w"> </span><span class="n">TIME</span><span class="w"> </span><span class="k">desc</span><span class="w"> </span><span class="k">limit</span><span class="w"> </span><span class="mi">10</span><span class="p">;</span><span class="w">
-</span></code></pre></div><p>查行锁：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="ln">1</span><span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">sys</span><span class="p">.</span><span class="n">innodb_lock_waits</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">locked_table</span><span class="w"> </span><span class="k">like</span><span class="w"> </span><span class="s1">&#39;`&lt;db&gt;`.%&#39;</span><span class="p">;</span><span class="w">
-</span></code></pre></div><p>查行锁+Block Pid正在执行的SQL：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="ln"> 1</span><span class="k">select</span><span class="w"> 
-</span><span class="ln"> 2</span><span class="w">  </span><span class="n">w</span><span class="p">.</span><span class="n">wait_started</span><span class="p">,</span><span class="w"> </span><span class="n">w</span><span class="p">.</span><span class="n">wait_age_secs</span><span class="p">,</span><span class="w"> </span><span class="n">w</span><span class="p">.</span><span class="n">locked_table</span><span class="p">,</span><span class="w"> </span><span class="n">w</span><span class="p">.</span><span class="n">locked_index</span><span class="p">,</span><span class="w"> </span><span class="n">w</span><span class="p">.</span><span class="n">locked_type</span><span class="p">,</span><span class="w">
-</span><span class="ln"> 3</span><span class="w">  </span><span class="n">w</span><span class="p">.</span><span class="n">waiting_pid</span><span class="p">,</span><span class="w"> </span><span class="n">substr</span><span class="p">(</span><span class="n">wp</span><span class="p">.</span><span class="n">INFO</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">100</span><span class="p">)</span><span class="w"> </span><span class="n">waiting_query</span><span class="p">,</span><span class="w">
-</span><span class="ln"> 4</span><span class="w">  </span><span class="n">w</span><span class="p">.</span><span class="n">blocking_pid</span><span class="p">,</span><span class="w"> </span><span class="n">w</span><span class="p">.</span><span class="n">blocking_query</span><span class="p">,</span><span class="w"> </span><span class="n">w</span><span class="p">.</span><span class="n">blocking_trx_started</span><span class="p">,</span><span class="w"> </span><span class="n">w</span><span class="p">.</span><span class="n">blocking_trx_age</span><span class="p">,</span><span class="w">
-</span><span class="ln"> 5</span><span class="w">  </span><span class="n">substr</span><span class="p">(</span><span class="n">bp</span><span class="p">.</span><span class="n">INFO</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">100</span><span class="p">)</span><span class="w"> </span><span class="n">blocking_query</span><span class="w">
-</span><span class="ln"> 6</span><span class="w"></span><span class="k">from</span><span class="w"> </span><span class="n">sys</span><span class="p">.</span><span class="n">innodb_lock_waits</span><span class="w"> </span><span class="n">w</span><span class="w"> 
-</span><span class="ln"> 7</span><span class="w"></span><span class="k">join</span><span class="w"> </span><span class="n">information_schema</span><span class="p">.</span><span class="n">processlist</span><span class="w"> </span><span class="n">bp</span><span class="w"> </span><span class="k">on</span><span class="w"> </span><span class="n">bp</span><span class="p">.</span><span class="n">ID</span><span class="o">=</span><span class="n">w</span><span class="p">.</span><span class="n">blocking_pid</span><span class="w">
-</span><span class="ln"> 8</span><span class="w"></span><span class="k">join</span><span class="w"> </span><span class="n">information_schema</span><span class="p">.</span><span class="n">processlist</span><span class="w"> </span><span class="n">wp</span><span class="w"> </span><span class="k">on</span><span class="w"> </span><span class="n">wp</span><span class="p">.</span><span class="n">ID</span><span class="o">=</span><span class="n">w</span><span class="p">.</span><span class="n">waiting_pid</span><span class="w">
-</span><span class="ln"> 9</span><span class="w"></span><span class="k">where</span><span class="w"> 
-</span><span class="ln">10</span><span class="w">  </span><span class="n">w</span><span class="p">.</span><span class="n">locked_table</span><span class="w"> </span><span class="k">like</span><span class="w"> </span><span class="s1">&#39;`&lt;db&gt;`.%&#39;</span><span class="p">;</span><span class="w">
-</span></code></pre></div></div></div>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="k">select</span><span class="w"> </span><span class="n">COMMAND</span><span class="p">,</span><span class="w"> </span><span class="n">TIME</span><span class="p">,</span><span class="w"> </span><span class="k">STATE</span><span class="p">,</span><span class="w"> </span><span class="n">substr</span><span class="p">(</span><span class="n">INFO</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">100</span><span class="p">),</span><span class="w"> </span><span class="k">length</span><span class="p">(</span><span class="n">INFO</span><span class="p">)</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">information_schema</span><span class="p">.</span><span class="n">processlist</span><span class="w"> 
+</span><span class="w"></span><span class="k">where</span><span class="w"> 
+</span><span class="w">  </span><span class="n">COMMAND</span><span class="o">&lt;&gt;</span><span class="s1">&#39;Sleep&#39;</span><span class="w"> 
+</span><span class="w">  </span><span class="k">and</span><span class="w"> </span><span class="n">db</span><span class="o">=</span><span class="s1">&#39;&lt;db&gt;&#39;</span><span class="w"> 
+</span><span class="w">  </span><span class="k">and</span><span class="w"> </span><span class="n">TIME</span><span class="w"> </span><span class="o">&gt;=</span><span class="w"> </span><span class="mi">5</span><span class="w">
+</span><span class="w"></span><span class="k">order</span><span class="w"> </span><span class="k">by</span><span class="w"> </span><span class="n">TIME</span><span class="w"> </span><span class="k">desc</span><span class="w"> </span><span class="k">limit</span><span class="w"> </span><span class="mi">10</span><span class="p">;</span><span class="w">
+</span></code></pre></td></tr></table>
+</div>
+</div><p>查行锁：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">sys</span><span class="p">.</span><span class="n">innodb_lock_waits</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">locked_table</span><span class="w"> </span><span class="k">like</span><span class="w"> </span><span class="s1">&#39;`&lt;db&gt;`.%&#39;</span><span class="p">;</span><span class="w">
+</span></code></pre></td></tr></table>
+</div>
+</div><p>查行锁+Block Pid正在执行的SQL：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="k">select</span><span class="w"> 
+</span><span class="w">  </span><span class="n">w</span><span class="p">.</span><span class="n">wait_started</span><span class="p">,</span><span class="w"> </span><span class="n">w</span><span class="p">.</span><span class="n">wait_age_secs</span><span class="p">,</span><span class="w"> </span><span class="n">w</span><span class="p">.</span><span class="n">locked_table</span><span class="p">,</span><span class="w"> </span><span class="n">w</span><span class="p">.</span><span class="n">locked_index</span><span class="p">,</span><span class="w"> </span><span class="n">w</span><span class="p">.</span><span class="n">locked_type</span><span class="p">,</span><span class="w">
+</span><span class="w">  </span><span class="n">w</span><span class="p">.</span><span class="n">waiting_pid</span><span class="p">,</span><span class="w"> </span><span class="n">substr</span><span class="p">(</span><span class="n">wp</span><span class="p">.</span><span class="n">INFO</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">100</span><span class="p">)</span><span class="w"> </span><span class="n">waiting_query</span><span class="p">,</span><span class="w">
+</span><span class="w">  </span><span class="n">w</span><span class="p">.</span><span class="n">blocking_pid</span><span class="p">,</span><span class="w"> </span><span class="n">w</span><span class="p">.</span><span class="n">blocking_query</span><span class="p">,</span><span class="w"> </span><span class="n">w</span><span class="p">.</span><span class="n">blocking_trx_started</span><span class="p">,</span><span class="w"> </span><span class="n">w</span><span class="p">.</span><span class="n">blocking_trx_age</span><span class="p">,</span><span class="w">
+</span><span class="w">  </span><span class="n">substr</span><span class="p">(</span><span class="n">bp</span><span class="p">.</span><span class="n">INFO</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">100</span><span class="p">)</span><span class="w"> </span><span class="n">blocking_query</span><span class="w">
+</span><span class="w"></span><span class="k">from</span><span class="w"> </span><span class="n">sys</span><span class="p">.</span><span class="n">innodb_lock_waits</span><span class="w"> </span><span class="n">w</span><span class="w"> 
+</span><span class="w"></span><span class="k">join</span><span class="w"> </span><span class="n">information_schema</span><span class="p">.</span><span class="n">processlist</span><span class="w"> </span><span class="n">bp</span><span class="w"> </span><span class="k">on</span><span class="w"> </span><span class="n">bp</span><span class="p">.</span><span class="n">ID</span><span class="o">=</span><span class="n">w</span><span class="p">.</span><span class="n">blocking_pid</span><span class="w">
+</span><span class="w"></span><span class="k">join</span><span class="w"> </span><span class="n">information_schema</span><span class="p">.</span><span class="n">processlist</span><span class="w"> </span><span class="n">wp</span><span class="w"> </span><span class="k">on</span><span class="w"> </span><span class="n">wp</span><span class="p">.</span><span class="n">ID</span><span class="o">=</span><span class="n">w</span><span class="p">.</span><span class="n">waiting_pid</span><span class="w">
+</span><span class="w"></span><span class="k">where</span><span class="w"> 
+</span><span class="w">  </span><span class="n">w</span><span class="p">.</span><span class="n">locked_table</span><span class="w"> </span><span class="k">like</span><span class="w"> </span><span class="s1">&#39;`&lt;db&gt;`.%&#39;</span><span class="p">;</span><span class="w">
+</span></code></pre></td></tr></table>
+</div>
+</div></div></div>
   <div class="card-footer"><div class="post-navs d-flex justify-content-evenly">
   <div class="post-nav post-prev"><i class="fas fa-fw fa-chevron-left"></i>
     <a href="/post/mysql/sql-opt-join-limit-order-by-3/">SQL优化:一个含有JOIN&#43;LIMIT&#43;ORDER BY的SQL(下)

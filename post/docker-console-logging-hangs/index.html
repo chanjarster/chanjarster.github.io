@@ -12,7 +12,7 @@
 <meta name="description" content="记一次容器打印到控制台阻塞，且容器停止响应的问题。" /><meta itemprop="name" content="容器打印日志到控制台阻塞的排障">
 <meta itemprop="description" content="记一次容器打印到控制台阻塞，且容器停止响应的问题。"><meta itemprop="datePublished" content="2019-02-17T09:42:34+08:00" />
 <meta itemprop="dateModified" content="2019-02-17T09:42:34+08:00" />
-<meta itemprop="wordCount" content="599">
+<meta itemprop="wordCount" content="600">
 <meta itemprop="keywords" content="docker,troubleshooting," /><meta property="og:title" content="容器打印日志到控制台阻塞的排障" />
 <meta property="og:description" content="记一次容器打印到控制台阻塞，且容器停止响应的问题。" />
 <meta property="og:type" content="article" />
@@ -224,40 +224,79 @@
 <div class="post-content mb-3"><p>记一次容器打印到控制台阻塞，且容器停止响应的问题。</p>
 <p>今日生产环境发现有些容器停止响应了，但是容器没有死，<code>docker exec -it &lt;container-name&gt; /bin/bash</code>也能正常使用。</p>
 <p>在容器内部使用<code>jstack &lt;pid&gt;</code>发现log4j2的Console Appender一直处于运行状态：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln"> 1</span>&#34;AsyncAppender-asyncConsole&#34; #21 daemon prio=5 os_prio=0 tid=0x00007fd968d07000 nid=0x1f runnable [0x00007fd91bffd000]
-<span class="ln"> 2</span>   java.lang.Thread.State: RUNNABLE
-<span class="ln"> 3</span>	at java.io.FileOutputStream.writeBytes(Native Method)
-<span class="ln"> 4</span>	at java.io.FileOutputStream.write(FileOutputStream.java:326)
-<span class="ln"> 5</span>	at java.io.BufferedOutputStream.write(BufferedOutputStream.java:122)
-<span class="ln"> 6</span>	- locked &lt;0x00000000f002b408&gt; (a java.io.BufferedOutputStream)
-<span class="ln"> 7</span>	at java.io.PrintStream.write(PrintStream.java:480)
-<span class="ln"> 8</span>	- locked &lt;0x00000000f002b3e8&gt; (a java.io.PrintStream)
-<span class="ln"> 9</span>	at org.apache.logging.log4j.core.util.CloseShieldOutputStream.write(CloseShieldOutputStream.java:53)
-<span class="ln">10</span>	at org.apache.logging.log4j.core.appender.OutputStreamManager.writeToDestination(OutputStreamManager.java:262)
-<span class="ln">11</span>	- locked &lt;0x00000000f021d848&gt; (a org.apache.logging.log4j.core.appender.OutputStreamManager)
-<span class="ln">12</span>	at org.apache.logging.log4j.core.appender.OutputStreamManager.flushBuffer(OutputStreamManager.java:294)
-<span class="ln">13</span>	- locked &lt;0x00000000f021d848&gt; (a org.apache.logging.log4j.core.appender.OutputStreamManager)
-<span class="ln">14</span>	at org.apache.logging.log4j.core.appender.OutputStreamManager.drain(OutputStreamManager.java:351)
-<span class="ln">15</span>	at org.apache.logging.log4j.core.layout.TextEncoderHelper.drainIfByteBufferFull(TextEncoderHelper.java:260)
-<span class="ln">16</span>	- locked &lt;0x00000000f021d848&gt; (a org.apache.logging.log4j.core.appender.OutputStreamManager)
-<span class="ln">17</span>	at org.apache.logging.log4j.core.layout.TextEncoderHelper.writeAndEncodeAsMuchAsPossible(TextEncoderHelper.java:199)
-<span class="ln">18</span>	at org.apache.logging.log4j.core.layout.TextEncoderHelper.encodeChunkedText(TextEncoderHelper.java:159)
-<span class="ln">19</span>	- locked &lt;0x00000000f021d848&gt; (a org.apache.logging.log4j.core.appender.OutputStreamManager)
-<span class="ln">20</span>	at org.apache.logging.log4j.core.layout.TextEncoderHelper.encodeText(TextEncoderHelper.java:58)
-<span class="ln">21</span>	at org.apache.logging.log4j.core.layout.StringBuilderEncoder.encode(StringBuilderEncoder.java:68)
-<span class="ln">22</span>	at org.apache.logging.log4j.core.layout.StringBuilderEncoder.encode(StringBuilderEncoder.java:32)
-<span class="ln">23</span>	at org.apache.logging.log4j.core.layout.PatternLayout.encode(PatternLayout.java:220)
-<span class="ln">24</span>	at org.apache.logging.log4j.core.layout.PatternLayout.encode(PatternLayout.java:58)
-<span class="ln">25</span>	at org.apache.logging.log4j.core.appender.AbstractOutputStreamAppender.directEncodeEvent(AbstractOutputStreamAppender.java:177)
-<span class="ln">26</span>	at org.apache.logging.log4j.core.appender.AbstractOutputStreamAppender.tryAppend(AbstractOutputStreamAppender.java:170)
-<span class="ln">27</span>	at org.apache.logging.log4j.core.appender.AbstractOutputStreamAppender.append(AbstractOutputStreamAppender.java:161)
-<span class="ln">28</span>	at org.apache.logging.log4j.core.config.AppenderControl.tryCallAppender(AppenderControl.java:156)
-<span class="ln">29</span>	at org.apache.logging.log4j.core.config.AppenderControl.callAppender0(AppenderControl.java:129)
-<span class="ln">30</span>	at org.apache.logging.log4j.core.config.AppenderControl.callAppenderPreventRecursion(AppenderControl.java:120)
-<span class="ln">31</span>	at org.apache.logging.log4j.core.config.AppenderControl.callAppender(AppenderControl.java:84)
-<span class="ln">32</span>	at org.apache.logging.log4j.core.appender.AsyncAppender$AsyncThread.callAppenders(AsyncAppender.java:459)
-<span class="ln">33</span>	at org.apache.logging.log4j.core.appender.AsyncAppender$AsyncThread.run(AsyncAppender.java:412)
-</code></pre></div><p>但用<code>docker logs -f &lt;container-name&gt;</code>没有发现有新的日志输出，且访问该应用肯定会输出日志的接口也是没有任何日志输出，因此怀疑log4j2阻塞住了。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt">&#34;AsyncAppender-asyncConsole&#34; #21 daemon prio=5 os_prio=0 tid=0x00007fd968d07000 nid=0x1f runnable [0x00007fd91bffd000]
+   java.lang.Thread.State: RUNNABLE
+	at java.io.FileOutputStream.writeBytes(Native Method)
+	at java.io.FileOutputStream.write(FileOutputStream.java:326)
+	at java.io.BufferedOutputStream.write(BufferedOutputStream.java:122)
+	- locked &lt;0x00000000f002b408&gt; (a java.io.BufferedOutputStream)
+	at java.io.PrintStream.write(PrintStream.java:480)
+	- locked &lt;0x00000000f002b3e8&gt; (a java.io.PrintStream)
+	at org.apache.logging.log4j.core.util.CloseShieldOutputStream.write(CloseShieldOutputStream.java:53)
+	at org.apache.logging.log4j.core.appender.OutputStreamManager.writeToDestination(OutputStreamManager.java:262)
+	- locked &lt;0x00000000f021d848&gt; (a org.apache.logging.log4j.core.appender.OutputStreamManager)
+	at org.apache.logging.log4j.core.appender.OutputStreamManager.flushBuffer(OutputStreamManager.java:294)
+	- locked &lt;0x00000000f021d848&gt; (a org.apache.logging.log4j.core.appender.OutputStreamManager)
+	at org.apache.logging.log4j.core.appender.OutputStreamManager.drain(OutputStreamManager.java:351)
+	at org.apache.logging.log4j.core.layout.TextEncoderHelper.drainIfByteBufferFull(TextEncoderHelper.java:260)
+	- locked &lt;0x00000000f021d848&gt; (a org.apache.logging.log4j.core.appender.OutputStreamManager)
+	at org.apache.logging.log4j.core.layout.TextEncoderHelper.writeAndEncodeAsMuchAsPossible(TextEncoderHelper.java:199)
+	at org.apache.logging.log4j.core.layout.TextEncoderHelper.encodeChunkedText(TextEncoderHelper.java:159)
+	- locked &lt;0x00000000f021d848&gt; (a org.apache.logging.log4j.core.appender.OutputStreamManager)
+	at org.apache.logging.log4j.core.layout.TextEncoderHelper.encodeText(TextEncoderHelper.java:58)
+	at org.apache.logging.log4j.core.layout.StringBuilderEncoder.encode(StringBuilderEncoder.java:68)
+	at org.apache.logging.log4j.core.layout.StringBuilderEncoder.encode(StringBuilderEncoder.java:32)
+	at org.apache.logging.log4j.core.layout.PatternLayout.encode(PatternLayout.java:220)
+	at org.apache.logging.log4j.core.layout.PatternLayout.encode(PatternLayout.java:58)
+	at org.apache.logging.log4j.core.appender.AbstractOutputStreamAppender.directEncodeEvent(AbstractOutputStreamAppender.java:177)
+	at org.apache.logging.log4j.core.appender.AbstractOutputStreamAppender.tryAppend(AbstractOutputStreamAppender.java:170)
+	at org.apache.logging.log4j.core.appender.AbstractOutputStreamAppender.append(AbstractOutputStreamAppender.java:161)
+	at org.apache.logging.log4j.core.config.AppenderControl.tryCallAppender(AppenderControl.java:156)
+	at org.apache.logging.log4j.core.config.AppenderControl.callAppender0(AppenderControl.java:129)
+	at org.apache.logging.log4j.core.config.AppenderControl.callAppenderPreventRecursion(AppenderControl.java:120)
+	at org.apache.logging.log4j.core.config.AppenderControl.callAppender(AppenderControl.java:84)
+	at org.apache.logging.log4j.core.appender.AsyncAppender$AsyncThread.callAppenders(AsyncAppender.java:459)
+	at org.apache.logging.log4j.core.appender.AsyncAppender$AsyncThread.run(AsyncAppender.java:412)
+</code></pre></td></tr></table>
+</div>
+</div><p>但用<code>docker logs -f &lt;container-name&gt;</code>没有发现有新的日志输出，且访问该应用肯定会输出日志的接口也是没有任何日志输出，因此怀疑log4j2阻塞住了。</p>
 <p>Google到有人在log4j提出了类似了问题<a href="https://jira.apache.org/jira/browse/LOG4J2-2239" target="_blank" rel="noopener noreferrer">LOG4J2-2239</a>
 ，官方给出的解释是问题出在log4j2之外。</p>
 <p>于是查一下logback是否也有类似问题，找到<a href="https://jira.qos.ch/browse/LOGBACK-1422" target="_blank" rel="noopener noreferrer">LOGBACK-1422</a>

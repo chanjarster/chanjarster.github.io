@@ -12,7 +12,7 @@
 <meta name="description" content="当JVM时区和数据库时区不一致的时候，会发生什么？这个问题也许你从来没有注意过，但是当把Java程序容器化的时候，问题就浮现出来了，因为目前几乎所有的Docker Image的时区都是UTC。本文探究了MySQL及其JDBC驱动对于时区的处理方式，并尝试给出最佳实践。" /><meta itemprop="name" content="数据库时区那些事儿 - MySQL的时区处理">
 <meta itemprop="description" content="当JVM时区和数据库时区不一致的时候，会发生什么？这个问题也许你从来没有注意过，但是当把Java程序容器化的时候，问题就浮现出来了，因为目前几乎所有的Docker Image的时区都是UTC。本文探究了MySQL及其JDBC驱动对于时区的处理方式，并尝试给出最佳实践。"><meta itemprop="datePublished" content="2018-09-17T15:09:20+08:00" />
 <meta itemprop="dateModified" content="2018-09-17T15:09:20+08:00" />
-<meta itemprop="wordCount" content="1923">
+<meta itemprop="wordCount" content="1912">
 <meta itemprop="keywords" content="JDBC,MySQL,数据库时区那些事儿," /><meta property="og:title" content="数据库时区那些事儿 - MySQL的时区处理" />
 <meta property="og:description" content="当JVM时区和数据库时区不一致的时候，会发生什么？这个问题也许你从来没有注意过，但是当把Java程序容器化的时候，问题就浮现出来了，因为目前几乎所有的Docker Image的时区都是UTC。本文探究了MySQL及其JDBC驱动对于时区的处理方式，并尝试给出最佳实践。" />
 <meta property="og:type" content="article" />
@@ -263,26 +263,56 @@ in both directions.</p>
 <li>使用<code>Europe/Paris</code>时区重复第2-3步的动作</li>
 </ol>
 <p>在运行程序之前，我们先用Docker启动一个MySQL，它所在的MySQL的时区是UTC（除非特别设定，所有Docker Image时区都默认为UTC）：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>docker run --name mysql-timezone-test <span class="se">\
-</span><span class="ln">2</span><span class="se"></span>  -e <span class="nv">MYSQL_RANDOM_ROOT_PASSWORD</span><span class="o">=</span>yes <span class="se">\
-</span><span class="ln">3</span><span class="se"></span>  -e <span class="nv">MYSQL_DATABASE</span><span class="o">=</span>testdb <span class="se">\
-</span><span class="ln">4</span><span class="se"></span>  -e <span class="nv">MYSQL_USER</span><span class="o">=</span>tz <span class="se">\
-</span><span class="ln">5</span><span class="se"></span>  -e <span class="nv">MYSQL_PASSWORD</span><span class="o">=</span>tz <span class="se">\
-</span><span class="ln">6</span><span class="se"></span>  -p 3306:3306 <span class="se">\
-</span><span class="ln">7</span><span class="se"></span>  -d mysql:8
-</code></pre></div><p>下面是结果：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln"> 1</span>Insert data, Time Zone        : 中国标准时间
-<span class="ln"> 2</span>java.util.Date                : 2018-09-14 10:00:00
-<span class="ln"> 3</span>Insert into timestamp column  : 2018-09-14 10:00:00
-<span class="ln"> 4</span>--------------------
-<span class="ln"> 5</span>Retrieve data, Time Zone      : 中国标准时间
-<span class="ln"> 6</span>Retrieve java.util.Date       : 2018-09-14 10:00:00
-<span class="ln"> 7</span>Retrieve formatted string     : 2018-09-14 02:00:00
-<span class="ln"> 8</span>--------------------
-<span class="ln"> 9</span>Retrieve data, Time Zone      : 中欧时间
-<span class="ln">10</span>Retrieve java.util.Date       : 2018-09-14 04:00:00
-<span class="ln">11</span>Retrieve formatted string     : 2018-09-14 02:00:00
-</code></pre></div><p>可以看到<code>Retrieve java.util.Date</code>返回的结果根据JVM时区做了转换的。而<code>Retrieve formatted string</code>返回的结果则是UTC时间。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">docker run --name mysql-timezone-test <span class="se">\
+</span><span class="se"></span>  -e <span class="nv">MYSQL_RANDOM_ROOT_PASSWORD</span><span class="o">=</span>yes <span class="se">\
+</span><span class="se"></span>  -e <span class="nv">MYSQL_DATABASE</span><span class="o">=</span>testdb <span class="se">\
+</span><span class="se"></span>  -e <span class="nv">MYSQL_USER</span><span class="o">=</span>tz <span class="se">\
+</span><span class="se"></span>  -e <span class="nv">MYSQL_PASSWORD</span><span class="o">=</span>tz <span class="se">\
+</span><span class="se"></span>  -p 3306:3306 <span class="se">\
+</span><span class="se"></span>  -d mysql:8
+</code></pre></td></tr></table>
+</div>
+</div><p>下面是结果：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt">Insert data, Time Zone        : 中国标准时间
+java.util.Date                : 2018-09-14 10:00:00
+Insert into timestamp column  : 2018-09-14 10:00:00
+--------------------
+Retrieve data, Time Zone      : 中国标准时间
+Retrieve java.util.Date       : 2018-09-14 10:00:00
+Retrieve formatted string     : 2018-09-14 02:00:00
+--------------------
+Retrieve data, Time Zone      : 中欧时间
+Retrieve java.util.Date       : 2018-09-14 04:00:00
+Retrieve formatted string     : 2018-09-14 02:00:00
+</code></pre></td></tr></table>
+</div>
+</div><p>可以看到<code>Retrieve java.util.Date</code>返回的结果根据JVM时区做了转换的。而<code>Retrieve formatted string</code>返回的结果则是UTC时间。</p>
 <h2 id="当前日期时间相关函数">当前日期时间相关函数<a class="anchor ms-1" href="#当前日期时间相关函数"><i class="fas fa-link"></i></a></h2>
 <p>MySQL与&quot;当前日期时间&quot;相关的函数有这么些，<a href="https://dev.mysql.com/doc/refman/8.0/en/date-and-time-functions.html" target="_blank" rel="noopener noreferrer">MySQL - Date and Time Functions</a>
 ：</p>
@@ -293,27 +323,53 @@ in the connection&rsquo;s current time zone, which is available as the value of 
 <p>而且根据文档所讲，它们返回的结果匹配当前连接所设定的时区。</p>
 <p>为了验证这个结论，同样写了一段程序，分别使用<code>Asia/Shanghai</code>和<code>Europe/Paris</code>来调用<code>CURRENT_TIMESTAMP()</code>、<code>CURRENT_TIME()</code>、<code>CURRENT_DATE()</code>。</p>
 <p>下面是运行结果：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln">1</span>JVM Time Zone              : 中国标准时间
-<span class="ln">2</span>Test CURRENT_DATE()        : 2018-09-18
-<span class="ln">3</span>Test CURRENT_TIME()        : 10:55:41
-<span class="ln">4</span>Test CURRENT_TIMESTAMP()   : 2018-09-18 10:55:41.0
-<span class="ln">5</span>--------------------
-<span class="ln">6</span>JVM Time Zone              : 中欧时间
-<span class="ln">7</span>Test CURRENT_DATE()        : 2018-09-18
-<span class="ln">8</span>Test CURRENT_TIME()        : 03:56:02
-<span class="ln">9</span>Test CURRENT_TIMESTAMP()   : 2018-09-18 04:56:02.0
-</code></pre></div><p>可以看到结果是基本符合文档里的说明的，但是要注意，在<code>Europe/Paris</code>时区，<code>CURRENT_TIME()</code>和<code>CURRENT_TIMESTAMP()</code>的时间部分相差一小时。
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span><span class="lnt">9
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt">JVM Time Zone              : 中国标准时间
+Test CURRENT_DATE()        : 2018-09-18
+Test CURRENT_TIME()        : 10:55:41
+Test CURRENT_TIMESTAMP()   : 2018-09-18 10:55:41.0
+--------------------
+JVM Time Zone              : 中欧时间
+Test CURRENT_DATE()        : 2018-09-18
+Test CURRENT_TIME()        : 03:56:02
+Test CURRENT_TIMESTAMP()   : 2018-09-18 04:56:02.0
+</code></pre></td></tr></table>
+</div>
+</div><p>可以看到结果是基本符合文档里的说明的，但是要注意，在<code>Europe/Paris</code>时区，<code>CURRENT_TIME()</code>和<code>CURRENT_TIMESTAMP()</code>的时间部分相差一小时。
 看上去<code>CURRENT_TIMESTAMP()</code>返回的是UTC DST offset结果，而<code>CURRENT_TIME()</code>返回的是UTC offset结果，关于这个我登记了<a href="https://bugs.mysql.com/bug.php?id=92453" target="_blank" rel="noopener noreferrer">Bug #92453</a>
 。
 关于<code>Europe/Paris</code>的DST信息可以在这里找到<a href="https://en.wikipedia.org/wiki/List_of_tz_database_time_zones" target="_blank" rel="noopener noreferrer">Wiki - List of tz database time zones</a>
 。</p>
 <h2 id="在mysql客户端操作时区">在MySQL客户端操作时区<a class="anchor ms-1" href="#在mysql客户端操作时区"><i class="fas fa-link"></i></a></h2>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="ln">1</span><span class="c1">-- 查询系统时区和session时区
-</span><span class="ln">2</span><span class="c1"></span><span class="k">SELECT</span><span class="w"> </span><span class="o">@@</span><span class="k">global</span><span class="p">.</span><span class="n">time_zone</span><span class="p">,</span><span class="w"> </span><span class="o">@@</span><span class="k">session</span><span class="p">.</span><span class="n">time_zone</span><span class="p">;</span><span class="w">
-</span><span class="ln">3</span><span class="w">
-</span><span class="ln">4</span><span class="w"></span><span class="c1">-- 设置session时区
-</span><span class="ln">5</span><span class="c1"></span><span class="k">SET</span><span class="w"> </span><span class="n">time_zone</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;Asia/Shanghai&#39;</span><span class="p">;</span><span class="w">
-</span></code></pre></div><p>详见：<a href="https://dev.mysql.com/doc/refman/8.0/en/time-zone-support.html" target="_blank" rel="noopener noreferrer">MySQL Server Time Zone Support</a>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="c1">-- 查询系统时区和session时区
+</span><span class="c1"></span><span class="k">SELECT</span><span class="w"> </span><span class="o">@@</span><span class="k">global</span><span class="p">.</span><span class="n">time_zone</span><span class="p">,</span><span class="w"> </span><span class="o">@@</span><span class="k">session</span><span class="p">.</span><span class="n">time_zone</span><span class="p">;</span><span class="w">
+</span><span class="w">
+</span><span class="w"></span><span class="c1">-- 设置session时区
+</span><span class="c1"></span><span class="k">SET</span><span class="w"> </span><span class="n">time_zone</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;Asia/Shanghai&#39;</span><span class="p">;</span><span class="w">
+</span></code></pre></td></tr></table>
+</div>
+</div><p>详见：<a href="https://dev.mysql.com/doc/refman/8.0/en/time-zone-support.html" target="_blank" rel="noopener noreferrer">MySQL Server Time Zone Support</a>
 </p>
 <h2 id="docker启动时设定时区">Docker启动时设定时区<a class="anchor ms-1" href="#docker启动时设定时区"><i class="fas fa-link"></i></a></h2>
 <p><del>你可以在docker启动的时候设定MySQL容器的时区，比如这样<code>-e TZ=Asia/Shanghai</code>。</del></p>

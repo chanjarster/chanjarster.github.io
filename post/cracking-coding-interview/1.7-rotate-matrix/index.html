@@ -12,7 +12,7 @@
 <meta name="description" content="" /><meta itemprop="name" content="Cracking Coding Interview - 1.7 Rotate Matrix">
 <meta itemprop="description" content=""><meta itemprop="datePublished" content="2019-08-08T14:27:40+08:00" />
 <meta itemprop="dateModified" content="2019-08-08T14:27:40+08:00" />
-<meta itemprop="wordCount" content="1003">
+<meta itemprop="wordCount" content="1026">
 <meta itemprop="keywords" content="ARTS-A," /><meta property="og:title" content="Cracking Coding Interview - 1.7 Rotate Matrix" />
 <meta property="og:description" content="" />
 <meta property="og:type" content="article" />
@@ -229,90 +229,216 @@
 <p>先弄几个例子看看向右旋转90度是怎么回事，我们从外到里顺时针给元素编号：</p>
 <p>周长 = 4n - 4，步进=周长-n-1</p>
 <p>1x1，周长1，步进0：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln">1</span>0 -&gt; 0
-</code></pre></div><p>2x2，周长4，步进3：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln">1</span>0 1  -&gt;  3 0
-<span class="ln">2</span>3 2      2 1
-</code></pre></div><p>3x3，周长8，步进6：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln">1</span>0 1 2      6 7 0
-<span class="ln">2</span>7 8 3  -&gt;  5 8 1
-<span class="ln">3</span>6 5 4      4 3 2
-</code></pre></div><p>4x4，周长12，步进9：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln">1</span>0  1  2  3      9  10 11 0
-<span class="ln">2</span>11 12 13 4  -&gt;  8  15 12 1
-<span class="ln">3</span>10 15 14 5      7  14 13 2
-<span class="ln">4</span>9  8  7  6      6  5  4  3
-</code></pre></div><p>从最外圈到里圈变动，格子里的数字 = (原数字+步进) % 周长</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt">0 -&gt; 0
+</code></pre></td></tr></table>
+</div>
+</div><p>2x2，周长4，步进3：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt">0 1  -&gt;  3 0
+3 2      2 1
+</code></pre></td></tr></table>
+</div>
+</div><p>3x3，周长8，步进6：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt">0 1 2      6 7 0
+7 8 3  -&gt;  5 8 1
+6 5 4      4 3 2
+</code></pre></td></tr></table>
+</div>
+</div><p>4x4，周长12，步进9：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt">0  1  2  3      9  10 11 0
+11 12 13 4  -&gt;  8  15 12 1
+10 15 14 5      7  14 13 2
+9  8  7  6      6  5  4  3
+</code></pre></td></tr></table>
+</div>
+</div><p>从最外圈到里圈变动，格子里的数字 = (原数字+步进) % 周长</p>
 <p>结果，这个分析失败了，因为缺少坐标关系，后面很难弄，不过给后面带来了思路</p>
 <h2 id="继续分析">继续分析<a class="anchor ms-1" href="#继续分析"><i class="fas fa-link"></i></a></h2>
 <p>这次把坐标填上：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln">1</span>(0,0)  (0,1)  (0,2)
-<span class="ln">2</span>(1,0)  (1,1)  (1,2)
-<span class="ln">3</span>(2,0)  (2,2)  (2,2)
-</code></pre></div><p>其实旋转可以看成是从四个顶点开始，都按照顺时针方向，挨个把自己的弄到90度的位置上去比如：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln">1</span>        --&gt;
-<span class="ln">2</span>   o          o
-<span class="ln">3</span>
-<span class="ln">4</span>^                |
-<span class="ln">5</span>|                v
-<span class="ln">6</span>
-<span class="ln">7</span>   o          o
-<span class="ln">8</span>       &lt;--
-</code></pre></div><p>如果我们知道了左上角的第一个顶点的位置，那么就能够知道其他3个顶点的位置：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="ln">1</span>   (r, [c]++)        （[r]++, c+n-1)
-<span class="ln">2</span>   
-<span class="ln">3</span>   
-<span class="ln">4</span>   ([r+n-1]--,c)      (r+n-1, [c+n-1]--)
-</code></pre></div><p>上面这个图中r=行，c=列，都是从0开始，边长为n，<code>[]</code>里的代表遍历时变动的维度，<code>++/--</code>代表变动的方式。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt">(0,0)  (0,1)  (0,2)
+(1,0)  (1,1)  (1,2)
+(2,0)  (2,2)  (2,2)
+</code></pre></td></tr></table>
+</div>
+</div><p>其实旋转可以看成是从四个顶点开始，都按照顺时针方向，挨个把自己的弄到90度的位置上去比如：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt">        --&gt;
+   o          o
+
+^                |
+|                v
+
+   o          o
+       &lt;--
+</code></pre></td></tr></table>
+</div>
+</div><p>如果我们知道了左上角的第一个顶点的位置，那么就能够知道其他3个顶点的位置：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback">   (r, [c]++)        （[r]++, c+n-1)
+   
+   
+   ([r+n-1]--,c)      (r+n-1, [c+n-1]--)
+</code></pre></td></tr></table>
+</div>
+</div><p>上面这个图中r=行，c=列，都是从0开始，边长为n，<code>[]</code>里的代表遍历时变动的维度，<code>++/--</code>代表变动的方式。</p>
 <p>然后怎么把整个替换掉，我们可以从最外圈旋转，然后再旋转里圈的：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln">1</span>           第一步             第二步
-<span class="ln">2</span>0  1  2  3       9  10 11 0       9  10 11 0
-<span class="ln">3</span>11 12 13 4  --&gt;  8  12 13 1  --&gt;  8  15 12 1
-<span class="ln">4</span>10 15 14 5       7  15 14 2       7  14 13 2
-<span class="ln">5</span>9  8  7  6       6  5  4  3       6  5  4  3
-</code></pre></div><p>而且第layer层的周长=n - 2 * layer，layer从0开始。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt">           第一步             第二步
+0  1  2  3       9  10 11 0       9  10 11 0
+11 12 13 4  --&gt;  8  12 13 1  --&gt;  8  15 12 1
+10 15 14 5       7  15 14 2       7  14 13 2
+9  8  7  6       6  5  4  3       6  5  4  3
+</code></pre></td></tr></table>
+</div>
+</div><p>而且第layer层的周长=n - 2 * layer，layer从0开始。</p>
 <h2 id="解法1">解法1<a class="anchor ms-1" href="#解法1"><i class="fas fa-link"></i></a></h2>
 <p>一共有几圈=n/2，第一圈的左上角是<code>(0,0)</code>，第二圈的左上角是<code>(1,1)</code>，以此类推：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln"> 1</span><span class="kd">public</span> <span class="kt">void</span> <span class="nf">rotateMatrix</span><span class="o">(</span><span class="kt">int</span><span class="o">[][]</span> <span class="n">matrix</span><span class="o">,</span> <span class="kt">int</span> <span class="n">n</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 2</span>  <span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">n</span> <span class="o">/</span> <span class="n">2</span><span class="o">;</span> <span class="n">i</span><span class="o">++)</span> <span class="o">{</span>
-<span class="ln"> 3</span>    <span class="kt">int</span> <span class="n">length</span> <span class="o">=</span> <span class="n">n</span> <span class="o">-</span> <span class="n">2</span> <span class="o">*</span> <span class="n">i</span><span class="o">;</span>
-<span class="ln"> 4</span>    <span class="kt">int</span> <span class="n">firstRow</span> <span class="o">=</span> <span class="n">i</span><span class="o">;</span>
-<span class="ln"> 5</span>    <span class="kt">int</span> <span class="n">firstCol</span> <span class="o">=</span> <span class="n">i</span><span class="o">;</span>
-<span class="ln"> 6</span>    <span class="kt">int</span> <span class="n">lastRow</span> <span class="o">=</span> <span class="n">firstRow</span> <span class="o">+</span> <span class="n">length</span> <span class="o">-</span> <span class="n">1</span><span class="o">;</span>
-<span class="ln"> 7</span>    <span class="kt">int</span> <span class="n">lastCol</span> <span class="o">=</span> <span class="n">firstCol</span> <span class="o">+</span> <span class="n">length</span> <span class="o">-</span> <span class="n">1</span><span class="o">;</span>
-<span class="ln"> 8</span>    <span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">j</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span> <span class="n">j</span> <span class="o">&lt;</span> <span class="n">length</span> <span class="o">-</span> <span class="n">1</span><span class="o">;</span> <span class="n">j</span><span class="o">++)</span> <span class="o">{</span>
-<span class="ln"> 9</span>      <span class="kt">int</span> <span class="n">leftTop</span> <span class="o">=</span> <span class="n">matrix</span><span class="o">[</span><span class="n">firstRow</span><span class="o">][</span><span class="n">firstCol</span> <span class="o">+</span> <span class="n">j</span><span class="o">];</span>
-<span class="ln">10</span>      <span class="c1">// leftBottom -&gt; leftTop
-</span><span class="ln">11</span><span class="c1"></span>      <span class="n">matrix</span><span class="o">[</span><span class="n">firstRow</span><span class="o">][</span><span class="n">firstCol</span> <span class="o">+</span> <span class="n">j</span><span class="o">]</span> <span class="o">=</span> <span class="n">matrix</span><span class="o">[</span><span class="n">lastRow</span> <span class="o">-</span> <span class="n">j</span><span class="o">][</span><span class="n">firstCol</span><span class="o">];</span>
-<span class="ln">12</span>      <span class="c1">// rightBottom -&gt; leftBottom;
-</span><span class="ln">13</span><span class="c1"></span>      <span class="n">matrix</span><span class="o">[</span><span class="n">lastRow</span> <span class="o">-</span> <span class="n">j</span><span class="o">][</span><span class="n">firstCol</span><span class="o">]</span> <span class="o">=</span> <span class="n">matrix</span><span class="o">[</span><span class="n">lastRow</span><span class="o">][</span><span class="n">lastCol</span> <span class="o">-</span> <span class="n">j</span><span class="o">];</span>
-<span class="ln">14</span>      <span class="c1">// rightTop -&gt; rightBottom
-</span><span class="ln">15</span><span class="c1"></span>      <span class="n">matrix</span><span class="o">[</span><span class="n">lastRow</span><span class="o">][</span><span class="n">lastCol</span> <span class="o">-</span> <span class="n">j</span><span class="o">]</span> <span class="o">=</span> <span class="n">matrix</span><span class="o">[</span><span class="n">firstRow</span> <span class="o">+</span> <span class="n">j</span><span class="o">][</span><span class="n">lastCol</span><span class="o">];</span>
-<span class="ln">16</span>      <span class="c1">// leftTop -&gt; rightTop
-</span><span class="ln">17</span><span class="c1"></span>      <span class="n">matrix</span><span class="o">[</span><span class="n">firstRow</span> <span class="o">+</span> <span class="n">j</span><span class="o">][</span><span class="n">lastCol</span><span class="o">]</span> <span class="o">=</span> <span class="n">leftTop</span><span class="o">;</span>
-<span class="ln">18</span>    <span class="o">}</span>
-<span class="ln">19</span>  <span class="o">}</span>
-<span class="ln">20</span><span class="o">}</span>
-</code></pre></div><p>注意上面的 <code>j &lt; length -1	</code>，因为一条边的最后一个元素就是另一条边的第一个元素，所以我们不能遍历到它。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="kd">public</span> <span class="kt">void</span> <span class="nf">rotateMatrix</span><span class="o">(</span><span class="kt">int</span><span class="o">[][]</span> <span class="n">matrix</span><span class="o">,</span> <span class="kt">int</span> <span class="n">n</span><span class="o">)</span> <span class="o">{</span>
+  <span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">n</span> <span class="o">/</span> <span class="n">2</span><span class="o">;</span> <span class="n">i</span><span class="o">++)</span> <span class="o">{</span>
+    <span class="kt">int</span> <span class="n">length</span> <span class="o">=</span> <span class="n">n</span> <span class="o">-</span> <span class="n">2</span> <span class="o">*</span> <span class="n">i</span><span class="o">;</span>
+    <span class="kt">int</span> <span class="n">firstRow</span> <span class="o">=</span> <span class="n">i</span><span class="o">;</span>
+    <span class="kt">int</span> <span class="n">firstCol</span> <span class="o">=</span> <span class="n">i</span><span class="o">;</span>
+    <span class="kt">int</span> <span class="n">lastRow</span> <span class="o">=</span> <span class="n">firstRow</span> <span class="o">+</span> <span class="n">length</span> <span class="o">-</span> <span class="n">1</span><span class="o">;</span>
+    <span class="kt">int</span> <span class="n">lastCol</span> <span class="o">=</span> <span class="n">firstCol</span> <span class="o">+</span> <span class="n">length</span> <span class="o">-</span> <span class="n">1</span><span class="o">;</span>
+    <span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">j</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span> <span class="n">j</span> <span class="o">&lt;</span> <span class="n">length</span> <span class="o">-</span> <span class="n">1</span><span class="o">;</span> <span class="n">j</span><span class="o">++)</span> <span class="o">{</span>
+      <span class="kt">int</span> <span class="n">leftTop</span> <span class="o">=</span> <span class="n">matrix</span><span class="o">[</span><span class="n">firstRow</span><span class="o">][</span><span class="n">firstCol</span> <span class="o">+</span> <span class="n">j</span><span class="o">];</span>
+      <span class="c1">// leftBottom -&gt; leftTop
+</span><span class="c1"></span>      <span class="n">matrix</span><span class="o">[</span><span class="n">firstRow</span><span class="o">][</span><span class="n">firstCol</span> <span class="o">+</span> <span class="n">j</span><span class="o">]</span> <span class="o">=</span> <span class="n">matrix</span><span class="o">[</span><span class="n">lastRow</span> <span class="o">-</span> <span class="n">j</span><span class="o">][</span><span class="n">firstCol</span><span class="o">];</span>
+      <span class="c1">// rightBottom -&gt; leftBottom;
+</span><span class="c1"></span>      <span class="n">matrix</span><span class="o">[</span><span class="n">lastRow</span> <span class="o">-</span> <span class="n">j</span><span class="o">][</span><span class="n">firstCol</span><span class="o">]</span> <span class="o">=</span> <span class="n">matrix</span><span class="o">[</span><span class="n">lastRow</span><span class="o">][</span><span class="n">lastCol</span> <span class="o">-</span> <span class="n">j</span><span class="o">];</span>
+      <span class="c1">// rightTop -&gt; rightBottom
+</span><span class="c1"></span>      <span class="n">matrix</span><span class="o">[</span><span class="n">lastRow</span><span class="o">][</span><span class="n">lastCol</span> <span class="o">-</span> <span class="n">j</span><span class="o">]</span> <span class="o">=</span> <span class="n">matrix</span><span class="o">[</span><span class="n">firstRow</span> <span class="o">+</span> <span class="n">j</span><span class="o">][</span><span class="n">lastCol</span><span class="o">];</span>
+      <span class="c1">// leftTop -&gt; rightTop
+</span><span class="c1"></span>      <span class="n">matrix</span><span class="o">[</span><span class="n">firstRow</span> <span class="o">+</span> <span class="n">j</span><span class="o">][</span><span class="n">lastCol</span><span class="o">]</span> <span class="o">=</span> <span class="n">leftTop</span><span class="o">;</span>
+    <span class="o">}</span>
+  <span class="o">}</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>注意上面的 <code>j &lt; length -1	</code>，因为一条边的最后一个元素就是另一条边的第一个元素，所以我们不能遍历到它。</p>
 <h2 id="解法2优化">解法2优化<a class="anchor ms-1" href="#解法2优化"><i class="fas fa-link"></i></a></h2>
 <p>可以发现<code>firstRow==firstCol</code>和<code>lastRow==lastCol</code>，因此可以省去一些变量：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln"> 1</span><span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">n</span> <span class="o">/</span> <span class="n">2</span><span class="o">;</span> <span class="n">i</span><span class="o">++)</span> <span class="o">{</span>
-<span class="ln"> 2</span>  <span class="kt">int</span> <span class="n">length</span> <span class="o">=</span> <span class="n">n</span> <span class="o">-</span> <span class="n">2</span> <span class="o">*</span> <span class="n">i</span><span class="o">;</span>
-<span class="ln"> 3</span>  <span class="kt">int</span> <span class="n">first</span> <span class="o">=</span> <span class="n">i</span><span class="o">;</span>
-<span class="ln"> 4</span>  <span class="kt">int</span> <span class="n">last</span> <span class="o">=</span> <span class="n">first</span> <span class="o">+</span> <span class="n">length</span> <span class="o">-</span> <span class="n">1</span><span class="o">;</span>
-<span class="ln"> 5</span>  <span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">j</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span> <span class="n">j</span> <span class="o">&lt;</span> <span class="n">length</span> <span class="o">-</span> <span class="n">1</span><span class="o">;</span> <span class="n">j</span><span class="o">++)</span> <span class="o">{</span>
-<span class="ln"> 6</span>    <span class="kt">int</span> <span class="n">leftTop</span> <span class="o">=</span> <span class="n">matrix</span><span class="o">[</span><span class="n">first</span><span class="o">][</span><span class="n">first</span> <span class="o">+</span> <span class="n">j</span><span class="o">];</span>
-<span class="ln"> 7</span>    <span class="c1">// leftBottom -&gt; leftTop
-</span><span class="ln"> 8</span><span class="c1"></span>    <span class="n">matrix</span><span class="o">[</span><span class="n">first</span><span class="o">][</span><span class="n">first</span> <span class="o">+</span> <span class="n">j</span><span class="o">]</span> <span class="o">=</span> <span class="n">matrix</span><span class="o">[</span><span class="n">last</span> <span class="o">-</span> <span class="n">j</span><span class="o">][</span><span class="n">first</span><span class="o">];</span>
-<span class="ln"> 9</span>    <span class="c1">// rightBottom -&gt; leftBottom;
-</span><span class="ln">10</span><span class="c1"></span>    <span class="n">matrix</span><span class="o">[</span><span class="n">last</span> <span class="o">-</span> <span class="n">j</span><span class="o">][</span><span class="n">first</span><span class="o">]</span> <span class="o">=</span> <span class="n">matrix</span><span class="o">[</span><span class="n">last</span><span class="o">][</span><span class="n">last</span> <span class="o">-</span> <span class="n">j</span><span class="o">];</span>
-<span class="ln">11</span>    <span class="c1">// rightTop -&gt; rightBottom
-</span><span class="ln">12</span><span class="c1"></span>    <span class="n">matrix</span><span class="o">[</span><span class="n">last</span><span class="o">][</span><span class="n">last</span> <span class="o">-</span> <span class="n">j</span><span class="o">]</span> <span class="o">=</span> <span class="n">matrix</span><span class="o">[</span><span class="n">first</span> <span class="o">+</span> <span class="n">j</span><span class="o">][</span><span class="n">last</span><span class="o">];</span>
-<span class="ln">13</span>    <span class="c1">// leftTop -&gt; rightTop
-</span><span class="ln">14</span><span class="c1"></span>    <span class="n">matrix</span><span class="o">[</span><span class="n">first</span> <span class="o">+</span> <span class="n">j</span><span class="o">][</span><span class="n">last</span><span class="o">]</span> <span class="o">=</span> <span class="n">leftTop</span><span class="o">;</span>
-<span class="ln">15</span>  <span class="o">}</span>
-<span class="ln">16</span><span class="o">}</span>
-</code></pre></div></div></div>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">n</span> <span class="o">/</span> <span class="n">2</span><span class="o">;</span> <span class="n">i</span><span class="o">++)</span> <span class="o">{</span>
+  <span class="kt">int</span> <span class="n">length</span> <span class="o">=</span> <span class="n">n</span> <span class="o">-</span> <span class="n">2</span> <span class="o">*</span> <span class="n">i</span><span class="o">;</span>
+  <span class="kt">int</span> <span class="n">first</span> <span class="o">=</span> <span class="n">i</span><span class="o">;</span>
+  <span class="kt">int</span> <span class="n">last</span> <span class="o">=</span> <span class="n">first</span> <span class="o">+</span> <span class="n">length</span> <span class="o">-</span> <span class="n">1</span><span class="o">;</span>
+  <span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">j</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span> <span class="n">j</span> <span class="o">&lt;</span> <span class="n">length</span> <span class="o">-</span> <span class="n">1</span><span class="o">;</span> <span class="n">j</span><span class="o">++)</span> <span class="o">{</span>
+    <span class="kt">int</span> <span class="n">leftTop</span> <span class="o">=</span> <span class="n">matrix</span><span class="o">[</span><span class="n">first</span><span class="o">][</span><span class="n">first</span> <span class="o">+</span> <span class="n">j</span><span class="o">];</span>
+    <span class="c1">// leftBottom -&gt; leftTop
+</span><span class="c1"></span>    <span class="n">matrix</span><span class="o">[</span><span class="n">first</span><span class="o">][</span><span class="n">first</span> <span class="o">+</span> <span class="n">j</span><span class="o">]</span> <span class="o">=</span> <span class="n">matrix</span><span class="o">[</span><span class="n">last</span> <span class="o">-</span> <span class="n">j</span><span class="o">][</span><span class="n">first</span><span class="o">];</span>
+    <span class="c1">// rightBottom -&gt; leftBottom;
+</span><span class="c1"></span>    <span class="n">matrix</span><span class="o">[</span><span class="n">last</span> <span class="o">-</span> <span class="n">j</span><span class="o">][</span><span class="n">first</span><span class="o">]</span> <span class="o">=</span> <span class="n">matrix</span><span class="o">[</span><span class="n">last</span><span class="o">][</span><span class="n">last</span> <span class="o">-</span> <span class="n">j</span><span class="o">];</span>
+    <span class="c1">// rightTop -&gt; rightBottom
+</span><span class="c1"></span>    <span class="n">matrix</span><span class="o">[</span><span class="n">last</span><span class="o">][</span><span class="n">last</span> <span class="o">-</span> <span class="n">j</span><span class="o">]</span> <span class="o">=</span> <span class="n">matrix</span><span class="o">[</span><span class="n">first</span> <span class="o">+</span> <span class="n">j</span><span class="o">][</span><span class="n">last</span><span class="o">];</span>
+    <span class="c1">// leftTop -&gt; rightTop
+</span><span class="c1"></span>    <span class="n">matrix</span><span class="o">[</span><span class="n">first</span> <span class="o">+</span> <span class="n">j</span><span class="o">][</span><span class="n">last</span><span class="o">]</span> <span class="o">=</span> <span class="n">leftTop</span><span class="o">;</span>
+  <span class="o">}</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div></div></div>
   <div class="card-footer"><div class="post-navs d-flex justify-content-evenly">
   <div class="post-nav post-prev"><i class="fas fa-fw fa-chevron-left"></i>
     <a href="/post/cracking-coding-interview/1.6-string-compression/">Cracking Coding Interview - 1.6 String Compression

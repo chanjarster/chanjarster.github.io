@@ -12,7 +12,7 @@
 <meta name="description" content="" /><meta itemprop="name" content="MySQL - 数据页、change buffer和索引">
 <meta itemprop="description" content=""><meta itemprop="datePublished" content="2020-01-07T13:03:02+08:00" />
 <meta itemprop="dateModified" content="2020-01-07T13:03:02+08:00" />
-<meta itemprop="wordCount" content="2042">
+<meta itemprop="wordCount" content="1993">
 <meta itemprop="keywords" content="mysql," /><meta property="og:title" content="MySQL - 数据页、change buffer和索引" />
 <meta property="og:description" content="" />
 <meta property="og:type" content="article" />
@@ -220,7 +220,7 @@
   <span class="post-date" title="创建于 2020-01-07 13:03:02 &#43;0800 CST。">
     2020-01-07
   </span><span class="post-reading-time">
-    5 分钟阅读
+    4 分钟阅读
   </span><span class="post-taxonomies"><a href="/tags/mysql/" class="badge post-taxonomy">mysql</a></span>
 </div>
 <div class="post-content mb-3"><p>原文：<a href="https://time.geekbang.org/column/article/70848" target="_blank" rel="noopener noreferrer">09 | 普通索引和唯一索引，应该怎么选择？</a>
@@ -265,8 +265,15 @@
 <h2 id="change-buffer和redo-log">change buffer和redo log<a class="anchor ms-1" href="#change-buffer和redo-log"><i class="fas fa-link"></i></a></h2>
 <h3 id="更新过程">更新过程<a class="anchor ms-1" href="#更新过程"><i class="fas fa-link"></i></a></h3>
 <p>现在，我们要在表上执行这个插入语句：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="ln">1</span><span class="n">mysql</span><span class="o">&gt;</span><span class="w"> </span><span class="k">insert</span><span class="w"> </span><span class="k">into</span><span class="w"> </span><span class="n">t</span><span class="p">(</span><span class="n">id</span><span class="p">,</span><span class="n">k</span><span class="p">)</span><span class="w"> </span><span class="k">values</span><span class="p">(</span><span class="n">id1</span><span class="p">,</span><span class="n">k1</span><span class="p">),(</span><span class="n">id2</span><span class="p">,</span><span class="n">k2</span><span class="p">);</span><span class="w">
-</span></code></pre></div><p>我们假设当前 k 索引树的状态，查找到位置后，k1 所在的数据页在内存 (InnoDB buffer pool) 中，k2 所在的数据页不在内存中。下图 所示是带 change buffer 的更新状态图。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="n">mysql</span><span class="o">&gt;</span><span class="w"> </span><span class="k">insert</span><span class="w"> </span><span class="k">into</span><span class="w"> </span><span class="n">t</span><span class="p">(</span><span class="n">id</span><span class="p">,</span><span class="n">k</span><span class="p">)</span><span class="w"> </span><span class="k">values</span><span class="p">(</span><span class="n">id1</span><span class="p">,</span><span class="n">k1</span><span class="p">),(</span><span class="n">id2</span><span class="p">,</span><span class="n">k2</span><span class="p">);</span><span class="w">
+</span></code></pre></td></tr></table>
+</div>
+</div><p>我们假设当前 k 索引树的状态，查找到位置后，k1 所在的数据页在内存 (InnoDB buffer pool) 中，k2 所在的数据页不在内存中。下图 所示是带 change buffer 的更新状态图。</p>
 <figure><img src="change-buffer-update.png" width="100%"/>
 </figure>
 

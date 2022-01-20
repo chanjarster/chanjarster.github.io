@@ -12,7 +12,7 @@
 <meta name="description" content="" /><meta itemprop="name" content="排查Ingress对象status字段不更新的问题">
 <meta itemprop="description" content=""><meta itemprop="datePublished" content="2021-05-14T09:10:20+08:00" />
 <meta itemprop="dateModified" content="2021-05-14T09:10:20+08:00" />
-<meta itemprop="wordCount" content="2374">
+<meta itemprop="wordCount" content="1827">
 <meta itemprop="keywords" content="k8s,ingress,troubleshooting," /><meta property="og:title" content="排查Ingress对象status字段不更新的问题" />
 <meta property="og:description" content="" />
 <meta property="og:type" content="article" />
@@ -220,7 +220,7 @@
   <span class="post-date" title="创建于 2021-05-14 09:10:20 &#43;0800 CST。">
     2021-05-14
   </span><span class="post-reading-time">
-    5 分钟阅读
+    4 分钟阅读
   </span><span class="post-taxonomies"><a href="/tags/k8s/" class="badge post-taxonomy">k8s</a><a href="/tags/ingress/" class="badge post-taxonomy">ingress</a><a href="/tags/troubleshooting/" class="badge post-taxonomy">troubleshooting</a></span>
 </div>
 <div class="post-content mb-3"><h2 id="现象">现象<a class="anchor ms-1" href="#现象"><i class="fas fa-link"></i></a></h2>
@@ -273,125 +273,256 @@
 <h2 id="检查ingress-controller和kube-apiserver的通信">检查Ingress Controller和kube apiserver的通信<a class="anchor ms-1" href="#检查ingress-controller和kube-apiserver的通信"><i class="fas fa-link"></i></a></h2>
 <p>K8S的Controller模型告诉我们，都必须和Apiserver通信，那么是不是Ingress Controller和Apiserver的通信出了问题呢？</p>
 <p>进入某个ingress controller容器，执行下列命令：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span><span class="nv">TOKEN</span><span class="o">=</span><span class="sb">`</span>cat /var/run/secrets/kubernetes.io/serviceaccount/token<span class="sb">`</span>
-<span class="ln">2</span>curl -k https://10.43.0.1:443/api --header <span class="s2">&#34;Authorization: Bearer </span><span class="nv">$TOKEN</span><span class="s2">&#34;</span>
-</code></pre></div><p>发现和API Server的通信是OK的。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="nv">TOKEN</span><span class="o">=</span><span class="sb">`</span>cat /var/run/secrets/kubernetes.io/serviceaccount/token<span class="sb">`</span>
+curl -k https://10.43.0.1:443/api --header <span class="s2">&#34;Authorization: Bearer </span><span class="nv">$TOKEN</span><span class="s2">&#34;</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>发现和API Server的通信是OK的。</p>
 <h2 id="检查ingress-controller的service-account的权限是否足够">检查Ingress Controller的Service Account的权限是否足够<a class="anchor ms-1" href="#检查ingress-controller的service-account的权限是否足够"><i class="fas fa-link"></i></a></h2>
 <p>因为调用Kube ApiServer需要权限，检查一下：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln"> 1</span>&gt; kubectl -n ingress-nginx get sa
-<span class="ln"> 2</span>NAME                           SECRETS   AGE
-<span class="ln"> 3</span>default                        <span class="m">1</span>         440d
-<span class="ln"> 4</span>nginx-ingress-serviceaccount   <span class="m">1</span>         440d
-<span class="ln"> 5</span>
-<span class="ln"> 6</span>&gt; kubectl -n ingress-nginx get rolebinding
-<span class="ln"> 7</span>NAME                              AGE
-<span class="ln"> 8</span>clusterrolebinding-2ltlc          440d
-<span class="ln"> 9</span>clusterrolebinding-6sk8h          440d
-<span class="ln">10</span>clusterrolebinding-964mz          440d
-<span class="ln">11</span>clusterrolebinding-znvvl          440d
-<span class="ln">12</span>nginx-ingress-role-nisa-binding   440d
-<span class="ln">13</span>
-<span class="ln">14</span>&gt; kubectl -n ingress-nginx get rolebinding nginx-ingress-role-nisa-binding
-<span class="ln">15</span>…
-<span class="ln">16</span>roleRef:
-<span class="ln">17</span>  apiGroup: rbac.authorization.k8s.io
-<span class="ln">18</span>  kind: Role
-<span class="ln">19</span>  name: nginx-ingress-role
-<span class="ln">20</span>subjects:
-<span class="ln">21</span>- kind: ServiceAccount
-<span class="ln">22</span>  name: nginx-ingress-serviceaccount
-<span class="ln">23</span>  namespace: ingress-nginx
-<span class="ln">24</span>
-<span class="ln">25</span>&gt; kubectl -n ingress-nginx get role nginx-ingress-role -o yaml
-<span class="ln">26</span>…
-<span class="ln">27</span>rules:
-<span class="ln">28</span>- apiGroups:
-<span class="ln">29</span>  - <span class="s2">&#34;&#34;</span>
-<span class="ln">30</span>  resources:
-<span class="ln">31</span>  - configmaps
-<span class="ln">32</span>  - pods
-<span class="ln">33</span>  - secrets
-<span class="ln">34</span>  - namespaces
-<span class="ln">35</span>  verbs:
-<span class="ln">36</span>  - get
-<span class="ln">37</span>- apiGroups:
-<span class="ln">38</span>  - <span class="s2">&#34;&#34;</span>
-<span class="ln">39</span>  resourceNames:
-<span class="ln">40</span>  - ingress-controller-leader-nginx
-<span class="ln">41</span>  resources:
-<span class="ln">42</span>  - configmaps
-<span class="ln">43</span>  verbs:
-<span class="ln">44</span>  - get
-<span class="ln">45</span>  - update
-<span class="ln">46</span>- apiGroups:
-<span class="ln">47</span>  - <span class="s2">&#34;&#34;</span>
-<span class="ln">48</span>  resources:
-<span class="ln">49</span>  - configmaps
-<span class="ln">50</span>  verbs:
-<span class="ln">51</span>  - create
-<span class="ln">52</span>- apiGroups:
-<span class="ln">53</span>  - <span class="s2">&#34;&#34;</span>
-<span class="ln">54</span>  resources:
-<span class="ln">55</span>  - endpoints
-<span class="ln">56</span>  verbs:
-<span class="ln">57</span>  - get
-</code></pre></div><p>发现权限是足够的，而且和一个正常的集群对比，结果也是一样的。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span><span class="lnt">46
+</span><span class="lnt">47
+</span><span class="lnt">48
+</span><span class="lnt">49
+</span><span class="lnt">50
+</span><span class="lnt">51
+</span><span class="lnt">52
+</span><span class="lnt">53
+</span><span class="lnt">54
+</span><span class="lnt">55
+</span><span class="lnt">56
+</span><span class="lnt">57
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">&gt; kubectl -n ingress-nginx get sa
+NAME                           SECRETS   AGE
+default                        <span class="m">1</span>         440d
+nginx-ingress-serviceaccount   <span class="m">1</span>         440d
+
+&gt; kubectl -n ingress-nginx get rolebinding
+NAME                              AGE
+clusterrolebinding-2ltlc          440d
+clusterrolebinding-6sk8h          440d
+clusterrolebinding-964mz          440d
+clusterrolebinding-znvvl          440d
+nginx-ingress-role-nisa-binding   440d
+
+&gt; kubectl -n ingress-nginx get rolebinding nginx-ingress-role-nisa-binding
+…
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: nginx-ingress-role
+subjects:
+- kind: ServiceAccount
+  name: nginx-ingress-serviceaccount
+  namespace: ingress-nginx
+
+&gt; kubectl -n ingress-nginx get role nginx-ingress-role -o yaml
+…
+rules:
+- apiGroups:
+  - <span class="s2">&#34;&#34;</span>
+  resources:
+  - configmaps
+  - pods
+  - secrets
+  - namespaces
+  verbs:
+  - get
+- apiGroups:
+  - <span class="s2">&#34;&#34;</span>
+  resourceNames:
+  - ingress-controller-leader-nginx
+  resources:
+  - configmaps
+  verbs:
+  - get
+  - update
+- apiGroups:
+  - <span class="s2">&#34;&#34;</span>
+  resources:
+  - configmaps
+  verbs:
+  - create
+- apiGroups:
+  - <span class="s2">&#34;&#34;</span>
+  resources:
+  - endpoints
+  verbs:
+  - get
+</code></pre></td></tr></table>
+</div>
+</div><p>发现权限是足够的，而且和一个正常的集群对比，结果也是一样的。</p>
 <h2 id="再次观察ingress-controller的日志">再次观察ingress controller的日志<a class="anchor ms-1" href="#再次观察ingress-controller的日志"><i class="fas fa-link"></i></a></h2>
 <p>调整ingress controller的参数，<a href="https://kubernetes.github.io/ingress-nginx/user-guide/nginx-configuration/configmap/#disable-access-log" target="_blank" rel="noopener noreferrer">把access log关掉</a>
 ，能够更清楚的看到controller的日志。</p>
 <p>发现这么一条：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>I0512 03:52:31.256060 <span class="m">6</span> status.go:86<span class="o">]</span> new  leader elected: nginx-ingress-controller-qxlt8  
-</code></pre></div><p>所有ingress-controller推举leader为 nginx-ingress-controller-qxlt8。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">I0512 03:52:31.256060 <span class="m">6</span> status.go:86<span class="o">]</span> new  leader elected: nginx-ingress-controller-qxlt8  
+</code></pre></td></tr></table>
+</div>
+</div><p>所有ingress-controller推举leader为 nginx-ingress-controller-qxlt8。</p>
 <p>但是在K8S里根本就不存在名字是这个的Pod。</p>
 <p>阅读<a href="https://github.com/kubernetes/ingress-nginx/blob/nginx-0.25.1/internal/ingress/controller/nginx.go#L290" target="_blank" rel="noopener noreferrer">源码</a>
 得知，只有leader才会负责更新Ingress对象的status字段。</p>
 <h2 id="查找-nginx-ingress-controller-qxlt8">查找 nginx-ingress-controller-qxlt8<a class="anchor ms-1" href="#查找-nginx-ingress-controller-qxlt8"><i class="fas fa-link"></i></a></h2>
 <p>怀疑是不是etcd里有，但是这个没有K8S查不到，于是到etcd上查询。</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln"> 1</span>&gt; docker <span class="nb">exec</span> -it etcd etcdctl get / --prefix --keys-only <span class="p">|</span> grep ingress-controller
-<span class="ln"> 2</span>
-<span class="ln"> 3</span>/registry/configmaps/ingress-nginx/ingress-controller-leader-nginx
-<span class="ln"> 4</span>/registry/configmaps/kube-system/rke-ingress-controller
-<span class="ln"> 5</span>/registry/controllerrevisions/ingress-nginx/nginx-ingress-controller-544c7854f8
-<span class="ln"> 6</span>/registry/controllerrevisions/ingress-nginx/nginx-ingress-controller-668ccb87b6
-<span class="ln"> 7</span>/registry/controllerrevisions/ingress-nginx/nginx-ingress-controller-678b59dd78
-<span class="ln"> 8</span>/registry/controllerrevisions/ingress-nginx/nginx-ingress-controller-6c4d466577
-<span class="ln"> 9</span>/registry/controllerrevisions/ingress-nginx/nginx-ingress-controller-7577d75bc9
-<span class="ln">10</span>/registry/controllerrevisions/ingress-nginx/nginx-ingress-controller-767b694845
-<span class="ln">11</span>/registry/controllerrevisions/ingress-nginx/nginx-ingress-controller-779b9c5dc8
-<span class="ln">12</span>/registry/controllerrevisions/ingress-nginx/nginx-ingress-controller-7854ff6b8d
-<span class="ln">13</span>/registry/controllerrevisions/ingress-nginx/nginx-ingress-controller-7f8fdf4c75
-<span class="ln">14</span>/registry/controllerrevisions/ingress-nginx/nginx-ingress-controller-8446bfc58
-<span class="ln">15</span>/registry/controllerrevisions/ingress-nginx/nginx-ingress-controller-9cc858b66
-<span class="ln">16</span>/registry/daemonsets/ingress-nginx/nginx-ingress-controller
-<span class="ln">17</span>/registry/jobs/kube-system/rke-ingress-controller-deploy-job
-<span class="ln">18</span>/registry/pods/ingress-nginx/nginx-ingress-controller-2f6nf
-<span class="ln">19</span>/registry/pods/ingress-nginx/nginx-ingress-controller-2zk9s
-<span class="ln">20</span>/registry/pods/ingress-nginx/nginx-ingress-controller-6lzr4
-<span class="ln">21</span>/registry/pods/ingress-nginx/nginx-ingress-controller-c9gxl
-<span class="ln">22</span>/registry/pods/ingress-nginx/nginx-ingress-controller-fj94z
-<span class="ln">23</span>/registry/pods/ingress-nginx/nginx-ingress-controller-gstz8
-<span class="ln">24</span>/registry/pods/ingress-nginx/nginx-ingress-controller-kks2w
-<span class="ln">25</span>/registry/pods/ingress-nginx/nginx-ingress-controller-ntmqm
-<span class="ln">26</span>/registry/pods/ingress-nginx/nginx-ingress-controller-qjwkw
-<span class="ln">27</span>/registry/pods/ingress-nginx/nginx-ingress-controller-rfbls
-<span class="ln">28</span>/registry/pods/ingress-nginx/nginx-ingress-controller-rt5bp
-<span class="ln">29</span>/registry/pods/ingress-nginx/nginx-ingress-controller-xjcgl
-<span class="ln">30</span>/registry/pods/kube-system/rke-ingress-controller-deploy-job-2vmwq
-</code></pre></div><p>没有 nginx-ingress-controller-qxlt8 这个Pod。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">&gt; docker <span class="nb">exec</span> -it etcd etcdctl get / --prefix --keys-only <span class="p">|</span> grep ingress-controller
+
+/registry/configmaps/ingress-nginx/ingress-controller-leader-nginx
+/registry/configmaps/kube-system/rke-ingress-controller
+/registry/controllerrevisions/ingress-nginx/nginx-ingress-controller-544c7854f8
+/registry/controllerrevisions/ingress-nginx/nginx-ingress-controller-668ccb87b6
+/registry/controllerrevisions/ingress-nginx/nginx-ingress-controller-678b59dd78
+/registry/controllerrevisions/ingress-nginx/nginx-ingress-controller-6c4d466577
+/registry/controllerrevisions/ingress-nginx/nginx-ingress-controller-7577d75bc9
+/registry/controllerrevisions/ingress-nginx/nginx-ingress-controller-767b694845
+/registry/controllerrevisions/ingress-nginx/nginx-ingress-controller-779b9c5dc8
+/registry/controllerrevisions/ingress-nginx/nginx-ingress-controller-7854ff6b8d
+/registry/controllerrevisions/ingress-nginx/nginx-ingress-controller-7f8fdf4c75
+/registry/controllerrevisions/ingress-nginx/nginx-ingress-controller-8446bfc58
+/registry/controllerrevisions/ingress-nginx/nginx-ingress-controller-9cc858b66
+/registry/daemonsets/ingress-nginx/nginx-ingress-controller
+/registry/jobs/kube-system/rke-ingress-controller-deploy-job
+/registry/pods/ingress-nginx/nginx-ingress-controller-2f6nf
+/registry/pods/ingress-nginx/nginx-ingress-controller-2zk9s
+/registry/pods/ingress-nginx/nginx-ingress-controller-6lzr4
+/registry/pods/ingress-nginx/nginx-ingress-controller-c9gxl
+/registry/pods/ingress-nginx/nginx-ingress-controller-fj94z
+/registry/pods/ingress-nginx/nginx-ingress-controller-gstz8
+/registry/pods/ingress-nginx/nginx-ingress-controller-kks2w
+/registry/pods/ingress-nginx/nginx-ingress-controller-ntmqm
+/registry/pods/ingress-nginx/nginx-ingress-controller-qjwkw
+/registry/pods/ingress-nginx/nginx-ingress-controller-rfbls
+/registry/pods/ingress-nginx/nginx-ingress-controller-rt5bp
+/registry/pods/ingress-nginx/nginx-ingress-controller-xjcgl
+/registry/pods/kube-system/rke-ingress-controller-deploy-job-2vmwq
+</code></pre></td></tr></table>
+</div>
+</div><p>没有 nginx-ingress-controller-qxlt8 这个Pod。</p>
 <p>但是注意到 configmap ingress-controller-leader-nginx。</p>
 <p>打开之后看到：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-yaml" data-lang="yaml"><span class="ln"> 1</span><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l">v1</span><span class="w">
-</span><span class="ln"> 2</span><span class="w"></span><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l">ConfigMap</span><span class="w">
-</span><span class="ln"> 3</span><span class="w"></span><span class="nt">metadata</span><span class="p">:</span><span class="w">
-</span><span class="ln"> 4</span><span class="w">  </span><span class="nt">annotations</span><span class="p">:</span><span class="w">
-</span><span class="ln"> 5</span><span class="w">    </span><span class="nt">control-plane.alpha.kubernetes.io/leader</span><span class="p">:</span><span class="w"> </span><span class="s1">&#39;{&#34;holderIdentity&#34;:&#34;nginx-ingress-controller-qxlt8&#34;,&#34;leaseDurationSeconds&#34;:30,&#34;acquireTime&#34;:&#34;2021-05-10T13:38:53Z&#34;,&#34;renewTime&#34;:&#34;2021-05-12T06:28:50Z&#34;,&#34;leaderTransitions&#34;:11}&#39;</span><span class="w">
-</span><span class="ln"> 6</span><span class="w">  </span><span class="nt">creationTimestamp</span><span class="p">:</span><span class="w"> </span><span class="s2">&#34;2020-02-26T10:37:12Z&#34;</span><span class="w">
-</span><span class="ln"> 7</span><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">ingress-controller-leader-nginx</span><span class="w">
-</span><span class="ln"> 8</span><span class="w">  </span><span class="nt">namespace</span><span class="p">:</span><span class="w"> </span><span class="l">ingress-nginx</span><span class="w">
-</span><span class="ln"> 9</span><span class="w">  </span><span class="nt">resourceVersion</span><span class="p">:</span><span class="w"> </span><span class="s2">&#34;230445553&#34;</span><span class="w">
-</span><span class="ln">10</span><span class="w">  </span><span class="nt">selfLink</span><span class="p">:</span><span class="w"> </span><span class="l">/api/v1/namespaces/ingress-nginx/configmaps/ingress-controller-leader-nginx</span><span class="w">
-</span><span class="ln">11</span><span class="w">  </span><span class="nt">uid</span><span class="p">:</span><span class="w"> </span><span class="l">14a0deec-eab4-44d1-aff1-36979b52a1e1</span><span class="w">
-</span></code></pre></div><p>这个configmap是ingress-controller维护的，目前的值显然是错了。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-yaml" data-lang="yaml"><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l">v1</span><span class="w">
+</span><span class="w"></span><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l">ConfigMap</span><span class="w">
+</span><span class="w"></span><span class="nt">metadata</span><span class="p">:</span><span class="w">
+</span><span class="w">  </span><span class="nt">annotations</span><span class="p">:</span><span class="w">
+</span><span class="w">    </span><span class="nt">control-plane.alpha.kubernetes.io/leader</span><span class="p">:</span><span class="w"> </span><span class="s1">&#39;{&#34;holderIdentity&#34;:&#34;nginx-ingress-controller-qxlt8&#34;,&#34;leaseDurationSeconds&#34;:30,&#34;acquireTime&#34;:&#34;2021-05-10T13:38:53Z&#34;,&#34;renewTime&#34;:&#34;2021-05-12T06:28:50Z&#34;,&#34;leaderTransitions&#34;:11}&#39;</span><span class="w">
+</span><span class="w">  </span><span class="nt">creationTimestamp</span><span class="p">:</span><span class="w"> </span><span class="s2">&#34;2020-02-26T10:37:12Z&#34;</span><span class="w">
+</span><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">ingress-controller-leader-nginx</span><span class="w">
+</span><span class="w">  </span><span class="nt">namespace</span><span class="p">:</span><span class="w"> </span><span class="l">ingress-nginx</span><span class="w">
+</span><span class="w">  </span><span class="nt">resourceVersion</span><span class="p">:</span><span class="w"> </span><span class="s2">&#34;230445553&#34;</span><span class="w">
+</span><span class="w">  </span><span class="nt">selfLink</span><span class="p">:</span><span class="w"> </span><span class="l">/api/v1/namespaces/ingress-nginx/configmaps/ingress-controller-leader-nginx</span><span class="w">
+</span><span class="w">  </span><span class="nt">uid</span><span class="p">:</span><span class="w"> </span><span class="l">14a0deec-eab4-44d1-aff1-36979b52a1e1</span><span class="w">
+</span></code></pre></td></tr></table>
+</div>
+</div><p>这个configmap是ingress-controller维护的，目前的值显然是错了。</p>
 <h2 id="再次研究ingress-controller的leader推举机制">再次研究ingress-controller的leader推举机制<a class="anchor ms-1" href="#再次研究ingress-controller的leader推举机制"><i class="fas fa-link"></i></a></h2>
 <p>查了代码之后发现，ingress-controller其实并不是想象中的分布式共识协议推举leader，而是最简单的抢座位的方式来定leader。</p>
 <p>只要有一个controller在其他controller之前占有锁（就是前面提到的configmap），并且在lease之前（30秒）刷新这个锁，那它就是leader。</p>
@@ -401,11 +532,21 @@
 <p>所有Ingress上的status字段状态都更新了。</p>
 <h2 id="排查游离在k8s集群之外的节点">排查游离在K8S集群之外的节点<a class="anchor ms-1" href="#排查游离在k8s集群之外的节点"><i class="fas fa-link"></i></a></h2>
 <p>现在可以推断存在游离在K8S集群之外，但是可以和K8S通信的服务器，后来果然在一台不在集群范围内的机器上找到了：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>$ docker ps -a<span class="p">|</span>grep ingress
-<span class="ln">2</span>...
-<span class="ln">3</span>f4c861555842        a80ffa0b898e                         <span class="s2">&#34;/usr/bin/dumb-init â€¦&#34;</span>   <span class="m">5</span> months ago        Up <span class="m">5</span> months                                     k8s_nginx-ingress-controller_nginx-ingress-controller-qxlt8_ingress-nginx_40487677-32c0-4936-bd1a-3e3cb99fbfa1_0
-<span class="ln">4</span>...
-</code></pre></div><p>印证了之前的推断。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">$ docker ps -a<span class="p">|</span>grep ingress
+...
+f4c861555842        a80ffa0b898e                         <span class="s2">&#34;/usr/bin/dumb-init â€¦&#34;</span>   <span class="m">5</span> months ago        Up <span class="m">5</span> months                                     k8s_nginx-ingress-controller_nginx-ingress-controller-qxlt8_ingress-nginx_40487677-32c0-4936-bd1a-3e3cb99fbfa1_0
+...
+</code></pre></td></tr></table>
+</div>
+</div><p>印证了之前的推断。</p>
 <p>把这台服务器上的kubelet、kube-proxy和ingress-controller容器停掉。</p>
 <h2 id="总结">总结<a class="anchor ms-1" href="#总结"><i class="fas fa-link"></i></a></h2>
 <p>本次排查发现三个问题：</p>

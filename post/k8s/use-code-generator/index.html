@@ -12,7 +12,7 @@
 <meta name="description" content="" /><meta itemprop="name" content="使用code-generator编写CRD">
 <meta itemprop="description" content=""><meta itemprop="datePublished" content="2020-06-30T08:57:26+08:00" />
 <meta itemprop="dateModified" content="2020-06-30T08:57:26+08:00" />
-<meta itemprop="wordCount" content="2076">
+<meta itemprop="wordCount" content="2155">
 <meta itemprop="keywords" content="k8s," /><meta property="og:title" content="使用code-generator编写CRD" />
 <meta property="og:description" content="" />
 <meta property="og:type" content="article" />
@@ -232,194 +232,444 @@
 是一个代码生成工具，用于为你的CRD生成<a href="https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md" target="_blank" rel="noopener noreferrer">kubernetes-style API</a>
 实现，这样你就可以管理K8S上你的自定义CRD资源了。</p>
 <h2 id="第一步初始化项目">第一步：初始化项目<a class="anchor ms-1" href="#第一步初始化项目"><i class="fas fa-link"></i></a></h2>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span><span class="nv">MODULE</span><span class="o">=</span>example.com/foo-controller
-<span class="ln">2</span>go mod init <span class="nv">$MODULE</span>
-</code></pre></div><h2 id="第二步定义api">第二步：定义API<a class="anchor ms-1" href="#第二步定义api"><i class="fas fa-link"></i></a></h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="nv">MODULE</span><span class="o">=</span>example.com/foo-controller
+go mod init <span class="nv">$MODULE</span>
+</code></pre></td></tr></table>
+</div>
+</div><h2 id="第二步定义api">第二步：定义API<a class="anchor ms-1" href="#第二步定义api"><i class="fas fa-link"></i></a></h2>
 <p>新建目录<code>api/&lt;group&gt;/&lt;version&gt;</code>，这个目录下得有以下几个文件：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>.
-<span class="ln">2</span>└── api
-<span class="ln">3</span>    └── foo
-<span class="ln">4</span>    └── v1alpha1
-<span class="ln">5</span>        ├── doc.go
-<span class="ln">6</span>        ├── register.go
-<span class="ln">7</span>        └── types.go
-</code></pre></div><p>执行命令：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span><span class="nv">GROUP</span><span class="o">=</span>foo
-<span class="ln">2</span><span class="nv">VERSION</span><span class="o">=</span>v1alpha1
-<span class="ln">3</span>mkdir -p api/<span class="nv">$GROUP</span>/<span class="nv">$VERSION</span>
-</code></pre></div><p>编写文件<code>api/&lt;group&gt;/&lt;version&gt;/doc.go</code>，注意<code>//+groupName=foo.example.com</code>，你需要视情况修改：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="ln">1</span><span class="c1">// +k8s:deepcopy-gen=package
-</span><span class="ln">2</span><span class="c1">// +groupName=foo.example.com
-</span><span class="ln">3</span><span class="c1"></span>
-<span class="ln">4</span><span class="c1">// Package v1alpha1 is the v1alpha1 version of the API.
-</span><span class="ln">5</span><span class="c1"></span><span class="kn">package</span> <span class="nx">v1alpha1</span>
-</code></pre></div><p>编写文件<code>api/&lt;group&gt;/&lt;version&gt;/types.go</code>，注意视情况修改类名以及相关常量，<code>Status</code>字段并非必须的：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="ln"> 1</span><span class="kn">package</span> <span class="nx">v1alpha1</span>
-<span class="ln"> 2</span>
-<span class="ln"> 3</span><span class="kn">import</span> <span class="p">(</span>
-<span class="ln"> 4</span>	<span class="nx">metav1</span> <span class="s">&#34;k8s.io/apimachinery/pkg/apis/meta/v1&#34;</span>
-<span class="ln"> 5</span><span class="p">)</span>
-<span class="ln"> 6</span>
-<span class="ln"> 7</span><span class="c1">// These const variables are used in our custom controller.
-</span><span class="ln"> 8</span><span class="c1"></span><span class="kd">const</span> <span class="p">(</span>
-<span class="ln"> 9</span>	<span class="nx">GroupName</span> <span class="kt">string</span> <span class="p">=</span> <span class="s">&#34;foo.example.com&#34;</span>
-<span class="ln">10</span>	<span class="nx">Kind</span>      <span class="kt">string</span> <span class="p">=</span> <span class="s">&#34;Foo&#34;</span>
-<span class="ln">11</span>	<span class="nx">Version</span>   <span class="kt">string</span> <span class="p">=</span> <span class="s">&#34;v1alpha1&#34;</span>
-<span class="ln">12</span>	<span class="nx">Plural</span>    <span class="kt">string</span> <span class="p">=</span> <span class="s">&#34;foos&#34;</span>
-<span class="ln">13</span>	<span class="nx">Singluar</span>  <span class="kt">string</span> <span class="p">=</span> <span class="s">&#34;foo&#34;</span>
-<span class="ln">14</span>	<span class="nx">ShortName</span> <span class="kt">string</span> <span class="p">=</span> <span class="s">&#34;foo&#34;</span>
-<span class="ln">15</span>	<span class="nx">Name</span>      <span class="kt">string</span> <span class="p">=</span> <span class="nx">Plural</span> <span class="o">+</span> <span class="s">&#34;.&#34;</span> <span class="o">+</span> <span class="nx">GroupName</span>
-<span class="ln">16</span><span class="p">)</span>
-<span class="ln">17</span>
-<span class="ln">18</span><span class="c1">// +genclient
-</span><span class="ln">19</span><span class="c1">// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-</span><span class="ln">20</span><span class="c1"></span>
-<span class="ln">21</span><span class="c1">// Foo is a specification for a Foo resource
-</span><span class="ln">22</span><span class="c1"></span><span class="kd">type</span> <span class="nx">Foo</span> <span class="kd">struct</span> <span class="p">{</span>
-<span class="ln">23</span>	<span class="nx">metav1</span><span class="p">.</span><span class="nx">TypeMeta</span>   <span class="s">`json:&#34;,inline&#34;`</span>
-<span class="ln">24</span>	<span class="nx">metav1</span><span class="p">.</span><span class="nx">ObjectMeta</span> <span class="s">`json:&#34;metadata,omitempty&#34;`</span>
-<span class="ln">25</span>
-<span class="ln">26</span>	<span class="nx">Spec</span>   <span class="nx">FooSpec</span>   <span class="s">`json:&#34;spec&#34;`</span>
-<span class="ln">27</span>	<span class="nx">Status</span> <span class="nx">FooStatus</span> <span class="s">`json:&#34;status&#34;`</span>
-<span class="ln">28</span><span class="p">}</span>
-<span class="ln">29</span>
-<span class="ln">30</span><span class="c1">// FooSpec is the spec for a Foo resource
-</span><span class="ln">31</span><span class="c1"></span><span class="kd">type</span> <span class="nx">FooSpec</span> <span class="kd">struct</span> <span class="p">{</span>
-<span class="ln">32</span>	<span class="nx">DeploymentName</span> <span class="kt">string</span> <span class="s">`json:&#34;deploymentName&#34;`</span>
-<span class="ln">33</span>	<span class="nx">Replicas</span>       <span class="o">*</span><span class="kt">int32</span> <span class="s">`json:&#34;replicas&#34;`</span>
-<span class="ln">34</span><span class="p">}</span>
-<span class="ln">35</span>
-<span class="ln">36</span><span class="c1">// FooStatus is the status for a Foo resource
-</span><span class="ln">37</span><span class="c1"></span><span class="kd">type</span> <span class="nx">FooStatus</span> <span class="kd">struct</span> <span class="p">{</span>
-<span class="ln">38</span>	<span class="nx">AvailableReplicas</span> <span class="kt">int32</span> <span class="s">`json:&#34;availableReplicas&#34;`</span>
-<span class="ln">39</span><span class="p">}</span>
-<span class="ln">40</span>
-<span class="ln">41</span><span class="c1">// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-</span><span class="ln">42</span><span class="c1"></span>
-<span class="ln">43</span><span class="c1">// FooList is a list of Foo resources
-</span><span class="ln">44</span><span class="c1"></span><span class="kd">type</span> <span class="nx">FooList</span> <span class="kd">struct</span> <span class="p">{</span>
-<span class="ln">45</span>	<span class="nx">metav1</span><span class="p">.</span><span class="nx">TypeMeta</span> <span class="s">`json:&#34;,inline&#34;`</span>
-<span class="ln">46</span>	<span class="nx">metav1</span><span class="p">.</span><span class="nx">ListMeta</span> <span class="s">`json:&#34;metadata&#34;`</span>
-<span class="ln">47</span>
-<span class="ln">48</span>	<span class="nx">Items</span> <span class="p">[]</span><span class="nx">Foo</span> <span class="s">`json:&#34;items&#34;`</span>
-<span class="ln">49</span><span class="p">}</span>
-</code></pre></div><p>编写文件<code>api/&lt;group&gt;/register.go</code></p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="ln"> 1</span><span class="kn">package</span> <span class="nx">v1alpha1</span>
-<span class="ln"> 2</span>
-<span class="ln"> 3</span><span class="kn">import</span> <span class="p">(</span>
-<span class="ln"> 4</span>	<span class="nx">metav1</span> <span class="s">&#34;k8s.io/apimachinery/pkg/apis/meta/v1&#34;</span>
-<span class="ln"> 5</span>	<span class="s">&#34;k8s.io/apimachinery/pkg/runtime&#34;</span>
-<span class="ln"> 6</span>	<span class="s">&#34;k8s.io/apimachinery/pkg/runtime/schema&#34;</span>
-<span class="ln"> 7</span><span class="p">)</span>
-<span class="ln"> 8</span>
-<span class="ln"> 9</span><span class="kd">var</span> <span class="p">(</span>
-<span class="ln">10</span>	<span class="c1">// SchemeBuilder initializes a scheme builder
-</span><span class="ln">11</span><span class="c1"></span>	<span class="nx">SchemeBuilder</span> <span class="p">=</span> <span class="nx">runtime</span><span class="p">.</span><span class="nf">NewSchemeBuilder</span><span class="p">(</span><span class="nx">addKnownTypes</span><span class="p">)</span>
-<span class="ln">12</span>	<span class="c1">// AddToScheme is a global function that registers this API group &amp; version to a scheme
-</span><span class="ln">13</span><span class="c1"></span>	<span class="nx">AddToScheme</span> <span class="p">=</span> <span class="nx">SchemeBuilder</span><span class="p">.</span><span class="nx">AddToScheme</span>
-<span class="ln">14</span><span class="p">)</span>
-<span class="ln">15</span>
-<span class="ln">16</span><span class="c1">// SchemeGroupVersion is group version used to register these objects.
-</span><span class="ln">17</span><span class="c1"></span><span class="kd">var</span> <span class="nx">SchemeGroupVersion</span> <span class="p">=</span> <span class="nx">schema</span><span class="p">.</span><span class="nx">GroupVersion</span><span class="p">{</span>
-<span class="ln">18</span>	<span class="nx">Group</span><span class="p">:</span>   <span class="nx">GroupName</span><span class="p">,</span>
-<span class="ln">19</span>	<span class="nx">Version</span><span class="p">:</span> <span class="nx">Version</span><span class="p">,</span>
-<span class="ln">20</span><span class="p">}</span>
-<span class="ln">21</span>
-<span class="ln">22</span><span class="kd">func</span> <span class="nf">Resource</span><span class="p">(</span><span class="nx">resource</span> <span class="kt">string</span><span class="p">)</span> <span class="nx">schema</span><span class="p">.</span><span class="nx">GroupResource</span> <span class="p">{</span>
-<span class="ln">23</span>	<span class="k">return</span> <span class="nx">SchemeGroupVersion</span><span class="p">.</span><span class="nf">WithResource</span><span class="p">(</span><span class="nx">resource</span><span class="p">).</span><span class="nf">GroupResource</span><span class="p">()</span>
-<span class="ln">24</span><span class="p">}</span>
-<span class="ln">25</span>
-<span class="ln">26</span><span class="kd">func</span> <span class="nf">addKnownTypes</span><span class="p">(</span><span class="nx">scheme</span> <span class="o">*</span><span class="nx">runtime</span><span class="p">.</span><span class="nx">Scheme</span><span class="p">)</span> <span class="kt">error</span> <span class="p">{</span>
-<span class="ln">27</span>	<span class="nx">scheme</span><span class="p">.</span><span class="nf">AddKnownTypes</span><span class="p">(</span><span class="nx">SchemeGroupVersion</span><span class="p">,</span>
-<span class="ln">28</span>		<span class="o">&amp;</span><span class="nx">Foo</span><span class="p">{},</span>
-<span class="ln">29</span>		<span class="o">&amp;</span><span class="nx">FooList</span><span class="p">{},</span>
-<span class="ln">30</span>	<span class="p">)</span>
-<span class="ln">31</span>	<span class="nx">metav1</span><span class="p">.</span><span class="nf">AddToGroupVersion</span><span class="p">(</span><span class="nx">scheme</span><span class="p">,</span> <span class="nx">SchemeGroupVersion</span><span class="p">)</span>
-<span class="ln">32</span>	<span class="k">return</span> <span class="kc">nil</span>
-<span class="ln">33</span><span class="p">}</span>
-</code></pre></div><p>然后添加依赖：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span><span class="nv">K8S_VERSION</span><span class="o">=</span>v0.18.5
-<span class="ln">2</span>go get k8s.io/apimachinery@<span class="nv">$K8S_VERSION</span>
-</code></pre></div><h2 id="第三步代码生成">第三步：代码生成<a class="anchor ms-1" href="#第三步代码生成"><i class="fas fa-link"></i></a></h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">.
+└── api
+    └── foo
+    └── v1alpha1
+        ├── doc.go
+        ├── register.go
+        └── types.go
+</code></pre></td></tr></table>
+</div>
+</div><p>执行命令：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="nv">GROUP</span><span class="o">=</span>foo
+<span class="nv">VERSION</span><span class="o">=</span>v1alpha1
+mkdir -p api/<span class="nv">$GROUP</span>/<span class="nv">$VERSION</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>编写文件<code>api/&lt;group&gt;/&lt;version&gt;/doc.go</code>，注意<code>//+groupName=foo.example.com</code>，你需要视情况修改：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="c1">// +k8s:deepcopy-gen=package
+</span><span class="c1">// +groupName=foo.example.com
+</span><span class="c1"></span>
+<span class="c1">// Package v1alpha1 is the v1alpha1 version of the API.
+</span><span class="c1"></span><span class="kn">package</span> <span class="nx">v1alpha1</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>编写文件<code>api/&lt;group&gt;/&lt;version&gt;/types.go</code>，注意视情况修改类名以及相关常量，<code>Status</code>字段并非必须的：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span><span class="lnt">46
+</span><span class="lnt">47
+</span><span class="lnt">48
+</span><span class="lnt">49
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="kn">package</span> <span class="nx">v1alpha1</span>
+
+<span class="kn">import</span> <span class="p">(</span>
+	<span class="nx">metav1</span> <span class="s">&#34;k8s.io/apimachinery/pkg/apis/meta/v1&#34;</span>
+<span class="p">)</span>
+
+<span class="c1">// These const variables are used in our custom controller.
+</span><span class="c1"></span><span class="kd">const</span> <span class="p">(</span>
+	<span class="nx">GroupName</span> <span class="kt">string</span> <span class="p">=</span> <span class="s">&#34;foo.example.com&#34;</span>
+	<span class="nx">Kind</span>      <span class="kt">string</span> <span class="p">=</span> <span class="s">&#34;Foo&#34;</span>
+	<span class="nx">Version</span>   <span class="kt">string</span> <span class="p">=</span> <span class="s">&#34;v1alpha1&#34;</span>
+	<span class="nx">Plural</span>    <span class="kt">string</span> <span class="p">=</span> <span class="s">&#34;foos&#34;</span>
+	<span class="nx">Singluar</span>  <span class="kt">string</span> <span class="p">=</span> <span class="s">&#34;foo&#34;</span>
+	<span class="nx">ShortName</span> <span class="kt">string</span> <span class="p">=</span> <span class="s">&#34;foo&#34;</span>
+	<span class="nx">Name</span>      <span class="kt">string</span> <span class="p">=</span> <span class="nx">Plural</span> <span class="o">+</span> <span class="s">&#34;.&#34;</span> <span class="o">+</span> <span class="nx">GroupName</span>
+<span class="p">)</span>
+
+<span class="c1">// +genclient
+</span><span class="c1">// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+</span><span class="c1"></span>
+<span class="c1">// Foo is a specification for a Foo resource
+</span><span class="c1"></span><span class="kd">type</span> <span class="nx">Foo</span> <span class="kd">struct</span> <span class="p">{</span>
+	<span class="nx">metav1</span><span class="p">.</span><span class="nx">TypeMeta</span>   <span class="s">`json:&#34;,inline&#34;`</span>
+	<span class="nx">metav1</span><span class="p">.</span><span class="nx">ObjectMeta</span> <span class="s">`json:&#34;metadata,omitempty&#34;`</span>
+
+	<span class="nx">Spec</span>   <span class="nx">FooSpec</span>   <span class="s">`json:&#34;spec&#34;`</span>
+	<span class="nx">Status</span> <span class="nx">FooStatus</span> <span class="s">`json:&#34;status&#34;`</span>
+<span class="p">}</span>
+
+<span class="c1">// FooSpec is the spec for a Foo resource
+</span><span class="c1"></span><span class="kd">type</span> <span class="nx">FooSpec</span> <span class="kd">struct</span> <span class="p">{</span>
+	<span class="nx">DeploymentName</span> <span class="kt">string</span> <span class="s">`json:&#34;deploymentName&#34;`</span>
+	<span class="nx">Replicas</span>       <span class="o">*</span><span class="kt">int32</span> <span class="s">`json:&#34;replicas&#34;`</span>
+<span class="p">}</span>
+
+<span class="c1">// FooStatus is the status for a Foo resource
+</span><span class="c1"></span><span class="kd">type</span> <span class="nx">FooStatus</span> <span class="kd">struct</span> <span class="p">{</span>
+	<span class="nx">AvailableReplicas</span> <span class="kt">int32</span> <span class="s">`json:&#34;availableReplicas&#34;`</span>
+<span class="p">}</span>
+
+<span class="c1">// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+</span><span class="c1"></span>
+<span class="c1">// FooList is a list of Foo resources
+</span><span class="c1"></span><span class="kd">type</span> <span class="nx">FooList</span> <span class="kd">struct</span> <span class="p">{</span>
+	<span class="nx">metav1</span><span class="p">.</span><span class="nx">TypeMeta</span> <span class="s">`json:&#34;,inline&#34;`</span>
+	<span class="nx">metav1</span><span class="p">.</span><span class="nx">ListMeta</span> <span class="s">`json:&#34;metadata&#34;`</span>
+
+	<span class="nx">Items</span> <span class="p">[]</span><span class="nx">Foo</span> <span class="s">`json:&#34;items&#34;`</span>
+<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>编写文件<code>api/&lt;group&gt;/register.go</code></p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="kn">package</span> <span class="nx">v1alpha1</span>
+
+<span class="kn">import</span> <span class="p">(</span>
+	<span class="nx">metav1</span> <span class="s">&#34;k8s.io/apimachinery/pkg/apis/meta/v1&#34;</span>
+	<span class="s">&#34;k8s.io/apimachinery/pkg/runtime&#34;</span>
+	<span class="s">&#34;k8s.io/apimachinery/pkg/runtime/schema&#34;</span>
+<span class="p">)</span>
+
+<span class="kd">var</span> <span class="p">(</span>
+	<span class="c1">// SchemeBuilder initializes a scheme builder
+</span><span class="c1"></span>	<span class="nx">SchemeBuilder</span> <span class="p">=</span> <span class="nx">runtime</span><span class="p">.</span><span class="nf">NewSchemeBuilder</span><span class="p">(</span><span class="nx">addKnownTypes</span><span class="p">)</span>
+	<span class="c1">// AddToScheme is a global function that registers this API group &amp; version to a scheme
+</span><span class="c1"></span>	<span class="nx">AddToScheme</span> <span class="p">=</span> <span class="nx">SchemeBuilder</span><span class="p">.</span><span class="nx">AddToScheme</span>
+<span class="p">)</span>
+
+<span class="c1">// SchemeGroupVersion is group version used to register these objects.
+</span><span class="c1"></span><span class="kd">var</span> <span class="nx">SchemeGroupVersion</span> <span class="p">=</span> <span class="nx">schema</span><span class="p">.</span><span class="nx">GroupVersion</span><span class="p">{</span>
+	<span class="nx">Group</span><span class="p">:</span>   <span class="nx">GroupName</span><span class="p">,</span>
+	<span class="nx">Version</span><span class="p">:</span> <span class="nx">Version</span><span class="p">,</span>
+<span class="p">}</span>
+
+<span class="kd">func</span> <span class="nf">Resource</span><span class="p">(</span><span class="nx">resource</span> <span class="kt">string</span><span class="p">)</span> <span class="nx">schema</span><span class="p">.</span><span class="nx">GroupResource</span> <span class="p">{</span>
+	<span class="k">return</span> <span class="nx">SchemeGroupVersion</span><span class="p">.</span><span class="nf">WithResource</span><span class="p">(</span><span class="nx">resource</span><span class="p">).</span><span class="nf">GroupResource</span><span class="p">()</span>
+<span class="p">}</span>
+
+<span class="kd">func</span> <span class="nf">addKnownTypes</span><span class="p">(</span><span class="nx">scheme</span> <span class="o">*</span><span class="nx">runtime</span><span class="p">.</span><span class="nx">Scheme</span><span class="p">)</span> <span class="kt">error</span> <span class="p">{</span>
+	<span class="nx">scheme</span><span class="p">.</span><span class="nf">AddKnownTypes</span><span class="p">(</span><span class="nx">SchemeGroupVersion</span><span class="p">,</span>
+		<span class="o">&amp;</span><span class="nx">Foo</span><span class="p">{},</span>
+		<span class="o">&amp;</span><span class="nx">FooList</span><span class="p">{},</span>
+	<span class="p">)</span>
+	<span class="nx">metav1</span><span class="p">.</span><span class="nf">AddToGroupVersion</span><span class="p">(</span><span class="nx">scheme</span><span class="p">,</span> <span class="nx">SchemeGroupVersion</span><span class="p">)</span>
+	<span class="k">return</span> <span class="kc">nil</span>
+<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>然后添加依赖：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="nv">K8S_VERSION</span><span class="o">=</span>v0.18.5
+go get k8s.io/apimachinery@<span class="nv">$K8S_VERSION</span>
+</code></pre></td></tr></table>
+</div>
+</div><h2 id="第三步代码生成">第三步：代码生成<a class="anchor ms-1" href="#第三步代码生成"><i class="fas fa-link"></i></a></h2>
 <h3 id="1准备脚本">1）准备脚本<a class="anchor ms-1" href="#1准备脚本"><i class="fas fa-link"></i></a></h3>
 <p>新建目录hack，我们需要在hack目录下有以下几个文件：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>.
-<span class="ln">2</span>└── hack
-<span class="ln">3</span>    ├── boilerplate.go.txt
-<span class="ln">4</span>    ├── tools.go
-<span class="ln">5</span>    ├── update-codegen.sh
-<span class="ln">6</span>    └── verify-codegen.sh
-</code></pre></div><p>执行命令：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>mkdir hack
-<span class="ln">2</span>touch hack/boilerplate.go.txt
-</code></pre></div><p>新建<code>hack/tools.go</code>文件：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="ln">1</span><span class="c1">// +build tools
-</span><span class="ln">2</span><span class="c1"></span>
-<span class="ln">3</span><span class="kn">package</span> <span class="nx">tools</span>
-<span class="ln">4</span>
-<span class="ln">5</span><span class="kn">import</span> <span class="nx">_</span> <span class="s">&#34;k8s.io/code-generator&#34;</span>
-</code></pre></div><p>新建<code>hack/update-codegen.sh</code>，注意修改几个变量：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">.
+└── hack
+    ├── boilerplate.go.txt
+    ├── tools.go
+    ├── update-codegen.sh
+    └── verify-codegen.sh
+</code></pre></td></tr></table>
+</div>
+</div><p>执行命令：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">mkdir hack
+touch hack/boilerplate.go.txt
+</code></pre></td></tr></table>
+</div>
+</div><p>新建<code>hack/tools.go</code>文件：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="c1">// +build tools
+</span><span class="c1"></span>
+<span class="kn">package</span> <span class="nx">tools</span>
+
+<span class="kn">import</span> <span class="nx">_</span> <span class="s">&#34;k8s.io/code-generator&#34;</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>新建<code>hack/update-codegen.sh</code>，注意修改几个变量：</p>
 <ul>
 <li><code>MODULE</code>和<code>go.mod</code>保持一致</li>
 <li><code>API_PKG=api</code>，和我们的目录保持一致</li>
 <li><code>OUTPUT_PKG</code></li>
 <li><code>GROUP_VERSION=foo.v1alpha1</code>而不是<code>foo.example.com:v1alpha1</code>，因为code generator会读取我们之前写的<code>api/&lt;group&gt;/&lt;version&gt;</code>下的代码，因此得要对应上这个路径：</li>
 </ul>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln"> 1</span><span class="cp">#!/usr/bin/env bash
-</span><span class="ln"> 2</span><span class="cp"></span>
-<span class="ln"> 3</span><span class="nb">set</span> -o errexit
-<span class="ln"> 4</span><span class="nb">set</span> -o nounset
-<span class="ln"> 5</span><span class="nb">set</span> -o pipefail
-<span class="ln"> 6</span>
-<span class="ln"> 7</span><span class="c1"># corresponding to go mod init &lt;module&gt;</span>
-<span class="ln"> 8</span><span class="nv">MODULE</span><span class="o">=</span>example.com/foo-controller
-<span class="ln"> 9</span><span class="c1"># api package</span>
-<span class="ln">10</span><span class="nv">APIS_PKG</span><span class="o">=</span>api
-<span class="ln">11</span><span class="c1"># generated output package</span>
-<span class="ln">12</span><span class="nv">OUTPUT_PKG</span><span class="o">=</span>generated
-<span class="ln">13</span><span class="c1"># group-version such as foo:v1alpha1</span>
-<span class="ln">14</span><span class="nv">GROUP_VERSION</span><span class="o">=</span>foo:v1alpha1
-<span class="ln">15</span>
-<span class="ln">16</span><span class="nv">SCRIPT_ROOT</span><span class="o">=</span><span class="k">$(</span>dirname <span class="s2">&#34;</span><span class="si">${</span><span class="nv">BASH_SOURCE</span><span class="p">[0]</span><span class="si">}</span><span class="s2">&#34;</span><span class="k">)</span>/..
-<span class="ln">17</span><span class="nv">CODEGEN_PKG</span><span class="o">=</span><span class="si">${</span><span class="nv">CODEGEN_PKG</span><span class="k">:-$(</span><span class="nb">cd</span> <span class="s2">&#34;</span><span class="si">${</span><span class="nv">SCRIPT_ROOT</span><span class="si">}</span><span class="s2">&#34;</span><span class="p">;</span> ls -d -1 ./vendor/k8s.io/code-generator 2&gt;/dev/null <span class="o">||</span> <span class="nb">echo</span> ../code-generator<span class="k">)</span><span class="si">}</span>
-<span class="ln">18</span>
-<span class="ln">19</span><span class="c1"># generate the code with:</span>
-<span class="ln">20</span><span class="c1"># --output-base    because this script should also be able to run inside the vendor dir of</span>
-<span class="ln">21</span><span class="c1">#                  k8s.io/kubernetes. The output-base is needed for the generators to output into the vendor dir</span>
-<span class="ln">22</span><span class="c1">#                  instead of the $GOPATH directly. For normal projects this can be dropped.</span>
-<span class="ln">23</span>bash <span class="s2">&#34;</span><span class="si">${</span><span class="nv">CODEGEN_PKG</span><span class="si">}</span><span class="s2">&#34;</span>/generate-groups.sh <span class="s2">&#34;all&#34;</span> <span class="se">\
-</span><span class="ln">24</span><span class="se"></span>  <span class="si">${</span><span class="nv">MODULE</span><span class="si">}</span>/<span class="si">${</span><span class="nv">OUTPUT_PKG</span><span class="si">}</span> <span class="si">${</span><span class="nv">MODULE</span><span class="si">}</span>/<span class="si">${</span><span class="nv">APIS_PKG</span><span class="si">}</span> <span class="se">\
-</span><span class="ln">25</span><span class="se"></span>  <span class="si">${</span><span class="nv">GROUP_VERSION</span><span class="si">}</span> <span class="se">\
-</span><span class="ln">26</span><span class="se"></span>  --go-header-file <span class="s2">&#34;</span><span class="si">${</span><span class="nv">SCRIPT_ROOT</span><span class="si">}</span><span class="s2">&#34;</span>/hack/boilerplate.go.txt <span class="se">\
-</span><span class="ln">27</span><span class="se"></span>  --output-base <span class="s2">&#34;</span><span class="si">${</span><span class="nv">SCRIPT_ROOT</span><span class="si">}</span><span class="s2">&#34;</span>
-<span class="ln">28</span><span class="c1">#  --output-base &#34;$(dirname &#34;${BASH_SOURCE[0]}&#34;)/../../..&#34; \</span>
-<span class="ln">29</span>
-<span class="ln">30</span><span class="c1"># To use your own boilerplate text append:</span>
-<span class="ln">31</span><span class="c1">#   --go-header-file &#34;${SCRIPT_ROOT}&#34;/hack/custom-boilerplate.go.txt</span>
-</code></pre></div><p>新建<code>hack/verify-codegen.sh</code>（文件内容请看github项目）。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="cp">#!/usr/bin/env bash
+</span><span class="cp"></span>
+<span class="nb">set</span> -o errexit
+<span class="nb">set</span> -o nounset
+<span class="nb">set</span> -o pipefail
+
+<span class="c1"># corresponding to go mod init &lt;module&gt;</span>
+<span class="nv">MODULE</span><span class="o">=</span>example.com/foo-controller
+<span class="c1"># api package</span>
+<span class="nv">APIS_PKG</span><span class="o">=</span>api
+<span class="c1"># generated output package</span>
+<span class="nv">OUTPUT_PKG</span><span class="o">=</span>generated
+<span class="c1"># group-version such as foo:v1alpha1</span>
+<span class="nv">GROUP_VERSION</span><span class="o">=</span>foo:v1alpha1
+
+<span class="nv">SCRIPT_ROOT</span><span class="o">=</span><span class="k">$(</span>dirname <span class="s2">&#34;</span><span class="si">${</span><span class="nv">BASH_SOURCE</span><span class="p">[0]</span><span class="si">}</span><span class="s2">&#34;</span><span class="k">)</span>/..
+<span class="nv">CODEGEN_PKG</span><span class="o">=</span><span class="si">${</span><span class="nv">CODEGEN_PKG</span><span class="k">:-$(</span><span class="nb">cd</span> <span class="s2">&#34;</span><span class="si">${</span><span class="nv">SCRIPT_ROOT</span><span class="si">}</span><span class="s2">&#34;</span><span class="p">;</span> ls -d -1 ./vendor/k8s.io/code-generator 2&gt;/dev/null <span class="o">||</span> <span class="nb">echo</span> ../code-generator<span class="k">)</span><span class="si">}</span>
+
+<span class="c1"># generate the code with:</span>
+<span class="c1"># --output-base    because this script should also be able to run inside the vendor dir of</span>
+<span class="c1">#                  k8s.io/kubernetes. The output-base is needed for the generators to output into the vendor dir</span>
+<span class="c1">#                  instead of the $GOPATH directly. For normal projects this can be dropped.</span>
+bash <span class="s2">&#34;</span><span class="si">${</span><span class="nv">CODEGEN_PKG</span><span class="si">}</span><span class="s2">&#34;</span>/generate-groups.sh <span class="s2">&#34;all&#34;</span> <span class="se">\
+</span><span class="se"></span>  <span class="si">${</span><span class="nv">MODULE</span><span class="si">}</span>/<span class="si">${</span><span class="nv">OUTPUT_PKG</span><span class="si">}</span> <span class="si">${</span><span class="nv">MODULE</span><span class="si">}</span>/<span class="si">${</span><span class="nv">APIS_PKG</span><span class="si">}</span> <span class="se">\
+</span><span class="se"></span>  <span class="si">${</span><span class="nv">GROUP_VERSION</span><span class="si">}</span> <span class="se">\
+</span><span class="se"></span>  --go-header-file <span class="s2">&#34;</span><span class="si">${</span><span class="nv">SCRIPT_ROOT</span><span class="si">}</span><span class="s2">&#34;</span>/hack/boilerplate.go.txt <span class="se">\
+</span><span class="se"></span>  --output-base <span class="s2">&#34;</span><span class="si">${</span><span class="nv">SCRIPT_ROOT</span><span class="si">}</span><span class="s2">&#34;</span>
+<span class="c1">#  --output-base &#34;$(dirname &#34;${BASH_SOURCE[0]}&#34;)/../../..&#34; \</span>
+
+<span class="c1"># To use your own boilerplate text append:</span>
+<span class="c1">#   --go-header-file &#34;${SCRIPT_ROOT}&#34;/hack/custom-boilerplate.go.txt</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>新建<code>hack/verify-codegen.sh</code>（文件内容请看github项目）。</p>
 <h3 id="2下载code-generator">2）下载code-generator<a class="anchor ms-1" href="#2下载code-generator"><i class="fas fa-link"></i></a></h3>
 <p>先把<a href="https://pkg.go.dev/mod/k8s.io/code-generator?tab=overview" target="_blank" rel="noopener noreferrer">code-generator</a>
 下载下来，注意这里的K8S版本号，得和前面是一致的：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span><span class="nv">K8S_VERSION</span><span class="o">=</span>v0.18.5
-<span class="ln">2</span>go get k8s.io/code-generator@<span class="nv">$K8S_VERSION</span>
-<span class="ln">3</span>go mod vendor
-</code></pre></div><p>然后给<code>generate-groups.sh</code>添加可执行权限：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>chmod +x vendor/k8s.io/code-generator/generate-groups.sh
-</code></pre></div><h3 id="3生成代码">3）生成代码<a class="anchor ms-1" href="#3生成代码"><i class="fas fa-link"></i></a></h3>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="nv">K8S_VERSION</span><span class="o">=</span>v0.18.5
+go get k8s.io/code-generator@<span class="nv">$K8S_VERSION</span>
+go mod vendor
+</code></pre></td></tr></table>
+</div>
+</div><p>然后给<code>generate-groups.sh</code>添加可执行权限：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">chmod +x vendor/k8s.io/code-generator/generate-groups.sh
+</code></pre></td></tr></table>
+</div>
+</div><h3 id="3生成代码">3）生成代码<a class="anchor ms-1" href="#3生成代码"><i class="fas fa-link"></i></a></h3>
 <p>执行<code>hack/update-codegen.sh</code>：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>./hack/update-codegen.sh
-</code></pre></div><p>代码会生成在<code>example.com/foo-controller</code>目录下（回忆前面的<code>MODULE=example.com/foo-controller</code>和<code>OUTPUT_PKG=generated</code>参数）：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln"> 1</span>example.com
-<span class="ln"> 2</span>└── foo-controller
-<span class="ln"> 3</span>    ├── api
-<span class="ln"> 4</span>    │   └── foo
-<span class="ln"> 5</span>    │       └── v1alpha1
-<span class="ln"> 6</span>    │           └── zz_generated.deepcopy.go
-<span class="ln"> 7</span>    └── generated
-<span class="ln"> 8</span>        ├── clientset
-<span class="ln"> 9</span>        ├── informers
-<span class="ln">10</span>        └── listers
-</code></pre></div><p>移动文件：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">./hack/update-codegen.sh
+</code></pre></td></tr></table>
+</div>
+</div><p>代码会生成在<code>example.com/foo-controller</code>目录下（回忆前面的<code>MODULE=example.com/foo-controller</code>和<code>OUTPUT_PKG=generated</code>参数）：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt">example.com
+└── foo-controller
+    ├── api
+    │   └── foo
+    │       └── v1alpha1
+    │           └── zz_generated.deepcopy.go
+    └── generated
+        ├── clientset
+        ├── informers
+        └── listers
+</code></pre></td></tr></table>
+</div>
+</div><p>移动文件：</p>
 <ul>
 <li><code>zz_generated.deepcopy.go</code>移动到<code>api/&lt;group&gt;/&lt;version&gt;</code>下</li>
 <li><code>example.com/foo-controller/generated</code>直接移出来，放到项目根下面<code>generated</code></li>

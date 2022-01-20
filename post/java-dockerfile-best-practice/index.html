@@ -12,7 +12,7 @@
 <meta name="description" content="本文推荐了一种Java程序制作Docker Image的方案。" /><meta itemprop="name" content="Java程序制作Docker Image推荐方案">
 <meta itemprop="description" content="本文推荐了一种Java程序制作Docker Image的方案。"><meta itemprop="datePublished" content="2018-09-20T14:36:00+08:00" />
 <meta itemprop="dateModified" content="2018-09-20T14:36:00+08:00" />
-<meta itemprop="wordCount" content="1886">
+<meta itemprop="wordCount" content="1901">
 <meta itemprop="keywords" content="docker,java," /><meta property="og:title" content="Java程序制作Docker Image推荐方案" />
 <meta property="og:description" content="本文推荐了一种Java程序制作Docker Image的方案。" />
 <meta property="og:type" content="article" />
@@ -254,25 +254,53 @@
 <li>openjdk:&lt;version&gt;-alpine</li>
 </ul>
 <p>关于<code>&lt;version&gt;</code>一般来说指定大版本号就行了，比如你可以在Dockerfile这样写：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln">1</span>FROM openjdk:8-alpine
-</code></pre></div><p>从尺寸上来讲，alpine最小、slim稍大、默认的最大。所以应该尽可能的使用alpine版本的，如果发现程序的运行环境缺少某些东西，那么尝试用slim版本或者默认版本。就目前的经验来讲：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt">FROM openjdk:8-alpine
+</code></pre></td></tr></table>
+</div>
+</div><p>从尺寸上来讲，alpine最小、slim稍大、默认的最大。所以应该尽可能的使用alpine版本的，如果发现程序的运行环境缺少某些东西，那么尝试用slim版本或者默认版本。就目前的经验来讲：</p>
 <ul>
 <li>如果需要操作系统字体库，那么就得使用slim版本或者默认版本。需要操作系统字体库的程序例如：图片验证码、PDF导出。</li>
 <li>如果需要某些Linux标准的动态/静态连接库，那么在alpine版本不行的情况下，尝试slim版本或默认版本。因为alpine版本是一个及其精简的Linux，它删除了很多东西。</li>
 </ul>
 <h3 id="设定正确的时区">设定正确的时区<a class="anchor ms-1" href="#设定正确的时区"><i class="fas fa-link"></i></a></h3>
 <p>几乎所有的Docker Image的时区都是UTC，我们需要给我们自己制作的Docker Image设定时区：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>ENV <span class="nv">TZ</span><span class="o">=</span>Asia/Shanghai
-<span class="ln">2</span>RUN <span class="nb">set</span> -eux<span class="p">;</span> <span class="se">\
-</span><span class="ln">3</span><span class="se"></span>    ln -snf /usr/share/zoneinfo/<span class="nv">$TZ</span> /etc/localtime<span class="p">;</span> <span class="se">\
-</span><span class="ln">4</span><span class="se"></span>    <span class="nb">echo</span> <span class="nv">$TZ</span> &gt; /etc/timezone
-</code></pre></div><p>如果是alpine系列的则要安装tzdata：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>ENV <span class="nv">TZ</span><span class="o">=</span>Asia/Shanghai
-<span class="ln">2</span>RUN <span class="nb">set</span> -eux<span class="p">;</span> <span class="se">\
-</span><span class="ln">3</span><span class="se"></span>    apk add --no-cache --update tzdata<span class="p">;</span> <span class="se">\
-</span><span class="ln">4</span><span class="se"></span>    ln -snf /usr/share/zoneinfo/<span class="nv">$TZ</span> /etc/localtime<span class="p">;</span> <span class="se">\
-</span><span class="ln">5</span><span class="se"></span>    <span class="nb">echo</span> <span class="nv">$TZ</span> &gt; /etc/timezone
-</code></pre></div><p>关于数据库时区的相关内容可以见：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">ENV <span class="nv">TZ</span><span class="o">=</span>Asia/Shanghai
+RUN <span class="nb">set</span> -eux<span class="p">;</span> <span class="se">\
+</span><span class="se"></span>    ln -snf /usr/share/zoneinfo/<span class="nv">$TZ</span> /etc/localtime<span class="p">;</span> <span class="se">\
+</span><span class="se"></span>    <span class="nb">echo</span> <span class="nv">$TZ</span> &gt; /etc/timezone
+</code></pre></td></tr></table>
+</div>
+</div><p>如果是alpine系列的则要安装tzdata：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">ENV <span class="nv">TZ</span><span class="o">=</span>Asia/Shanghai
+RUN <span class="nb">set</span> -eux<span class="p">;</span> <span class="se">\
+</span><span class="se"></span>    apk add --no-cache --update tzdata<span class="p">;</span> <span class="se">\
+</span><span class="se"></span>    ln -snf /usr/share/zoneinfo/<span class="nv">$TZ</span> /etc/localtime<span class="p">;</span> <span class="se">\
+</span><span class="se"></span>    <span class="nb">echo</span> <span class="nv">$TZ</span> &gt; /etc/timezone
+</code></pre></td></tr></table>
+</div>
+</div><p>关于数据库时区的相关内容可以见：</p>
 <ul>
 <li><a href="https://segmentfault.com/a/1190000016426048" target="_blank" rel="noopener noreferrer">数据库时区那些事儿 - MySQL的时区处理</a>
 </li>
@@ -282,22 +310,56 @@
 <h3 id="container内的程序以非root用户启动">Container内的程序以非root用户启动<a class="anchor ms-1" href="#container内的程序以非root用户启动"><i class="fas fa-link"></i></a></h3>
 <p>在Docker Image内部，我们应该使用非root用户启动程序，这需要新建用户。</p>
 <p>如果你用的是<code>openjdk:&lt;version&gt;-alpine</code>新建用户命令是这样的：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln">1</span>RUN set -eux; \
-<span class="ln">2</span>    addgroup --gid 1000 java-app; \
-<span class="ln">3</span>    adduser -S -u 1000 -g java-app -h /home/java-app/ -s /bin/sh -D java-app;
-</code></pre></div><p>如果你用的是<code>openjdk:&lt;version&gt;-slim</code>或者<code>openjdk:&lt;version&gt;</code>新建用户命令是这样的：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln">1</span>RUN set -eux; \
-<span class="ln">2</span>    addgroup --gid 1000 java-app; \
-<span class="ln">3</span>    adduser --system --uid 1000 --gid 1000 --home=/home/java-app/ --shell=/bin/sh --disabled-password java-app;
-</code></pre></div><p>然后使用<a href="https://docs.docker.com/engine/reference/builder/#use" target="_blank" rel="noopener noreferrer">Dockerfile USER指令</a>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt">RUN set -eux; \
+    addgroup --gid 1000 java-app; \
+    adduser -S -u 1000 -g java-app -h /home/java-app/ -s /bin/sh -D java-app;
+</code></pre></td></tr></table>
+</div>
+</div><p>如果你用的是<code>openjdk:&lt;version&gt;-slim</code>或者<code>openjdk:&lt;version&gt;</code>新建用户命令是这样的：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt">RUN set -eux; \
+    addgroup --gid 1000 java-app; \
+    adduser --system --uid 1000 --gid 1000 --home=/home/java-app/ --shell=/bin/sh --disabled-password java-app;
+</code></pre></td></tr></table>
+</div>
+</div><p>然后使用<a href="https://docs.docker.com/engine/reference/builder/#use" target="_blank" rel="noopener noreferrer">Dockerfile USER指令</a>
 </p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln">1</span>USER java-app
-<span class="ln">2</span>
-<span class="ln">3</span># 后面的指令就都是以java-app用户身份执行了
-</code></pre></div><h3 id="指定web程序的接口">指定Web程序的接口<a class="anchor ms-1" href="#指定web程序的接口"><i class="fas fa-link"></i></a></h3>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt">USER java-app
+
+# 后面的指令就都是以java-app用户身份执行了
+</code></pre></td></tr></table>
+</div>
+</div><h3 id="指定web程序的接口">指定Web程序的接口<a class="anchor ms-1" href="#指定web程序的接口"><i class="fas fa-link"></i></a></h3>
 <p>对于联网应用而言，必须在Dockerfile中指定暴露的端口，否则该端口无法映射。</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln">1</span>EXPOSE 8080
-</code></pre></div><h3 id="能够传递jvm参数java-system-properties程序自定义的参数">能够传递JVM参数、Java System Properties、程序自定义的参数<a class="anchor ms-1" href="#能够传递jvm参数java-system-properties程序自定义的参数"><i class="fas fa-link"></i></a></h3>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt">EXPOSE 8080
+</code></pre></td></tr></table>
+</div>
+</div><h3 id="能够传递jvm参数java-system-properties程序自定义的参数">能够传递JVM参数、Java System Properties、程序自定义的参数<a class="anchor ms-1" href="#能够传递jvm参数java-system-properties程序自定义的参数"><i class="fas fa-link"></i></a></h3>
 <p>我们需要能够在启动Docker Image的时候将一些参数传递进去：</p>
 <ul>
 <li>JVM参数</li>
@@ -310,14 +372,27 @@
 <h2 id="样例项目拆解">样例项目拆解<a class="anchor ms-1" href="#样例项目拆解"><i class="fas fa-link"></i></a></h2>
 <h3 id="目录结构">目录结构<a class="anchor ms-1" href="#目录结构"><i class="fas fa-link"></i></a></h3>
 <p>所有与程序相关的东西都存放在<code>/home/java-app/</code>下：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="ln">1</span>/home/java-app
-<span class="ln">2</span>   ├── docker-entrypoint.sh
-<span class="ln">3</span>   ├── lib
-<span class="ln">4</span>   │   └── java-app.jar
-<span class="ln">5</span>   ├── etc
-<span class="ln">6</span>   ├── logs
-<span class="ln">7</span>   └── tmp
-</code></pre></div><ul>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback">/home/java-app
+   ├── docker-entrypoint.sh
+   ├── lib
+   │   └── java-app.jar
+   ├── etc
+   ├── logs
+   └── tmp
+</code></pre></td></tr></table>
+</div>
+</div><ul>
 <li><code>docker-entrypoint.sh</code>，启动脚本</li>
 <li><code>lib</code>，存放JAR包</li>
 <li><code>lib/java-app.jar</code>，程序JAR包</li>
@@ -326,15 +401,43 @@
 <li><code>tmp</code>，存放临时文件</li>
 </ul>
 <h3 id="构建image的方法">构建Image的方法<a class="anchor ms-1" href="#构建image的方法"><i class="fas fa-link"></i></a></h3>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>mvn clean package dockerfile:build
-</code></pre></div><h3 id="运行">运行<a class="anchor ms-1" href="#运行"><i class="fas fa-link"></i></a></h3>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">mvn clean package dockerfile:build
+</code></pre></td></tr></table>
+</div>
+</div><h3 id="运行">运行<a class="anchor ms-1" href="#运行"><i class="fas fa-link"></i></a></h3>
 <p>普通启动，然后访问<code>http://localhost:8080</code>：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>docker run -p 8080:8080 chanjarster/dockerfile-java-examples-1:1.0-SNAPSHOT
-</code></pre></div><p>设定JVM参数/System Properties，使用<code>JAVA_OPTS</code>环境变量：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>docker run -p 8080:8080 -e <span class="nv">JAVA_OPTS</span><span class="o">=</span><span class="s1">&#39;-Xmx128M -Xms128M -Dabc=xyz -Ddef=uvw&#39;</span> chanjarster/dockerfile-java-examples-1:1.0-SNAPSHOT
-</code></pre></div><p>提供程序运行参数，在后面直接添加即可：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>docker run -p 8080:8080 chanjarster/dockerfile-java-examples-1:1.0-SNAPSHOT --debug
-</code></pre></div><h2 id="2018-12-27更新">2018-12-27更新<a class="anchor ms-1" href="#2018-12-27更新"><i class="fas fa-link"></i></a></h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">docker run -p 8080:8080 chanjarster/dockerfile-java-examples-1:1.0-SNAPSHOT
+</code></pre></td></tr></table>
+</div>
+</div><p>设定JVM参数/System Properties，使用<code>JAVA_OPTS</code>环境变量：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">docker run -p 8080:8080 -e <span class="nv">JAVA_OPTS</span><span class="o">=</span><span class="s1">&#39;-Xmx128M -Xms128M -Dabc=xyz -Ddef=uvw&#39;</span> chanjarster/dockerfile-java-examples-1:1.0-SNAPSHOT
+</code></pre></td></tr></table>
+</div>
+</div><p>提供程序运行参数，在后面直接添加即可：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">docker run -p 8080:8080 chanjarster/dockerfile-java-examples-1:1.0-SNAPSHOT --debug
+</code></pre></td></tr></table>
+</div>
+</div><h2 id="2018-12-27更新">2018-12-27更新<a class="anchor ms-1" href="#2018-12-27更新"><i class="fas fa-link"></i></a></h2>
 <p>在<code>docker-entrypoint.sh</code>里启动Java进程时，使用<code>exec /usr/bin/java ...</code>这种形式，保证进程PID=1，这样在进程能够在<code>docker stop</code>时收到<code>SIGTERM</code>。
 详见：<a href="https://docs.docker.com/engine/reference/commandline/stop/" target="_blank" rel="noopener noreferrer">docker stop</a>
 </p>

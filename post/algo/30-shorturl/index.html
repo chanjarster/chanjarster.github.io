@@ -12,7 +12,7 @@
 <meta name="description" content="" /><meta itemprop="name" content="算法 - 如何实现短网址服务">
 <meta itemprop="description" content=""><meta itemprop="datePublished" content="2020-05-12T20:25:10+08:00" />
 <meta itemprop="dateModified" content="2020-05-12T20:25:10+08:00" />
-<meta itemprop="wordCount" content="1418">
+<meta itemprop="wordCount" content="1422">
 <meta itemprop="keywords" content="ARTS-A," /><meta property="og:title" content="算法 - 如何实现短网址服务" />
 <meta property="og:description" content="" />
 <meta property="og:type" content="article" />
@@ -249,38 +249,78 @@
 </ol>
 <p><strong>如何提升服务的性能？</strong></p>
 <p>按照追加特殊字符的冲突消解的代码大致如下：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="ln"> 1</span><span class="kd">func</span> <span class="nf">shortify</span><span class="p">(</span><span class="nx">url</span> <span class="kt">string</span><span class="p">)</span> <span class="kt">string</span> <span class="p">{</span>
-<span class="ln"> 2</span>  <span class="k">for</span>  <span class="p">{</span>
-<span class="ln"> 3</span>    <span class="nx">shorturl</span> <span class="o">:=</span> <span class="nf">hash</span><span class="p">(</span><span class="nx">url</span><span class="p">)</span>
-<span class="ln"> 4</span>    <span class="k">if</span> <span class="nx">store</span><span class="p">.</span><span class="nf">exists</span><span class="p">(</span><span class="nx">shorturl</span><span class="p">)</span> <span class="p">{</span>
-<span class="ln"> 5</span>      <span class="nx">existedUrl</span> <span class="o">:=</span> <span class="nx">store</span><span class="p">.</span><span class="nf">get</span><span class="p">(</span><span class="nx">shorturl</span><span class="p">)</span>
-<span class="ln"> 6</span>      <span class="k">if</span> <span class="nx">existedUrl</span> <span class="o">==</span> <span class="nx">url</span> <span class="p">{</span>
-<span class="ln"> 7</span>        <span class="k">return</span> <span class="nx">shorturl</span>
-<span class="ln"> 8</span>      <span class="p">}</span>
-<span class="ln"> 9</span>      <span class="nx">url</span> <span class="p">=</span> <span class="nf">resolveConflict</span><span class="p">(</span><span class="nx">url</span><span class="p">)</span> <span class="c1">// 修改url追加特殊字符
-</span><span class="ln">10</span><span class="c1"></span>      <span class="k">continue</span>
-<span class="ln">11</span>    <span class="p">}</span>
-<span class="ln">12</span>    <span class="nx">store</span><span class="p">.</span><span class="nf">save</span><span class="p">(</span><span class="nx">shorurl</span><span class="p">,</span> <span class="nx">url</span><span class="p">)</span>
-<span class="ln">13</span>    <span class="k">return</span> <span class="nx">shorturl</span>
-<span class="ln">14</span>  <span class="p">}</span>
-<span class="ln">15</span><span class="p">}</span>
-</code></pre></div><p>可以看到整个过程必须查询一次<code>store.exists(shorturl)</code>再保存一次<code>store.save(shorturl, url)</code></p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="kd">func</span> <span class="nf">shortify</span><span class="p">(</span><span class="nx">url</span> <span class="kt">string</span><span class="p">)</span> <span class="kt">string</span> <span class="p">{</span>
+  <span class="k">for</span>  <span class="p">{</span>
+    <span class="nx">shorturl</span> <span class="o">:=</span> <span class="nf">hash</span><span class="p">(</span><span class="nx">url</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nx">store</span><span class="p">.</span><span class="nf">exists</span><span class="p">(</span><span class="nx">shorturl</span><span class="p">)</span> <span class="p">{</span>
+      <span class="nx">existedUrl</span> <span class="o">:=</span> <span class="nx">store</span><span class="p">.</span><span class="nf">get</span><span class="p">(</span><span class="nx">shorturl</span><span class="p">)</span>
+      <span class="k">if</span> <span class="nx">existedUrl</span> <span class="o">==</span> <span class="nx">url</span> <span class="p">{</span>
+        <span class="k">return</span> <span class="nx">shorturl</span>
+      <span class="p">}</span>
+      <span class="nx">url</span> <span class="p">=</span> <span class="nf">resolveConflict</span><span class="p">(</span><span class="nx">url</span><span class="p">)</span> <span class="c1">// 修改url追加特殊字符
+</span><span class="c1"></span>      <span class="k">continue</span>
+    <span class="p">}</span>
+    <span class="nx">store</span><span class="p">.</span><span class="nf">save</span><span class="p">(</span><span class="nx">shorurl</span><span class="p">,</span> <span class="nx">url</span><span class="p">)</span>
+    <span class="k">return</span> <span class="nx">shorturl</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>可以看到整个过程必须查询一次<code>store.exists(shorturl)</code>再保存一次<code>store.save(shorturl, url)</code></p>
 <p><strong>如何减少每次判断？</strong></p>
 <p>1）可以利用redis的<code>SETNX</code>和数据库中添加唯一索引让这个过程变得只有一次：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="ln"> 1</span><span class="kd">func</span> <span class="nf">shortify</span><span class="p">(</span><span class="nx">url</span> <span class="kt">string</span><span class="p">)</span> <span class="kt">string</span> <span class="p">{</span>
-<span class="ln"> 2</span>  <span class="k">for</span>  <span class="p">{</span>
-<span class="ln"> 3</span>    <span class="nx">shorturl</span> <span class="o">:=</span> <span class="nf">hash</span><span class="p">(</span><span class="nx">url</span><span class="p">)</span>
-<span class="ln"> 4</span>    <span class="k">if</span> <span class="nx">store</span><span class="p">.</span><span class="nf">save</span><span class="p">(</span><span class="nx">shorurl</span><span class="p">,</span> <span class="nx">url</span><span class="p">)</span> <span class="p">{</span>
-<span class="ln"> 5</span>      <span class="k">return</span> <span class="nx">shorturl</span>
-<span class="ln"> 6</span>    <span class="p">}</span>
-<span class="ln"> 7</span>    <span class="nx">existedUrl</span> <span class="o">:=</span> <span class="nx">store</span><span class="p">.</span><span class="nf">get</span><span class="p">(</span><span class="nx">shorturl</span><span class="p">)</span>
-<span class="ln"> 8</span>    <span class="k">if</span> <span class="nx">existedUrl</span> <span class="o">==</span> <span class="nx">url</span> <span class="p">{</span>
-<span class="ln"> 9</span>      <span class="k">return</span> <span class="nx">shorturl</span>
-<span class="ln">10</span>    <span class="p">}</span>
-<span class="ln">11</span>    <span class="nx">url</span> <span class="p">=</span> <span class="nf">resolveConflict</span><span class="p">(</span><span class="nx">url</span><span class="p">)</span> <span class="c1">// 修改url追加特殊字符    
-</span><span class="ln">12</span><span class="c1"></span>  <span class="p">}</span>
-<span class="ln">13</span><span class="p">}</span>
-</code></pre></div><p>2）可以利用布隆过滤器，布隆过滤器是比较节省内存的一种存储结构，长度是 10 亿的<a href="../32-bloom-filter">布隆过滤器</a>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="kd">func</span> <span class="nf">shortify</span><span class="p">(</span><span class="nx">url</span> <span class="kt">string</span><span class="p">)</span> <span class="kt">string</span> <span class="p">{</span>
+  <span class="k">for</span>  <span class="p">{</span>
+    <span class="nx">shorturl</span> <span class="o">:=</span> <span class="nf">hash</span><span class="p">(</span><span class="nx">url</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nx">store</span><span class="p">.</span><span class="nf">save</span><span class="p">(</span><span class="nx">shorurl</span><span class="p">,</span> <span class="nx">url</span><span class="p">)</span> <span class="p">{</span>
+      <span class="k">return</span> <span class="nx">shorturl</span>
+    <span class="p">}</span>
+    <span class="nx">existedUrl</span> <span class="o">:=</span> <span class="nx">store</span><span class="p">.</span><span class="nf">get</span><span class="p">(</span><span class="nx">shorturl</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nx">existedUrl</span> <span class="o">==</span> <span class="nx">url</span> <span class="p">{</span>
+      <span class="k">return</span> <span class="nx">shorturl</span>
+    <span class="p">}</span>
+    <span class="nx">url</span> <span class="p">=</span> <span class="nf">resolveConflict</span><span class="p">(</span><span class="nx">url</span><span class="p">)</span> <span class="c1">// 修改url追加特殊字符    
+</span><span class="c1"></span>  <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>2）可以利用布隆过滤器，布隆过滤器是比较节省内存的一种存储结构，长度是 10 亿的<a href="../32-bloom-filter">布隆过滤器</a>
 ，也只需要 125MB 左右的内存空间。</p>
 <h2 id="自增id法">自增ID法<a class="anchor ms-1" href="#自增id法"><i class="fas fa-link"></i></a></h2>
 <p>数据库中自增ID生成作为短网址。</p>

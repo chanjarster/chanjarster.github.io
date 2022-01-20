@@ -12,7 +12,7 @@
 <meta name="description" content="本文介绍JDK 8的jps、jstat、jstack &hellip; 的工作原理。" /><meta itemprop="name" content="jps jstat jstack...的工作原理">
 <meta itemprop="description" content="本文介绍JDK 8的jps、jstat、jstack &hellip; 的工作原理。"><meta itemprop="datePublished" content="2021-12-07T13:12:18+08:00" />
 <meta itemprop="dateModified" content="2021-12-07T13:12:18+08:00" />
-<meta itemprop="wordCount" content="1097">
+<meta itemprop="wordCount" content="1100">
 <meta itemprop="keywords" content="jvm," /><meta property="og:title" content="jps jstat jstack...的工作原理" />
 <meta property="og:description" content="本文介绍JDK 8的jps、jstat、jstack &hellip; 的工作原理。" />
 <meta property="og:type" content="article" />
@@ -254,20 +254,39 @@
 <p>所以说，如果你把别的机器的<code>/tmp/hsperfdata_&lt;usr&gt;/&lt;pid&gt;</code> 复制到你本地，jps也是能够返回结果的。</p>
 <p><strong>但是</strong>，前提是PID得在你的机器上存在，比如别的机器上PID是2121，那么你的机器上也必须有PID=2121的进程，无论这个进程是什么。否则jps会返回<code> -- process information unavailable</code> 这样的信息。</p>
 <p>如果你这样执行jps（其实所有命令都可以这样执行），可以看到异常：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln"> 1</span>java -cp <span class="nv">$JAVA_HOME</span>/lib/tools.jar -Djps.debug<span class="o">=</span><span class="nb">true</span> -Djps.printStackTrace<span class="o">=</span><span class="nb">true</span> sun.tools.jps.Jps
-<span class="ln"> 2</span>
-<span class="ln"> 3</span>sun.jvmstat.monitor.MonitorException: <span class="m">2121</span> not found
-<span class="ln"> 4</span>        at sun.jvmstat.perfdata.monitor.protocol.local.PerfDataBuffer.&lt;init&gt;<span class="o">(</span>PerfDataBuffer.java:84<span class="o">)</span>
-<span class="ln"> 5</span>        at sun.jvmstat.perfdata.monitor.protocol.local.LocalMonitoredVm.&lt;init&gt;<span class="o">(</span>LocalMonitoredVm.java:68<span class="o">)</span>
-<span class="ln"> 6</span>        at sun.jvmstat.perfdata.monitor.protocol.local.MonitoredHostProvider.getMonitoredVm<span class="o">(</span>MonitoredHostProvider.java:77<span class="o">)</span>
-<span class="ln"> 7</span>        at sun.tools.jps.Jps.main<span class="o">(</span>Jps.java:92<span class="o">)</span>
-<span class="ln"> 8</span>Caused by: java.lang.IllegalArgumentException: Process not found
-<span class="ln"> 9</span>        at sun.misc.Perf.attach<span class="o">(</span>Native Method<span class="o">)</span>
-<span class="ln">10</span>        at sun.misc.Perf.attachImpl<span class="o">(</span>Perf.java:270<span class="o">)</span>
-<span class="ln">11</span>        at sun.misc.Perf.attach<span class="o">(</span>Perf.java:200<span class="o">)</span>
-<span class="ln">12</span>        at sun.jvmstat.perfdata.monitor.protocol.local.PerfDataBuffer.&lt;init&gt;<span class="o">(</span>PerfDataBuffer.java:64<span class="o">)</span>
-<span class="ln">13</span>        ... <span class="m">3</span> more
-</code></pre></div><p>顺着这个错误分析<a href="https://github.com/openjdk/jdk8u-dev/blob/master/jdk/src/share/classes/sun/jvmstat/perfdata/monitor/protocol/local/PerfDataBuffer.java" target="_blank" rel="noopener noreferrer">PerfDataBuffer.java</a>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">java -cp <span class="nv">$JAVA_HOME</span>/lib/tools.jar -Djps.debug<span class="o">=</span><span class="nb">true</span> -Djps.printStackTrace<span class="o">=</span><span class="nb">true</span> sun.tools.jps.Jps
+
+sun.jvmstat.monitor.MonitorException: <span class="m">2121</span> not found
+        at sun.jvmstat.perfdata.monitor.protocol.local.PerfDataBuffer.&lt;init&gt;<span class="o">(</span>PerfDataBuffer.java:84<span class="o">)</span>
+        at sun.jvmstat.perfdata.monitor.protocol.local.LocalMonitoredVm.&lt;init&gt;<span class="o">(</span>LocalMonitoredVm.java:68<span class="o">)</span>
+        at sun.jvmstat.perfdata.monitor.protocol.local.MonitoredHostProvider.getMonitoredVm<span class="o">(</span>MonitoredHostProvider.java:77<span class="o">)</span>
+        at sun.tools.jps.Jps.main<span class="o">(</span>Jps.java:92<span class="o">)</span>
+Caused by: java.lang.IllegalArgumentException: Process not found
+        at sun.misc.Perf.attach<span class="o">(</span>Native Method<span class="o">)</span>
+        at sun.misc.Perf.attachImpl<span class="o">(</span>Perf.java:270<span class="o">)</span>
+        at sun.misc.Perf.attach<span class="o">(</span>Perf.java:200<span class="o">)</span>
+        at sun.jvmstat.perfdata.monitor.protocol.local.PerfDataBuffer.&lt;init&gt;<span class="o">(</span>PerfDataBuffer.java:64<span class="o">)</span>
+        ... <span class="m">3</span> more
+</code></pre></td></tr></table>
+</div>
+</div><p>顺着这个错误分析<a href="https://github.com/openjdk/jdk8u-dev/blob/master/jdk/src/share/classes/sun/jvmstat/perfdata/monitor/protocol/local/PerfDataBuffer.java" target="_blank" rel="noopener noreferrer">PerfDataBuffer.java</a>
 ，可以发现解决的办法就是创建一个<code>/tmp/hsperfdata_&lt;pid&gt;</code>的文件。</p>
 <h2 id="jstat">jstat<a class="anchor ms-1" href="#jstat"><i class="fas fa-link"></i></a></h2>
 <p>先说结论：</p>

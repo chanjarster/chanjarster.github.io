@@ -12,7 +12,7 @@
 <meta name="description" content="" /><meta itemprop="name" content="如何估算吞吐量以及线程池大小">
 <meta itemprop="description" content=""><meta itemprop="datePublished" content="2019-03-21T21:24:29+08:00" />
 <meta itemprop="dateModified" content="2019-03-21T21:24:29+08:00" />
-<meta itemprop="wordCount" content="1306">
+<meta itemprop="wordCount" content="1308">
 <meta itemprop="keywords" content="并发编程," /><meta property="og:title" content="如何估算吞吐量以及线程池大小" />
 <meta property="og:description" content="" />
 <meta property="og:type" content="article" />
@@ -237,20 +237,38 @@
 <p>可以得益于开了10个线程，每个task可以利用其他task的等待时间里执行自己的计算操作，同时使得CPU始终处于忙碌状态，即利用率100%。这也告诉你，就算你开11个线程也不会得到更多好处。</p>
 <p>上面这个图的计算任务是按顺序执行的，这只是一个假想情况，实际中操作系统会将这10个线程交替运行，见图中的红色线，操作系统可以在这个范围内对这10个task的计算任务做任意调度。如果去除线程调度的开销，花费的总时间其实还是等于10秒的。</p>
 <p>这个图的吞吐量就显而易见了：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln">1</span>throughput = 10 tasks / (10 * computing time + wait time) 
-<span class="ln">2</span>           = 10 tasks / (10 * 1s + 9s) 
-<span class="ln">3</span>           = 10 / 19s = 0.526 tasks/s
-</code></pre></div><p>如果我们现在有一个双核CPU，那么会怎样呢？</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt">throughput = 10 tasks / (10 * computing time + wait time) 
+           = 10 tasks / (10 * 1s + 9s) 
+           = 10 / 19s = 0.526 tasks/s
+</code></pre></td></tr></table>
+</div>
+</div><p>如果我们现在有一个双核CPU，那么会怎样呢？</p>
 <p><img class="img-fluid" alt="" src="/post/concurrent-programming/throughput-and-thread-pool-size/2-cores.png" loading="lazy"
   
    />
 
 </p>
 <p>可以看到因为有了2个CPU核心，计算任务可以重叠，进而花费的时间减半，吞吐量为：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln">1</span>throughput = 10 tasks / (10 * computing time / 2 + wait time) 
-<span class="ln">2</span>           = 10 tasks / (10 * 1s / 2 + 9s) 
-<span class="ln">3</span>           = 10 / 14s = 0.7142 tasks/s
-</code></pre></div><p>那么总结一下吞吐量计算公式：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt">throughput = 10 tasks / (10 * computing time / 2 + wait time) 
+           = 10 tasks / (10 * 1s / 2 + 9s) 
+           = 10 / 14s = 0.7142 tasks/s
+</code></pre></td></tr></table>
+</div>
+</div><p>那么总结一下吞吐量计算公式：</p>
 <ul>
 <li>Throughput：吞吐量。</li>
 <li>Tn：task数量。</li>

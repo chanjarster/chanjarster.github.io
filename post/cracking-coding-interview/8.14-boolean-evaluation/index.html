@@ -12,7 +12,7 @@
 <meta name="description" content="" /><meta itemprop="name" content="Cracking Coding Interview - 8.14 Boolean Evaluation">
 <meta itemprop="description" content=""><meta itemprop="datePublished" content="2019-08-27T15:50:11+08:00" />
 <meta itemprop="dateModified" content="2019-08-27T15:50:11+08:00" />
-<meta itemprop="wordCount" content="1430">
+<meta itemprop="wordCount" content="1459">
 <meta itemprop="keywords" content="ARTS-A," /><meta property="og:title" content="Cracking Coding Interview - 8.14 Boolean Evaluation" />
 <meta property="og:description" content="" />
 <meta property="og:type" content="article" />
@@ -225,216 +225,466 @@
 </div>
 <div class="post-content mb-3"><p><strong>Boolean Evaluation</strong>: Given a boolean expression consisting of the symbols <code>0 (false)</code>, <code>1 (true)</code>, <code>&amp; (AND)</code>, <code>| (OR)</code>, and <code>^ (XOR)</code>, and a desired boolean result value <code>result</code>, implement a function to count the number of ways of parenthesizing the expression such that it evaluates to <code>result</code>.</p>
 <p>EXAMPLE</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln">1</span>countEval(&#34;1^0|0|1&#34;, false) -&gt; 2
-<span class="ln">2</span>countEval(&#34;0&amp;0&amp;0&amp;1^1|0&#34;, true) -&gt; 10
-</code></pre></div><p>Hints: #148, #168, #197, #305, #327</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt">countEval(&#34;1^0|0|1&#34;, false) -&gt; 2
+countEval(&#34;0&amp;0&amp;0&amp;1^1|0&#34;, true) -&gt; 10
+</code></pre></td></tr></table>
+</div>
+</div><p>Hints: #148, #168, #197, #305, #327</p>
 <h2 id="解法1">解法1<a class="anchor ms-1" href="#解法1"><i class="fas fa-link"></i></a></h2>
 <p>对于第一个例子的两个做法是：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln">1</span>1^(0|(0|1))
-<span class="ln">2</span>1^((0|0)|1)
-</code></pre></div><p>怎么分析这个问题？</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt">1^(0|(0|1))
+1^((0|0)|1)
+</code></pre></td></tr></table>
+</div>
+</div><p>怎么分析这个问题？</p>
 <p>先看两个简单的例子：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln">1</span>表达式: a | b
-<span class="ln">2</span>加括号: (a) | (b)
-<span class="ln">3</span>
-<span class="ln">4</span>表达式: a &amp; b | c
-<span class="ln">5</span>加括号: (a) &amp; (b | c)
-<span class="ln">6</span>       (a &amp; b) | (c)
-<span class="ln">7</span>其中: b | c 可以拆分成 (b) | (c)
-<span class="ln">8</span>     a &amp; b 可以是 (a) &amp; (b)
-</code></pre></div><p>所以，可以发现加括号实际上可以是一个递归的过程，将表达式根据操作符分割成左右两边，对左右两边再做分割。直到表达式里没有操作符为止，即达到Base Condition。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt">表达式: a | b
+加括号: (a) | (b)
+
+表达式: a &amp; b | c
+加括号: (a) &amp; (b | c)
+       (a &amp; b) | (c)
+其中: b | c 可以拆分成 (b) | (c)
+     a &amp; b 可以是 (a) &amp; (b)
+</code></pre></td></tr></table>
+</div>
+</div><p>所以，可以发现加括号实际上可以是一个递归的过程，将表达式根据操作符分割成左右两边，对左右两边再做分割。直到表达式里没有操作符为止，即达到Base Condition。</p>
 <p>然后再看表达式的左右两边值得是如何的才能得到期望值：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln"> 1</span>Required: a | b == true
-<span class="ln"> 2</span>Solution: a == true &amp;&amp; b == true
-<span class="ln"> 3</span>       OR a == true &amp;&amp; b == false
-<span class="ln"> 4</span>       OR a == false &amp;&amp; b == true
-<span class="ln"> 5</span>
-<span class="ln"> 6</span>Required: a | b == false
-<span class="ln"> 7</span>Solution: a == false &amp;&amp; b == false
-<span class="ln"> 8</span>
-<span class="ln"> 9</span>Required: a &amp; b == true
-<span class="ln">10</span>Solution: a == true &amp;&amp; b == true
-<span class="ln">11</span>
-<span class="ln">12</span>Required: a &amp; b == false
-<span class="ln">13</span>Solution: a == true &amp;&amp; b == false
-<span class="ln">14</span>       OR a == false &amp;&amp; b == true
-<span class="ln">15</span>       OR a == false &amp;&amp; b == false
-<span class="ln">16</span>
-<span class="ln">17</span>Required: a ^ b == true
-<span class="ln">18</span>Solution: a == true &amp;&amp; b == false
-<span class="ln">19</span>       OR a == false &amp;&amp; b == true
-<span class="ln">20</span>
-<span class="ln">21</span>Required: a ^ b == true
-<span class="ln">22</span>Solution: a == true &amp;&amp; b == true
-<span class="ln">23</span>       OR a == false &amp;&amp; b == false
-</code></pre></div><p>所以：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln"> 1</span>countEval(a | b, true) = countEval(a, true) * countEval(b, false)
-<span class="ln"> 2</span>                       + countEval(a, false) * countEval(b, true)
-<span class="ln"> 3</span>                       + countEval(a, true) * countEval(b, true)
-<span class="ln"> 4</span>
-<span class="ln"> 5</span>countEval(a | b, false) = countEval(a, false) * countEval(b, false)
-<span class="ln"> 6</span>
-<span class="ln"> 7</span>countEval(a &amp; b, true) = countEval(a, true) * countEval(b, true)
-<span class="ln"> 8</span>
-<span class="ln"> 9</span>countEval(a &amp; b, false) = countEval(a, true) * countEval(b, false)
-<span class="ln">10</span>                       + countEval(a, false) * countEval(b, true)
-<span class="ln">11</span>                       + countEval(a, false) * countEval(b, false)
-<span class="ln">12</span>                       
-<span class="ln">13</span>countEval(a ^ b, true) = countEval(a, true) * countEval(b, false)
-<span class="ln">14</span>                       + countEval(a, false) * countEval(b, true)
-<span class="ln">15</span>
-<span class="ln">16</span>countEval(a ^ b, false) = countEval(a, true) * countEval(b, true)
-<span class="ln">17</span>                        + countEval(a, false) * countEval(b, false)
-</code></pre></div><p>所以代码：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln"> 1</span><span class="kd">public</span> <span class="kt">int</span> <span class="nf">countEval</span><span class="o">(</span><span class="n">String</span> <span class="n">expression</span><span class="o">,</span> <span class="kt">boolean</span> <span class="n">expected</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 2</span>  <span class="k">if</span> <span class="o">(</span><span class="n">expression</span> <span class="o">==</span> <span class="s">&#34;&#34;</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 3</span>    <span class="k">return</span> <span class="n">0</span><span class="o">;</span>
-<span class="ln"> 4</span>  <span class="o">}</span>
-<span class="ln"> 5</span>  <span class="k">if</span> <span class="o">(</span><span class="n">expression</span> <span class="o">==</span> <span class="s">&#34;1&#34;</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 6</span>    <span class="k">return</span> <span class="n">expected</span> <span class="o">?</span> <span class="n">1</span> <span class="o">:</span> <span class="n">0</span><span class="o">;</span>
-<span class="ln"> 7</span>  <span class="o">}</span>
-<span class="ln"> 8</span>  <span class="k">if</span> <span class="o">(</span><span class="n">expression</span> <span class="o">==</span> <span class="s">&#34;0&#34;</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 9</span>    <span class="k">return</span> <span class="n">expected</span> <span class="o">?</span> <span class="n">0</span> <span class="o">:</span> <span class="n">1</span><span class="o">;</span>
-<span class="ln">10</span>  <span class="o">}</span>
-<span class="ln">11</span>  <span class="kt">int</span> <span class="n">ways</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span>
-<span class="ln">12</span>  <span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="n">1</span><span class="o">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">expression</span><span class="o">.</span><span class="na">length</span><span class="o">;</span> <span class="n">i</span> <span class="o">+=</span> <span class="n">2</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">13</span>    <span class="kt">char</span> <span class="n">op</span> <span class="o">=</span> <span class="n">expression</span><span class="o">.</span><span class="na">charAt</span><span class="o">(</span><span class="n">i</span><span class="o">);</span>
-<span class="ln">14</span>    <span class="n">String</span> <span class="n">left</span> <span class="o">=</span> <span class="n">expression</span><span class="o">.</span><span class="na">subString</span><span class="o">(</span><span class="n">0</span><span class="o">,</span> <span class="n">i</span><span class="o">);</span>
-<span class="ln">15</span>    <span class="n">String</span> <span class="n">right</span> <span class="o">=</span> <span class="n">expression</span><span class="o">.</span><span class="na">subString</span><span class="o">(</span><span class="n">i</span> <span class="o">+</span> <span class="n">1</span><span class="o">);</span>
-<span class="ln">16</span>    
-<span class="ln">17</span>    <span class="kt">int</span> <span class="n">leftTrue</span> <span class="o">=</span> <span class="n">countEval</span><span class="o">(</span><span class="n">left</span><span class="o">,</span> <span class="kc">true</span><span class="o">);</span>
-<span class="ln">18</span>    <span class="kt">int</span> <span class="n">leftFalse</span> <span class="o">=</span> <span class="n">countEval</span><span class="o">(</span><span class="n">left</span><span class="o">,</span> <span class="kc">false</span><span class="o">);</span>
-<span class="ln">19</span>    <span class="kt">int</span> <span class="n">rightTrue</span> <span class="o">=</span> <span class="n">countEval</span><span class="o">(</span><span class="n">right</span><span class="o">,</span> <span class="kc">true</span><span class="o">);</span>
-<span class="ln">20</span>    <span class="kt">int</span> <span class="n">rightFalse</span> <span class="o">=</span> <span class="n">countEval</span><span class="o">(</span><span class="n">right</span><span class="o">,</span> <span class="kc">false</span><span class="o">);</span>
-<span class="ln">21</span>
-<span class="ln">22</span>    <span class="k">if</span> <span class="o">(</span><span class="n">op</span> <span class="o">==</span> <span class="sc">&#39;|&#39;</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">23</span>      <span class="k">if</span> <span class="o">(</span><span class="n">expected</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">24</span>        <span class="n">ways</span> <span class="o">+=</span> <span class="n">leftTrue</span> <span class="o">*</span> <span class="n">rightTrue</span>
-<span class="ln">25</span>              <span class="o">+</span> <span class="n">leftTrue</span> <span class="o">*</span> <span class="n">rightFalse</span>
-<span class="ln">26</span>              <span class="o">+</span> <span class="n">leftFalse</span> <span class="o">*</span> <span class="n">rightTrue</span><span class="o">;</span>
-<span class="ln">27</span>      <span class="o">}</span> <span class="k">else</span> <span class="o">{</span>
-<span class="ln">28</span>        <span class="n">ways</span> <span class="o">+=</span> <span class="n">leftFalse</span> <span class="o">*</span> <span class="n">rightFalse</span><span class="o">;</span>
-<span class="ln">29</span>      <span class="o">}</span>
-<span class="ln">30</span>    <span class="o">}</span> <span class="k">else</span> <span class="k">if</span> <span class="o">(</span><span class="n">op</span> <span class="o">==</span> <span class="sc">&#39;&amp;&#39;</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">31</span>      <span class="k">if</span> <span class="o">(</span><span class="n">expected</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">32</span>        <span class="n">ways</span> <span class="o">+=</span> <span class="n">leftTrue</span> <span class="o">*</span> <span class="n">rightTrue</span><span class="o">;</span>
-<span class="ln">33</span>      <span class="o">}</span> <span class="k">else</span> <span class="o">{</span>
-<span class="ln">34</span>        <span class="n">ways</span> <span class="o">+=</span> <span class="n">leftTrue</span> <span class="o">*</span> <span class="n">rightFalse</span>
-<span class="ln">35</span>              <span class="o">+</span> <span class="n">leftFalse</span> <span class="o">*</span> <span class="n">rightTrue</span>
-<span class="ln">36</span>              <span class="o">+</span> <span class="n">leftFalse</span> <span class="o">*</span> <span class="n">rightFalse</span><span class="o">;</span>
-<span class="ln">37</span>      <span class="o">}</span>
-<span class="ln">38</span>    <span class="o">}</span> <span class="k">else</span> <span class="k">if</span> <span class="o">(</span><span class="n">op</span> <span class="o">==</span> <span class="sc">&#39;^&#39;</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">39</span>      <span class="k">if</span> <span class="o">(</span><span class="n">expected</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">40</span>        <span class="n">ways</span> <span class="o">+=</span> <span class="n">leftTrue</span> <span class="o">*</span> <span class="n">rightFalse</span>
-<span class="ln">41</span>              <span class="o">+</span> <span class="n">leftFalse</span> <span class="o">*</span> <span class="n">rightTrue</span><span class="o">;</span>
-<span class="ln">42</span>      <span class="o">}</span> <span class="k">else</span> <span class="o">{</span>
-<span class="ln">43</span>        <span class="n">ways</span> <span class="o">+=</span> <span class="n">leftTrue</span> <span class="o">*</span> <span class="n">rightTrue</span>
-<span class="ln">44</span>              <span class="o">+</span> <span class="n">leftFalse</span> <span class="o">*</span> <span class="n">rightFalse</span><span class="o">;</span>
-<span class="ln">45</span>      <span class="o">}</span>
-<span class="ln">46</span>    <span class="o">}</span>
-<span class="ln">47</span>  <span class="o">}</span>
-<span class="ln">48</span>  <span class="k">return</span> <span class="n">ways</span><span class="o">;</span>
-<span class="ln">49</span><span class="o">}</span>
-</code></pre></div><p>上面的代码有点长，可以这样计算：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln">1</span>左右表达式的总数量 = 左边表达式的总数 * 表达式的总数
-<span class="ln">2</span>                = (左边true + 左边false) * (右边true + 右边false)
-<span class="ln">3</span>因此:
-<span class="ln">4</span>totalCount(a | b) = (countEval(a, true) + countEval(a, false))
-<span class="ln">5</span>                  * (countEval(b, true) + countEval(b, false))
-<span class="ln">6</span>
-<span class="ln">7</span>而countEval(a | b, false) = totalCount(a | b) - countEval(a | b, true);
-</code></pre></div><p>因此可以简化：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln"> 1</span><span class="kd">public</span> <span class="kt">int</span> <span class="nf">countEval</span><span class="o">(</span><span class="n">String</span> <span class="n">expression</span><span class="o">,</span> <span class="kt">boolean</span> <span class="n">expected</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 2</span>  <span class="k">if</span> <span class="o">(</span><span class="n">expression</span> <span class="o">==</span> <span class="s">&#34;&#34;</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 3</span>    <span class="k">return</span> <span class="n">0</span><span class="o">;</span>
-<span class="ln"> 4</span>  <span class="o">}</span>
-<span class="ln"> 5</span>  <span class="k">if</span> <span class="o">(</span><span class="n">expression</span> <span class="o">==</span> <span class="s">&#34;1&#34;</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 6</span>    <span class="k">return</span> <span class="n">expected</span> <span class="o">?</span> <span class="n">1</span> <span class="o">:</span> <span class="n">0</span><span class="o">;</span>
-<span class="ln"> 7</span>  <span class="o">}</span>
-<span class="ln"> 8</span>  <span class="k">if</span> <span class="o">(</span><span class="n">expression</span> <span class="o">==</span> <span class="s">&#34;0&#34;</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 9</span>    <span class="k">return</span> <span class="n">expected</span> <span class="o">?</span> <span class="n">0</span> <span class="o">:</span> <span class="n">1</span><span class="o">;</span>
-<span class="ln">10</span>  <span class="o">}</span>
-<span class="ln">11</span>  <span class="kt">int</span> <span class="n">ways</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span>
-<span class="ln">12</span>  <span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="n">1</span><span class="o">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">expression</span><span class="o">.</span><span class="na">length</span><span class="o">;</span> <span class="n">i</span> <span class="o">+=</span> <span class="n">2</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">13</span>    <span class="kt">char</span> <span class="n">op</span> <span class="o">=</span> <span class="n">expression</span><span class="o">.</span><span class="na">charAt</span><span class="o">(</span><span class="n">i</span><span class="o">);</span>
-<span class="ln">14</span>    <span class="n">String</span> <span class="n">left</span> <span class="o">=</span> <span class="n">expression</span><span class="o">.</span><span class="na">subString</span><span class="o">(</span><span class="n">0</span><span class="o">,</span> <span class="n">i</span><span class="o">);</span>
-<span class="ln">15</span>    <span class="n">String</span> <span class="n">right</span> <span class="o">=</span> <span class="n">expression</span><span class="o">.</span><span class="na">subString</span><span class="o">(</span><span class="n">i</span> <span class="o">+</span> <span class="n">1</span><span class="o">);</span>
-<span class="ln">16</span>    
-<span class="ln">17</span>    <span class="kt">int</span> <span class="n">leftTrue</span> <span class="o">=</span> <span class="n">countEval</span><span class="o">(</span><span class="n">left</span><span class="o">,</span> <span class="kc">true</span><span class="o">);</span>
-<span class="ln">18</span>    <span class="kt">int</span> <span class="n">leftFalse</span> <span class="o">=</span> <span class="n">countEval</span><span class="o">(</span><span class="n">left</span><span class="o">,</span> <span class="kc">false</span><span class="o">);</span>
-<span class="ln">19</span>    <span class="kt">int</span> <span class="n">rightTrue</span> <span class="o">=</span> <span class="n">countEval</span><span class="o">(</span><span class="n">right</span><span class="o">,</span> <span class="kc">true</span><span class="o">);</span>
-<span class="ln">20</span>    <span class="kt">int</span> <span class="n">rightFalse</span> <span class="o">=</span> <span class="n">countEval</span><span class="o">(</span><span class="n">right</span><span class="o">,</span> <span class="kc">false</span><span class="o">);</span>
-<span class="ln">21</span>    <span class="kt">int</span> <span class="n">total</span> <span class="o">=</span> <span class="o">(</span><span class="n">leftTrue</span> <span class="o">+</span> <span class="n">leftFalse</span><span class="o">)</span> <span class="o">*</span> <span class="o">(</span><span class="n">rightTrue</span> <span class="o">*</span> <span class="n">rightFalse</span><span class="o">);</span>
-<span class="ln">22</span>    <span class="kt">int</span> <span class="n">totalTrue</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span>
-<span class="ln">23</span>    <span class="k">if</span> <span class="o">(</span><span class="n">op</span> <span class="o">==</span> <span class="sc">&#39;|&#39;</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">24</span>      <span class="n">totalTrue</span> <span class="o">=</span> <span class="n">leftTrue</span> <span class="o">*</span> <span class="n">rightTrue</span>
-<span class="ln">25</span>              <span class="o">+</span> <span class="n">leftTrue</span> <span class="o">*</span> <span class="n">rightFalse</span>
-<span class="ln">26</span>              <span class="o">+</span> <span class="n">leftFalse</span> <span class="o">*</span> <span class="n">rightTrue</span><span class="o">;</span>
-<span class="ln">27</span>    <span class="o">}</span> <span class="k">else</span> <span class="k">if</span> <span class="o">(</span><span class="n">op</span> <span class="o">==</span> <span class="sc">&#39;&amp;&#39;</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">28</span>      <span class="n">totalTrue</span> <span class="o">=</span> <span class="n">leftTrue</span> <span class="o">*</span> <span class="n">rightTrue</span><span class="o">;</span>
-<span class="ln">29</span>    <span class="o">}</span> <span class="k">else</span> <span class="k">if</span> <span class="o">(</span><span class="n">op</span> <span class="o">==</span> <span class="sc">&#39;^&#39;</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">30</span>      <span class="n">totalTrue</span> <span class="o">=</span> <span class="n">leftTrue</span> <span class="o">*</span> <span class="n">rightFalse</span>
-<span class="ln">31</span>                <span class="o">+</span> <span class="n">leftFalse</span> <span class="o">*</span> <span class="n">rightTrue</span><span class="o">;</span>
-<span class="ln">32</span>    <span class="o">}</span>
-<span class="ln">33</span>    <span class="kt">int</span> <span class="n">subWays</span> <span class="o">=</span> <span class="n">result</span> <span class="o">?</span> <span class="n">totalTrue</span> <span class="o">:</span> <span class="n">total</span> <span class="o">-</span> <span class="n">totalTrue</span><span class="o">;</span>
-<span class="ln">34</span>    <span class="n">ways</span> <span class="o">+=</span> <span class="n">subWays</span><span class="o">;</span>
-<span class="ln">35</span>  <span class="o">}</span>
-<span class="ln">36</span>  <span class="k">return</span> <span class="n">ways</span><span class="o">;</span>
-<span class="ln">37</span><span class="o">}</span>
-</code></pre></div><h2 id="解法2">解法2<a class="anchor ms-1" href="#解法2"><i class="fas fa-link"></i></a></h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt">Required: a | b == true
+Solution: a == true &amp;&amp; b == true
+       OR a == true &amp;&amp; b == false
+       OR a == false &amp;&amp; b == true
+
+Required: a | b == false
+Solution: a == false &amp;&amp; b == false
+
+Required: a &amp; b == true
+Solution: a == true &amp;&amp; b == true
+
+Required: a &amp; b == false
+Solution: a == true &amp;&amp; b == false
+       OR a == false &amp;&amp; b == true
+       OR a == false &amp;&amp; b == false
+
+Required: a ^ b == true
+Solution: a == true &amp;&amp; b == false
+       OR a == false &amp;&amp; b == true
+
+Required: a ^ b == true
+Solution: a == true &amp;&amp; b == true
+       OR a == false &amp;&amp; b == false
+</code></pre></td></tr></table>
+</div>
+</div><p>所以：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt">countEval(a | b, true) = countEval(a, true) * countEval(b, false)
+                       + countEval(a, false) * countEval(b, true)
+                       + countEval(a, true) * countEval(b, true)
+
+countEval(a | b, false) = countEval(a, false) * countEval(b, false)
+
+countEval(a &amp; b, true) = countEval(a, true) * countEval(b, true)
+
+countEval(a &amp; b, false) = countEval(a, true) * countEval(b, false)
+                       + countEval(a, false) * countEval(b, true)
+                       + countEval(a, false) * countEval(b, false)
+                       
+countEval(a ^ b, true) = countEval(a, true) * countEval(b, false)
+                       + countEval(a, false) * countEval(b, true)
+
+countEval(a ^ b, false) = countEval(a, true) * countEval(b, true)
+                        + countEval(a, false) * countEval(b, false)
+</code></pre></td></tr></table>
+</div>
+</div><p>所以代码：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span><span class="lnt">46
+</span><span class="lnt">47
+</span><span class="lnt">48
+</span><span class="lnt">49
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="kd">public</span> <span class="kt">int</span> <span class="nf">countEval</span><span class="o">(</span><span class="n">String</span> <span class="n">expression</span><span class="o">,</span> <span class="kt">boolean</span> <span class="n">expected</span><span class="o">)</span> <span class="o">{</span>
+  <span class="k">if</span> <span class="o">(</span><span class="n">expression</span> <span class="o">==</span> <span class="s">&#34;&#34;</span><span class="o">)</span> <span class="o">{</span>
+    <span class="k">return</span> <span class="n">0</span><span class="o">;</span>
+  <span class="o">}</span>
+  <span class="k">if</span> <span class="o">(</span><span class="n">expression</span> <span class="o">==</span> <span class="s">&#34;1&#34;</span><span class="o">)</span> <span class="o">{</span>
+    <span class="k">return</span> <span class="n">expected</span> <span class="o">?</span> <span class="n">1</span> <span class="o">:</span> <span class="n">0</span><span class="o">;</span>
+  <span class="o">}</span>
+  <span class="k">if</span> <span class="o">(</span><span class="n">expression</span> <span class="o">==</span> <span class="s">&#34;0&#34;</span><span class="o">)</span> <span class="o">{</span>
+    <span class="k">return</span> <span class="n">expected</span> <span class="o">?</span> <span class="n">0</span> <span class="o">:</span> <span class="n">1</span><span class="o">;</span>
+  <span class="o">}</span>
+  <span class="kt">int</span> <span class="n">ways</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span>
+  <span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="n">1</span><span class="o">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">expression</span><span class="o">.</span><span class="na">length</span><span class="o">;</span> <span class="n">i</span> <span class="o">+=</span> <span class="n">2</span><span class="o">)</span> <span class="o">{</span>
+    <span class="kt">char</span> <span class="n">op</span> <span class="o">=</span> <span class="n">expression</span><span class="o">.</span><span class="na">charAt</span><span class="o">(</span><span class="n">i</span><span class="o">);</span>
+    <span class="n">String</span> <span class="n">left</span> <span class="o">=</span> <span class="n">expression</span><span class="o">.</span><span class="na">subString</span><span class="o">(</span><span class="n">0</span><span class="o">,</span> <span class="n">i</span><span class="o">);</span>
+    <span class="n">String</span> <span class="n">right</span> <span class="o">=</span> <span class="n">expression</span><span class="o">.</span><span class="na">subString</span><span class="o">(</span><span class="n">i</span> <span class="o">+</span> <span class="n">1</span><span class="o">);</span>
+    
+    <span class="kt">int</span> <span class="n">leftTrue</span> <span class="o">=</span> <span class="n">countEval</span><span class="o">(</span><span class="n">left</span><span class="o">,</span> <span class="kc">true</span><span class="o">);</span>
+    <span class="kt">int</span> <span class="n">leftFalse</span> <span class="o">=</span> <span class="n">countEval</span><span class="o">(</span><span class="n">left</span><span class="o">,</span> <span class="kc">false</span><span class="o">);</span>
+    <span class="kt">int</span> <span class="n">rightTrue</span> <span class="o">=</span> <span class="n">countEval</span><span class="o">(</span><span class="n">right</span><span class="o">,</span> <span class="kc">true</span><span class="o">);</span>
+    <span class="kt">int</span> <span class="n">rightFalse</span> <span class="o">=</span> <span class="n">countEval</span><span class="o">(</span><span class="n">right</span><span class="o">,</span> <span class="kc">false</span><span class="o">);</span>
+
+    <span class="k">if</span> <span class="o">(</span><span class="n">op</span> <span class="o">==</span> <span class="sc">&#39;|&#39;</span><span class="o">)</span> <span class="o">{</span>
+      <span class="k">if</span> <span class="o">(</span><span class="n">expected</span><span class="o">)</span> <span class="o">{</span>
+        <span class="n">ways</span> <span class="o">+=</span> <span class="n">leftTrue</span> <span class="o">*</span> <span class="n">rightTrue</span>
+              <span class="o">+</span> <span class="n">leftTrue</span> <span class="o">*</span> <span class="n">rightFalse</span>
+              <span class="o">+</span> <span class="n">leftFalse</span> <span class="o">*</span> <span class="n">rightTrue</span><span class="o">;</span>
+      <span class="o">}</span> <span class="k">else</span> <span class="o">{</span>
+        <span class="n">ways</span> <span class="o">+=</span> <span class="n">leftFalse</span> <span class="o">*</span> <span class="n">rightFalse</span><span class="o">;</span>
+      <span class="o">}</span>
+    <span class="o">}</span> <span class="k">else</span> <span class="k">if</span> <span class="o">(</span><span class="n">op</span> <span class="o">==</span> <span class="sc">&#39;&amp;&#39;</span><span class="o">)</span> <span class="o">{</span>
+      <span class="k">if</span> <span class="o">(</span><span class="n">expected</span><span class="o">)</span> <span class="o">{</span>
+        <span class="n">ways</span> <span class="o">+=</span> <span class="n">leftTrue</span> <span class="o">*</span> <span class="n">rightTrue</span><span class="o">;</span>
+      <span class="o">}</span> <span class="k">else</span> <span class="o">{</span>
+        <span class="n">ways</span> <span class="o">+=</span> <span class="n">leftTrue</span> <span class="o">*</span> <span class="n">rightFalse</span>
+              <span class="o">+</span> <span class="n">leftFalse</span> <span class="o">*</span> <span class="n">rightTrue</span>
+              <span class="o">+</span> <span class="n">leftFalse</span> <span class="o">*</span> <span class="n">rightFalse</span><span class="o">;</span>
+      <span class="o">}</span>
+    <span class="o">}</span> <span class="k">else</span> <span class="k">if</span> <span class="o">(</span><span class="n">op</span> <span class="o">==</span> <span class="sc">&#39;^&#39;</span><span class="o">)</span> <span class="o">{</span>
+      <span class="k">if</span> <span class="o">(</span><span class="n">expected</span><span class="o">)</span> <span class="o">{</span>
+        <span class="n">ways</span> <span class="o">+=</span> <span class="n">leftTrue</span> <span class="o">*</span> <span class="n">rightFalse</span>
+              <span class="o">+</span> <span class="n">leftFalse</span> <span class="o">*</span> <span class="n">rightTrue</span><span class="o">;</span>
+      <span class="o">}</span> <span class="k">else</span> <span class="o">{</span>
+        <span class="n">ways</span> <span class="o">+=</span> <span class="n">leftTrue</span> <span class="o">*</span> <span class="n">rightTrue</span>
+              <span class="o">+</span> <span class="n">leftFalse</span> <span class="o">*</span> <span class="n">rightFalse</span><span class="o">;</span>
+      <span class="o">}</span>
+    <span class="o">}</span>
+  <span class="o">}</span>
+  <span class="k">return</span> <span class="n">ways</span><span class="o">;</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>上面的代码有点长，可以这样计算：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt">左右表达式的总数量 = 左边表达式的总数 * 表达式的总数
+                = (左边true + 左边false) * (右边true + 右边false)
+因此:
+totalCount(a | b) = (countEval(a, true) + countEval(a, false))
+                  * (countEval(b, true) + countEval(b, false))
+
+而countEval(a | b, false) = totalCount(a | b) - countEval(a | b, true);
+</code></pre></td></tr></table>
+</div>
+</div><p>因此可以简化：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="kd">public</span> <span class="kt">int</span> <span class="nf">countEval</span><span class="o">(</span><span class="n">String</span> <span class="n">expression</span><span class="o">,</span> <span class="kt">boolean</span> <span class="n">expected</span><span class="o">)</span> <span class="o">{</span>
+  <span class="k">if</span> <span class="o">(</span><span class="n">expression</span> <span class="o">==</span> <span class="s">&#34;&#34;</span><span class="o">)</span> <span class="o">{</span>
+    <span class="k">return</span> <span class="n">0</span><span class="o">;</span>
+  <span class="o">}</span>
+  <span class="k">if</span> <span class="o">(</span><span class="n">expression</span> <span class="o">==</span> <span class="s">&#34;1&#34;</span><span class="o">)</span> <span class="o">{</span>
+    <span class="k">return</span> <span class="n">expected</span> <span class="o">?</span> <span class="n">1</span> <span class="o">:</span> <span class="n">0</span><span class="o">;</span>
+  <span class="o">}</span>
+  <span class="k">if</span> <span class="o">(</span><span class="n">expression</span> <span class="o">==</span> <span class="s">&#34;0&#34;</span><span class="o">)</span> <span class="o">{</span>
+    <span class="k">return</span> <span class="n">expected</span> <span class="o">?</span> <span class="n">0</span> <span class="o">:</span> <span class="n">1</span><span class="o">;</span>
+  <span class="o">}</span>
+  <span class="kt">int</span> <span class="n">ways</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span>
+  <span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="n">1</span><span class="o">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">expression</span><span class="o">.</span><span class="na">length</span><span class="o">;</span> <span class="n">i</span> <span class="o">+=</span> <span class="n">2</span><span class="o">)</span> <span class="o">{</span>
+    <span class="kt">char</span> <span class="n">op</span> <span class="o">=</span> <span class="n">expression</span><span class="o">.</span><span class="na">charAt</span><span class="o">(</span><span class="n">i</span><span class="o">);</span>
+    <span class="n">String</span> <span class="n">left</span> <span class="o">=</span> <span class="n">expression</span><span class="o">.</span><span class="na">subString</span><span class="o">(</span><span class="n">0</span><span class="o">,</span> <span class="n">i</span><span class="o">);</span>
+    <span class="n">String</span> <span class="n">right</span> <span class="o">=</span> <span class="n">expression</span><span class="o">.</span><span class="na">subString</span><span class="o">(</span><span class="n">i</span> <span class="o">+</span> <span class="n">1</span><span class="o">);</span>
+    
+    <span class="kt">int</span> <span class="n">leftTrue</span> <span class="o">=</span> <span class="n">countEval</span><span class="o">(</span><span class="n">left</span><span class="o">,</span> <span class="kc">true</span><span class="o">);</span>
+    <span class="kt">int</span> <span class="n">leftFalse</span> <span class="o">=</span> <span class="n">countEval</span><span class="o">(</span><span class="n">left</span><span class="o">,</span> <span class="kc">false</span><span class="o">);</span>
+    <span class="kt">int</span> <span class="n">rightTrue</span> <span class="o">=</span> <span class="n">countEval</span><span class="o">(</span><span class="n">right</span><span class="o">,</span> <span class="kc">true</span><span class="o">);</span>
+    <span class="kt">int</span> <span class="n">rightFalse</span> <span class="o">=</span> <span class="n">countEval</span><span class="o">(</span><span class="n">right</span><span class="o">,</span> <span class="kc">false</span><span class="o">);</span>
+    <span class="kt">int</span> <span class="n">total</span> <span class="o">=</span> <span class="o">(</span><span class="n">leftTrue</span> <span class="o">+</span> <span class="n">leftFalse</span><span class="o">)</span> <span class="o">*</span> <span class="o">(</span><span class="n">rightTrue</span> <span class="o">*</span> <span class="n">rightFalse</span><span class="o">);</span>
+    <span class="kt">int</span> <span class="n">totalTrue</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span>
+    <span class="k">if</span> <span class="o">(</span><span class="n">op</span> <span class="o">==</span> <span class="sc">&#39;|&#39;</span><span class="o">)</span> <span class="o">{</span>
+      <span class="n">totalTrue</span> <span class="o">=</span> <span class="n">leftTrue</span> <span class="o">*</span> <span class="n">rightTrue</span>
+              <span class="o">+</span> <span class="n">leftTrue</span> <span class="o">*</span> <span class="n">rightFalse</span>
+              <span class="o">+</span> <span class="n">leftFalse</span> <span class="o">*</span> <span class="n">rightTrue</span><span class="o">;</span>
+    <span class="o">}</span> <span class="k">else</span> <span class="k">if</span> <span class="o">(</span><span class="n">op</span> <span class="o">==</span> <span class="sc">&#39;&amp;&#39;</span><span class="o">)</span> <span class="o">{</span>
+      <span class="n">totalTrue</span> <span class="o">=</span> <span class="n">leftTrue</span> <span class="o">*</span> <span class="n">rightTrue</span><span class="o">;</span>
+    <span class="o">}</span> <span class="k">else</span> <span class="k">if</span> <span class="o">(</span><span class="n">op</span> <span class="o">==</span> <span class="sc">&#39;^&#39;</span><span class="o">)</span> <span class="o">{</span>
+      <span class="n">totalTrue</span> <span class="o">=</span> <span class="n">leftTrue</span> <span class="o">*</span> <span class="n">rightFalse</span>
+                <span class="o">+</span> <span class="n">leftFalse</span> <span class="o">*</span> <span class="n">rightTrue</span><span class="o">;</span>
+    <span class="o">}</span>
+    <span class="kt">int</span> <span class="n">subWays</span> <span class="o">=</span> <span class="n">result</span> <span class="o">?</span> <span class="n">totalTrue</span> <span class="o">:</span> <span class="n">total</span> <span class="o">-</span> <span class="n">totalTrue</span><span class="o">;</span>
+    <span class="n">ways</span> <span class="o">+=</span> <span class="n">subWays</span><span class="o">;</span>
+  <span class="o">}</span>
+  <span class="k">return</span> <span class="n">ways</span><span class="o">;</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><h2 id="解法2">解法2<a class="anchor ms-1" href="#解法2"><i class="fas fa-link"></i></a></h2>
 <p>考虑这个表达式<code>a|b&amp;a|b</code>，当分割成<code>(a|b)*(a|b)</code>时，左边的数量右边的数量是一致的，因此可以缓存起来避免重复计算。</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln"> 1</span><span class="kd">public</span> <span class="kt">int</span> <span class="nf">countEval</span><span class="o">(</span><span class="n">String</span> <span class="n">expression</span><span class="o">,</span> <span class="kt">boolean</span> <span class="n">expected</span><span class="o">,</span> <span class="n">Map</span><span class="o">&lt;</span><span class="n">String</span><span class="o">,</span> <span class="n">Map</span><span class="o">&lt;</span><span class="n">Boolean</span><span class="o">,</span> <span class="n">Integer</span><span class="o">&gt;&gt;</span> <span class="n">cache</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 2</span>  <span class="k">if</span> <span class="o">(</span><span class="n">expression</span> <span class="o">==</span> <span class="s">&#34;&#34;</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 3</span>    <span class="k">return</span> <span class="n">0</span><span class="o">;</span>
-<span class="ln"> 4</span>  <span class="o">}</span>
-<span class="ln"> 5</span>  <span class="k">if</span> <span class="o">(</span><span class="n">expression</span> <span class="o">==</span> <span class="s">&#34;1&#34;</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 6</span>    <span class="k">return</span> <span class="n">expected</span> <span class="o">?</span> <span class="n">1</span> <span class="o">:</span> <span class="n">0</span><span class="o">;</span>
-<span class="ln"> 7</span>  <span class="o">}</span>
-<span class="ln"> 8</span>  <span class="k">if</span> <span class="o">(</span><span class="n">expression</span> <span class="o">==</span> <span class="s">&#34;0&#34;</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 9</span>    <span class="k">return</span> <span class="n">expected</span> <span class="o">?</span> <span class="n">0</span> <span class="o">:</span> <span class="n">1</span><span class="o">;</span>
-<span class="ln">10</span>  <span class="o">}</span>
-<span class="ln">11</span>  <span class="n">Map</span><span class="o">&lt;</span><span class="n">Boolean</span><span class="o">,</span> <span class="n">Integer</span><span class="o">&gt;</span> <span class="n">boolCache</span> <span class="o">=</span> <span class="n">cache</span><span class="o">.</span><span class="na">get</span><span class="o">(</span><span class="n">expression</span><span class="o">);</span>
-<span class="ln">12</span>  <span class="k">if</span> <span class="o">(</span><span class="n">boolCache</span> <span class="o">!=</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">13</span>    <span class="n">Integer</span> <span class="n">cacheCount</span> <span class="o">=</span> <span class="n">cache</span><span class="o">.</span><span class="na">get</span><span class="o">(</span><span class="n">expression</span><span class="o">).</span><span class="na">get</span><span class="o">(</span><span class="n">result</span><span class="o">);</span>
-<span class="ln">14</span>    <span class="k">if</span> <span class="o">(</span><span class="n">cacheCount</span> <span class="o">!=</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">15</span>      <span class="k">return</span> <span class="n">cacheCount</span><span class="o">;</span>
-<span class="ln">16</span>    <span class="o">}</span>
-<span class="ln">17</span>  <span class="o">}</span>
-<span class="ln">18</span>    
-<span class="ln">19</span>  <span class="kt">int</span> <span class="n">ways</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span>
-<span class="ln">20</span>  <span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="n">1</span><span class="o">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">expression</span><span class="o">.</span><span class="na">length</span><span class="o">;</span> <span class="n">i</span> <span class="o">+=</span> <span class="n">2</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">21</span>    <span class="kt">char</span> <span class="n">op</span> <span class="o">=</span> <span class="n">expression</span><span class="o">.</span><span class="na">charAt</span><span class="o">(</span><span class="n">i</span><span class="o">);</span>
-<span class="ln">22</span>    <span class="n">String</span> <span class="n">left</span> <span class="o">=</span> <span class="n">expression</span><span class="o">.</span><span class="na">subString</span><span class="o">(</span><span class="n">0</span><span class="o">,</span> <span class="n">i</span><span class="o">);</span>
-<span class="ln">23</span>    <span class="n">String</span> <span class="n">right</span> <span class="o">=</span> <span class="n">expression</span><span class="o">.</span><span class="na">subString</span><span class="o">(</span><span class="n">i</span> <span class="o">+</span> <span class="n">1</span><span class="o">);</span>
-<span class="ln">24</span>    
-<span class="ln">25</span>    <span class="kt">int</span> <span class="n">leftTrue</span> <span class="o">=</span> <span class="n">countEval</span><span class="o">(</span><span class="n">left</span><span class="o">,</span> <span class="kc">true</span><span class="o">);</span>
-<span class="ln">26</span>    <span class="kt">int</span> <span class="n">leftFalse</span> <span class="o">=</span> <span class="n">countEval</span><span class="o">(</span><span class="n">left</span><span class="o">,</span> <span class="kc">false</span><span class="o">);</span>
-<span class="ln">27</span>    <span class="kt">int</span> <span class="n">rightTrue</span> <span class="o">=</span> <span class="n">countEval</span><span class="o">(</span><span class="n">right</span><span class="o">,</span> <span class="kc">true</span><span class="o">);</span>
-<span class="ln">28</span>    <span class="kt">int</span> <span class="n">rightFalse</span> <span class="o">=</span> <span class="n">countEval</span><span class="o">(</span><span class="n">right</span><span class="o">,</span> <span class="kc">false</span><span class="o">);</span>
-<span class="ln">29</span>    <span class="kt">int</span> <span class="n">total</span> <span class="o">=</span> <span class="o">(</span><span class="n">leftTrue</span> <span class="o">+</span> <span class="n">leftFalse</span><span class="o">)</span> <span class="o">*</span> <span class="o">(</span><span class="n">rightTrue</span> <span class="o">*</span> <span class="n">rightFalse</span><span class="o">);</span>
-<span class="ln">30</span>    <span class="kt">int</span> <span class="n">totalTrue</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span>
-<span class="ln">31</span>    <span class="k">if</span> <span class="o">(</span><span class="n">op</span> <span class="o">==</span> <span class="sc">&#39;|&#39;</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">32</span>      <span class="n">totalTrue</span> <span class="o">=</span> <span class="n">leftTrue</span> <span class="o">*</span> <span class="n">rightTrue</span>
-<span class="ln">33</span>              <span class="o">+</span> <span class="n">leftTrue</span> <span class="o">*</span> <span class="n">rightFalse</span>
-<span class="ln">34</span>              <span class="o">+</span> <span class="n">leftFalse</span> <span class="o">*</span> <span class="n">rightTrue</span><span class="o">;</span>
-<span class="ln">35</span>    <span class="o">}</span> <span class="k">else</span> <span class="k">if</span> <span class="o">(</span><span class="n">op</span> <span class="o">==</span> <span class="sc">&#39;&amp;&#39;</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">36</span>      <span class="n">totalTrue</span> <span class="o">=</span> <span class="n">leftTrue</span> <span class="o">*</span> <span class="n">rightTrue</span><span class="o">;</span>
-<span class="ln">37</span>    <span class="o">}</span> <span class="k">else</span> <span class="k">if</span> <span class="o">(</span><span class="n">op</span> <span class="o">==</span> <span class="sc">&#39;^&#39;</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">38</span>      <span class="n">totalTrue</span> <span class="o">=</span> <span class="n">leftTrue</span> <span class="o">*</span> <span class="n">rightFalse</span>
-<span class="ln">39</span>                <span class="o">+</span> <span class="n">leftFalse</span> <span class="o">*</span> <span class="n">rightTrue</span><span class="o">;</span>
-<span class="ln">40</span>    <span class="o">}</span>
-<span class="ln">41</span>    <span class="kt">int</span> <span class="n">subWays</span> <span class="o">=</span> <span class="n">result</span> <span class="o">?</span> <span class="n">totalTrue</span> <span class="o">:</span> <span class="n">total</span> <span class="o">-</span> <span class="n">totalTrue</span><span class="o">;</span>
-<span class="ln">42</span>    <span class="n">ways</span> <span class="o">+=</span> <span class="n">subWays</span><span class="o">;</span>
-<span class="ln">43</span>  <span class="o">}</span>
-<span class="ln">44</span>  
-<span class="ln">45</span>  <span class="k">if</span> <span class="o">(</span><span class="n">boolCache</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">46</span>    <span class="n">boolCache</span> <span class="o">=</span> <span class="k">new</span> <span class="n">HashMap</span><span class="o">&lt;&gt;();</span>
-<span class="ln">47</span>    <span class="n">cache</span><span class="o">.</span><span class="na">put</span><span class="o">(</span><span class="n">expression</span><span class="o">,</span> <span class="n">boolCache</span><span class="o">);</span>
-<span class="ln">48</span>  <span class="o">}</span>
-<span class="ln">49</span>  <span class="n">boolCache</span><span class="o">.</span><span class="na">put</span><span class="o">(</span><span class="n">result</span><span class="o">,</span> <span class="n">ways</span><span class="o">);</span>
-<span class="ln">50</span>  <span class="k">return</span> <span class="n">ways</span><span class="o">;</span>
-<span class="ln">51</span><span class="o">}</span>
-</code></pre></div></div></div>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span><span class="lnt">46
+</span><span class="lnt">47
+</span><span class="lnt">48
+</span><span class="lnt">49
+</span><span class="lnt">50
+</span><span class="lnt">51
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="kd">public</span> <span class="kt">int</span> <span class="nf">countEval</span><span class="o">(</span><span class="n">String</span> <span class="n">expression</span><span class="o">,</span> <span class="kt">boolean</span> <span class="n">expected</span><span class="o">,</span> <span class="n">Map</span><span class="o">&lt;</span><span class="n">String</span><span class="o">,</span> <span class="n">Map</span><span class="o">&lt;</span><span class="n">Boolean</span><span class="o">,</span> <span class="n">Integer</span><span class="o">&gt;&gt;</span> <span class="n">cache</span><span class="o">)</span> <span class="o">{</span>
+  <span class="k">if</span> <span class="o">(</span><span class="n">expression</span> <span class="o">==</span> <span class="s">&#34;&#34;</span><span class="o">)</span> <span class="o">{</span>
+    <span class="k">return</span> <span class="n">0</span><span class="o">;</span>
+  <span class="o">}</span>
+  <span class="k">if</span> <span class="o">(</span><span class="n">expression</span> <span class="o">==</span> <span class="s">&#34;1&#34;</span><span class="o">)</span> <span class="o">{</span>
+    <span class="k">return</span> <span class="n">expected</span> <span class="o">?</span> <span class="n">1</span> <span class="o">:</span> <span class="n">0</span><span class="o">;</span>
+  <span class="o">}</span>
+  <span class="k">if</span> <span class="o">(</span><span class="n">expression</span> <span class="o">==</span> <span class="s">&#34;0&#34;</span><span class="o">)</span> <span class="o">{</span>
+    <span class="k">return</span> <span class="n">expected</span> <span class="o">?</span> <span class="n">0</span> <span class="o">:</span> <span class="n">1</span><span class="o">;</span>
+  <span class="o">}</span>
+  <span class="n">Map</span><span class="o">&lt;</span><span class="n">Boolean</span><span class="o">,</span> <span class="n">Integer</span><span class="o">&gt;</span> <span class="n">boolCache</span> <span class="o">=</span> <span class="n">cache</span><span class="o">.</span><span class="na">get</span><span class="o">(</span><span class="n">expression</span><span class="o">);</span>
+  <span class="k">if</span> <span class="o">(</span><span class="n">boolCache</span> <span class="o">!=</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
+    <span class="n">Integer</span> <span class="n">cacheCount</span> <span class="o">=</span> <span class="n">cache</span><span class="o">.</span><span class="na">get</span><span class="o">(</span><span class="n">expression</span><span class="o">).</span><span class="na">get</span><span class="o">(</span><span class="n">result</span><span class="o">);</span>
+    <span class="k">if</span> <span class="o">(</span><span class="n">cacheCount</span> <span class="o">!=</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
+      <span class="k">return</span> <span class="n">cacheCount</span><span class="o">;</span>
+    <span class="o">}</span>
+  <span class="o">}</span>
+    
+  <span class="kt">int</span> <span class="n">ways</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span>
+  <span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="n">1</span><span class="o">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">expression</span><span class="o">.</span><span class="na">length</span><span class="o">;</span> <span class="n">i</span> <span class="o">+=</span> <span class="n">2</span><span class="o">)</span> <span class="o">{</span>
+    <span class="kt">char</span> <span class="n">op</span> <span class="o">=</span> <span class="n">expression</span><span class="o">.</span><span class="na">charAt</span><span class="o">(</span><span class="n">i</span><span class="o">);</span>
+    <span class="n">String</span> <span class="n">left</span> <span class="o">=</span> <span class="n">expression</span><span class="o">.</span><span class="na">subString</span><span class="o">(</span><span class="n">0</span><span class="o">,</span> <span class="n">i</span><span class="o">);</span>
+    <span class="n">String</span> <span class="n">right</span> <span class="o">=</span> <span class="n">expression</span><span class="o">.</span><span class="na">subString</span><span class="o">(</span><span class="n">i</span> <span class="o">+</span> <span class="n">1</span><span class="o">);</span>
+    
+    <span class="kt">int</span> <span class="n">leftTrue</span> <span class="o">=</span> <span class="n">countEval</span><span class="o">(</span><span class="n">left</span><span class="o">,</span> <span class="kc">true</span><span class="o">);</span>
+    <span class="kt">int</span> <span class="n">leftFalse</span> <span class="o">=</span> <span class="n">countEval</span><span class="o">(</span><span class="n">left</span><span class="o">,</span> <span class="kc">false</span><span class="o">);</span>
+    <span class="kt">int</span> <span class="n">rightTrue</span> <span class="o">=</span> <span class="n">countEval</span><span class="o">(</span><span class="n">right</span><span class="o">,</span> <span class="kc">true</span><span class="o">);</span>
+    <span class="kt">int</span> <span class="n">rightFalse</span> <span class="o">=</span> <span class="n">countEval</span><span class="o">(</span><span class="n">right</span><span class="o">,</span> <span class="kc">false</span><span class="o">);</span>
+    <span class="kt">int</span> <span class="n">total</span> <span class="o">=</span> <span class="o">(</span><span class="n">leftTrue</span> <span class="o">+</span> <span class="n">leftFalse</span><span class="o">)</span> <span class="o">*</span> <span class="o">(</span><span class="n">rightTrue</span> <span class="o">*</span> <span class="n">rightFalse</span><span class="o">);</span>
+    <span class="kt">int</span> <span class="n">totalTrue</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span>
+    <span class="k">if</span> <span class="o">(</span><span class="n">op</span> <span class="o">==</span> <span class="sc">&#39;|&#39;</span><span class="o">)</span> <span class="o">{</span>
+      <span class="n">totalTrue</span> <span class="o">=</span> <span class="n">leftTrue</span> <span class="o">*</span> <span class="n">rightTrue</span>
+              <span class="o">+</span> <span class="n">leftTrue</span> <span class="o">*</span> <span class="n">rightFalse</span>
+              <span class="o">+</span> <span class="n">leftFalse</span> <span class="o">*</span> <span class="n">rightTrue</span><span class="o">;</span>
+    <span class="o">}</span> <span class="k">else</span> <span class="k">if</span> <span class="o">(</span><span class="n">op</span> <span class="o">==</span> <span class="sc">&#39;&amp;&#39;</span><span class="o">)</span> <span class="o">{</span>
+      <span class="n">totalTrue</span> <span class="o">=</span> <span class="n">leftTrue</span> <span class="o">*</span> <span class="n">rightTrue</span><span class="o">;</span>
+    <span class="o">}</span> <span class="k">else</span> <span class="k">if</span> <span class="o">(</span><span class="n">op</span> <span class="o">==</span> <span class="sc">&#39;^&#39;</span><span class="o">)</span> <span class="o">{</span>
+      <span class="n">totalTrue</span> <span class="o">=</span> <span class="n">leftTrue</span> <span class="o">*</span> <span class="n">rightFalse</span>
+                <span class="o">+</span> <span class="n">leftFalse</span> <span class="o">*</span> <span class="n">rightTrue</span><span class="o">;</span>
+    <span class="o">}</span>
+    <span class="kt">int</span> <span class="n">subWays</span> <span class="o">=</span> <span class="n">result</span> <span class="o">?</span> <span class="n">totalTrue</span> <span class="o">:</span> <span class="n">total</span> <span class="o">-</span> <span class="n">totalTrue</span><span class="o">;</span>
+    <span class="n">ways</span> <span class="o">+=</span> <span class="n">subWays</span><span class="o">;</span>
+  <span class="o">}</span>
+  
+  <span class="k">if</span> <span class="o">(</span><span class="n">boolCache</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
+    <span class="n">boolCache</span> <span class="o">=</span> <span class="k">new</span> <span class="n">HashMap</span><span class="o">&lt;&gt;();</span>
+    <span class="n">cache</span><span class="o">.</span><span class="na">put</span><span class="o">(</span><span class="n">expression</span><span class="o">,</span> <span class="n">boolCache</span><span class="o">);</span>
+  <span class="o">}</span>
+  <span class="n">boolCache</span><span class="o">.</span><span class="na">put</span><span class="o">(</span><span class="n">result</span><span class="o">,</span> <span class="n">ways</span><span class="o">);</span>
+  <span class="k">return</span> <span class="n">ways</span><span class="o">;</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div></div></div>
   <div class="card-footer"><div class="post-navs d-flex justify-content-evenly">
   <div class="post-nav post-prev"><i class="fas fa-fw fa-chevron-left"></i>
     <a href="/post/cracking-coding-interview/8.13-stack-of-boxes/">Cracking Coding Interview - 8.13 Stack of Boxes

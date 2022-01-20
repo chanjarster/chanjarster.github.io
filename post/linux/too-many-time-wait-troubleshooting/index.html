@@ -12,7 +12,7 @@
 <meta name="description" content="" /><meta itemprop="name" content="压测时大量TIME_WAIT问题排查">
 <meta itemprop="description" content=""><meta itemprop="datePublished" content="2021-09-07T11:42:45+08:00" />
 <meta itemprop="dateModified" content="2021-09-07T11:42:45+08:00" />
-<meta itemprop="wordCount" content="794">
+<meta itemprop="wordCount" content="811">
 <meta itemprop="keywords" content="nginx,troubleshooting," /><meta property="og:title" content="压测时大量TIME_WAIT问题排查" />
 <meta property="og:description" content="" />
 <meta property="og:type" content="article" />
@@ -225,60 +225,159 @@
 </div>
 <div class="post-content mb-3"><h2 id="环境">环境<a class="anchor ms-1" href="#环境"><i class="fas fa-link"></i></a></h2>
 <p>一台Tomcat服务器，监听8080端口，注意这里采用host网络没有NAT：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>docker run -d --name tomcat-8080 --network<span class="o">=</span>host tomcat:8.5-alpine
-</code></pre></div><p>用wrk做压测，连接数100，压5分钟，注意这里故意访问了一个不存在的地址，这是为了降低Tomcat CPU以及流量：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>wrk -c <span class="m">100</span> -t <span class="m">2</span> -d <span class="m">300</span> http://192.168.100.12:8080/abc
-</code></pre></div><p>【服务端侧】Tomcat，netstat得到大量 TIME_WAIT 的连接：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>$ sudo netstat -antpl <span class="p">|</span> grep <span class="s1">&#39;192.168.100.12:8080&#39;</span> <span class="p">|</span> gawk -F<span class="s1">&#39; &#39;</span> <span class="s1">&#39;{ print $6 }&#39;</span> <span class="p">|</span> sort <span class="p">|</span> uniq -c
-<span class="ln">2</span>     <span class="m">93</span> ESTABLISHED
-<span class="ln">3</span>  <span class="m">19980</span> TIME_WAIT
-<span class="ln">4</span>
-<span class="ln">5</span>$ sudo conntrack -L -o extended <span class="p">|</span> awk <span class="s1">&#39;{print $6 &#34; &#34; $7 &#34; &#34; $8}&#39;</span>  <span class="p">|</span> sort <span class="p">|</span> uniq -c <span class="p">|</span> sort -nr <span class="p">|</span> head -n <span class="m">10</span>
-<span class="ln">6</span>conntrack v1.4.3 <span class="o">(</span>conntrack-tools<span class="o">)</span>: <span class="m">6566</span> flow entries have been shown.
-<span class="ln">7</span>   <span class="m">12361</span> TIME_WAIT <span class="nv">src</span><span class="o">=</span>192.168.100.21 <span class="nv">dst</span><span class="o">=</span>192.168.100.12
-<span class="ln">8</span>   ...
-</code></pre></div><p>【客户端侧】wrk，netstat得到TIME_WAIT 连接在4000左右，conntrack的连接在 6400左右：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>$ sudo netstat -antpl <span class="p">|</span> grep <span class="s1">&#39;192.168.100.12:8080&#39;</span> <span class="p">|</span> gawk -F<span class="s1">&#39; &#39;</span> <span class="s1">&#39;{ print $6 }&#39;</span> <span class="p">|</span> sort <span class="p">|</span> uniq -c
-<span class="ln">2</span>    <span class="m">101</span> ESTABLISHED
-<span class="ln">3</span>      <span class="m">1</span> SYN_SENT
-<span class="ln">4</span>  <span class="m">11782</span> TIME_WAIT
-<span class="ln">5</span>
-<span class="ln">6</span>$ sudo conntrack -L -o extended <span class="p">|</span> awk <span class="s1">&#39;{print $6 &#34; &#34; $7 &#34; &#34; $8}&#39;</span>  <span class="p">|</span> sort <span class="p">|</span> uniq -c <span class="p">|</span> sort -nr <span class="p">|</span> head -n <span class="m">10</span>
-<span class="ln">7</span>conntrack v1.4.3 <span class="o">(</span>conntrack-tools<span class="o">)</span>: <span class="m">9972</span> flow entries have been shown.
-<span class="ln">8</span>   <span class="m">21081</span> TIME_WAIT <span class="nv">src</span><span class="o">=</span>192.168.100.21 <span class="nv">dst</span><span class="o">=</span>192.168.100.12
-<span class="ln">9</span>   ...
-</code></pre></div><h2 id="分析">分析<a class="anchor ms-1" href="#分析"><i class="fas fa-link"></i></a></h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">docker run -d --name tomcat-8080 --network<span class="o">=</span>host tomcat:8.5-alpine
+</code></pre></td></tr></table>
+</div>
+</div><p>用wrk做压测，连接数100，压5分钟，注意这里故意访问了一个不存在的地址，这是为了降低Tomcat CPU以及流量：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">wrk -c <span class="m">100</span> -t <span class="m">2</span> -d <span class="m">300</span> http://192.168.100.12:8080/abc
+</code></pre></td></tr></table>
+</div>
+</div><p>【服务端侧】Tomcat，netstat得到大量 TIME_WAIT 的连接：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">$ sudo netstat -antpl <span class="p">|</span> grep <span class="s1">&#39;192.168.100.12:8080&#39;</span> <span class="p">|</span> gawk -F<span class="s1">&#39; &#39;</span> <span class="s1">&#39;{ print $6 }&#39;</span> <span class="p">|</span> sort <span class="p">|</span> uniq -c
+     <span class="m">93</span> ESTABLISHED
+  <span class="m">19980</span> TIME_WAIT
+
+$ sudo conntrack -L -o extended <span class="p">|</span> awk <span class="s1">&#39;{print $6 &#34; &#34; $7 &#34; &#34; $8}&#39;</span>  <span class="p">|</span> sort <span class="p">|</span> uniq -c <span class="p">|</span> sort -nr <span class="p">|</span> head -n <span class="m">10</span>
+conntrack v1.4.3 <span class="o">(</span>conntrack-tools<span class="o">)</span>: <span class="m">6566</span> flow entries have been shown.
+   <span class="m">12361</span> TIME_WAIT <span class="nv">src</span><span class="o">=</span>192.168.100.21 <span class="nv">dst</span><span class="o">=</span>192.168.100.12
+   ...
+</code></pre></td></tr></table>
+</div>
+</div><p>【客户端侧】wrk，netstat得到TIME_WAIT 连接在4000左右，conntrack的连接在 6400左右：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span><span class="lnt">9
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">$ sudo netstat -antpl <span class="p">|</span> grep <span class="s1">&#39;192.168.100.12:8080&#39;</span> <span class="p">|</span> gawk -F<span class="s1">&#39; &#39;</span> <span class="s1">&#39;{ print $6 }&#39;</span> <span class="p">|</span> sort <span class="p">|</span> uniq -c
+    <span class="m">101</span> ESTABLISHED
+      <span class="m">1</span> SYN_SENT
+  <span class="m">11782</span> TIME_WAIT
+
+$ sudo conntrack -L -o extended <span class="p">|</span> awk <span class="s1">&#39;{print $6 &#34; &#34; $7 &#34; &#34; $8}&#39;</span>  <span class="p">|</span> sort <span class="p">|</span> uniq -c <span class="p">|</span> sort -nr <span class="p">|</span> head -n <span class="m">10</span>
+conntrack v1.4.3 <span class="o">(</span>conntrack-tools<span class="o">)</span>: <span class="m">9972</span> flow entries have been shown.
+   <span class="m">21081</span> TIME_WAIT <span class="nv">src</span><span class="o">=</span>192.168.100.21 <span class="nv">dst</span><span class="o">=</span>192.168.100.12
+   ...
+</code></pre></td></tr></table>
+</div>
+</div><h2 id="分析">分析<a class="anchor ms-1" href="#分析"><i class="fas fa-link"></i></a></h2>
 <p>【客户端侧】wrk连接数才100个就产生了近 12000 个TIME_WAIT连接，极大浪费了本地端口资源。</p>
 <p>【服务端侧】在Tomcat侧也有近 20000 个TIME_WAIT，虽然不浪费端口资源但是浪费内核资源。</p>
 <p>TIME_WAIT 状态代表socket已经关闭，走完了4次挥手流程，在等待网络里是否还有包传输过来：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>$ man netstat
-<span class="ln">2</span>TIME_WAIT
-<span class="ln">3</span>    The socket is waiting after close to handle packets 
-<span class="ln">4</span>    still in the network.
-</code></pre></div><p>联想到内核tcp相关参数：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>$ man tcp
-<span class="ln">2</span>
-<span class="ln">3</span>tcp_tw_reuse <span class="o">(</span>Boolean<span class="p">;</span> default: disabled<span class="p">;</span> since Linux 2.4.19/2.6<span class="o">)</span>
-<span class="ln">4</span>       Allow to reuse TIME_WAIT sockets <span class="k">for</span> new connections 
-<span class="ln">5</span>       when it is safe from protocol viewpoint.  It should 
-<span class="ln">6</span>       not be changed without advice/request of technical experts.
-</code></pre></div><h2 id="调整参数">调整参数<a class="anchor ms-1" href="#调整参数"><i class="fas fa-link"></i></a></h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">$ man netstat
+TIME_WAIT
+    The socket is waiting after close to handle packets 
+    still in the network.
+</code></pre></td></tr></table>
+</div>
+</div><p>联想到内核tcp相关参数：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">$ man tcp
+
+tcp_tw_reuse <span class="o">(</span>Boolean<span class="p">;</span> default: disabled<span class="p">;</span> since Linux 2.4.19/2.6<span class="o">)</span>
+       Allow to reuse TIME_WAIT sockets <span class="k">for</span> new connections 
+       when it is safe from protocol viewpoint.  It should 
+       not be changed without advice/request of technical experts.
+</code></pre></td></tr></table>
+</div>
+</div><h2 id="调整参数">调整参数<a class="anchor ms-1" href="#调整参数"><i class="fas fa-link"></i></a></h2>
 <p>观察 <code>net.ipv4.tcp_tw_reuse</code>内核参数发现没有开启：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>$ sysctl net.ipv4.tcp_tw_reuse
-<span class="ln">2</span><span class="m">0</span>
-</code></pre></div><p>将其打开（如果要永久开启请看<a href="../limits">Linux调整Limits</a>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">$ sysctl net.ipv4.tcp_tw_reuse
+<span class="m">0</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>将其打开（如果要永久开启请看<a href="../limits">Linux调整Limits</a>
 ）：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>$ sudo sysctl -w net.ipv4.tcp_tw_reuse<span class="o">=</span><span class="m">1</span>
-</code></pre></div><p>【客户端】wrk TIME_WAIT连接数 7000左右，比之前 12000 好很多：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>$ sudo netstat -antpl <span class="p">|</span> grep <span class="s1">&#39;192.168.100.12:8080&#39;</span> <span class="p">|</span> gawk -F<span class="s1">&#39; &#39;</span> <span class="s1">&#39;{ print $6 }&#39;</span> <span class="p">|</span> sort <span class="p">|</span> uniq -c
-<span class="ln">2</span>      <span class="m">1</span> CLOSING
-<span class="ln">3</span>     <span class="m">99</span> ESTABLISHED
-<span class="ln">4</span>   <span class="m">7018</span> TIME_WAIT
-</code></pre></div><p>【服务端】Tomcat TIME_WAIT连接数 13000左右，比之前的 20000 好很多：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>$ sudo netstat -antpl <span class="p">|</span> grep <span class="s1">&#39;192.168.100.12:8080&#39;</span> <span class="p">|</span> gawk -F<span class="s1">&#39; &#39;</span> <span class="s1">&#39;{ print $6 }&#39;</span> <span class="p">|</span> sort <span class="p">|</span> uniq -c
-<span class="ln">2</span>    <span class="m">103</span> ESTABLISHED
-<span class="ln">3</span>  <span class="m">13628</span> TIME_WAIT
-</code></pre></div><h2 id="扩展">扩展<a class="anchor ms-1" href="#扩展"><i class="fas fa-link"></i></a></h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">$ sudo sysctl -w net.ipv4.tcp_tw_reuse<span class="o">=</span><span class="m">1</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>【客户端】wrk TIME_WAIT连接数 7000左右，比之前 12000 好很多：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">$ sudo netstat -antpl <span class="p">|</span> grep <span class="s1">&#39;192.168.100.12:8080&#39;</span> <span class="p">|</span> gawk -F<span class="s1">&#39; &#39;</span> <span class="s1">&#39;{ print $6 }&#39;</span> <span class="p">|</span> sort <span class="p">|</span> uniq -c
+      <span class="m">1</span> CLOSING
+     <span class="m">99</span> ESTABLISHED
+   <span class="m">7018</span> TIME_WAIT
+</code></pre></td></tr></table>
+</div>
+</div><p>【服务端】Tomcat TIME_WAIT连接数 13000左右，比之前的 20000 好很多：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">$ sudo netstat -antpl <span class="p">|</span> grep <span class="s1">&#39;192.168.100.12:8080&#39;</span> <span class="p">|</span> gawk -F<span class="s1">&#39; &#39;</span> <span class="s1">&#39;{ print $6 }&#39;</span> <span class="p">|</span> sort <span class="p">|</span> uniq -c
+    <span class="m">103</span> ESTABLISHED
+  <span class="m">13628</span> TIME_WAIT
+</code></pre></td></tr></table>
+</div>
+</div><h2 id="扩展">扩展<a class="anchor ms-1" href="#扩展"><i class="fas fa-link"></i></a></h2>
 <p>可以参考<a href="../net-params">常用网络内核参数优化</a>
 给内核网络参数做一个完整的优化。</p></div></div>
   <div class="card-footer"><div class="post-navs d-flex justify-content-evenly">

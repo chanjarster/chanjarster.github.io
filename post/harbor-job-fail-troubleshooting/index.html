@@ -12,7 +12,7 @@
 <meta name="description" content="" /><meta itemprop="name" content="排查Harbor定时任务无法执行的问题">
 <meta itemprop="description" content=""><meta itemprop="datePublished" content="2021-05-14T09:01:20+08:00" />
 <meta itemprop="dateModified" content="2021-05-14T09:01:20+08:00" />
-<meta itemprop="wordCount" content="499">
+<meta itemprop="wordCount" content="510">
 <meta itemprop="keywords" content="docker,harbor,troubleshooting," /><meta property="og:title" content="排查Harbor定时任务无法执行的问题" />
 <meta property="og:description" content="" />
 <meta property="og:type" content="article" />
@@ -220,7 +220,7 @@
   <span class="post-date" title="创建于 2021-05-14 09:01:20 &#43;0800 CST。">
     2021-05-14
   </span><span class="post-reading-time">
-    1 分钟阅读
+    2 分钟阅读
   </span><span class="post-taxonomies"><a href="/tags/docker/" class="badge post-taxonomy">docker</a><a href="/tags/harbor/" class="badge post-taxonomy">harbor</a><a href="/tags/troubleshooting/" class="badge post-taxonomy">troubleshooting</a></span>
 </div>
 <div class="post-content mb-3"><h2 id="现象">现象<a class="anchor ms-1" href="#现象"><i class="fas fa-link"></i></a></h2>
@@ -245,11 +245,21 @@
 </p>
 <h2 id="到harbor-db-查看lock表">到harbor-db 查看Lock表<a class="anchor ms-1" href="#到harbor-db-查看lock表"><i class="fas fa-link"></i></a></h2>
 <p>最终在 postgres database里找到lock表：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>docker stop harbor-core
-<span class="ln">2</span>docker <span class="nb">exec</span> -it harbor-db /bin/bash
-<span class="ln">3</span>psql postgres
-<span class="ln">4</span><span class="k">select</span> * from lock<span class="p">;</span>
-</code></pre></div><p><img class="img-fluid" alt="" src="/post/harbor-job-fail-troubleshooting/4.png" loading="lazy"
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">docker stop harbor-core
+docker <span class="nb">exec</span> -it harbor-db /bin/bash
+psql postgres
+<span class="k">select</span> * from lock<span class="p">;</span>
+</code></pre></td></tr></table>
+</div>
+</div><p><img class="img-fluid" alt="" src="/post/harbor-job-fail-troubleshooting/4.png" loading="lazy"
   
    />
 
@@ -265,36 +275,79 @@
 </p>
 <p>但是时间不匹配。</p>
 <h2 id="尝试重启harbor">尝试重启harbor<a class="anchor ms-1" href="#尝试重启harbor"><i class="fas fa-link"></i></a></h2>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span><span class="nb">cd</span> /path/to/harbor-installer-dir
-<span class="ln">2</span>docker-compose down -v
-</code></pre></div><p>发现 harbor-jobservice 删除不掉，于是强制删除：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>docker rm –force harbor-jobservice
-</code></pre></div><p>然后再启动harbor：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>docker-compose up -d
-</code></pre></div><p>得到提示：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="nb">cd</span> /path/to/harbor-installer-dir
+docker-compose down -v
+</code></pre></td></tr></table>
+</div>
+</div><p>发现 harbor-jobservice 删除不掉，于是强制删除：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">docker rm –force harbor-jobservice
+</code></pre></td></tr></table>
+</div>
+</div><p>然后再启动harbor：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">docker-compose up -d
+</code></pre></td></tr></table>
+</div>
+</div><p>得到提示：</p>
 <p><img class="img-fluid" alt="" src="/post/harbor-job-fail-troubleshooting/6.png" loading="lazy"
   
    />
 
 </p>
 <p>尝试删除 harbor_harbor network：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>docker network rm harbor_harbor
-</code></pre></div><p>得到提示：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">docker network rm harbor_harbor
+</code></pre></td></tr></table>
+</div>
+</div><p>得到提示：</p>
 <p><img class="img-fluid" alt="" src="/post/harbor-job-fail-troubleshooting/7.png" loading="lazy"
   
    />
 
 </p>
 <p>观察这个network：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>docker network inspect harbor_harbor
-</code></pre></div><p><img class="img-fluid" alt="" src="/post/harbor-job-fail-troubleshooting/8.png" loading="lazy"
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">docker network inspect harbor_harbor
+</code></pre></td></tr></table>
+</div>
+</div><p><img class="img-fluid" alt="" src="/post/harbor-job-fail-troubleshooting/8.png" loading="lazy"
   
    />
 
 </p>
 <p>看到上面存在幽灵容器 harbor-jobservice的注册记录，而这个容器之前已经删除了。因为<code>docker network rm</code> 没有<code> --force</code> 选项，所以重启docker看看能不能修复数据。</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>systemctl restart docker
-</code></pre></div><p>之后再观察harbor_harbor network 就正常了。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">systemctl restart docker
+</code></pre></td></tr></table>
+</div>
+</div><p>之后再观察harbor_harbor network 就正常了。</p>
 <p>然后重启harbor成功，同步任务也能顺利执行。</p>
 <h2 id="总结">总结<a class="anchor ms-1" href="#总结"><i class="fas fa-link"></i></a></h2>
 <p>排查的过程中走了一些弯路，其实如果一开始就观察harbor容器的状况就有可能定位问题所在。</p>

@@ -12,7 +12,7 @@
 <meta name="description" content="" /><meta itemprop="name" content="如何在Tomcat中做TLS客户端认证">
 <meta itemprop="description" content=""><meta itemprop="datePublished" content="2019-03-27T15:01:57+08:00" />
 <meta itemprop="dateModified" content="2019-03-27T15:01:57+08:00" />
-<meta itemprop="wordCount" content="5323">
+<meta itemprop="wordCount" content="5419">
 <meta itemprop="keywords" content="java,tls,openssl," /><meta property="og:title" content="如何在Tomcat中做TLS客户端认证" />
 <meta property="og:description" content="" />
 <meta property="og:type" content="article" />
@@ -241,27 +241,61 @@
 <li>自己签发</li>
 </ul>
 <p>在一切可能的情况下都应该使用权威CA签发的证书，为什么这么建议？因为这里牵涉到一个信任问题，浏览器、编程语言SDK和某些工具都维护了一个信任CA证书清单，只要是由这些CA签发的证书那就信任，否则就不信任。而这个链条是可以多级的，这里就不展开了。你只需要知道由信任CA签发的所有证书都是可信的。比如JDK自带的信任CA证书可以通过下面命令看到：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>keytool -list -keystore <span class="nv">$JAVA_HOME</span>/jre/lib/security/cacerts
-<span class="ln">2</span>
-<span class="ln">3</span>verisignclass2g2ca <span class="o">[</span>jdk<span class="o">]</span>, 2016-8-25, trustedCertEntry,
-<span class="ln">4</span>证书指纹 <span class="o">(</span>SHA1<span class="o">)</span>: B3:EA:C4:47:76:C9:C8:1C:EA:F2:9D:95:B6:CC:A0:08:1B:67:EC:9D
-<span class="ln">5</span>digicertassuredidg3 <span class="o">[</span>jdk<span class="o">]</span>, 2016-8-25, trustedCertEntry,
-<span class="ln">6</span>证书指纹 <span class="o">(</span>SHA1<span class="o">)</span>: F5:17:A2:4F:9A:48:C6:C9:F8:A2:00:26:9F:DC:0F:48:2C:AB:30:89
-<span class="ln">7</span>verisignuniversalrootca <span class="o">[</span>jdk<span class="o">]</span>, 2016-8-25, trustedCertEntry,
-<span class="ln">8</span>...
-</code></pre></div><p>让你输密码的时候输入<code>changeit</code>。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">keytool -list -keystore <span class="nv">$JAVA_HOME</span>/jre/lib/security/cacerts
+
+verisignclass2g2ca <span class="o">[</span>jdk<span class="o">]</span>, 2016-8-25, trustedCertEntry,
+证书指纹 <span class="o">(</span>SHA1<span class="o">)</span>: B3:EA:C4:47:76:C9:C8:1C:EA:F2:9D:95:B6:CC:A0:08:1B:67:EC:9D
+digicertassuredidg3 <span class="o">[</span>jdk<span class="o">]</span>, 2016-8-25, trustedCertEntry,
+证书指纹 <span class="o">(</span>SHA1<span class="o">)</span>: F5:17:A2:4F:9A:48:C6:C9:F8:A2:00:26:9F:DC:0F:48:2C:AB:30:89
+verisignuniversalrootca <span class="o">[</span>jdk<span class="o">]</span>, 2016-8-25, trustedCertEntry,
+...
+</code></pre></td></tr></table>
+</div>
+</div><p>让你输密码的时候输入<code>changeit</code>。</p>
 <p>如果这个证书不是由信任CA签发的（比如自己签发）会发生什么？浏览器、编程语言SDK、你所使用的工具会报告以下错误：</p>
 <p>curl：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln">1</span>curl: (60) SSL certificate problem: self signed certificate in certificate chain
-</code></pre></div><p>Java：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln">1</span>Exception in thread &#34;main&#34; javax.net.ssl.SSLHandshakeException: sun.security.validator.ValidatorException: PKIX path building failed: sun.security.provider.certpath.SunCertPathBuilderException: unable to find valid certification path to requested target
-<span class="ln">2</span>	at sun.security.ssl.Alerts.getSSLException(Alerts.java:192)
-<span class="ln">3</span>	at sun.security.ssl.SSLSocketImpl.fatal(SSLSocketImpl.java:1964)
-<span class="ln">4</span>	at sun.security.ssl.Handshaker.fatalSE(Handshaker.java:328)
-<span class="ln">5</span>	at sun.security.ssl.Handshaker.fatalSE(Handshaker.java:322)
-<span class="ln">6</span>	at sun.security.ssl.ClientHandshaker.serverCertificate(ClientHandshaker.java:1614)
-<span class="ln">7</span>...
-</code></pre></div><p>浏览器：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt">curl: (60) SSL certificate problem: self signed certificate in certificate chain
+</code></pre></td></tr></table>
+</div>
+</div><p>Java：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt">Exception in thread &#34;main&#34; javax.net.ssl.SSLHandshakeException: sun.security.validator.ValidatorException: PKIX path building failed: sun.security.provider.certpath.SunCertPathBuilderException: unable to find valid certification path to requested target
+	at sun.security.ssl.Alerts.getSSLException(Alerts.java:192)
+	at sun.security.ssl.SSLSocketImpl.fatal(SSLSocketImpl.java:1964)
+	at sun.security.ssl.Handshaker.fatalSE(Handshaker.java:328)
+	at sun.security.ssl.Handshaker.fatalSE(Handshaker.java:322)
+	at sun.security.ssl.ClientHandshaker.serverCertificate(ClientHandshaker.java:1614)
+...
+</code></pre></td></tr></table>
+</div>
+</div><p>浏览器：</p>
 <p><img class="img-fluid" alt="" src="/post/tls/how-to-tls-client-authentication-in-tomcat/browser-warning.png" loading="lazy"
   
    />
@@ -297,411 +331,983 @@
 这个工具来生成证书。</p>
 <h3 id="服务端">服务端<a class="anchor ms-1" href="#服务端"><i class="fas fa-link"></i></a></h3>
 <p>先弄一套目录：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span><span class="c1"># 放自签发的服务端CA根证书</span>
-<span class="ln">2</span>server-secrets/ca
-<span class="ln">3</span><span class="c1"># 放自签发的服务端的证书</span>
-<span class="ln">4</span>server-secrets/cert
-<span class="ln">5</span><span class="c1"># 放服务端的keystore和truststore</span>
-<span class="ln">6</span>server-secrets/jks
-</code></pre></div><h4 id="生成自签名ca证书">生成自签名CA证书<a class="anchor ms-1" href="#生成自签名ca证书"><i class="fas fa-link"></i></a></h4>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="c1"># 放自签发的服务端CA根证书</span>
+server-secrets/ca
+<span class="c1"># 放自签发的服务端的证书</span>
+server-secrets/cert
+<span class="c1"># 放服务端的keystore和truststore</span>
+server-secrets/jks
+</code></pre></td></tr></table>
+</div>
+</div><h4 id="生成自签名ca证书">生成自签名CA证书<a class="anchor ms-1" href="#生成自签名ca证书"><i class="fas fa-link"></i></a></h4>
 <p>新建文件：server-secrets/ca/server-root-ca-csr.json</p>
 <p>内容如下：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-json" data-lang="json"><span class="ln"> 1</span><span class="p">{</span>
-<span class="ln"> 2</span>  <span class="nt">&#34;key&#34;</span><span class="p">:</span> <span class="p">{</span>
-<span class="ln"> 3</span>    <span class="nt">&#34;algo&#34;</span><span class="p">:</span> <span class="s2">&#34;rsa&#34;</span><span class="p">,</span>
-<span class="ln"> 4</span>    <span class="nt">&#34;size&#34;</span><span class="p">:</span> <span class="mi">2048</span>
-<span class="ln"> 5</span>  <span class="p">},</span>
-<span class="ln"> 6</span>  <span class="nt">&#34;names&#34;</span><span class="p">:</span> <span class="p">[</span>
-<span class="ln"> 7</span>    <span class="p">{</span>
-<span class="ln"> 8</span>      <span class="nt">&#34;O&#34;</span><span class="p">:</span> <span class="s2">&#34;Company&#34;</span><span class="p">,</span>
-<span class="ln"> 9</span>      <span class="nt">&#34;OU&#34;</span><span class="p">:</span> <span class="s2">&#34;Datacenter&#34;</span><span class="p">,</span>
-<span class="ln">10</span>      <span class="nt">&#34;L&#34;</span><span class="p">:</span> <span class="s2">&#34;Shanghai&#34;</span><span class="p">,</span>
-<span class="ln">11</span>      <span class="nt">&#34;ST&#34;</span><span class="p">:</span> <span class="s2">&#34;Shanghai&#34;</span><span class="p">,</span>
-<span class="ln">12</span>      <span class="nt">&#34;C&#34;</span><span class="p">:</span> <span class="s2">&#34;CN&#34;</span>
-<span class="ln">13</span>    <span class="p">}</span>
-<span class="ln">14</span>  <span class="p">],</span>
-<span class="ln">15</span>  <span class="nt">&#34;CN&#34;</span><span class="p">:</span> <span class="s2">&#34;server-root-ca&#34;</span>
-<span class="ln">16</span><span class="p">}</span>
-</code></pre></div><p>运行下面命令生成Server ROOT CA证书：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>cfssl gencert --initca<span class="o">=</span><span class="nb">true</span> ./server-root-ca-csr.json <span class="p">|</span> cfssljson --bare server-root-ca
-</code></pre></div><p>会得到下面几个文件：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln">1</span>server-secrets/ca/
-<span class="ln">2</span>├── server-root-ca-key.pem
-<span class="ln">3</span>├── server-root-ca.csr
-<span class="ln">4</span>└── server-root-ca.pem
-</code></pre></div><p>用下面命令验证证书：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln"> 1</span>openssl x509 -in ./server-root-ca.pem -text -noout
-<span class="ln"> 2</span>
-<span class="ln"> 3</span>Certificate:
-<span class="ln"> 4</span>    Data:
-<span class="ln"> 5</span>        Version: <span class="m">3</span> <span class="o">(</span>0x2<span class="o">)</span>
-<span class="ln"> 6</span>        Serial Number:
-<span class="ln"> 7</span>            0c:8a:1a:ca:da:fa:4c:17:6c:1f:42:40:4c:f1:90:f4:fd:1d:fe:58
-<span class="ln"> 8</span>    Signature Algorithm: sha256WithRSAEncryption
-<span class="ln"> 9</span>        Issuer: <span class="nv">C</span><span class="o">=</span>CN, <span class="nv">ST</span><span class="o">=</span>Shanghai, <span class="nv">L</span><span class="o">=</span>Shanghai, <span class="nv">O</span><span class="o">=</span>Company, <span class="nv">OU</span><span class="o">=</span>Datacenter, <span class="nv">CN</span><span class="o">=</span>server-root-ca
-<span class="ln">10</span>        Validity
-<span class="ln">11</span>            Not Before: Mar <span class="m">27</span> 05:14:00 <span class="m">2019</span> GMT
-<span class="ln">12</span>            Not After : Mar <span class="m">25</span> 05:14:00 <span class="m">2024</span> GMT
-<span class="ln">13</span>        Subject: <span class="nv">C</span><span class="o">=</span>CN, <span class="nv">ST</span><span class="o">=</span>Shanghai, <span class="nv">L</span><span class="o">=</span>Shanghai, <span class="nv">O</span><span class="o">=</span>Company, <span class="nv">OU</span><span class="o">=</span>Datacenter, <span class="nv">CN</span><span class="o">=</span>server-root-ca
-</code></pre></div><p>可以看到签发人和被签发人是同一个。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-json" data-lang="json"><span class="p">{</span>
+  <span class="nt">&#34;key&#34;</span><span class="p">:</span> <span class="p">{</span>
+    <span class="nt">&#34;algo&#34;</span><span class="p">:</span> <span class="s2">&#34;rsa&#34;</span><span class="p">,</span>
+    <span class="nt">&#34;size&#34;</span><span class="p">:</span> <span class="mi">2048</span>
+  <span class="p">},</span>
+  <span class="nt">&#34;names&#34;</span><span class="p">:</span> <span class="p">[</span>
+    <span class="p">{</span>
+      <span class="nt">&#34;O&#34;</span><span class="p">:</span> <span class="s2">&#34;Company&#34;</span><span class="p">,</span>
+      <span class="nt">&#34;OU&#34;</span><span class="p">:</span> <span class="s2">&#34;Datacenter&#34;</span><span class="p">,</span>
+      <span class="nt">&#34;L&#34;</span><span class="p">:</span> <span class="s2">&#34;Shanghai&#34;</span><span class="p">,</span>
+      <span class="nt">&#34;ST&#34;</span><span class="p">:</span> <span class="s2">&#34;Shanghai&#34;</span><span class="p">,</span>
+      <span class="nt">&#34;C&#34;</span><span class="p">:</span> <span class="s2">&#34;CN&#34;</span>
+    <span class="p">}</span>
+  <span class="p">],</span>
+  <span class="nt">&#34;CN&#34;</span><span class="p">:</span> <span class="s2">&#34;server-root-ca&#34;</span>
+<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>运行下面命令生成Server ROOT CA证书：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">cfssl gencert --initca<span class="o">=</span><span class="nb">true</span> ./server-root-ca-csr.json <span class="p">|</span> cfssljson --bare server-root-ca
+</code></pre></td></tr></table>
+</div>
+</div><p>会得到下面几个文件：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt">server-secrets/ca/
+├── server-root-ca-key.pem
+├── server-root-ca.csr
+└── server-root-ca.pem
+</code></pre></td></tr></table>
+</div>
+</div><p>用下面命令验证证书：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">openssl x509 -in ./server-root-ca.pem -text -noout
+
+Certificate:
+    Data:
+        Version: <span class="m">3</span> <span class="o">(</span>0x2<span class="o">)</span>
+        Serial Number:
+            0c:8a:1a:ca:da:fa:4c:17:6c:1f:42:40:4c:f1:90:f4:fd:1d:fe:58
+    Signature Algorithm: sha256WithRSAEncryption
+        Issuer: <span class="nv">C</span><span class="o">=</span>CN, <span class="nv">ST</span><span class="o">=</span>Shanghai, <span class="nv">L</span><span class="o">=</span>Shanghai, <span class="nv">O</span><span class="o">=</span>Company, <span class="nv">OU</span><span class="o">=</span>Datacenter, <span class="nv">CN</span><span class="o">=</span>server-root-ca
+        Validity
+            Not Before: Mar <span class="m">27</span> 05:14:00 <span class="m">2019</span> GMT
+            Not After : Mar <span class="m">25</span> 05:14:00 <span class="m">2024</span> GMT
+        Subject: <span class="nv">C</span><span class="o">=</span>CN, <span class="nv">ST</span><span class="o">=</span>Shanghai, <span class="nv">L</span><span class="o">=</span>Shanghai, <span class="nv">O</span><span class="o">=</span>Company, <span class="nv">OU</span><span class="o">=</span>Datacenter, <span class="nv">CN</span><span class="o">=</span>server-root-ca
+</code></pre></td></tr></table>
+</div>
+</div><p>可以看到签发人和被签发人是同一个。</p>
 <h4 id="生成自签发证书">生成自签发证书<a class="anchor ms-1" href="#生成自签发证书"><i class="fas fa-link"></i></a></h4>
 <p>新建文件 server-secrets/cert/server-gencert.json，内容如下：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-json" data-lang="json"><span class="ln"> 1</span><span class="p">{</span>
-<span class="ln"> 2</span>  <span class="nt">&#34;signing&#34;</span><span class="p">:</span> <span class="p">{</span>
-<span class="ln"> 3</span>    <span class="nt">&#34;default&#34;</span><span class="p">:</span> <span class="p">{</span>
-<span class="ln"> 4</span>        <span class="nt">&#34;usages&#34;</span><span class="p">:</span> <span class="p">[</span>
-<span class="ln"> 5</span>          <span class="s2">&#34;signing&#34;</span><span class="p">,</span>
-<span class="ln"> 6</span>          <span class="s2">&#34;key encipherment&#34;</span><span class="p">,</span>
-<span class="ln"> 7</span>          <span class="s2">&#34;server auth&#34;</span>
-<span class="ln"> 8</span>        <span class="p">],</span>
-<span class="ln"> 9</span>        <span class="nt">&#34;expiry&#34;</span><span class="p">:</span> <span class="s2">&#34;87600h&#34;</span>
-<span class="ln">10</span>    <span class="p">}</span>
-<span class="ln">11</span>  <span class="p">}</span>
-<span class="ln">12</span><span class="p">}</span>
-</code></pre></div><p>可以看到我们会生成用来做server auth的证书。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-json" data-lang="json"><span class="p">{</span>
+  <span class="nt">&#34;signing&#34;</span><span class="p">:</span> <span class="p">{</span>
+    <span class="nt">&#34;default&#34;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="nt">&#34;usages&#34;</span><span class="p">:</span> <span class="p">[</span>
+          <span class="s2">&#34;signing&#34;</span><span class="p">,</span>
+          <span class="s2">&#34;key encipherment&#34;</span><span class="p">,</span>
+          <span class="s2">&#34;server auth&#34;</span>
+        <span class="p">],</span>
+        <span class="nt">&#34;expiry&#34;</span><span class="p">:</span> <span class="s2">&#34;87600h&#34;</span>
+    <span class="p">}</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>可以看到我们会生成用来做server auth的证书。</p>
 <p>新建文件 server-secrets/cert/demo-csr.json，内容如下：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-json" data-lang="json"><span class="ln"> 1</span><span class="p">{</span>
-<span class="ln"> 2</span>  <span class="nt">&#34;key&#34;</span><span class="p">:</span> <span class="p">{</span>
-<span class="ln"> 3</span>    <span class="nt">&#34;algo&#34;</span><span class="p">:</span> <span class="s2">&#34;rsa&#34;</span><span class="p">,</span>
-<span class="ln"> 4</span>    <span class="nt">&#34;size&#34;</span><span class="p">:</span> <span class="mi">2048</span>
-<span class="ln"> 5</span>  <span class="p">},</span>
-<span class="ln"> 6</span>  <span class="nt">&#34;names&#34;</span><span class="p">:</span> <span class="p">[</span>
-<span class="ln"> 7</span>    <span class="p">{</span>
-<span class="ln"> 8</span>      <span class="nt">&#34;O&#34;</span><span class="p">:</span> <span class="s2">&#34;Company&#34;</span><span class="p">,</span>
-<span class="ln"> 9</span>      <span class="nt">&#34;OU&#34;</span><span class="p">:</span> <span class="s2">&#34;Datacenter&#34;</span><span class="p">,</span>
-<span class="ln">10</span>      <span class="nt">&#34;L&#34;</span><span class="p">:</span> <span class="s2">&#34;Shanghai&#34;</span><span class="p">,</span>
-<span class="ln">11</span>      <span class="nt">&#34;ST&#34;</span><span class="p">:</span> <span class="s2">&#34;Shanghai&#34;</span><span class="p">,</span>
-<span class="ln">12</span>      <span class="nt">&#34;C&#34;</span><span class="p">:</span> <span class="s2">&#34;CN&#34;</span>
-<span class="ln">13</span>    <span class="p">}</span>
-<span class="ln">14</span>  <span class="p">],</span>
-<span class="ln">15</span>  <span class="nt">&#34;CN&#34;</span><span class="p">:</span> <span class="s2">&#34;server-demo&#34;</span><span class="p">,</span>
-<span class="ln">16</span>  <span class="nt">&#34;hosts&#34;</span><span class="p">:</span> <span class="p">[</span>
-<span class="ln">17</span>    <span class="s2">&#34;127.0.0.1&#34;</span><span class="p">,</span>
-<span class="ln">18</span>    <span class="s2">&#34;localhost&#34;</span>
-<span class="ln">19</span>  <span class="p">]</span>
-<span class="ln">20</span><span class="p">}</span>
-</code></pre></div><p>看上面的hosts，你可以根据自己的需要填写域名或IP，这里因为是本地演示所以是127.0.0.1和localhost。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-json" data-lang="json"><span class="p">{</span>
+  <span class="nt">&#34;key&#34;</span><span class="p">:</span> <span class="p">{</span>
+    <span class="nt">&#34;algo&#34;</span><span class="p">:</span> <span class="s2">&#34;rsa&#34;</span><span class="p">,</span>
+    <span class="nt">&#34;size&#34;</span><span class="p">:</span> <span class="mi">2048</span>
+  <span class="p">},</span>
+  <span class="nt">&#34;names&#34;</span><span class="p">:</span> <span class="p">[</span>
+    <span class="p">{</span>
+      <span class="nt">&#34;O&#34;</span><span class="p">:</span> <span class="s2">&#34;Company&#34;</span><span class="p">,</span>
+      <span class="nt">&#34;OU&#34;</span><span class="p">:</span> <span class="s2">&#34;Datacenter&#34;</span><span class="p">,</span>
+      <span class="nt">&#34;L&#34;</span><span class="p">:</span> <span class="s2">&#34;Shanghai&#34;</span><span class="p">,</span>
+      <span class="nt">&#34;ST&#34;</span><span class="p">:</span> <span class="s2">&#34;Shanghai&#34;</span><span class="p">,</span>
+      <span class="nt">&#34;C&#34;</span><span class="p">:</span> <span class="s2">&#34;CN&#34;</span>
+    <span class="p">}</span>
+  <span class="p">],</span>
+  <span class="nt">&#34;CN&#34;</span><span class="p">:</span> <span class="s2">&#34;server-demo&#34;</span><span class="p">,</span>
+  <span class="nt">&#34;hosts&#34;</span><span class="p">:</span> <span class="p">[</span>
+    <span class="s2">&#34;127.0.0.1&#34;</span><span class="p">,</span>
+    <span class="s2">&#34;localhost&#34;</span>
+  <span class="p">]</span>
+<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>看上面的hosts，你可以根据自己的需要填写域名或IP，这里因为是本地演示所以是127.0.0.1和localhost。</p>
 <p>运行下面命令生成证书</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>cfssl gencert <span class="se">\
-</span><span class="ln">2</span><span class="se"></span>  --ca ../ca/server-root-ca.pem <span class="se">\
-</span><span class="ln">3</span><span class="se"></span>  --ca-key ../ca/server-root-ca-key.pem <span class="se">\
-</span><span class="ln">4</span><span class="se"></span>  --config ./server-gencert.json <span class="se">\
-</span><span class="ln">5</span><span class="se"></span>  ./demo-csr.json <span class="p">|</span> cfssljson --bare ./demo
-</code></pre></div><p>得到文件：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln">1</span>server-secrets/cert/
-<span class="ln">2</span>├── demo-key.pem
-<span class="ln">3</span>├── demo.csr
-<span class="ln">4</span>└── demo.pem
-</code></pre></div><p>验证结果：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln"> 1</span>openssl x509 -in ./demo.pem -text -noout
-<span class="ln"> 2</span>
-<span class="ln"> 3</span>Certificate:
-<span class="ln"> 4</span>    Data:
-<span class="ln"> 5</span>        Version: <span class="m">3</span> <span class="o">(</span>0x2<span class="o">)</span>
-<span class="ln"> 6</span>        Serial Number:
-<span class="ln"> 7</span>            1d:d0:51:97:6c:ce:ea:29:2a:f4:3b:3c:48:a3:69:b0:ef:f3:26:7b
-<span class="ln"> 8</span>    Signature Algorithm: sha256WithRSAEncryption
-<span class="ln"> 9</span>        Issuer: <span class="nv">C</span><span class="o">=</span>CN, <span class="nv">ST</span><span class="o">=</span>Shanghai, <span class="nv">L</span><span class="o">=</span>Shanghai, <span class="nv">O</span><span class="o">=</span>Company, <span class="nv">OU</span><span class="o">=</span>Datacenter, <span class="nv">CN</span><span class="o">=</span>server-root-ca
-<span class="ln">10</span>        Validity
-<span class="ln">11</span>            Not Before: Mar <span class="m">27</span> 05:17:00 <span class="m">2019</span> GMT
-<span class="ln">12</span>            Not After : Mar <span class="m">24</span> 05:17:00 <span class="m">2029</span> GMT
-<span class="ln">13</span>        Subject: <span class="nv">C</span><span class="o">=</span>CN, <span class="nv">ST</span><span class="o">=</span>Shanghai, <span class="nv">L</span><span class="o">=</span>Shanghai, <span class="nv">O</span><span class="o">=</span>Company, <span class="nv">OU</span><span class="o">=</span>Datacenter, <span class="nv">CN</span><span class="o">=</span>server-demo
-</code></pre></div><p>可以看到签发者是server-root-ca，Subject是server-demo。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">cfssl gencert <span class="se">\
+</span><span class="se"></span>  --ca ../ca/server-root-ca.pem <span class="se">\
+</span><span class="se"></span>  --ca-key ../ca/server-root-ca-key.pem <span class="se">\
+</span><span class="se"></span>  --config ./server-gencert.json <span class="se">\
+</span><span class="se"></span>  ./demo-csr.json <span class="p">|</span> cfssljson --bare ./demo
+</code></pre></td></tr></table>
+</div>
+</div><p>得到文件：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt">server-secrets/cert/
+├── demo-key.pem
+├── demo.csr
+└── demo.pem
+</code></pre></td></tr></table>
+</div>
+</div><p>验证结果：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">openssl x509 -in ./demo.pem -text -noout
+
+Certificate:
+    Data:
+        Version: <span class="m">3</span> <span class="o">(</span>0x2<span class="o">)</span>
+        Serial Number:
+            1d:d0:51:97:6c:ce:ea:29:2a:f4:3b:3c:48:a3:69:b0:ef:f3:26:7b
+    Signature Algorithm: sha256WithRSAEncryption
+        Issuer: <span class="nv">C</span><span class="o">=</span>CN, <span class="nv">ST</span><span class="o">=</span>Shanghai, <span class="nv">L</span><span class="o">=</span>Shanghai, <span class="nv">O</span><span class="o">=</span>Company, <span class="nv">OU</span><span class="o">=</span>Datacenter, <span class="nv">CN</span><span class="o">=</span>server-root-ca
+        Validity
+            Not Before: Mar <span class="m">27</span> 05:17:00 <span class="m">2019</span> GMT
+            Not After : Mar <span class="m">24</span> 05:17:00 <span class="m">2029</span> GMT
+        Subject: <span class="nv">C</span><span class="o">=</span>CN, <span class="nv">ST</span><span class="o">=</span>Shanghai, <span class="nv">L</span><span class="o">=</span>Shanghai, <span class="nv">O</span><span class="o">=</span>Company, <span class="nv">OU</span><span class="o">=</span>Datacenter, <span class="nv">CN</span><span class="o">=</span>server-demo
+</code></pre></td></tr></table>
+</div>
+</div><p>可以看到签发者是server-root-ca，Subject是server-demo。</p>
 <h4 id="将证书导入keystore">将证书导入keystore<a class="anchor ms-1" href="#将证书导入keystore"><i class="fas fa-link"></i></a></h4>
 <p>到 server-secrets/jks，执行下面命令生成pkcs12格式的keystore（JDK识别这个格式）</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>openssl pkcs12 -export <span class="se">\
-</span><span class="ln">2</span><span class="se"></span>  -in ../cert/demo.pem <span class="se">\
-</span><span class="ln">3</span><span class="se"></span>  -inkey ../cert/demo-key.pem <span class="se">\
-</span><span class="ln">4</span><span class="se"></span>  -out server-demo.keystore <span class="se">\
-</span><span class="ln">5</span><span class="se"></span>  -name server-demo <span class="se">\
-</span><span class="ln">6</span><span class="se"></span>  -CAfile ../ca/server-root-ca.pem <span class="se">\
-</span><span class="ln">7</span><span class="se"></span>  -caname root -chain
-</code></pre></div><p>过程中会让你输入密码，你就输入：server-demo-ks。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">openssl pkcs12 -export <span class="se">\
+</span><span class="se"></span>  -in ../cert/demo.pem <span class="se">\
+</span><span class="se"></span>  -inkey ../cert/demo-key.pem <span class="se">\
+</span><span class="se"></span>  -out server-demo.keystore <span class="se">\
+</span><span class="se"></span>  -name server-demo <span class="se">\
+</span><span class="se"></span>  -CAfile ../ca/server-root-ca.pem <span class="se">\
+</span><span class="se"></span>  -caname root -chain
+</code></pre></td></tr></table>
+</div>
+</div><p>过程中会让你输入密码，你就输入：server-demo-ks。</p>
 <p>得到文件：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln">1</span>server-secrets/jks/
-<span class="ln">2</span>└── server-demo.keystore
-</code></pre></div><p>用JDK提供的keytool看看里面的内容：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>keytool -list -keystore server-demo.keystore
-<span class="ln">2</span>
-<span class="ln">3</span>server-demo, 2019-3-27, PrivateKeyEntry,
-<span class="ln">4</span>证书指纹 <span class="o">(</span>SHA1<span class="o">)</span>: B2:E5:46:63:BB:00:E7:82:48:A4:2F:EC:01:41:CE:B4:4B:CE:68:7A
-</code></pre></div><p>让你输入密码的时候就输入：server-demo-ks。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt">server-secrets/jks/
+└── server-demo.keystore
+</code></pre></td></tr></table>
+</div>
+</div><p>用JDK提供的keytool看看里面的内容：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">keytool -list -keystore server-demo.keystore
+
+server-demo, 2019-3-27, PrivateKeyEntry,
+证书指纹 <span class="o">(</span>SHA1<span class="o">)</span>: B2:E5:46:63:BB:00:E7:82:48:A4:2F:EC:01:41:CE:B4:4B:CE:68:7A
+</code></pre></td></tr></table>
+</div>
+</div><p>让你输入密码的时候就输入：server-demo-ks。</p>
 <h3 id="客户端">客户端<a class="anchor ms-1" href="#客户端"><i class="fas fa-link"></i></a></h3>
 <p>先弄一套目录：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln">1</span># 放自签发的客户端CA根证书
-<span class="ln">2</span>client-secrets/ca
-<span class="ln">3</span># 放自签发的客户端的证书
-<span class="ln">4</span>client-secrets/cert
-<span class="ln">5</span># 放客户端的keystore和truststore
-<span class="ln">6</span>client-secrets/jks
-</code></pre></div><h4 id="生成自签名ca证书-1">生成自签名CA证书<a class="anchor ms-1" href="#生成自签名ca证书-1"><i class="fas fa-link"></i></a></h4>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"># 放自签发的客户端CA根证书
+client-secrets/ca
+# 放自签发的客户端的证书
+client-secrets/cert
+# 放客户端的keystore和truststore
+client-secrets/jks
+</code></pre></td></tr></table>
+</div>
+</div><h4 id="生成自签名ca证书-1">生成自签名CA证书<a class="anchor ms-1" href="#生成自签名ca证书-1"><i class="fas fa-link"></i></a></h4>
 <p>新建文件 client-secrets/ca/client-root-ca-csr.json：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-json" data-lang="json"><span class="ln"> 1</span><span class="p">{</span>
-<span class="ln"> 2</span>  <span class="nt">&#34;key&#34;</span><span class="p">:</span> <span class="p">{</span>
-<span class="ln"> 3</span>    <span class="nt">&#34;algo&#34;</span><span class="p">:</span> <span class="s2">&#34;rsa&#34;</span><span class="p">,</span>
-<span class="ln"> 4</span>    <span class="nt">&#34;size&#34;</span><span class="p">:</span> <span class="mi">2048</span>
-<span class="ln"> 5</span>  <span class="p">},</span>
-<span class="ln"> 6</span>  <span class="nt">&#34;names&#34;</span><span class="p">:</span> <span class="p">[</span>
-<span class="ln"> 7</span>    <span class="p">{</span>
-<span class="ln"> 8</span>      <span class="nt">&#34;O&#34;</span><span class="p">:</span> <span class="s2">&#34;Company&#34;</span><span class="p">,</span>
-<span class="ln"> 9</span>      <span class="nt">&#34;OU&#34;</span><span class="p">:</span> <span class="s2">&#34;Datacenter&#34;</span><span class="p">,</span>
-<span class="ln">10</span>      <span class="nt">&#34;L&#34;</span><span class="p">:</span> <span class="s2">&#34;Shanghai&#34;</span><span class="p">,</span>
-<span class="ln">11</span>      <span class="nt">&#34;ST&#34;</span><span class="p">:</span> <span class="s2">&#34;Shanghai&#34;</span><span class="p">,</span>
-<span class="ln">12</span>      <span class="nt">&#34;C&#34;</span><span class="p">:</span> <span class="s2">&#34;CN&#34;</span>
-<span class="ln">13</span>    <span class="p">}</span>
-<span class="ln">14</span>  <span class="p">],</span>
-<span class="ln">15</span>  <span class="nt">&#34;CN&#34;</span><span class="p">:</span> <span class="s2">&#34;client-root-ca&#34;</span>
-<span class="ln">16</span><span class="p">}</span>
-</code></pre></div><p>运行下面命令生成Client ROOT CA证书：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>cfssl gencert --initca<span class="o">=</span><span class="nb">true</span> ./client-root-ca-csr.json <span class="p">|</span> cfssljson --bare client-root-ca
-</code></pre></div><p>会得到下面几个文件：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln">1</span>client-secrets/ca/
-<span class="ln">2</span>├── client-root-ca-key.pem
-<span class="ln">3</span>├── client-root-ca.csr
-<span class="ln">4</span>└── client-root-ca.pem
-</code></pre></div><p>用下面命令验证证书：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln"> 1</span>openssl x509 -in ./client-root-ca.pem -text -noout
-<span class="ln"> 2</span>
-<span class="ln"> 3</span>Certificate:
-<span class="ln"> 4</span>    Data:
-<span class="ln"> 5</span>        Version: <span class="m">3</span> <span class="o">(</span>0x2<span class="o">)</span>
-<span class="ln"> 6</span>        Serial Number:
-<span class="ln"> 7</span>            7e:fc:f3:53:07:1a:17:ae:24:34:d5:1d:00:02:d6:e4:24:09:92:12
-<span class="ln"> 8</span>    Signature Algorithm: sha256WithRSAEncryption
-<span class="ln"> 9</span>        Issuer: <span class="nv">C</span><span class="o">=</span>CN, <span class="nv">ST</span><span class="o">=</span>Shanghai, <span class="nv">L</span><span class="o">=</span>Shanghai, <span class="nv">O</span><span class="o">=</span>Company, <span class="nv">OU</span><span class="o">=</span>Datacenter, <span class="nv">CN</span><span class="o">=</span>client-root-ca
-<span class="ln">10</span>        Validity
-<span class="ln">11</span>            Not Before: Mar <span class="m">27</span> 05:20:00 <span class="m">2019</span> GMT
-<span class="ln">12</span>            Not After : Mar <span class="m">25</span> 05:20:00 <span class="m">2024</span> GMT
-<span class="ln">13</span>        Subject: <span class="nv">C</span><span class="o">=</span>CN, <span class="nv">ST</span><span class="o">=</span>Shanghai, <span class="nv">L</span><span class="o">=</span>Shanghai, <span class="nv">O</span><span class="o">=</span>Company, <span class="nv">OU</span><span class="o">=</span>Datacenter, <span class="nv">CN</span><span class="o">=</span>client-root-ca
-</code></pre></div><p>可以看到签发人和被签发人是同一个。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-json" data-lang="json"><span class="p">{</span>
+  <span class="nt">&#34;key&#34;</span><span class="p">:</span> <span class="p">{</span>
+    <span class="nt">&#34;algo&#34;</span><span class="p">:</span> <span class="s2">&#34;rsa&#34;</span><span class="p">,</span>
+    <span class="nt">&#34;size&#34;</span><span class="p">:</span> <span class="mi">2048</span>
+  <span class="p">},</span>
+  <span class="nt">&#34;names&#34;</span><span class="p">:</span> <span class="p">[</span>
+    <span class="p">{</span>
+      <span class="nt">&#34;O&#34;</span><span class="p">:</span> <span class="s2">&#34;Company&#34;</span><span class="p">,</span>
+      <span class="nt">&#34;OU&#34;</span><span class="p">:</span> <span class="s2">&#34;Datacenter&#34;</span><span class="p">,</span>
+      <span class="nt">&#34;L&#34;</span><span class="p">:</span> <span class="s2">&#34;Shanghai&#34;</span><span class="p">,</span>
+      <span class="nt">&#34;ST&#34;</span><span class="p">:</span> <span class="s2">&#34;Shanghai&#34;</span><span class="p">,</span>
+      <span class="nt">&#34;C&#34;</span><span class="p">:</span> <span class="s2">&#34;CN&#34;</span>
+    <span class="p">}</span>
+  <span class="p">],</span>
+  <span class="nt">&#34;CN&#34;</span><span class="p">:</span> <span class="s2">&#34;client-root-ca&#34;</span>
+<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>运行下面命令生成Client ROOT CA证书：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">cfssl gencert --initca<span class="o">=</span><span class="nb">true</span> ./client-root-ca-csr.json <span class="p">|</span> cfssljson --bare client-root-ca
+</code></pre></td></tr></table>
+</div>
+</div><p>会得到下面几个文件：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt">client-secrets/ca/
+├── client-root-ca-key.pem
+├── client-root-ca.csr
+└── client-root-ca.pem
+</code></pre></td></tr></table>
+</div>
+</div><p>用下面命令验证证书：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">openssl x509 -in ./client-root-ca.pem -text -noout
+
+Certificate:
+    Data:
+        Version: <span class="m">3</span> <span class="o">(</span>0x2<span class="o">)</span>
+        Serial Number:
+            7e:fc:f3:53:07:1a:17:ae:24:34:d5:1d:00:02:d6:e4:24:09:92:12
+    Signature Algorithm: sha256WithRSAEncryption
+        Issuer: <span class="nv">C</span><span class="o">=</span>CN, <span class="nv">ST</span><span class="o">=</span>Shanghai, <span class="nv">L</span><span class="o">=</span>Shanghai, <span class="nv">O</span><span class="o">=</span>Company, <span class="nv">OU</span><span class="o">=</span>Datacenter, <span class="nv">CN</span><span class="o">=</span>client-root-ca
+        Validity
+            Not Before: Mar <span class="m">27</span> 05:20:00 <span class="m">2019</span> GMT
+            Not After : Mar <span class="m">25</span> 05:20:00 <span class="m">2024</span> GMT
+        Subject: <span class="nv">C</span><span class="o">=</span>CN, <span class="nv">ST</span><span class="o">=</span>Shanghai, <span class="nv">L</span><span class="o">=</span>Shanghai, <span class="nv">O</span><span class="o">=</span>Company, <span class="nv">OU</span><span class="o">=</span>Datacenter, <span class="nv">CN</span><span class="o">=</span>client-root-ca
+</code></pre></td></tr></table>
+</div>
+</div><p>可以看到签发人和被签发人是同一个。</p>
 <h4 id="生成自签发证书-1">生成自签发证书<a class="anchor ms-1" href="#生成自签发证书-1"><i class="fas fa-link"></i></a></h4>
 <p>新建文件 client-secrets/cert/client-gencert.json，内容如下：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-json" data-lang="json"><span class="ln"> 1</span><span class="p">{</span>
-<span class="ln"> 2</span>  <span class="nt">&#34;signing&#34;</span><span class="p">:</span> <span class="p">{</span>
-<span class="ln"> 3</span>    <span class="nt">&#34;default&#34;</span><span class="p">:</span> <span class="p">{</span>
-<span class="ln"> 4</span>        <span class="nt">&#34;usages&#34;</span><span class="p">:</span> <span class="p">[</span>
-<span class="ln"> 5</span>          <span class="s2">&#34;signing&#34;</span><span class="p">,</span>
-<span class="ln"> 6</span>          <span class="s2">&#34;key encipherment&#34;</span><span class="p">,</span>
-<span class="ln"> 7</span>          <span class="s2">&#34;client auth&#34;</span>
-<span class="ln"> 8</span>        <span class="p">],</span>
-<span class="ln"> 9</span>        <span class="nt">&#34;expiry&#34;</span><span class="p">:</span> <span class="s2">&#34;87600h&#34;</span>
-<span class="ln">10</span>    <span class="p">}</span>
-<span class="ln">11</span>  <span class="p">}</span>
-<span class="ln">12</span><span class="p">}</span>
-</code></pre></div><p>可以看到我们会生成用来做client auth的证书。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-json" data-lang="json"><span class="p">{</span>
+  <span class="nt">&#34;signing&#34;</span><span class="p">:</span> <span class="p">{</span>
+    <span class="nt">&#34;default&#34;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="nt">&#34;usages&#34;</span><span class="p">:</span> <span class="p">[</span>
+          <span class="s2">&#34;signing&#34;</span><span class="p">,</span>
+          <span class="s2">&#34;key encipherment&#34;</span><span class="p">,</span>
+          <span class="s2">&#34;client auth&#34;</span>
+        <span class="p">],</span>
+        <span class="nt">&#34;expiry&#34;</span><span class="p">:</span> <span class="s2">&#34;87600h&#34;</span>
+    <span class="p">}</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>可以看到我们会生成用来做client auth的证书。</p>
 <p>新建文件 client-secrets/cert/demo-csr.json，内容如下：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-json" data-lang="json"><span class="ln"> 1</span><span class="p">{</span>
-<span class="ln"> 2</span>  <span class="nt">&#34;key&#34;</span><span class="p">:</span> <span class="p">{</span>
-<span class="ln"> 3</span>    <span class="nt">&#34;algo&#34;</span><span class="p">:</span> <span class="s2">&#34;rsa&#34;</span><span class="p">,</span>
-<span class="ln"> 4</span>    <span class="nt">&#34;size&#34;</span><span class="p">:</span> <span class="mi">2048</span>
-<span class="ln"> 5</span>  <span class="p">},</span>
-<span class="ln"> 6</span>  <span class="nt">&#34;names&#34;</span><span class="p">:</span> <span class="p">[</span>
-<span class="ln"> 7</span>    <span class="p">{</span>
-<span class="ln"> 8</span>      <span class="nt">&#34;O&#34;</span><span class="p">:</span> <span class="s2">&#34;Company&#34;</span><span class="p">,</span>
-<span class="ln"> 9</span>      <span class="nt">&#34;OU&#34;</span><span class="p">:</span> <span class="s2">&#34;Datacenter&#34;</span><span class="p">,</span>
-<span class="ln">10</span>      <span class="nt">&#34;L&#34;</span><span class="p">:</span> <span class="s2">&#34;Shanghai&#34;</span><span class="p">,</span>
-<span class="ln">11</span>      <span class="nt">&#34;ST&#34;</span><span class="p">:</span> <span class="s2">&#34;Shanghai&#34;</span><span class="p">,</span>
-<span class="ln">12</span>      <span class="nt">&#34;C&#34;</span><span class="p">:</span> <span class="s2">&#34;CN&#34;</span>
-<span class="ln">13</span>    <span class="p">}</span>
-<span class="ln">14</span>  <span class="p">],</span>
-<span class="ln">15</span>  <span class="nt">&#34;CN&#34;</span><span class="p">:</span> <span class="s2">&#34;client-demo&#34;</span>
-<span class="ln">16</span><span class="p">}</span>
-</code></pre></div><p>这里没有hosts，这是因为我们不需要用这个证书来做服务端认证。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-json" data-lang="json"><span class="p">{</span>
+  <span class="nt">&#34;key&#34;</span><span class="p">:</span> <span class="p">{</span>
+    <span class="nt">&#34;algo&#34;</span><span class="p">:</span> <span class="s2">&#34;rsa&#34;</span><span class="p">,</span>
+    <span class="nt">&#34;size&#34;</span><span class="p">:</span> <span class="mi">2048</span>
+  <span class="p">},</span>
+  <span class="nt">&#34;names&#34;</span><span class="p">:</span> <span class="p">[</span>
+    <span class="p">{</span>
+      <span class="nt">&#34;O&#34;</span><span class="p">:</span> <span class="s2">&#34;Company&#34;</span><span class="p">,</span>
+      <span class="nt">&#34;OU&#34;</span><span class="p">:</span> <span class="s2">&#34;Datacenter&#34;</span><span class="p">,</span>
+      <span class="nt">&#34;L&#34;</span><span class="p">:</span> <span class="s2">&#34;Shanghai&#34;</span><span class="p">,</span>
+      <span class="nt">&#34;ST&#34;</span><span class="p">:</span> <span class="s2">&#34;Shanghai&#34;</span><span class="p">,</span>
+      <span class="nt">&#34;C&#34;</span><span class="p">:</span> <span class="s2">&#34;CN&#34;</span>
+    <span class="p">}</span>
+  <span class="p">],</span>
+  <span class="nt">&#34;CN&#34;</span><span class="p">:</span> <span class="s2">&#34;client-demo&#34;</span>
+<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>这里没有hosts，这是因为我们不需要用这个证书来做服务端认证。</p>
 <p>运行下面命令生成证书</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>cfssl gencert <span class="se">\
-</span><span class="ln">2</span><span class="se"></span>  --ca ../ca/client-root-ca.pem <span class="se">\
-</span><span class="ln">3</span><span class="se"></span>  --ca-key ../ca/client-root-ca-key.pem <span class="se">\
-</span><span class="ln">4</span><span class="se"></span>  --config ./client-gencert.json <span class="se">\
-</span><span class="ln">5</span><span class="se"></span>  ./demo-csr.json <span class="p">|</span> cfssljson --bare ./demo
-</code></pre></div><p>得到文件：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln">1</span>client-secrets/cert/
-<span class="ln">2</span>├── demo-key.pem
-<span class="ln">3</span>├── demo.csr
-<span class="ln">4</span>└── demo.pem
-</code></pre></div><p>验证结果：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln"> 1</span>openssl x509 -in ./demo.pem -text -noout
-<span class="ln"> 2</span>
-<span class="ln"> 3</span>Certificate:
-<span class="ln"> 4</span>    Data:
-<span class="ln"> 5</span>        Version: <span class="m">3</span> <span class="o">(</span>0x2<span class="o">)</span>
-<span class="ln"> 6</span>        Serial Number:
-<span class="ln"> 7</span>            6e:50:e2:2c:02:bb:ef:fd:03:d9:2c:0a:8f:ba:90:65:fb:c4:b5:75
-<span class="ln"> 8</span>    Signature Algorithm: sha256WithRSAEncryption
-<span class="ln"> 9</span>        Issuer: <span class="nv">C</span><span class="o">=</span>CN, <span class="nv">ST</span><span class="o">=</span>Shanghai, <span class="nv">L</span><span class="o">=</span>Shanghai, <span class="nv">O</span><span class="o">=</span>Company, <span class="nv">OU</span><span class="o">=</span>Datacenter, <span class="nv">CN</span><span class="o">=</span>client-root-ca
-<span class="ln">10</span>        Validity
-<span class="ln">11</span>            Not Before: Mar <span class="m">27</span> 05:21:00 <span class="m">2019</span> GMT
-<span class="ln">12</span>            Not After : Mar <span class="m">24</span> 05:21:00 <span class="m">2029</span> GMT
-<span class="ln">13</span>        Subject: <span class="nv">C</span><span class="o">=</span>CN, <span class="nv">ST</span><span class="o">=</span>Shanghai, <span class="nv">L</span><span class="o">=</span>Shanghai, <span class="nv">O</span><span class="o">=</span>Company, <span class="nv">OU</span><span class="o">=</span>Datacenter, <span class="nv">CN</span><span class="o">=</span>client-demo
-</code></pre></div><p>可以看到签发者是client-root-ca，Subject是client-demo。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">cfssl gencert <span class="se">\
+</span><span class="se"></span>  --ca ../ca/client-root-ca.pem <span class="se">\
+</span><span class="se"></span>  --ca-key ../ca/client-root-ca-key.pem <span class="se">\
+</span><span class="se"></span>  --config ./client-gencert.json <span class="se">\
+</span><span class="se"></span>  ./demo-csr.json <span class="p">|</span> cfssljson --bare ./demo
+</code></pre></td></tr></table>
+</div>
+</div><p>得到文件：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt">client-secrets/cert/
+├── demo-key.pem
+├── demo.csr
+└── demo.pem
+</code></pre></td></tr></table>
+</div>
+</div><p>验证结果：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">openssl x509 -in ./demo.pem -text -noout
+
+Certificate:
+    Data:
+        Version: <span class="m">3</span> <span class="o">(</span>0x2<span class="o">)</span>
+        Serial Number:
+            6e:50:e2:2c:02:bb:ef:fd:03:d9:2c:0a:8f:ba:90:65:fb:c4:b5:75
+    Signature Algorithm: sha256WithRSAEncryption
+        Issuer: <span class="nv">C</span><span class="o">=</span>CN, <span class="nv">ST</span><span class="o">=</span>Shanghai, <span class="nv">L</span><span class="o">=</span>Shanghai, <span class="nv">O</span><span class="o">=</span>Company, <span class="nv">OU</span><span class="o">=</span>Datacenter, <span class="nv">CN</span><span class="o">=</span>client-root-ca
+        Validity
+            Not Before: Mar <span class="m">27</span> 05:21:00 <span class="m">2019</span> GMT
+            Not After : Mar <span class="m">24</span> 05:21:00 <span class="m">2029</span> GMT
+        Subject: <span class="nv">C</span><span class="o">=</span>CN, <span class="nv">ST</span><span class="o">=</span>Shanghai, <span class="nv">L</span><span class="o">=</span>Shanghai, <span class="nv">O</span><span class="o">=</span>Company, <span class="nv">OU</span><span class="o">=</span>Datacenter, <span class="nv">CN</span><span class="o">=</span>client-demo
+</code></pre></td></tr></table>
+</div>
+</div><p>可以看到签发者是client-root-ca，Subject是client-demo。</p>
 <h4 id="将证书导入keystore-1">将证书导入keystore<a class="anchor ms-1" href="#将证书导入keystore-1"><i class="fas fa-link"></i></a></h4>
 <p>到 client-secrets/jks，执行下面命令生成pkcs12格式的keystore（JDK识别这个格式）</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>openssl pkcs12 -export <span class="se">\
-</span><span class="ln">2</span><span class="se"></span>  -in ../cert/demo.pem <span class="se">\
-</span><span class="ln">3</span><span class="se"></span>  -inkey ../cert/demo-key.pem <span class="se">\
-</span><span class="ln">4</span><span class="se"></span>  -out client-demo.keystore <span class="se">\
-</span><span class="ln">5</span><span class="se"></span>  -name client-demo <span class="se">\
-</span><span class="ln">6</span><span class="se"></span>  -CAfile ../ca/client-root-ca.pem <span class="se">\
-</span><span class="ln">7</span><span class="se"></span>  -caname root -chain
-</code></pre></div><p>过程中会让你输入密码，你就输入：client-demo-ks。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">openssl pkcs12 -export <span class="se">\
+</span><span class="se"></span>  -in ../cert/demo.pem <span class="se">\
+</span><span class="se"></span>  -inkey ../cert/demo-key.pem <span class="se">\
+</span><span class="se"></span>  -out client-demo.keystore <span class="se">\
+</span><span class="se"></span>  -name client-demo <span class="se">\
+</span><span class="se"></span>  -CAfile ../ca/client-root-ca.pem <span class="se">\
+</span><span class="se"></span>  -caname root -chain
+</code></pre></td></tr></table>
+</div>
+</div><p>过程中会让你输入密码，你就输入：client-demo-ks。</p>
 <p>得到文件：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln">1</span>client-secrets/jks/
-<span class="ln">2</span>└── client-demo.keystore
-</code></pre></div><p>用JDK提供的keytool看看里面的内容：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>keytool -list -keystore client-demo.keystore
-<span class="ln">2</span>
-<span class="ln">3</span>client-demo, 2019-3-27, PrivateKeyEntry,
-<span class="ln">4</span>证书指纹 <span class="o">(</span>SHA1<span class="o">)</span>: 83:AE:0E:5E:0C:CE:86:C9:D1:84:D7:6F:87:F3:76:1F:B4:3E:46:31
-</code></pre></div><p>让你输入密码的时候就输入：client-demo-ks。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt">client-secrets/jks/
+└── client-demo.keystore
+</code></pre></td></tr></table>
+</div>
+</div><p>用JDK提供的keytool看看里面的内容：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">keytool -list -keystore client-demo.keystore
+
+client-demo, 2019-3-27, PrivateKeyEntry,
+证书指纹 <span class="o">(</span>SHA1<span class="o">)</span>: 83:AE:0E:5E:0C:CE:86:C9:D1:84:D7:6F:87:F3:76:1F:B4:3E:46:31
+</code></pre></td></tr></table>
+</div>
+</div><p>让你输入密码的时候就输入：client-demo-ks。</p>
 <h3 id="两端互信">两端互信<a class="anchor ms-1" href="#两端互信"><i class="fas fa-link"></i></a></h3>
 <p>好了，到此为止server和client的证书都已经生成了，接下来只需要将各自的root-ca添加到彼此都truststore中。</p>
 <h4 id="把server-root-ca导入到client的truststore中">把server-root-ca导入到client的truststore中<a class="anchor ms-1" href="#把server-root-ca导入到client的truststore中"><i class="fas fa-link"></i></a></h4>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span><span class="nb">cd</span> client-secrets/jks
-<span class="ln">2</span>
-<span class="ln">3</span>keytool -importcert <span class="se">\
-</span><span class="ln">4</span><span class="se"></span>  -alias server-root-ca <span class="se">\
-</span><span class="ln">5</span><span class="se"></span>  -storetype pkcs12 <span class="se">\
-</span><span class="ln">6</span><span class="se"></span>  -keystore client.truststore <span class="se">\
-</span><span class="ln">7</span><span class="se"></span>  -storepass client-ts <span class="se">\
-</span><span class="ln">8</span><span class="se"></span>  -file ../../server-secrets/ca/server-root-ca.pem -noprompt
-</code></pre></div><p>注意上面的-storepass参数，这个是trustore的密码：client-ts。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="nb">cd</span> client-secrets/jks
+
+keytool -importcert <span class="se">\
+</span><span class="se"></span>  -alias server-root-ca <span class="se">\
+</span><span class="se"></span>  -storetype pkcs12 <span class="se">\
+</span><span class="se"></span>  -keystore client.truststore <span class="se">\
+</span><span class="se"></span>  -storepass client-ts <span class="se">\
+</span><span class="se"></span>  -file ../../server-secrets/ca/server-root-ca.pem -noprompt
+</code></pre></td></tr></table>
+</div>
+</div><p>注意上面的-storepass参数，这个是trustore的密码：client-ts。</p>
 <p>得到文件：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln">1</span>client-secrets/jks/
-<span class="ln">2</span>└── client.truststore
-</code></pre></div><p>用JDK提供的keytool看看里面的内容：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>keytool -list -keystore client.truststore
-<span class="ln">2</span>
-<span class="ln">3</span>server-root-ca, 2019-3-27, trustedCertEntry,
-<span class="ln">4</span>证书指纹 <span class="o">(</span>SHA1<span class="o">)</span>: 75:E3:78:97:85:B2:29:38:25:3C:FD:EC:68:97:9B:78:A0:5F:BB:9D
-</code></pre></div><p>让你输入密码的时候就输入：client-ts。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt">client-secrets/jks/
+└── client.truststore
+</code></pre></td></tr></table>
+</div>
+</div><p>用JDK提供的keytool看看里面的内容：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">keytool -list -keystore client.truststore
+
+server-root-ca, 2019-3-27, trustedCertEntry,
+证书指纹 <span class="o">(</span>SHA1<span class="o">)</span>: 75:E3:78:97:85:B2:29:38:25:3C:FD:EC:68:97:9B:78:A0:5F:BB:9D
+</code></pre></td></tr></table>
+</div>
+</div><p>让你输入密码的时候就输入：client-ts。</p>
 <h4 id="把client-root-ca导入到server的truststore中">把client-root-ca导入到server的truststore中<a class="anchor ms-1" href="#把client-root-ca导入到server的truststore中"><i class="fas fa-link"></i></a></h4>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span><span class="nb">cd</span> server-secrets/jks
-<span class="ln">2</span>
-<span class="ln">3</span>keytool -importcert <span class="se">\
-</span><span class="ln">4</span><span class="se"></span>  -alias client-root-ca <span class="se">\
-</span><span class="ln">5</span><span class="se"></span>  -storetype pkcs12 <span class="se">\
-</span><span class="ln">6</span><span class="se"></span>  -keystore server.truststore <span class="se">\
-</span><span class="ln">7</span><span class="se"></span>  -storepass server-ts <span class="se">\
-</span><span class="ln">8</span><span class="se"></span>  -file ../../client-secrets/ca/client-root-ca.pem -noprompt
-</code></pre></div><p>注意上面的-storepass参数，这个是trustore的密码：server-ts。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="nb">cd</span> server-secrets/jks
+
+keytool -importcert <span class="se">\
+</span><span class="se"></span>  -alias client-root-ca <span class="se">\
+</span><span class="se"></span>  -storetype pkcs12 <span class="se">\
+</span><span class="se"></span>  -keystore server.truststore <span class="se">\
+</span><span class="se"></span>  -storepass server-ts <span class="se">\
+</span><span class="se"></span>  -file ../../client-secrets/ca/client-root-ca.pem -noprompt
+</code></pre></td></tr></table>
+</div>
+</div><p>注意上面的-storepass参数，这个是trustore的密码：server-ts。</p>
 <p>得到文件：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln">1</span>server-secrets/jks/
-<span class="ln">2</span>└── server.truststore
-</code></pre></div><p>用JDK提供的keytool看看里面的内容：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>keytool -list -keystore server.truststore
-<span class="ln">2</span>
-<span class="ln">3</span>client-root-ca, 2019-3-27, trustedCertEntry,
-<span class="ln">4</span>证书指纹 <span class="o">(</span>SHA1<span class="o">)</span>: 1E:95:2C:12:AA:7E:6D:E7:74:F1:83:C2:B8:73:6F:EE:57:FB:CA:46
-</code></pre></div><p>让你输入密码的时候就输入：server-ts。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt">server-secrets/jks/
+└── server.truststore
+</code></pre></td></tr></table>
+</div>
+</div><p>用JDK提供的keytool看看里面的内容：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">keytool -list -keystore server.truststore
+
+client-root-ca, 2019-3-27, trustedCertEntry,
+证书指纹 <span class="o">(</span>SHA1<span class="o">)</span>: 1E:95:2C:12:AA:7E:6D:E7:74:F1:83:C2:B8:73:6F:EE:57:FB:CA:46
+</code></pre></td></tr></table>
+</div>
+</div><p>让你输入密码的时候就输入：server-ts。</p>
 <h3 id="配置tomcat">配置Tomcat<a class="anchor ms-1" href="#配置tomcat"><i class="fas fa-link"></i></a></h3>
 <p>好了，我们现在client和server都有了自己证书放在了自己的keystore中，而且把彼此的root-ca证书放到了自己的truststore里。现在我们弄一个tomcat作为server，然后为他配置SSL。</p>
 <p>修改tomcat/conf/server.xml，添加如下Connector：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-xml" data-lang="xml"><span class="ln"> 1</span><span class="nt">&lt;Connector</span> <span class="na">port=</span><span class="s">&#34;8443&#34;</span> <span class="na">protocol=</span><span class="s">&#34;org.apache.coyote.http11.Http11NioProtocol&#34;</span>
-<span class="ln"> 2</span>           <span class="na">maxThreads=</span><span class="s">&#34;150&#34;</span> <span class="na">SSLEnabled=</span><span class="s">&#34;true&#34;</span><span class="nt">&gt;</span>
-<span class="ln"> 3</span>    <span class="nt">&lt;SSLHostConfig</span>
-<span class="ln"> 4</span>      <span class="na">certificateVerification=</span><span class="s">&#34;required&#34;</span>
-<span class="ln"> 5</span>      <span class="na">truststoreFile=</span><span class="s">&#34;/path/to/server-secrets/jks/server.truststore&#34;</span>
-<span class="ln"> 6</span>      <span class="na">truststorePassword=</span><span class="s">&#34;server-ts&#34;</span> 
-<span class="ln"> 7</span>      <span class="na">truststoreType=</span><span class="s">&#34;PKCS12&#34;</span><span class="nt">&gt;</span>
-<span class="ln"> 8</span>        <span class="nt">&lt;Certificate</span>
-<span class="ln"> 9</span>          <span class="na">certificateKeyAlias=</span><span class="s">&#34;server-demo&#34;</span>
-<span class="ln">10</span>          <span class="na">certificateKeystoreFile=</span><span class="s">&#34;/path/to/server-secrets/demo-jks/server-demo.keystore&#34;</span>
-<span class="ln">11</span>          <span class="na">certificateKeystoreType=</span><span class="s">&#34;PKCS12&#34;</span>
-<span class="ln">12</span>          <span class="na">certificateKeystorePassword=</span><span class="s">&#34;server-demo-ks&#34;</span>
-<span class="ln">13</span>          <span class="na">type=</span><span class="s">&#34;RSA&#34;</span> <span class="nt">/&gt;</span>
-<span class="ln">14</span>    <span class="nt">&lt;/SSLHostConfig&gt;</span>
-<span class="ln">15</span><span class="nt">&lt;/Connector&gt;</span>
-</code></pre></div><p>可以看到我们开启了客户端认证<code>certificateVerification=&quot;required&quot;</code>，也开启了服务端认证<code>&lt;Certificate&gt;</code>。记得修改上面的keystore和truststore的路径。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-xml" data-lang="xml"><span class="nt">&lt;Connector</span> <span class="na">port=</span><span class="s">&#34;8443&#34;</span> <span class="na">protocol=</span><span class="s">&#34;org.apache.coyote.http11.Http11NioProtocol&#34;</span>
+           <span class="na">maxThreads=</span><span class="s">&#34;150&#34;</span> <span class="na">SSLEnabled=</span><span class="s">&#34;true&#34;</span><span class="nt">&gt;</span>
+    <span class="nt">&lt;SSLHostConfig</span>
+      <span class="na">certificateVerification=</span><span class="s">&#34;required&#34;</span>
+      <span class="na">truststoreFile=</span><span class="s">&#34;/path/to/server-secrets/jks/server.truststore&#34;</span>
+      <span class="na">truststorePassword=</span><span class="s">&#34;server-ts&#34;</span> 
+      <span class="na">truststoreType=</span><span class="s">&#34;PKCS12&#34;</span><span class="nt">&gt;</span>
+        <span class="nt">&lt;Certificate</span>
+          <span class="na">certificateKeyAlias=</span><span class="s">&#34;server-demo&#34;</span>
+          <span class="na">certificateKeystoreFile=</span><span class="s">&#34;/path/to/server-secrets/demo-jks/server-demo.keystore&#34;</span>
+          <span class="na">certificateKeystoreType=</span><span class="s">&#34;PKCS12&#34;</span>
+          <span class="na">certificateKeystorePassword=</span><span class="s">&#34;server-demo-ks&#34;</span>
+          <span class="na">type=</span><span class="s">&#34;RSA&#34;</span> <span class="nt">/&gt;</span>
+    <span class="nt">&lt;/SSLHostConfig&gt;</span>
+<span class="nt">&lt;/Connector&gt;</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>可以看到我们开启了客户端认证<code>certificateVerification=&quot;required&quot;</code>，也开启了服务端认证<code>&lt;Certificate&gt;</code>。记得修改上面的keystore和truststore的路径。</p>
 <p>修改tomcat/conf/web.xml，添加如下元素：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-xml" data-lang="xml"><span class="ln">1</span><span class="nt">&lt;security-constraint&gt;</span>
-<span class="ln">2</span>  <span class="nt">&lt;web-resource-collection&gt;</span>
-<span class="ln">3</span>    <span class="nt">&lt;web-resource-name&gt;</span>Automatic Forward to HTTPS/SSL<span class="nt">&lt;/web-resource-name&gt;</span>
-<span class="ln">4</span>    <span class="nt">&lt;url-pattern&gt;</span>/*<span class="nt">&lt;/url-pattern&gt;</span>
-<span class="ln">5</span>  <span class="nt">&lt;/web-resource-collection&gt;</span>
-<span class="ln">6</span>  <span class="nt">&lt;user-data-constraint&gt;</span>
-<span class="ln">7</span>    <span class="nt">&lt;transport-guarantee&gt;</span>CONFIDENTIAL<span class="nt">&lt;/transport-guarantee&gt;</span>
-<span class="ln">8</span>  <span class="nt">&lt;/user-data-constraint&gt;</span>
-<span class="ln">9</span><span class="nt">&lt;/security-constraint&gt;</span>
-</code></pre></div><p>这个作用是当访问8080端口时，都跳转到8443端口，强制走HTTPS。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span><span class="lnt">9
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-xml" data-lang="xml"><span class="nt">&lt;security-constraint&gt;</span>
+  <span class="nt">&lt;web-resource-collection&gt;</span>
+    <span class="nt">&lt;web-resource-name&gt;</span>Automatic Forward to HTTPS/SSL<span class="nt">&lt;/web-resource-name&gt;</span>
+    <span class="nt">&lt;url-pattern&gt;</span>/*<span class="nt">&lt;/url-pattern&gt;</span>
+  <span class="nt">&lt;/web-resource-collection&gt;</span>
+  <span class="nt">&lt;user-data-constraint&gt;</span>
+    <span class="nt">&lt;transport-guarantee&gt;</span>CONFIDENTIAL<span class="nt">&lt;/transport-guarantee&gt;</span>
+  <span class="nt">&lt;/user-data-constraint&gt;</span>
+<span class="nt">&lt;/security-constraint&gt;</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>这个作用是当访问8080端口时，都跳转到8443端口，强制走HTTPS。</p>
 <p>启动tomcat：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>tomcat/bin/catalina.sh run
-</code></pre></div><h3 id="用curl测试">用curl测试<a class="anchor ms-1" href="#用curl测试"><i class="fas fa-link"></i></a></h3>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">tomcat/bin/catalina.sh run
+</code></pre></td></tr></table>
+</div>
+</div><h3 id="用curl测试">用curl测试<a class="anchor ms-1" href="#用curl测试"><i class="fas fa-link"></i></a></h3>
 <p>好了，我们现在用curl来测试访问一下：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>curl https://localhost:8443/
-<span class="ln">2</span>
-<span class="ln">3</span>curl: <span class="o">(</span>60<span class="o">)</span> SSL certificate problem: self signed certificate in certificate chain
-<span class="ln">4</span>...
-</code></pre></div><p>看到curl说服务端用的是一个自签发的证书，不可信，也就是说服务端认证失败。添加<code>--insecure</code>试试：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>curl --insecure https://localhost:8443/
-<span class="ln">2</span>
-<span class="ln">3</span>curl: <span class="o">(</span>35<span class="o">)</span> error:1401E412:SSL routines:CONNECT_CR_FINISHED:sslv3 alert bad certificate
-</code></pre></div><p>这里就说明客户端认证失败。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">curl https://localhost:8443/
+
+curl: <span class="o">(</span>60<span class="o">)</span> SSL certificate problem: self signed certificate in certificate chain
+...
+</code></pre></td></tr></table>
+</div>
+</div><p>看到curl说服务端用的是一个自签发的证书，不可信，也就是说服务端认证失败。添加<code>--insecure</code>试试：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">curl --insecure https://localhost:8443/
+
+curl: <span class="o">(</span>35<span class="o">)</span> error:1401E412:SSL routines:CONNECT_CR_FINISHED:sslv3 alert bad certificate
+</code></pre></td></tr></table>
+</div>
+</div><p>这里就说明客户端认证失败。</p>
 <p>所以如果要正确访问得像下面这样，指定server-root-ca证书，以及客户端自己签发的证书及private key：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>curl --cacert server-secrets/ca/server-root-ca.pem <span class="se">\
-</span><span class="ln">2</span><span class="se"></span>  --key client-secrets/cert/demo-key.pem <span class="se">\
-</span><span class="ln">3</span><span class="se"></span>  --cert client-secrets/cert/demo.pem <span class="se">\
-</span><span class="ln">4</span><span class="se"></span>  https://localhost:8443/
-<span class="ln">5</span>
-<span class="ln">6</span>&lt;!DOCTYPE html&gt;
-<span class="ln">7</span>&lt;html <span class="nv">lang</span><span class="o">=</span><span class="s2">&#34;en&#34;</span>&gt;
-<span class="ln">8</span>...
-</code></pre></div><h3 id="httpclient测试">Httpclient测试<a class="anchor ms-1" href="#httpclient测试"><i class="fas fa-link"></i></a></h3>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">curl --cacert server-secrets/ca/server-root-ca.pem <span class="se">\
+</span><span class="se"></span>  --key client-secrets/cert/demo-key.pem <span class="se">\
+</span><span class="se"></span>  --cert client-secrets/cert/demo.pem <span class="se">\
+</span><span class="se"></span>  https://localhost:8443/
+
+&lt;!DOCTYPE html&gt;
+&lt;html <span class="nv">lang</span><span class="o">=</span><span class="s2">&#34;en&#34;</span>&gt;
+...
+</code></pre></td></tr></table>
+</div>
+</div><h3 id="httpclient测试">Httpclient测试<a class="anchor ms-1" href="#httpclient测试"><i class="fas fa-link"></i></a></h3>
 <p>我们现在用Httpclient来访问看看。pom.xml中添加依赖：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-xml" data-lang="xml"><span class="ln">1</span><span class="nt">&lt;dependency&gt;</span>
-<span class="ln">2</span>  <span class="nt">&lt;groupId&gt;</span>org.apache.httpcomponents<span class="nt">&lt;/groupId&gt;</span>
-<span class="ln">3</span>  <span class="nt">&lt;artifactId&gt;</span>httpclient<span class="nt">&lt;/artifactId&gt;</span>
-<span class="ln">4</span>  <span class="nt">&lt;version&gt;</span>4.5.7<span class="nt">&lt;/version&gt;</span>
-<span class="ln">5</span><span class="nt">&lt;/dependency&gt;</span>
-</code></pre></div><p>Java代码，记得把文件路径改掉：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln"> 1</span><span class="kn">import</span> <span class="nn">org.apache.http.HttpEntity</span><span class="o">;</span>
-<span class="ln"> 2</span><span class="kn">import</span> <span class="nn">org.apache.http.HttpException</span><span class="o">;</span>
-<span class="ln"> 3</span><span class="kn">import</span> <span class="nn">org.apache.http.client.methods.CloseableHttpResponse</span><span class="o">;</span>
-<span class="ln"> 4</span><span class="kn">import</span> <span class="nn">org.apache.http.client.methods.HttpGet</span><span class="o">;</span>
-<span class="ln"> 5</span><span class="kn">import</span> <span class="nn">org.apache.http.conn.ssl.SSLConnectionSocketFactory</span><span class="o">;</span>
-<span class="ln"> 6</span><span class="kn">import</span> <span class="nn">org.apache.http.impl.client.CloseableHttpClient</span><span class="o">;</span>
-<span class="ln"> 7</span><span class="kn">import</span> <span class="nn">org.apache.http.impl.client.HttpClients</span><span class="o">;</span>
-<span class="ln"> 8</span><span class="kn">import</span> <span class="nn">org.apache.http.ssl.SSLContexts</span><span class="o">;</span>
-<span class="ln"> 9</span><span class="kn">import</span> <span class="nn">org.apache.http.util.EntityUtils</span><span class="o">;</span>
-<span class="ln">10</span>
-<span class="ln">11</span><span class="kn">import</span> <span class="nn">javax.net.ssl.SSLContext</span><span class="o">;</span>
-<span class="ln">12</span><span class="kn">import</span> <span class="nn">java.io.File</span><span class="o">;</span>
-<span class="ln">13</span><span class="kn">import</span> <span class="nn">java.io.IOException</span><span class="o">;</span>
-<span class="ln">14</span>
-<span class="ln">15</span><span class="kd">public</span> <span class="kd">class</span> <span class="nc">Client</span> <span class="o">{</span>
-<span class="ln">16</span>
-<span class="ln">17</span>  <span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">main</span><span class="o">(</span><span class="n">String</span><span class="o">[]</span> <span class="n">args</span><span class="o">)</span> <span class="kd">throws</span> <span class="n">Exception</span> <span class="o">{</span>
-<span class="ln">18</span>
-<span class="ln">19</span>    <span class="n">SSLContext</span> <span class="n">sslcontext</span> <span class="o">=</span> <span class="n">SSLContexts</span><span class="o">.</span><span class="na">custom</span><span class="o">()</span>
-<span class="ln">20</span>        <span class="o">.</span><span class="na">loadTrustMaterial</span><span class="o">(</span>
-<span class="ln">21</span>            <span class="k">new</span> <span class="n">File</span><span class="o">(</span><span class="s">&#34;/path/to/client-secrets/demo-jks/client.truststore&#34;</span><span class="o">),</span>
-<span class="ln">22</span>            <span class="s">&#34;client-ts&#34;</span><span class="o">.</span><span class="na">toCharArray</span><span class="o">()</span>
-<span class="ln">23</span>        <span class="o">)</span>
-<span class="ln">24</span>        <span class="o">.</span><span class="na">loadKeyMaterial</span><span class="o">(</span>
-<span class="ln">25</span>            <span class="k">new</span> <span class="n">File</span><span class="o">(</span><span class="s">&#34;/path/to/client-secrets/demo-jks/client-demo.keystore&#34;</span><span class="o">),</span>
-<span class="ln">26</span>            <span class="s">&#34;client-demo-ks&#34;</span><span class="o">.</span><span class="na">toCharArray</span><span class="o">(),</span>
-<span class="ln">27</span>            <span class="s">&#34;client-demo-ks&#34;</span><span class="o">.</span><span class="na">toCharArray</span><span class="o">())</span>
-<span class="ln">28</span>        <span class="o">.</span><span class="na">build</span><span class="o">();</span>
-<span class="ln">29</span>
-<span class="ln">30</span>    <span class="n">SSLConnectionSocketFactory</span> <span class="n">sslsf</span> <span class="o">=</span> <span class="k">new</span> <span class="n">SSLConnectionSocketFactory</span><span class="o">(</span>
-<span class="ln">31</span>        <span class="n">sslcontext</span><span class="o">,</span>
-<span class="ln">32</span>        <span class="n">SSLConnectionSocketFactory</span><span class="o">.</span><span class="na">getDefaultHostnameVerifier</span><span class="o">());</span>
-<span class="ln">33</span>
-<span class="ln">34</span>    <span class="n">CloseableHttpClient</span> <span class="n">httpclient</span> <span class="o">=</span> <span class="n">HttpClients</span><span class="o">.</span><span class="na">custom</span><span class="o">()</span>
-<span class="ln">35</span>        <span class="o">.</span><span class="na">setSSLSocketFactory</span><span class="o">(</span><span class="n">sslsf</span><span class="o">)</span>
-<span class="ln">36</span>        <span class="o">.</span><span class="na">build</span><span class="o">();</span>
-<span class="ln">37</span>
-<span class="ln">38</span>    <span class="n">HttpGet</span> <span class="n">httpGet</span> <span class="o">=</span> <span class="k">new</span> <span class="n">HttpGet</span><span class="o">(</span><span class="s">&#34;https://localhost:8443&#34;</span><span class="o">);</span>
-<span class="ln">39</span>    <span class="n">CloseableHttpResponse</span> <span class="n">response</span> <span class="o">=</span> <span class="n">httpclient</span><span class="o">.</span><span class="na">execute</span><span class="o">(</span><span class="n">httpGet</span><span class="o">);</span>
-<span class="ln">40</span>    <span class="k">try</span> <span class="o">{</span>
-<span class="ln">41</span>      <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="n">response</span><span class="o">.</span><span class="na">getStatusLine</span><span class="o">());</span>
-<span class="ln">42</span>      <span class="n">HttpEntity</span> <span class="n">entity</span> <span class="o">=</span> <span class="n">response</span><span class="o">.</span><span class="na">getEntity</span><span class="o">();</span>
-<span class="ln">43</span>      <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="n">EntityUtils</span><span class="o">.</span><span class="na">toString</span><span class="o">(</span><span class="n">entity</span><span class="o">));</span>
-<span class="ln">44</span>    <span class="o">}</span> <span class="k">finally</span> <span class="o">{</span>
-<span class="ln">45</span>      <span class="n">response</span><span class="o">.</span><span class="na">close</span><span class="o">();</span>
-<span class="ln">46</span>    <span class="o">}</span>
-<span class="ln">47</span>
-<span class="ln">48</span>  <span class="o">}</span>
-<span class="ln">49</span><span class="o">}</span>
-</code></pre></div><h2 id="安全性考虑">安全性考虑<a class="anchor ms-1" href="#安全性考虑"><i class="fas fa-link"></i></a></h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-xml" data-lang="xml"><span class="nt">&lt;dependency&gt;</span>
+  <span class="nt">&lt;groupId&gt;</span>org.apache.httpcomponents<span class="nt">&lt;/groupId&gt;</span>
+  <span class="nt">&lt;artifactId&gt;</span>httpclient<span class="nt">&lt;/artifactId&gt;</span>
+  <span class="nt">&lt;version&gt;</span>4.5.7<span class="nt">&lt;/version&gt;</span>
+<span class="nt">&lt;/dependency&gt;</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>Java代码，记得把文件路径改掉：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span><span class="lnt">46
+</span><span class="lnt">47
+</span><span class="lnt">48
+</span><span class="lnt">49
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="kn">import</span> <span class="nn">org.apache.http.HttpEntity</span><span class="o">;</span>
+<span class="kn">import</span> <span class="nn">org.apache.http.HttpException</span><span class="o">;</span>
+<span class="kn">import</span> <span class="nn">org.apache.http.client.methods.CloseableHttpResponse</span><span class="o">;</span>
+<span class="kn">import</span> <span class="nn">org.apache.http.client.methods.HttpGet</span><span class="o">;</span>
+<span class="kn">import</span> <span class="nn">org.apache.http.conn.ssl.SSLConnectionSocketFactory</span><span class="o">;</span>
+<span class="kn">import</span> <span class="nn">org.apache.http.impl.client.CloseableHttpClient</span><span class="o">;</span>
+<span class="kn">import</span> <span class="nn">org.apache.http.impl.client.HttpClients</span><span class="o">;</span>
+<span class="kn">import</span> <span class="nn">org.apache.http.ssl.SSLContexts</span><span class="o">;</span>
+<span class="kn">import</span> <span class="nn">org.apache.http.util.EntityUtils</span><span class="o">;</span>
+
+<span class="kn">import</span> <span class="nn">javax.net.ssl.SSLContext</span><span class="o">;</span>
+<span class="kn">import</span> <span class="nn">java.io.File</span><span class="o">;</span>
+<span class="kn">import</span> <span class="nn">java.io.IOException</span><span class="o">;</span>
+
+<span class="kd">public</span> <span class="kd">class</span> <span class="nc">Client</span> <span class="o">{</span>
+
+  <span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">main</span><span class="o">(</span><span class="n">String</span><span class="o">[]</span> <span class="n">args</span><span class="o">)</span> <span class="kd">throws</span> <span class="n">Exception</span> <span class="o">{</span>
+
+    <span class="n">SSLContext</span> <span class="n">sslcontext</span> <span class="o">=</span> <span class="n">SSLContexts</span><span class="o">.</span><span class="na">custom</span><span class="o">()</span>
+        <span class="o">.</span><span class="na">loadTrustMaterial</span><span class="o">(</span>
+            <span class="k">new</span> <span class="n">File</span><span class="o">(</span><span class="s">&#34;/path/to/client-secrets/demo-jks/client.truststore&#34;</span><span class="o">),</span>
+            <span class="s">&#34;client-ts&#34;</span><span class="o">.</span><span class="na">toCharArray</span><span class="o">()</span>
+        <span class="o">)</span>
+        <span class="o">.</span><span class="na">loadKeyMaterial</span><span class="o">(</span>
+            <span class="k">new</span> <span class="n">File</span><span class="o">(</span><span class="s">&#34;/path/to/client-secrets/demo-jks/client-demo.keystore&#34;</span><span class="o">),</span>
+            <span class="s">&#34;client-demo-ks&#34;</span><span class="o">.</span><span class="na">toCharArray</span><span class="o">(),</span>
+            <span class="s">&#34;client-demo-ks&#34;</span><span class="o">.</span><span class="na">toCharArray</span><span class="o">())</span>
+        <span class="o">.</span><span class="na">build</span><span class="o">();</span>
+
+    <span class="n">SSLConnectionSocketFactory</span> <span class="n">sslsf</span> <span class="o">=</span> <span class="k">new</span> <span class="n">SSLConnectionSocketFactory</span><span class="o">(</span>
+        <span class="n">sslcontext</span><span class="o">,</span>
+        <span class="n">SSLConnectionSocketFactory</span><span class="o">.</span><span class="na">getDefaultHostnameVerifier</span><span class="o">());</span>
+
+    <span class="n">CloseableHttpClient</span> <span class="n">httpclient</span> <span class="o">=</span> <span class="n">HttpClients</span><span class="o">.</span><span class="na">custom</span><span class="o">()</span>
+        <span class="o">.</span><span class="na">setSSLSocketFactory</span><span class="o">(</span><span class="n">sslsf</span><span class="o">)</span>
+        <span class="o">.</span><span class="na">build</span><span class="o">();</span>
+
+    <span class="n">HttpGet</span> <span class="n">httpGet</span> <span class="o">=</span> <span class="k">new</span> <span class="n">HttpGet</span><span class="o">(</span><span class="s">&#34;https://localhost:8443&#34;</span><span class="o">);</span>
+    <span class="n">CloseableHttpResponse</span> <span class="n">response</span> <span class="o">=</span> <span class="n">httpclient</span><span class="o">.</span><span class="na">execute</span><span class="o">(</span><span class="n">httpGet</span><span class="o">);</span>
+    <span class="k">try</span> <span class="o">{</span>
+      <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="n">response</span><span class="o">.</span><span class="na">getStatusLine</span><span class="o">());</span>
+      <span class="n">HttpEntity</span> <span class="n">entity</span> <span class="o">=</span> <span class="n">response</span><span class="o">.</span><span class="na">getEntity</span><span class="o">();</span>
+      <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="n">EntityUtils</span><span class="o">.</span><span class="na">toString</span><span class="o">(</span><span class="n">entity</span><span class="o">));</span>
+    <span class="o">}</span> <span class="k">finally</span> <span class="o">{</span>
+      <span class="n">response</span><span class="o">.</span><span class="na">close</span><span class="o">();</span>
+    <span class="o">}</span>
+
+  <span class="o">}</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><h2 id="安全性考虑">安全性考虑<a class="anchor ms-1" href="#安全性考虑"><i class="fas fa-link"></i></a></h2>
 <ul>
 <li>所有private key都很重要！如果它被泄漏了，就要回收它所对应都证书。如果CA的private key泄漏了，那么用它签发的所有证书都要被回收。</li>
 <li>keystore和truststore的密码设置的要复杂一些。</li>

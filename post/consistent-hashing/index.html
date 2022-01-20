@@ -12,7 +12,7 @@
 <meta name="description" content="" /><meta itemprop="name" content="一致性Hash笔记">
 <meta itemprop="description" content=""><meta itemprop="datePublished" content="2019-12-04T09:22:23+08:00" />
 <meta itemprop="dateModified" content="2019-12-04T09:22:23+08:00" />
-<meta itemprop="wordCount" content="1329">
+<meta itemprop="wordCount" content="1331">
 <meta itemprop="keywords" content="分布式架构,分布式算法," /><meta property="og:title" content="一致性Hash笔记" />
 <meta property="og:description" content="" />
 <meta property="og:type" content="article" />
@@ -266,59 +266,117 @@
 <h3 id="参考代码">参考代码<a class="anchor ms-1" href="#参考代码"><i class="fas fa-link"></i></a></h3>
 <p>感谢<a href="http://www.tom-e-white.com/2007/11/consistent-hashing.html" target="_blank" rel="noopener noreferrer">Tom White - Consistent Hashing</a>
 ，他给出了一种Java的参考实现：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln"> 1</span><span class="kd">public</span> <span class="kd">class</span> <span class="nc">ConsistentHash</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="o">{</span>
-<span class="ln"> 2</span>
-<span class="ln"> 3</span>  <span class="kd">private</span> <span class="kd">final</span> <span class="n">HashFunction</span> <span class="n">hashFunction</span><span class="o">;</span>
-<span class="ln"> 4</span>  <span class="c1">// 每个服务器有几个分身，即虚拟节点
-</span><span class="ln"> 5</span><span class="c1"></span>  <span class="kd">private</span> <span class="kd">final</span> <span class="kt">int</span> <span class="n">numberOfReplicas</span><span class="o">;</span>
-<span class="ln"> 6</span>  <span class="kd">private</span> <span class="kd">final</span> <span class="n">SortedMap</span><span class="o">&lt;</span><span class="n">Integer</span><span class="o">,</span> <span class="n">T</span><span class="o">&gt;</span> <span class="n">circle</span> <span class="o">=</span>
-<span class="ln"> 7</span>    <span class="k">new</span> <span class="n">TreeMap</span><span class="o">&lt;</span><span class="n">Integer</span><span class="o">,</span> <span class="n">T</span><span class="o">&gt;();</span>
-<span class="ln"> 8</span>
-<span class="ln"> 9</span>  <span class="kd">public</span> <span class="nf">ConsistentHash</span><span class="o">(</span><span class="n">HashFunction</span> <span class="n">hashFunction</span><span class="o">,</span>
-<span class="ln">10</span>    <span class="kt">int</span> <span class="n">numberOfReplicas</span><span class="o">,</span> <span class="n">Collection</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="n">nodes</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">11</span>
-<span class="ln">12</span>    <span class="k">this</span><span class="o">.</span><span class="na">hashFunction</span> <span class="o">=</span> <span class="n">hashFunction</span><span class="o">;</span>
-<span class="ln">13</span>    <span class="k">this</span><span class="o">.</span><span class="na">numberOfReplicas</span> <span class="o">=</span> <span class="n">numberOfReplicas</span><span class="o">;</span>
-<span class="ln">14</span>
-<span class="ln">15</span>    <span class="k">for</span> <span class="o">(</span><span class="n">T</span> <span class="n">node</span> <span class="o">:</span> <span class="n">nodes</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">16</span>      <span class="n">add</span><span class="o">(</span><span class="n">node</span><span class="o">);</span>
-<span class="ln">17</span>    <span class="o">}</span>
-<span class="ln">18</span>  <span class="o">}</span>
-<span class="ln">19</span>
-<span class="ln">20</span>  <span class="kd">public</span> <span class="kt">void</span> <span class="nf">add</span><span class="o">(</span><span class="n">T</span> <span class="n">node</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">21</span>    <span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">numberOfReplicas</span><span class="o">;</span> <span class="n">i</span><span class="o">++)</span> <span class="o">{</span>
-<span class="ln">22</span>      <span class="c1">// 给服务器加编号的形式产生虚拟节点
-</span><span class="ln">23</span><span class="c1"></span>      <span class="n">circle</span><span class="o">.</span><span class="na">put</span><span class="o">(</span><span class="n">hashFunction</span><span class="o">.</span><span class="na">hash</span><span class="o">(</span><span class="n">node</span><span class="o">.</span><span class="na">toString</span><span class="o">()</span> <span class="o">+</span> <span class="n">i</span><span class="o">),</span>
-<span class="ln">24</span>        <span class="n">node</span><span class="o">);</span>
-<span class="ln">25</span>    <span class="o">}</span>
-<span class="ln">26</span>  <span class="o">}</span>
-<span class="ln">27</span>
-<span class="ln">28</span>  <span class="kd">public</span> <span class="kt">void</span> <span class="nf">remove</span><span class="o">(</span><span class="n">T</span> <span class="n">node</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">29</span>    <span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">numberOfReplicas</span><span class="o">;</span> <span class="n">i</span><span class="o">++)</span> <span class="o">{</span>
-<span class="ln">30</span>      <span class="c1">// 删除服务器的所有虚拟节点
-</span><span class="ln">31</span><span class="c1"></span>      <span class="n">circle</span><span class="o">.</span><span class="na">remove</span><span class="o">(</span><span class="n">hashFunction</span><span class="o">.</span><span class="na">hash</span><span class="o">(</span><span class="n">node</span><span class="o">.</span><span class="na">toString</span><span class="o">()</span> <span class="o">+</span> <span class="n">i</span><span class="o">));</span>
-<span class="ln">32</span>    <span class="o">}</span>
-<span class="ln">33</span>  <span class="o">}</span>
-<span class="ln">34</span>
-<span class="ln">35</span>  <span class="kd">public</span> <span class="n">T</span> <span class="nf">get</span><span class="o">(</span><span class="n">Object</span> <span class="n">key</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">36</span>    <span class="k">if</span> <span class="o">(</span><span class="n">circle</span><span class="o">.</span><span class="na">isEmpty</span><span class="o">())</span> <span class="o">{</span>
-<span class="ln">37</span>      <span class="k">return</span> <span class="kc">null</span><span class="o">;</span>
-<span class="ln">38</span>    <span class="o">}</span>
-<span class="ln">39</span>    <span class="kt">int</span> <span class="n">hash</span> <span class="o">=</span> <span class="n">hashFunction</span><span class="o">.</span><span class="na">hash</span><span class="o">(</span><span class="n">key</span><span class="o">);</span>
-<span class="ln">40</span>    <span class="k">if</span> <span class="o">(!</span><span class="n">circle</span><span class="o">.</span><span class="na">containsKey</span><span class="o">(</span><span class="n">hash</span><span class="o">))</span> <span class="o">{</span>
-<span class="ln">41</span>      <span class="n">SortedMap</span><span class="o">&lt;</span><span class="n">Integer</span><span class="o">,</span> <span class="n">T</span><span class="o">&gt;</span> <span class="n">tailMap</span> <span class="o">=</span>
-<span class="ln">42</span>        <span class="c1">// tailMap方法返回大于等于key的第一个key及其之后的数据，得到当前Map的视图
-</span><span class="ln">43</span><span class="c1"></span>        <span class="n">circle</span><span class="o">.</span><span class="na">tailMap</span><span class="o">(</span><span class="n">hash</span><span class="o">);</span>
-<span class="ln">44</span>      <span class="c1">// 如果tailMap为空，那么就去环中的第一个节点，否则就去tailMap的第一个节点
-</span><span class="ln">45</span><span class="c1"></span>      <span class="c1">// 相当于顺时针找服务器
-</span><span class="ln">46</span><span class="c1"></span>      <span class="n">hash</span> <span class="o">=</span> <span class="n">tailMap</span><span class="o">.</span><span class="na">isEmpty</span><span class="o">()</span> <span class="o">?</span>
-<span class="ln">47</span>             <span class="n">circle</span><span class="o">.</span><span class="na">firstKey</span><span class="o">()</span> <span class="o">:</span> <span class="n">tailMap</span><span class="o">.</span><span class="na">firstKey</span><span class="o">();</span>
-<span class="ln">48</span>    <span class="o">}</span>
-<span class="ln">49</span>    <span class="k">return</span> <span class="n">circle</span><span class="o">.</span><span class="na">get</span><span class="o">(</span><span class="n">hash</span><span class="o">);</span>
-<span class="ln">50</span>  <span class="o">}</span> 
-<span class="ln">51</span>
-<span class="ln">52</span><span class="o">}</span>
-</code></pre></div><h3 id="代价">代价<a class="anchor ms-1" href="#代价"><i class="fas fa-link"></i></a></h3>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span><span class="lnt">46
+</span><span class="lnt">47
+</span><span class="lnt">48
+</span><span class="lnt">49
+</span><span class="lnt">50
+</span><span class="lnt">51
+</span><span class="lnt">52
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="kd">public</span> <span class="kd">class</span> <span class="nc">ConsistentHash</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="o">{</span>
+
+  <span class="kd">private</span> <span class="kd">final</span> <span class="n">HashFunction</span> <span class="n">hashFunction</span><span class="o">;</span>
+  <span class="c1">// 每个服务器有几个分身，即虚拟节点
+</span><span class="c1"></span>  <span class="kd">private</span> <span class="kd">final</span> <span class="kt">int</span> <span class="n">numberOfReplicas</span><span class="o">;</span>
+  <span class="kd">private</span> <span class="kd">final</span> <span class="n">SortedMap</span><span class="o">&lt;</span><span class="n">Integer</span><span class="o">,</span> <span class="n">T</span><span class="o">&gt;</span> <span class="n">circle</span> <span class="o">=</span>
+    <span class="k">new</span> <span class="n">TreeMap</span><span class="o">&lt;</span><span class="n">Integer</span><span class="o">,</span> <span class="n">T</span><span class="o">&gt;();</span>
+
+  <span class="kd">public</span> <span class="nf">ConsistentHash</span><span class="o">(</span><span class="n">HashFunction</span> <span class="n">hashFunction</span><span class="o">,</span>
+    <span class="kt">int</span> <span class="n">numberOfReplicas</span><span class="o">,</span> <span class="n">Collection</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="n">nodes</span><span class="o">)</span> <span class="o">{</span>
+
+    <span class="k">this</span><span class="o">.</span><span class="na">hashFunction</span> <span class="o">=</span> <span class="n">hashFunction</span><span class="o">;</span>
+    <span class="k">this</span><span class="o">.</span><span class="na">numberOfReplicas</span> <span class="o">=</span> <span class="n">numberOfReplicas</span><span class="o">;</span>
+
+    <span class="k">for</span> <span class="o">(</span><span class="n">T</span> <span class="n">node</span> <span class="o">:</span> <span class="n">nodes</span><span class="o">)</span> <span class="o">{</span>
+      <span class="n">add</span><span class="o">(</span><span class="n">node</span><span class="o">);</span>
+    <span class="o">}</span>
+  <span class="o">}</span>
+
+  <span class="kd">public</span> <span class="kt">void</span> <span class="nf">add</span><span class="o">(</span><span class="n">T</span> <span class="n">node</span><span class="o">)</span> <span class="o">{</span>
+    <span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">numberOfReplicas</span><span class="o">;</span> <span class="n">i</span><span class="o">++)</span> <span class="o">{</span>
+      <span class="c1">// 给服务器加编号的形式产生虚拟节点
+</span><span class="c1"></span>      <span class="n">circle</span><span class="o">.</span><span class="na">put</span><span class="o">(</span><span class="n">hashFunction</span><span class="o">.</span><span class="na">hash</span><span class="o">(</span><span class="n">node</span><span class="o">.</span><span class="na">toString</span><span class="o">()</span> <span class="o">+</span> <span class="n">i</span><span class="o">),</span>
+        <span class="n">node</span><span class="o">);</span>
+    <span class="o">}</span>
+  <span class="o">}</span>
+
+  <span class="kd">public</span> <span class="kt">void</span> <span class="nf">remove</span><span class="o">(</span><span class="n">T</span> <span class="n">node</span><span class="o">)</span> <span class="o">{</span>
+    <span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">numberOfReplicas</span><span class="o">;</span> <span class="n">i</span><span class="o">++)</span> <span class="o">{</span>
+      <span class="c1">// 删除服务器的所有虚拟节点
+</span><span class="c1"></span>      <span class="n">circle</span><span class="o">.</span><span class="na">remove</span><span class="o">(</span><span class="n">hashFunction</span><span class="o">.</span><span class="na">hash</span><span class="o">(</span><span class="n">node</span><span class="o">.</span><span class="na">toString</span><span class="o">()</span> <span class="o">+</span> <span class="n">i</span><span class="o">));</span>
+    <span class="o">}</span>
+  <span class="o">}</span>
+
+  <span class="kd">public</span> <span class="n">T</span> <span class="nf">get</span><span class="o">(</span><span class="n">Object</span> <span class="n">key</span><span class="o">)</span> <span class="o">{</span>
+    <span class="k">if</span> <span class="o">(</span><span class="n">circle</span><span class="o">.</span><span class="na">isEmpty</span><span class="o">())</span> <span class="o">{</span>
+      <span class="k">return</span> <span class="kc">null</span><span class="o">;</span>
+    <span class="o">}</span>
+    <span class="kt">int</span> <span class="n">hash</span> <span class="o">=</span> <span class="n">hashFunction</span><span class="o">.</span><span class="na">hash</span><span class="o">(</span><span class="n">key</span><span class="o">);</span>
+    <span class="k">if</span> <span class="o">(!</span><span class="n">circle</span><span class="o">.</span><span class="na">containsKey</span><span class="o">(</span><span class="n">hash</span><span class="o">))</span> <span class="o">{</span>
+      <span class="n">SortedMap</span><span class="o">&lt;</span><span class="n">Integer</span><span class="o">,</span> <span class="n">T</span><span class="o">&gt;</span> <span class="n">tailMap</span> <span class="o">=</span>
+        <span class="c1">// tailMap方法返回大于等于key的第一个key及其之后的数据，得到当前Map的视图
+</span><span class="c1"></span>        <span class="n">circle</span><span class="o">.</span><span class="na">tailMap</span><span class="o">(</span><span class="n">hash</span><span class="o">);</span>
+      <span class="c1">// 如果tailMap为空，那么就去环中的第一个节点，否则就去tailMap的第一个节点
+</span><span class="c1"></span>      <span class="c1">// 相当于顺时针找服务器
+</span><span class="c1"></span>      <span class="n">hash</span> <span class="o">=</span> <span class="n">tailMap</span><span class="o">.</span><span class="na">isEmpty</span><span class="o">()</span> <span class="o">?</span>
+             <span class="n">circle</span><span class="o">.</span><span class="na">firstKey</span><span class="o">()</span> <span class="o">:</span> <span class="n">tailMap</span><span class="o">.</span><span class="na">firstKey</span><span class="o">();</span>
+    <span class="o">}</span>
+    <span class="k">return</span> <span class="n">circle</span><span class="o">.</span><span class="na">get</span><span class="o">(</span><span class="n">hash</span><span class="o">);</span>
+  <span class="o">}</span> 
+
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><h3 id="代价">代价<a class="anchor ms-1" href="#代价"><i class="fas fa-link"></i></a></h3>
 <p>那么每个服务器多少个虚拟节点才能使得分布均匀呢？</p>
 <p><a href="https://medium.com/@dgryski/consistent-hashing-algorithmic-tradeoffs-ef6b8e2fcae8" target="_blank" rel="noopener noreferrer">Consistent Hashing: Algorithmic Tradeoffs</a>
 提到：</p>

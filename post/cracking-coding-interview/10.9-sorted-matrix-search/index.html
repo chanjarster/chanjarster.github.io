@@ -12,7 +12,7 @@
 <meta name="description" content="" /><meta itemprop="name" content="Cracking Coding Interview - 10.9 Sorted Matrix Search">
 <meta itemprop="description" content=""><meta itemprop="datePublished" content="2019-08-29T09:37:11+08:00" />
 <meta itemprop="dateModified" content="2019-08-29T09:37:11+08:00" />
-<meta itemprop="wordCount" content="605">
+<meta itemprop="wordCount" content="617">
 <meta itemprop="keywords" content="ARTS-A," /><meta property="og:title" content="Cracking Coding Interview - 10.9 Sorted Matrix Search" />
 <meta property="og:description" content="" />
 <meta property="og:type" content="article" />
@@ -227,11 +227,21 @@
 <p>Hints: #193, #211, #229, #251, #266, #279, #288, #291, #303, #317, #330</p>
 <h2 id="解法1">解法1<a class="anchor ms-1" href="#解法1"><i class="fas fa-link"></i></a></h2>
 <p>一个在行、列两个方向都是升序排列的矩阵，举个例子：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln">1</span>1, 2, 3, 4
-<span class="ln">2</span>2, 3, 4, 5
-<span class="ln">3</span>3, 4, 5, 6
-<span class="ln">4</span>4, 5, 6, 7
-</code></pre></div><p>根据定义在任意坐标<code>(r, c)</code>上，成立以下关系：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt">1, 2, 3, 4
+2, 3, 4, 5
+3, 4, 5, 6
+4, 5, 6, 7
+</code></pre></td></tr></table>
+</div>
+</div><p>根据定义在任意坐标<code>(r, c)</code>上，成立以下关系：</p>
 <ul>
 <li><code>(r - 1, c) &lt;= (r, c)</code></li>
 <li><code>(r + 1, c) &gt; (r, c)</code></li>
@@ -239,65 +249,129 @@
 <li><code>(r, c + 1) &gt; (r, c)</code></li>
 </ul>
 <p>在有序数组的二分法查找的时候只有左右两个方向，那么在矩阵二分查找的话则有左右、上下两个方向。</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln"> 1</span><span class="kd">public</span> <span class="n">RowCol</span> <span class="o">{</span>
-<span class="ln"> 2</span>  <span class="kd">final</span> <span class="kt">int</span> <span class="n">row</span><span class="o">;</span>
-<span class="ln"> 3</span>  <span class="kd">final</span> <span class="kt">int</span> <span class="n">col</span><span class="o">;</span>
-<span class="ln"> 4</span>  <span class="kd">public</span> <span class="nf">RowCol</span><span class="o">(</span><span class="kt">int</span> <span class="n">row</span><span class="o">,</span> <span class="kt">int</span> <span class="n">col</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 5</span>    <span class="k">this</span><span class="o">.</span><span class="na">row</span> <span class="o">=</span> <span class="n">row</span><span class="o">;</span>
-<span class="ln"> 6</span>    <span class="k">this</span><span class="o">.</span><span class="na">col</span> <span class="o">=</span> <span class="n">col</span><span class="o">;</span>
-<span class="ln"> 7</span>  <span class="o">}</span>
-<span class="ln"> 8</span>  <span class="kd">public</span> <span class="kt">boolean</span> <span class="nf">isGreaterThan</span><span class="o">(</span><span class="n">Row</span> <span class="n">another</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 9</span>    <span class="k">return</span> <span class="k">this</span><span class="o">.</span><span class="na">row</span> <span class="o">&gt;</span> <span class="n">another</span><span class="o">.</span><span class="na">row</span> <span class="o">&amp;&amp;</span> <span class="k">this</span><span class="o">.</span><span class="na">col</span> <span class="o">&gt;</span> <span class="n">another</span><span class="o">.</span><span class="na">col</span><span class="o">;</span>
-<span class="ln">10</span>  <span class="o">}</span>
-<span class="ln">11</span>  <span class="kd">public</span> <span class="kt">boolean</span> <span class="nf">isNotFound</span><span class="o">()</span> <span class="o">{</span>
-<span class="ln">12</span>    <span class="k">return</span> <span class="n">row</span> <span class="o">==</span> <span class="o">-</span><span class="n">1</span> <span class="o">&amp;&amp;</span> <span class="n">col</span> <span class="o">==</span> <span class="o">-</span><span class="n">1</span><span class="o">;</span>
-<span class="ln">13</span>  <span class="o">}</span>
-<span class="ln">14</span>  <span class="kd">public</span> <span class="n">RowCol</span> <span class="nf">minusRow</span><span class="o">()</span> <span class="o">{</span>
-<span class="ln">15</span>    <span class="k">return</span> <span class="k">new</span> <span class="n">RowCol</span><span class="o">(</span><span class="n">row</span> <span class="o">-</span> <span class="n">1</span><span class="o">,</span> <span class="n">col</span><span class="o">);</span>
-<span class="ln">16</span>  <span class="o">}</span>
-<span class="ln">17</span>  <span class="kd">public</span> <span class="n">RowCol</span> <span class="nf">plusRow</span><span class="o">()</span> <span class="o">{</span>
-<span class="ln">18</span>    <span class="k">return</span> <span class="k">new</span> <span class="n">RowCol</span><span class="o">(</span><span class="n">row</span> <span class="o">+</span> <span class="n">1</span><span class="o">,</span> <span class="n">col</span><span class="o">);</span>
-<span class="ln">19</span>  <span class="o">}</span>
-<span class="ln">20</span>  <span class="kd">public</span> <span class="n">RowCol</span> <span class="nf">minusCol</span><span class="o">()</span> <span class="o">{</span>
-<span class="ln">21</span>    <span class="k">return</span> <span class="k">new</span> <span class="n">RowCol</span><span class="o">(</span><span class="n">row</span><span class="o">,</span> <span class="n">col</span> <span class="o">-</span> <span class="n">1</span><span class="o">);</span>
-<span class="ln">22</span>  <span class="o">}</span>
-<span class="ln">23</span>  <span class="kd">public</span> <span class="n">RowCol</span> <span class="nf">plusCol</span><span class="o">()</span> <span class="o">{</span>
-<span class="ln">24</span>    <span class="k">return</span> <span class="k">new</span> <span class="n">RowCol</span><span class="o">(</span><span class="n">row</span><span class="o">,</span> <span class="n">col</span> <span class="o">+</span> <span class="n">1</span><span class="o">);</span>
-<span class="ln">25</span>  <span class="o">}</span>
-<span class="ln">26</span>  <span class="kd">public</span> <span class="n">RowCol</span> <span class="nf">mid</span><span class="o">(</span><span class="n">RowCol</span> <span class="n">another</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">27</span>    <span class="k">return</span> <span class="k">new</span> <span class="n">RowCol</span><span class="o">((</span><span class="n">row</span> <span class="o">+</span> <span class="n">another</span><span class="o">.</span><span class="na">row</span><span class="o">)</span> <span class="o">/</span> <span class="n">2</span><span class="o">,</span> <span class="o">(</span><span class="n">col</span> <span class="o">+</span> <span class="n">another</span><span class="o">.</span><span class="na">col</span><span class="o">)</span> <span class="o">/</span> <span class="n">2</span><span class="o">);</span>
-<span class="ln">28</span>  <span class="o">}</span>
-<span class="ln">29</span><span class="o">}</span>
-<span class="ln">30</span>
-<span class="ln">31</span><span class="kd">public</span> <span class="n">RowCol</span> <span class="nf">search</span><span class="o">(</span><span class="kt">int</span><span class="o">[][]</span> <span class="n">matrix</span><span class="o">,</span> <span class="kt">int</span> <span class="n">n</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">32</span>  <span class="kt">int</span> <span class="n">rows</span> <span class="o">=</span> <span class="n">matrix</span><span class="o">.</span><span class="na">length</span><span class="o">;</span>
-<span class="ln">33</span>  <span class="kt">int</span> <span class="n">cols</span> <span class="o">=</span> <span class="n">matrix</span><span class="o">[</span><span class="n">0</span><span class="o">].</span><span class="na">length</span><span class="o">;</span>
-<span class="ln">34</span>  <span class="k">return</span> <span class="n">search</span><span class="o">(</span><span class="n">matrix</span><span class="o">,</span> <span class="n">n</span><span class="o">,</span> <span class="k">new</span> <span class="n">RowCol</span><span class="o">(</span><span class="n">0</span><span class="o">,</span> <span class="n">0</span><span class="o">),</span> <span class="k">new</span> <span class="n">RowCol</span><span class="o">(</span><span class="n">rows</span> <span class="o">-</span> <span class="n">1</span><span class="o">,</span> <span class="n">cols</span> <span class="o">-</span> <span class="n">1</span><span class="o">));</span>
-<span class="ln">35</span><span class="o">}</span>
-<span class="ln">36</span>
-<span class="ln">37</span><span class="kd">private</span> <span class="n">RowCol</span> <span class="nf">search</span><span class="o">(</span><span class="kt">int</span><span class="o">[][]</span> <span class="n">matrix</span><span class="o">,</span> <span class="kt">int</span> <span class="n">n</span><span class="o">,</span> <span class="n">RowCol</span> <span class="n">start</span><span class="o">,</span> <span class="n">RowCol</span> <span class="n">end</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">38</span>  <span class="k">if</span> <span class="o">(</span><span class="n">start</span><span class="o">.</span><span class="na">isGreaterThat</span><span class="o">(</span><span class="n">end</span><span class="o">))</span> <span class="o">{</span>
-<span class="ln">39</span>    <span class="k">return</span> <span class="n">RowCol</span><span class="o">(-</span><span class="n">1</span><span class="o">,</span> <span class="o">-</span><span class="n">1</span><span class="o">);</span>
-<span class="ln">40</span>  <span class="o">}</span>
-<span class="ln">41</span>  <span class="n">RowCol</span> <span class="n">mid</span> <span class="o">=</span> <span class="n">start</span><span class="o">.</span><span class="na">mid</span><span class="o">(</span><span class="n">end</span><span class="o">);</span>
-<span class="ln">42</span>  <span class="kt">int</span> <span class="n">midValue</span> <span class="o">=</span> <span class="n">matrix</span><span class="o">[</span><span class="n">mid</span><span class="o">.</span><span class="na">row</span><span class="o">][</span><span class="n">mid</span><span class="o">.</span><span class="na">col</span><span class="o">];</span>
-<span class="ln">43</span>  <span class="k">if</span> <span class="o">(</span><span class="n">n</span> <span class="o">==</span> <span class="n">midValue</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">44</span>    <span class="k">return</span> <span class="n">mid</span><span class="o">;</span>
-<span class="ln">45</span>  <span class="o">}</span>
-<span class="ln">46</span>  <span class="k">if</span> <span class="o">(</span><span class="n">n</span> <span class="o">&lt;</span> <span class="n">midValue</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">47</span>    <span class="n">RowCol</span> <span class="n">tmp</span> <span class="o">=</span> <span class="n">search</span><span class="o">(</span><span class="n">matrix</span><span class="o">,</span> <span class="n">n</span><span class="o">,</span> <span class="n">start</span><span class="o">,</span> <span class="n">mid</span><span class="o">.</span><span class="na">minusRow</span><span class="o">());</span>
-<span class="ln">48</span>    <span class="k">if</span> <span class="o">(</span><span class="n">tmp</span><span class="o">.</span><span class="na">isNotFound</span><span class="o">())</span> <span class="o">{</span>
-<span class="ln">49</span>      <span class="k">return</span> <span class="n">search</span><span class="o">(</span><span class="n">matrix</span><span class="o">,</span> <span class="n">n</span><span class="o">,</span> <span class="n">start</span><span class="o">,</span> <span class="n">mid</span><span class="o">.</span><span class="na">minusCol</span><span class="o">());</span>
-<span class="ln">50</span>    <span class="o">}</span>
-<span class="ln">51</span>    <span class="k">return</span> <span class="n">tmp</span><span class="o">;</span>
-<span class="ln">52</span>  <span class="o">}</span>
-<span class="ln">53</span>  <span class="n">RowCol</span> <span class="n">tmp</span> <span class="o">=</span> <span class="n">search</span><span class="o">(</span><span class="n">matrix</span><span class="o">,</span> <span class="n">n</span><span class="o">,</span> <span class="n">mid</span><span class="o">.</span><span class="na">plusRow</span><span class="o">(),</span> <span class="n">end</span><span class="o">);</span>
-<span class="ln">54</span>  <span class="k">if</span> <span class="o">(</span><span class="n">tmp</span><span class="o">.</span><span class="na">isNotFound</span><span class="o">())</span> <span class="o">{</span>
-<span class="ln">55</span>    <span class="k">return</span> <span class="n">search</span><span class="o">(</span><span class="n">matrix</span><span class="o">,</span> <span class="n">n</span><span class="o">,</span> <span class="n">mid</span><span class="o">.</span><span class="na">plusCol</span><span class="o">(),</span> <span class="n">end</span><span class="o">);</span>
-<span class="ln">56</span>  <span class="o">}</span>
-<span class="ln">57</span>  <span class="k">return</span> <span class="n">tmp</span><span class="o">;</span>
-<span class="ln">58</span><span class="o">}</span>
-</code></pre></div><h2 id="解法2">解法2<a class="anchor ms-1" href="#解法2"><i class="fas fa-link"></i></a></h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span><span class="lnt">46
+</span><span class="lnt">47
+</span><span class="lnt">48
+</span><span class="lnt">49
+</span><span class="lnt">50
+</span><span class="lnt">51
+</span><span class="lnt">52
+</span><span class="lnt">53
+</span><span class="lnt">54
+</span><span class="lnt">55
+</span><span class="lnt">56
+</span><span class="lnt">57
+</span><span class="lnt">58
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="kd">public</span> <span class="n">RowCol</span> <span class="o">{</span>
+  <span class="kd">final</span> <span class="kt">int</span> <span class="n">row</span><span class="o">;</span>
+  <span class="kd">final</span> <span class="kt">int</span> <span class="n">col</span><span class="o">;</span>
+  <span class="kd">public</span> <span class="nf">RowCol</span><span class="o">(</span><span class="kt">int</span> <span class="n">row</span><span class="o">,</span> <span class="kt">int</span> <span class="n">col</span><span class="o">)</span> <span class="o">{</span>
+    <span class="k">this</span><span class="o">.</span><span class="na">row</span> <span class="o">=</span> <span class="n">row</span><span class="o">;</span>
+    <span class="k">this</span><span class="o">.</span><span class="na">col</span> <span class="o">=</span> <span class="n">col</span><span class="o">;</span>
+  <span class="o">}</span>
+  <span class="kd">public</span> <span class="kt">boolean</span> <span class="nf">isGreaterThan</span><span class="o">(</span><span class="n">Row</span> <span class="n">another</span><span class="o">)</span> <span class="o">{</span>
+    <span class="k">return</span> <span class="k">this</span><span class="o">.</span><span class="na">row</span> <span class="o">&gt;</span> <span class="n">another</span><span class="o">.</span><span class="na">row</span> <span class="o">&amp;&amp;</span> <span class="k">this</span><span class="o">.</span><span class="na">col</span> <span class="o">&gt;</span> <span class="n">another</span><span class="o">.</span><span class="na">col</span><span class="o">;</span>
+  <span class="o">}</span>
+  <span class="kd">public</span> <span class="kt">boolean</span> <span class="nf">isNotFound</span><span class="o">()</span> <span class="o">{</span>
+    <span class="k">return</span> <span class="n">row</span> <span class="o">==</span> <span class="o">-</span><span class="n">1</span> <span class="o">&amp;&amp;</span> <span class="n">col</span> <span class="o">==</span> <span class="o">-</span><span class="n">1</span><span class="o">;</span>
+  <span class="o">}</span>
+  <span class="kd">public</span> <span class="n">RowCol</span> <span class="nf">minusRow</span><span class="o">()</span> <span class="o">{</span>
+    <span class="k">return</span> <span class="k">new</span> <span class="n">RowCol</span><span class="o">(</span><span class="n">row</span> <span class="o">-</span> <span class="n">1</span><span class="o">,</span> <span class="n">col</span><span class="o">);</span>
+  <span class="o">}</span>
+  <span class="kd">public</span> <span class="n">RowCol</span> <span class="nf">plusRow</span><span class="o">()</span> <span class="o">{</span>
+    <span class="k">return</span> <span class="k">new</span> <span class="n">RowCol</span><span class="o">(</span><span class="n">row</span> <span class="o">+</span> <span class="n">1</span><span class="o">,</span> <span class="n">col</span><span class="o">);</span>
+  <span class="o">}</span>
+  <span class="kd">public</span> <span class="n">RowCol</span> <span class="nf">minusCol</span><span class="o">()</span> <span class="o">{</span>
+    <span class="k">return</span> <span class="k">new</span> <span class="n">RowCol</span><span class="o">(</span><span class="n">row</span><span class="o">,</span> <span class="n">col</span> <span class="o">-</span> <span class="n">1</span><span class="o">);</span>
+  <span class="o">}</span>
+  <span class="kd">public</span> <span class="n">RowCol</span> <span class="nf">plusCol</span><span class="o">()</span> <span class="o">{</span>
+    <span class="k">return</span> <span class="k">new</span> <span class="n">RowCol</span><span class="o">(</span><span class="n">row</span><span class="o">,</span> <span class="n">col</span> <span class="o">+</span> <span class="n">1</span><span class="o">);</span>
+  <span class="o">}</span>
+  <span class="kd">public</span> <span class="n">RowCol</span> <span class="nf">mid</span><span class="o">(</span><span class="n">RowCol</span> <span class="n">another</span><span class="o">)</span> <span class="o">{</span>
+    <span class="k">return</span> <span class="k">new</span> <span class="n">RowCol</span><span class="o">((</span><span class="n">row</span> <span class="o">+</span> <span class="n">another</span><span class="o">.</span><span class="na">row</span><span class="o">)</span> <span class="o">/</span> <span class="n">2</span><span class="o">,</span> <span class="o">(</span><span class="n">col</span> <span class="o">+</span> <span class="n">another</span><span class="o">.</span><span class="na">col</span><span class="o">)</span> <span class="o">/</span> <span class="n">2</span><span class="o">);</span>
+  <span class="o">}</span>
+<span class="o">}</span>
+
+<span class="kd">public</span> <span class="n">RowCol</span> <span class="nf">search</span><span class="o">(</span><span class="kt">int</span><span class="o">[][]</span> <span class="n">matrix</span><span class="o">,</span> <span class="kt">int</span> <span class="n">n</span><span class="o">)</span> <span class="o">{</span>
+  <span class="kt">int</span> <span class="n">rows</span> <span class="o">=</span> <span class="n">matrix</span><span class="o">.</span><span class="na">length</span><span class="o">;</span>
+  <span class="kt">int</span> <span class="n">cols</span> <span class="o">=</span> <span class="n">matrix</span><span class="o">[</span><span class="n">0</span><span class="o">].</span><span class="na">length</span><span class="o">;</span>
+  <span class="k">return</span> <span class="n">search</span><span class="o">(</span><span class="n">matrix</span><span class="o">,</span> <span class="n">n</span><span class="o">,</span> <span class="k">new</span> <span class="n">RowCol</span><span class="o">(</span><span class="n">0</span><span class="o">,</span> <span class="n">0</span><span class="o">),</span> <span class="k">new</span> <span class="n">RowCol</span><span class="o">(</span><span class="n">rows</span> <span class="o">-</span> <span class="n">1</span><span class="o">,</span> <span class="n">cols</span> <span class="o">-</span> <span class="n">1</span><span class="o">));</span>
+<span class="o">}</span>
+
+<span class="kd">private</span> <span class="n">RowCol</span> <span class="nf">search</span><span class="o">(</span><span class="kt">int</span><span class="o">[][]</span> <span class="n">matrix</span><span class="o">,</span> <span class="kt">int</span> <span class="n">n</span><span class="o">,</span> <span class="n">RowCol</span> <span class="n">start</span><span class="o">,</span> <span class="n">RowCol</span> <span class="n">end</span><span class="o">)</span> <span class="o">{</span>
+  <span class="k">if</span> <span class="o">(</span><span class="n">start</span><span class="o">.</span><span class="na">isGreaterThat</span><span class="o">(</span><span class="n">end</span><span class="o">))</span> <span class="o">{</span>
+    <span class="k">return</span> <span class="n">RowCol</span><span class="o">(-</span><span class="n">1</span><span class="o">,</span> <span class="o">-</span><span class="n">1</span><span class="o">);</span>
+  <span class="o">}</span>
+  <span class="n">RowCol</span> <span class="n">mid</span> <span class="o">=</span> <span class="n">start</span><span class="o">.</span><span class="na">mid</span><span class="o">(</span><span class="n">end</span><span class="o">);</span>
+  <span class="kt">int</span> <span class="n">midValue</span> <span class="o">=</span> <span class="n">matrix</span><span class="o">[</span><span class="n">mid</span><span class="o">.</span><span class="na">row</span><span class="o">][</span><span class="n">mid</span><span class="o">.</span><span class="na">col</span><span class="o">];</span>
+  <span class="k">if</span> <span class="o">(</span><span class="n">n</span> <span class="o">==</span> <span class="n">midValue</span><span class="o">)</span> <span class="o">{</span>
+    <span class="k">return</span> <span class="n">mid</span><span class="o">;</span>
+  <span class="o">}</span>
+  <span class="k">if</span> <span class="o">(</span><span class="n">n</span> <span class="o">&lt;</span> <span class="n">midValue</span><span class="o">)</span> <span class="o">{</span>
+    <span class="n">RowCol</span> <span class="n">tmp</span> <span class="o">=</span> <span class="n">search</span><span class="o">(</span><span class="n">matrix</span><span class="o">,</span> <span class="n">n</span><span class="o">,</span> <span class="n">start</span><span class="o">,</span> <span class="n">mid</span><span class="o">.</span><span class="na">minusRow</span><span class="o">());</span>
+    <span class="k">if</span> <span class="o">(</span><span class="n">tmp</span><span class="o">.</span><span class="na">isNotFound</span><span class="o">())</span> <span class="o">{</span>
+      <span class="k">return</span> <span class="n">search</span><span class="o">(</span><span class="n">matrix</span><span class="o">,</span> <span class="n">n</span><span class="o">,</span> <span class="n">start</span><span class="o">,</span> <span class="n">mid</span><span class="o">.</span><span class="na">minusCol</span><span class="o">());</span>
+    <span class="o">}</span>
+    <span class="k">return</span> <span class="n">tmp</span><span class="o">;</span>
+  <span class="o">}</span>
+  <span class="n">RowCol</span> <span class="n">tmp</span> <span class="o">=</span> <span class="n">search</span><span class="o">(</span><span class="n">matrix</span><span class="o">,</span> <span class="n">n</span><span class="o">,</span> <span class="n">mid</span><span class="o">.</span><span class="na">plusRow</span><span class="o">(),</span> <span class="n">end</span><span class="o">);</span>
+  <span class="k">if</span> <span class="o">(</span><span class="n">tmp</span><span class="o">.</span><span class="na">isNotFound</span><span class="o">())</span> <span class="o">{</span>
+    <span class="k">return</span> <span class="n">search</span><span class="o">(</span><span class="n">matrix</span><span class="o">,</span> <span class="n">n</span><span class="o">,</span> <span class="n">mid</span><span class="o">.</span><span class="na">plusCol</span><span class="o">(),</span> <span class="n">end</span><span class="o">);</span>
+  <span class="o">}</span>
+  <span class="k">return</span> <span class="n">tmp</span><span class="o">;</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><h2 id="解法2">解法2<a class="anchor ms-1" href="#解法2"><i class="fas fa-link"></i></a></h2>
 <p>步骤：</p>
 <ol>
 <li>从第一行开始，从右到左看列，如果某列大于<code>x</code>（被搜索值），则左移一列，因为左一列可能能找到。</li>
@@ -305,21 +379,41 @@
 <li>重复1到2步。</li>
 </ol>
 <p>代码：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln"> 1</span><span class="kd">public</span> <span class="kt">int</span><span class="o">[]</span> <span class="nf">search</span><span class="o">(</span><span class="kt">int</span><span class="o">[][]</span> <span class="n">matrix</span><span class="o">,</span> <span class="kt">int</span> <span class="n">n</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 2</span>  <span class="kt">int</span> <span class="n">row</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span>
-<span class="ln"> 3</span>  <span class="kt">int</span> <span class="n">col</span> <span class="o">=</span> <span class="n">matrix</span><span class="o">[</span><span class="n">0</span><span class="o">].</span><span class="na">length</span> <span class="o">-</span> <span class="n">1</span><span class="o">;</span>
-<span class="ln"> 4</span>  <span class="k">while</span> <span class="o">(</span><span class="n">row</span> <span class="o">&lt;=</span> <span class="n">matrix</span><span class="o">.</span><span class="na">length</span> <span class="o">-</span> <span class="n">1</span> <span class="o">&amp;&amp;</span> <span class="n">col</span> <span class="o">&gt;=</span> <span class="n">0</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 5</span>    <span class="k">if</span> <span class="o">(</span><span class="n">matrix</span><span class="o">[</span><span class="n">row</span><span class="o">][</span><span class="n">col</span><span class="o">]</span> <span class="o">==</span> <span class="n">n</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 6</span>      <span class="k">return</span> <span class="k">new</span> <span class="kt">int</span><span class="o">[</span><span class="n">row</span><span class="o">,</span> <span class="n">col</span><span class="o">];</span>
-<span class="ln"> 7</span>    <span class="o">}</span> <span class="k">else</span> <span class="k">if</span> <span class="o">(</span><span class="n">matrix</span><span class="o">[</span><span class="n">row</span><span class="o">][</span><span class="n">col</span><span class="o">]</span> <span class="o">&gt;</span> <span class="n">n</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 8</span>      <span class="n">col</span><span class="o">--;</span>
-<span class="ln"> 9</span>    <span class="o">}</span> <span class="k">else</span> <span class="o">{</span>
-<span class="ln">10</span>      <span class="n">row</span><span class="o">++;</span>
-<span class="ln">11</span>    <span class="o">}</span>
-<span class="ln">12</span>  <span class="o">}</span>
-<span class="ln">13</span>  <span class="k">return</span> <span class="k">new</span> <span class="kt">int</span><span class="o">[]</span> <span class="o">{-</span><span class="n">1</span><span class="o">,</span> <span class="o">-</span><span class="n">1</span><span class="o">};</span>
-<span class="ln">14</span><span class="o">}</span>
-</code></pre></div></div></div>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="kd">public</span> <span class="kt">int</span><span class="o">[]</span> <span class="nf">search</span><span class="o">(</span><span class="kt">int</span><span class="o">[][]</span> <span class="n">matrix</span><span class="o">,</span> <span class="kt">int</span> <span class="n">n</span><span class="o">)</span> <span class="o">{</span>
+  <span class="kt">int</span> <span class="n">row</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span>
+  <span class="kt">int</span> <span class="n">col</span> <span class="o">=</span> <span class="n">matrix</span><span class="o">[</span><span class="n">0</span><span class="o">].</span><span class="na">length</span> <span class="o">-</span> <span class="n">1</span><span class="o">;</span>
+  <span class="k">while</span> <span class="o">(</span><span class="n">row</span> <span class="o">&lt;=</span> <span class="n">matrix</span><span class="o">.</span><span class="na">length</span> <span class="o">-</span> <span class="n">1</span> <span class="o">&amp;&amp;</span> <span class="n">col</span> <span class="o">&gt;=</span> <span class="n">0</span><span class="o">)</span> <span class="o">{</span>
+    <span class="k">if</span> <span class="o">(</span><span class="n">matrix</span><span class="o">[</span><span class="n">row</span><span class="o">][</span><span class="n">col</span><span class="o">]</span> <span class="o">==</span> <span class="n">n</span><span class="o">)</span> <span class="o">{</span>
+      <span class="k">return</span> <span class="k">new</span> <span class="kt">int</span><span class="o">[</span><span class="n">row</span><span class="o">,</span> <span class="n">col</span><span class="o">];</span>
+    <span class="o">}</span> <span class="k">else</span> <span class="k">if</span> <span class="o">(</span><span class="n">matrix</span><span class="o">[</span><span class="n">row</span><span class="o">][</span><span class="n">col</span><span class="o">]</span> <span class="o">&gt;</span> <span class="n">n</span><span class="o">)</span> <span class="o">{</span>
+      <span class="n">col</span><span class="o">--;</span>
+    <span class="o">}</span> <span class="k">else</span> <span class="o">{</span>
+      <span class="n">row</span><span class="o">++;</span>
+    <span class="o">}</span>
+  <span class="o">}</span>
+  <span class="k">return</span> <span class="k">new</span> <span class="kt">int</span><span class="o">[]</span> <span class="o">{-</span><span class="n">1</span><span class="o">,</span> <span class="o">-</span><span class="n">1</span><span class="o">};</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div></div></div>
   <div class="card-footer"><div class="post-navs d-flex justify-content-evenly">
   <div class="post-nav post-prev"><i class="fas fa-fw fa-chevron-left"></i>
     <a href="/post/cracking-coding-interview/10.8-find-duplicates/">Cracking Coding Interview - 10.8 Find Duplicates

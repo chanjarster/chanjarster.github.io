@@ -12,7 +12,7 @@
 <meta name="description" content="" /><meta itemprop="name" content="MySQL - 索引">
 <meta itemprop="description" content=""><meta itemprop="datePublished" content="2019-12-20T10:03:02+08:00" />
 <meta itemprop="dateModified" content="2019-12-20T10:03:02+08:00" />
-<meta itemprop="wordCount" content="1594">
+<meta itemprop="wordCount" content="1599">
 <meta itemprop="keywords" content="mysql," /><meta property="og:title" content="MySQL - 索引" />
 <meta property="og:description" content="" />
 <meta property="og:type" content="article" />
@@ -293,18 +293,36 @@
 <li>如果<code>(a, b), (b)</code>和<code>(b, a), (a)</code>都能满足要求，那么看哪种占用空间小就用哪个。其实就是看<code>a</code>和<code>b</code>哪个占用空间小。</li>
 </ol>
 <h3 id="索引下推">索引下推<a class="anchor ms-1" href="#索引下推"><i class="fas fa-link"></i></a></h3>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="ln">1</span><span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">tuser</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">name</span><span class="w"> </span><span class="k">like</span><span class="w"> </span><span class="s1">&#39;张%&#39;</span><span class="w"> </span><span class="k">and</span><span class="w"> </span><span class="n">age</span><span class="o">=</span><span class="mi">10</span><span class="w"> </span><span class="k">and</span><span class="w"> </span><span class="n">ismale</span><span class="o">=</span><span class="mi">1</span><span class="p">;</span><span class="w">
-</span></code></pre></div><p>如果<code>name</code>和<code>age</code>都有索引，但是<code>ismale</code>没有，在MySQL 5.6之前是先根据<code>name</code>找到记录，然后就开始回表判断了。5.6之后则会先拿索引字段<code>name</code>和<code>age</code>来过滤，然后再回表。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">tuser</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">name</span><span class="w"> </span><span class="k">like</span><span class="w"> </span><span class="s1">&#39;张%&#39;</span><span class="w"> </span><span class="k">and</span><span class="w"> </span><span class="n">age</span><span class="o">=</span><span class="mi">10</span><span class="w"> </span><span class="k">and</span><span class="w"> </span><span class="n">ismale</span><span class="o">=</span><span class="mi">1</span><span class="p">;</span><span class="w">
+</span></code></pre></td></tr></table>
+</div>
+</div><p>如果<code>name</code>和<code>age</code>都有索引，但是<code>ismale</code>没有，在MySQL 5.6之前是先根据<code>name</code>找到记录，然后就开始回表判断了。5.6之后则会先拿索引字段<code>name</code>和<code>age</code>来过滤，然后再回表。</p>
 <h2 id="重建索引">重建索引<a class="anchor ms-1" href="#重建索引"><i class="fas fa-link"></i></a></h2>
 <p>为何要重建索引？为了解决数据页空洞，节省磁盘空间。</p>
 <p>重建主键索引会将其他索引一并重建。事实上无论是删除还是创建主键都会将整个表的索引都搞一遍。</p>
 <p>可以使用<code>alter table T engine=InnoDB</code>来重建。当然下面也是可以的：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="ln">1</span><span class="k">alter</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">T</span><span class="w"> </span><span class="k">drop</span><span class="w"> </span><span class="k">index</span><span class="w"> </span><span class="n">k</span><span class="p">;</span><span class="w">
-</span><span class="ln">2</span><span class="w"></span><span class="k">alter</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">T</span><span class="w"> </span><span class="k">add</span><span class="w"> </span><span class="k">index</span><span class="p">(</span><span class="n">k</span><span class="p">);</span><span class="w">
-</span><span class="ln">3</span><span class="w">
-</span><span class="ln">4</span><span class="w"></span><span class="k">alter</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">T</span><span class="w"> </span><span class="k">drop</span><span class="w"> </span><span class="k">primary</span><span class="w"> </span><span class="k">key</span><span class="p">;</span><span class="w">
-</span><span class="ln">5</span><span class="w"></span><span class="k">alter</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">T</span><span class="w"> </span><span class="k">add</span><span class="w"> </span><span class="k">primary</span><span class="w"> </span><span class="k">key</span><span class="p">(</span><span class="n">id</span><span class="p">);</span><span class="w">
-</span></code></pre></div></div></div>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="k">alter</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">T</span><span class="w"> </span><span class="k">drop</span><span class="w"> </span><span class="k">index</span><span class="w"> </span><span class="n">k</span><span class="p">;</span><span class="w">
+</span><span class="w"></span><span class="k">alter</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">T</span><span class="w"> </span><span class="k">add</span><span class="w"> </span><span class="k">index</span><span class="p">(</span><span class="n">k</span><span class="p">);</span><span class="w">
+</span><span class="w">
+</span><span class="w"></span><span class="k">alter</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">T</span><span class="w"> </span><span class="k">drop</span><span class="w"> </span><span class="k">primary</span><span class="w"> </span><span class="k">key</span><span class="p">;</span><span class="w">
+</span><span class="w"></span><span class="k">alter</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">T</span><span class="w"> </span><span class="k">add</span><span class="w"> </span><span class="k">primary</span><span class="w"> </span><span class="k">key</span><span class="p">(</span><span class="n">id</span><span class="p">);</span><span class="w">
+</span></code></pre></td></tr></table>
+</div>
+</div></div></div>
   <div class="card-footer"><div class="post-navs d-flex justify-content-evenly">
   <div class="post-nav post-prev"><i class="fas fa-fw fa-chevron-left"></i>
     <a href="/post/mysql/index-page/">MySQL系列

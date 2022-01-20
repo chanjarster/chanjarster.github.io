@@ -12,7 +12,7 @@
 <meta name="description" content="" /><meta itemprop="name" content="Cracking Coding Interview - 16.18 Pattern Matching">
 <meta itemprop="description" content=""><meta itemprop="datePublished" content="2019-09-16T10:01:11+08:00" />
 <meta itemprop="dateModified" content="2019-09-16T10:01:11+08:00" />
-<meta itemprop="wordCount" content="1422">
+<meta itemprop="wordCount" content="1441">
 <meta itemprop="keywords" content="ARTS-A," /><meta property="og:title" content="Cracking Coding Interview - 16.18 Pattern Matching" />
 <meta property="og:description" content="" />
 <meta property="og:type" content="article" />
@@ -227,138 +227,293 @@
 <p>Hints: #631, #643, #653, #663, #685, #718, #727</p>
 <h2 id="解法">解法<a class="anchor ms-1" href="#解法"><i class="fas fa-link"></i></a></h2>
 <p>理解一下题意：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln">1</span>Input    : catcatgocatgo
-<span class="ln">2</span>Pattern 1: aabab, a=cat, b=go
-<span class="ln">3</span>Pattern 2: a, a=catcatgocatgo
-<span class="ln">4</span>Pattern 3: ab, a=c, b=atcatgocatgo or a=ca, b=tcatgocatgo or ...
-<span class="ln">5</span>Pattern 4: b, b=catcatgocatgo
-</code></pre></div><p>看一下Pattern 3 <code>ab</code>，其实只要在字符串中间切一刀，只要两边不相同就能够匹配<code>ab</code>。所以这个问题不是对单词（word）的模式匹配。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt">Input    : catcatgocatgo
+Pattern 1: aabab, a=cat, b=go
+Pattern 2: a, a=catcatgocatgo
+Pattern 3: ab, a=c, b=atcatgocatgo or a=ca, b=tcatgocatgo or ...
+Pattern 4: b, b=catcatgocatgo
+</code></pre></td></tr></table>
+</div>
+</div><p>看一下Pattern 3 <code>ab</code>，其实只要在字符串中间切一刀，只要两边不相同就能够匹配<code>ab</code>。所以这个问题不是对单词（word）的模式匹配。</p>
 <p>看Pattern 2 <code>a</code>和Pattern 4 <code>b</code>，这就说明<code>a</code>和<code>b</code>其实是等价的。</p>
 <p>看Pattern 1<code>aabab</code>，前面已经说了这个问题不是对word的模式匹配，那么是如何得到<code>a=cat</code>、<code>b=go</code>的呢？</p>
 <p>我们可以逐步检验Pattern，我们可以先看第一个<code>a</code>，那么Pattern实际上就变成了<code>a|abab</code>。然后我们开始猜测a：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln">1</span>c|atcatgocatgo
-<span class="ln">2</span>ca|tcatgocatgo
-<span class="ln">3</span>cat|catgocatgo
-<span class="ln">4</span>catc|atgocatgo
-<span class="ln">5</span>...
-</code></pre></div><p>我们可以先用第一个选择，把<code>a=c</code>，然后就看Pattern的第二个<code>a|bab</code>，检验<code>atcatgocatgo</code>，因为已知<code>a=c</code>，这个就很好检验，发现检验结果失败。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt">c|atcatgocatgo
+ca|tcatgocatgo
+cat|catgocatgo
+catc|atgocatgo
+...
+</code></pre></td></tr></table>
+</div>
+</div><p>我们可以先用第一个选择，把<code>a=c</code>，然后就看Pattern的第二个<code>a|bab</code>，检验<code>atcatgocatgo</code>，因为已知<code>a=c</code>，这个就很好检验，发现检验结果失败。</p>
 <p>然后以此类推。这个过程可以描述为：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln"> 1</span>matchPattern(catcatgocatgo, aabab)
-<span class="ln"> 2</span>  matchPattern(catcatgocatgo, aabab, a=c, b=)
-<span class="ln"> 3</span>    matchPattern(atcatgocatgo, abab, a=c, b=)
-<span class="ln"> 4</span>      return false
-<span class="ln"> 5</span>  matchPattern(catcatgocatgo, aabab, a=ca, b=)
-<span class="ln"> 6</span>    matchPattern(tcatgocatgo, abab, a=ca, b=)
-<span class="ln"> 7</span>      return false;
-<span class="ln"> 8</span>  matchPattern(catcatgocatgo, aabab, a=cat, b=)
-<span class="ln"> 9</span>    matchPattern(catgocatgo, abab, a=cat, b=)
-<span class="ln">10</span>      matchPattern(gocatgo, bab, a=cat, b=)
-<span class="ln">11</span>        matchPattern(gocatgo, bab, a=cat, b=g)
-<span class="ln">12</span>          matchPattern(ocatgo, ab, a=cat, b=g)
-<span class="ln">13</span>            return false
-<span class="ln">14</span>        matchPattern(gocatgo, bab, a=cat, b=go)
-<span class="ln">15</span>          matchPattern(catgo, ab, a=cat, b=go)
-<span class="ln">16</span>            matchPattern(go, b, a=cat, b=go)
-<span class="ln">17</span>              matchPattern(&#34;&#34;, &#34;&#34;, a=cat, b=go)
-<span class="ln">18</span>                return true
-</code></pre></div><p>代码：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln"> 1</span><span class="kd">public</span> <span class="kt">boolean</span> <span class="nf">matches</span><span class="o">(</span><span class="n">String</span> <span class="n">value</span><span class="o">,</span> <span class="n">String</span> <span class="n">pattern</span><span class="o">,</span> <span class="n">String</span> <span class="n">prefixA</span><span class="o">,</span> <span class="n">String</span> <span class="n">prefixB</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 2</span>  <span class="k">if</span> <span class="o">(</span><span class="n">value</span> <span class="o">==</span> <span class="s">&#34;&#34;</span> <span class="o">&amp;&amp;</span> <span class="n">pattern</span> <span class="o">==</span> <span class="s">&#34;&#34;</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 3</span>    <span class="c1">// 匹配完毕，说明成功了
-</span><span class="ln"> 4</span><span class="c1"></span>    <span class="k">return</span> <span class="kc">true</span><span class="o">;</span>
-<span class="ln"> 5</span>  <span class="o">}</span>
-<span class="ln"> 6</span>  <span class="k">if</span> <span class="o">(</span><span class="n">value</span> <span class="o">==</span> <span class="s">&#34;&#34;</span> <span class="o">||</span> <span class="n">pattern</span> <span class="o">==</span> <span class="s">&#34;&#34;</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 7</span>    <span class="k">return</span> <span class="kc">false</span><span class="o">;</span>
-<span class="ln"> 8</span>  <span class="o">}</span>
-<span class="ln"> 9</span>  <span class="kt">char</span> <span class="n">patternChar</span> <span class="o">=</span> <span class="n">pattern</span><span class="o">.</span><span class="na">charAt</span><span class="o">(</span><span class="n">0</span><span class="o">);</span>
-<span class="ln">10</span>  <span class="k">if</span> <span class="o">(</span><span class="n">patternChar</span> <span class="o">==</span> <span class="sc">&#39;a&#39;</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">11</span>    <span class="c1">// 现在检查的是a
-</span><span class="ln">12</span><span class="c1"></span>    <span class="k">if</span> <span class="o">(</span><span class="n">prefixA</span> <span class="o">!=</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">13</span>      <span class="k">if</span> <span class="o">(!</span><span class="n">value</span><span class="o">.</span><span class="na">startsWith</span><span class="o">(</span><span class="n">prefixA</span><span class="o">))</span> <span class="o">{</span>
-<span class="ln">14</span>        <span class="k">return</span> <span class="kc">false</span><span class="o">;</span>
-<span class="ln">15</span>      <span class="o">}</span>
-<span class="ln">16</span>      <span class="c1">// 去掉value的prefixA，去掉pattern的当前字符，然后继续比较
-</span><span class="ln">17</span><span class="c1"></span>      <span class="k">return</span> <span class="n">matches</span><span class="o">(</span><span class="n">value</span><span class="o">.</span><span class="na">subString</span><span class="o">(</span><span class="n">prefixA</span><span class="o">.</span><span class="na">length</span><span class="o">()),</span> <span class="n">pattern</span><span class="o">.</span><span class="na">subString</span><span class="o">(</span><span class="n">1</span><span class="o">),</span> <span class="n">prefixA</span><span class="o">,</span> <span class="n">prefixB</span><span class="o">);</span>
-<span class="ln">18</span>    <span class="o">}</span> <span class="k">else</span> <span class="o">{</span>
-<span class="ln">19</span>      <span class="kt">boolean</span> <span class="n">result</span> <span class="o">=</span> <span class="kc">false</span><span class="o">;</span>
-<span class="ln">20</span>      <span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="n">1</span><span class="o">;</span> <span class="n">i</span> <span class="o">&lt;=</span> <span class="n">value</span><span class="o">.</span><span class="na">length</span><span class="o">();</span> <span class="n">i</span><span class="o">++)</span> <span class="o">{</span>
-<span class="ln">21</span>        <span class="n">prefixA</span> <span class="o">=</span> <span class="n">value</span><span class="o">.</span><span class="na">subString</span><span class="o">(</span><span class="n">0</span><span class="o">,</span> <span class="n">i</span><span class="o">);</span>
-<span class="ln">22</span>        <span class="n">result</span> <span class="o">=</span> <span class="n">result</span> <span class="o">||</span> <span class="n">matches</span><span class="o">(</span><span class="n">value</span><span class="o">,</span> <span class="n">pattern</span><span class="o">,</span> <span class="n">prefixA</span><span class="o">,</span> <span class="n">prefixB</span><span class="o">);</span>
-<span class="ln">23</span>      <span class="o">}</span>
-<span class="ln">24</span>      <span class="k">return</span> <span class="n">result</span><span class="o">;</span>
-<span class="ln">25</span>    <span class="o">}</span>
-<span class="ln">26</span>  <span class="o">}</span>
-<span class="ln">27</span>  
-<span class="ln">28</span>  <span class="k">if</span> <span class="o">(</span><span class="n">patternChar</span> <span class="o">==</span> <span class="sc">&#39;b&#39;</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">29</span>    <span class="k">if</span> <span class="o">(</span><span class="n">prefixB</span> <span class="o">!=</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">30</span>      <span class="k">if</span> <span class="o">(!</span><span class="n">value</span><span class="o">.</span><span class="na">startsWith</span><span class="o">(</span><span class="n">prefixB</span><span class="o">))</span> <span class="o">{</span>
-<span class="ln">31</span>        <span class="k">return</span> <span class="kc">false</span><span class="o">;</span>
-<span class="ln">32</span>      <span class="o">}</span>
-<span class="ln">33</span>      <span class="k">return</span> <span class="n">matches</span><span class="o">(</span><span class="n">value</span><span class="o">.</span><span class="na">subString</span><span class="o">(</span><span class="n">prefixB</span><span class="o">.</span><span class="na">length</span><span class="o">()),</span> <span class="n">pattern</span><span class="o">.</span><span class="na">subString</span><span class="o">(</span><span class="n">1</span><span class="o">),</span> <span class="n">prefixA</span><span class="o">,</span> <span class="n">prefixB</span><span class="o">);</span>
-<span class="ln">34</span>    <span class="o">}</span> <span class="k">else</span> <span class="o">{</span>
-<span class="ln">35</span>      <span class="kt">boolean</span> <span class="n">result</span> <span class="o">=</span> <span class="kc">false</span><span class="o">;</span>
-<span class="ln">36</span>      <span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="n">1</span><span class="o">;</span> <span class="n">i</span> <span class="o">&lt;=</span> <span class="n">value</span><span class="o">.</span><span class="na">length</span><span class="o">();</span> <span class="n">i</span><span class="o">++)</span> <span class="o">{</span>
-<span class="ln">37</span>        <span class="n">prefixB</span> <span class="o">=</span> <span class="n">value</span><span class="o">.</span><span class="na">subString</span><span class="o">(</span><span class="n">0</span><span class="o">,</span> <span class="n">i</span><span class="o">);</span>
-<span class="ln">38</span>        <span class="n">result</span> <span class="o">=</span> <span class="n">result</span> <span class="o">||</span> <span class="n">matches</span><span class="o">(</span><span class="n">value</span><span class="o">,</span> <span class="n">pattern</span><span class="o">,</span> <span class="n">prefixA</span><span class="o">,</span> <span class="n">prefixB</span><span class="o">);</span>
-<span class="ln">39</span>      <span class="o">}</span>
-<span class="ln">40</span>      <span class="k">return</span> <span class="n">result</span><span class="o">;</span>
-<span class="ln">41</span>    <span class="o">}</span>
-<span class="ln">42</span>  <span class="o">}</span>
-<span class="ln">43</span><span class="o">}</span>
-</code></pre></div><p>时间复杂度：太复杂，计算不出来。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt">matchPattern(catcatgocatgo, aabab)
+  matchPattern(catcatgocatgo, aabab, a=c, b=)
+    matchPattern(atcatgocatgo, abab, a=c, b=)
+      return false
+  matchPattern(catcatgocatgo, aabab, a=ca, b=)
+    matchPattern(tcatgocatgo, abab, a=ca, b=)
+      return false;
+  matchPattern(catcatgocatgo, aabab, a=cat, b=)
+    matchPattern(catgocatgo, abab, a=cat, b=)
+      matchPattern(gocatgo, bab, a=cat, b=)
+        matchPattern(gocatgo, bab, a=cat, b=g)
+          matchPattern(ocatgo, ab, a=cat, b=g)
+            return false
+        matchPattern(gocatgo, bab, a=cat, b=go)
+          matchPattern(catgo, ab, a=cat, b=go)
+            matchPattern(go, b, a=cat, b=go)
+              matchPattern(&#34;&#34;, &#34;&#34;, a=cat, b=go)
+                return true
+</code></pre></td></tr></table>
+</div>
+</div><p>代码：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="kd">public</span> <span class="kt">boolean</span> <span class="nf">matches</span><span class="o">(</span><span class="n">String</span> <span class="n">value</span><span class="o">,</span> <span class="n">String</span> <span class="n">pattern</span><span class="o">,</span> <span class="n">String</span> <span class="n">prefixA</span><span class="o">,</span> <span class="n">String</span> <span class="n">prefixB</span><span class="o">)</span> <span class="o">{</span>
+  <span class="k">if</span> <span class="o">(</span><span class="n">value</span> <span class="o">==</span> <span class="s">&#34;&#34;</span> <span class="o">&amp;&amp;</span> <span class="n">pattern</span> <span class="o">==</span> <span class="s">&#34;&#34;</span><span class="o">)</span> <span class="o">{</span>
+    <span class="c1">// 匹配完毕，说明成功了
+</span><span class="c1"></span>    <span class="k">return</span> <span class="kc">true</span><span class="o">;</span>
+  <span class="o">}</span>
+  <span class="k">if</span> <span class="o">(</span><span class="n">value</span> <span class="o">==</span> <span class="s">&#34;&#34;</span> <span class="o">||</span> <span class="n">pattern</span> <span class="o">==</span> <span class="s">&#34;&#34;</span><span class="o">)</span> <span class="o">{</span>
+    <span class="k">return</span> <span class="kc">false</span><span class="o">;</span>
+  <span class="o">}</span>
+  <span class="kt">char</span> <span class="n">patternChar</span> <span class="o">=</span> <span class="n">pattern</span><span class="o">.</span><span class="na">charAt</span><span class="o">(</span><span class="n">0</span><span class="o">);</span>
+  <span class="k">if</span> <span class="o">(</span><span class="n">patternChar</span> <span class="o">==</span> <span class="sc">&#39;a&#39;</span><span class="o">)</span> <span class="o">{</span>
+    <span class="c1">// 现在检查的是a
+</span><span class="c1"></span>    <span class="k">if</span> <span class="o">(</span><span class="n">prefixA</span> <span class="o">!=</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
+      <span class="k">if</span> <span class="o">(!</span><span class="n">value</span><span class="o">.</span><span class="na">startsWith</span><span class="o">(</span><span class="n">prefixA</span><span class="o">))</span> <span class="o">{</span>
+        <span class="k">return</span> <span class="kc">false</span><span class="o">;</span>
+      <span class="o">}</span>
+      <span class="c1">// 去掉value的prefixA，去掉pattern的当前字符，然后继续比较
+</span><span class="c1"></span>      <span class="k">return</span> <span class="n">matches</span><span class="o">(</span><span class="n">value</span><span class="o">.</span><span class="na">subString</span><span class="o">(</span><span class="n">prefixA</span><span class="o">.</span><span class="na">length</span><span class="o">()),</span> <span class="n">pattern</span><span class="o">.</span><span class="na">subString</span><span class="o">(</span><span class="n">1</span><span class="o">),</span> <span class="n">prefixA</span><span class="o">,</span> <span class="n">prefixB</span><span class="o">);</span>
+    <span class="o">}</span> <span class="k">else</span> <span class="o">{</span>
+      <span class="kt">boolean</span> <span class="n">result</span> <span class="o">=</span> <span class="kc">false</span><span class="o">;</span>
+      <span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="n">1</span><span class="o">;</span> <span class="n">i</span> <span class="o">&lt;=</span> <span class="n">value</span><span class="o">.</span><span class="na">length</span><span class="o">();</span> <span class="n">i</span><span class="o">++)</span> <span class="o">{</span>
+        <span class="n">prefixA</span> <span class="o">=</span> <span class="n">value</span><span class="o">.</span><span class="na">subString</span><span class="o">(</span><span class="n">0</span><span class="o">,</span> <span class="n">i</span><span class="o">);</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">result</span> <span class="o">||</span> <span class="n">matches</span><span class="o">(</span><span class="n">value</span><span class="o">,</span> <span class="n">pattern</span><span class="o">,</span> <span class="n">prefixA</span><span class="o">,</span> <span class="n">prefixB</span><span class="o">);</span>
+      <span class="o">}</span>
+      <span class="k">return</span> <span class="n">result</span><span class="o">;</span>
+    <span class="o">}</span>
+  <span class="o">}</span>
+  
+  <span class="k">if</span> <span class="o">(</span><span class="n">patternChar</span> <span class="o">==</span> <span class="sc">&#39;b&#39;</span><span class="o">)</span> <span class="o">{</span>
+    <span class="k">if</span> <span class="o">(</span><span class="n">prefixB</span> <span class="o">!=</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
+      <span class="k">if</span> <span class="o">(!</span><span class="n">value</span><span class="o">.</span><span class="na">startsWith</span><span class="o">(</span><span class="n">prefixB</span><span class="o">))</span> <span class="o">{</span>
+        <span class="k">return</span> <span class="kc">false</span><span class="o">;</span>
+      <span class="o">}</span>
+      <span class="k">return</span> <span class="n">matches</span><span class="o">(</span><span class="n">value</span><span class="o">.</span><span class="na">subString</span><span class="o">(</span><span class="n">prefixB</span><span class="o">.</span><span class="na">length</span><span class="o">()),</span> <span class="n">pattern</span><span class="o">.</span><span class="na">subString</span><span class="o">(</span><span class="n">1</span><span class="o">),</span> <span class="n">prefixA</span><span class="o">,</span> <span class="n">prefixB</span><span class="o">);</span>
+    <span class="o">}</span> <span class="k">else</span> <span class="o">{</span>
+      <span class="kt">boolean</span> <span class="n">result</span> <span class="o">=</span> <span class="kc">false</span><span class="o">;</span>
+      <span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="n">1</span><span class="o">;</span> <span class="n">i</span> <span class="o">&lt;=</span> <span class="n">value</span><span class="o">.</span><span class="na">length</span><span class="o">();</span> <span class="n">i</span><span class="o">++)</span> <span class="o">{</span>
+        <span class="n">prefixB</span> <span class="o">=</span> <span class="n">value</span><span class="o">.</span><span class="na">subString</span><span class="o">(</span><span class="n">0</span><span class="o">,</span> <span class="n">i</span><span class="o">);</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">result</span> <span class="o">||</span> <span class="n">matches</span><span class="o">(</span><span class="n">value</span><span class="o">,</span> <span class="n">pattern</span><span class="o">,</span> <span class="n">prefixA</span><span class="o">,</span> <span class="n">prefixB</span><span class="o">);</span>
+      <span class="o">}</span>
+      <span class="k">return</span> <span class="n">result</span><span class="o">;</span>
+    <span class="o">}</span>
+  <span class="o">}</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>时间复杂度：太复杂，计算不出来。</p>
 <h2 id="解法2更好">解法2（更好）<a class="anchor ms-1" href="#解法2更好"><i class="fas fa-link"></i></a></h2>
 <p>还是看这个：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln">1</span>Value:   catcatgocatgo
-<span class="ln">2</span>Pattern: aabab
-</code></pre></div><p>我们可以看到<code>a</code>有3个，<code>b</code>有2个，Value的长度为13，那么可以知道<code>a</code>的最长的长度是<code>13 / 3 = 4</code>，因此可以缩小<code>a</code>的取值范围，<code>b</code>的长度则等于<code>(13 - 3 * a) / 2</code>。可以依此猜测<code>a</code>和<code>b</code>的值，然后看是否匹配。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt">Value:   catcatgocatgo
+Pattern: aabab
+</code></pre></td></tr></table>
+</div>
+</div><p>我们可以看到<code>a</code>有3个，<code>b</code>有2个，Value的长度为13，那么可以知道<code>a</code>的最长的长度是<code>13 / 3 = 4</code>，因此可以缩小<code>a</code>的取值范围，<code>b</code>的长度则等于<code>(13 - 3 * a) / 2</code>。可以依此猜测<code>a</code>和<code>b</code>的值，然后看是否匹配。</p>
 <p>代码：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln"> 1</span><span class="kd">public</span> <span class="kt">boolean</span> <span class="nf">patternMatches</span><span class="o">(</span><span class="n">String</span> <span class="n">value</span><span class="o">,</span> <span class="n">String</span> <span class="n">pattern</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 2</span>  <span class="c1">// pattern的第一个字符就是mainChar，另一个则是subChar
-</span><span class="ln"> 3</span><span class="c1"></span>  <span class="kt">char</span> <span class="n">mainChar</span> <span class="o">=</span> <span class="n">pattern</span><span class="o">.</span><span class="na">charAt</span><span class="o">(</span><span class="n">0</span><span class="o">);</span>
-<span class="ln"> 4</span>  <span class="c1">// mainChar的数量
-</span><span class="ln"> 5</span><span class="c1"></span>  <span class="kt">int</span> <span class="n">mainCount</span> <span class="o">=</span> <span class="n">mainChar</span> <span class="o">==</span> <span class="sc">&#39;a&#39;</span> <span class="o">?</span> <span class="n">count</span><span class="o">(</span><span class="n">pattern</span><span class="o">,</span> <span class="sc">&#39;a&#39;</span><span class="o">)</span> <span class="o">:</span> <span class="n">count</span><span class="o">(</span><span class="n">pattern</span><span class="o">,</span> <span class="sc">&#39;b&#39;</span><span class="o">);</span>
-<span class="ln"> 6</span>  <span class="c1">// subChar的数量
-</span><span class="ln"> 7</span><span class="c1"></span>  <span class="kt">int</span> <span class="n">subCount</span> <span class="o">=</span> <span class="n">pattern</span><span class="o">.</span><span class="na">length</span><span class="o">()</span> <span class="o">-</span> <span class="n">mainCount</span><span class="o">;</span>
-<span class="ln"> 8</span>  <span class="c1">// mainChar所代表的字符串的最大长度
-</span><span class="ln"> 9</span><span class="c1"></span>  <span class="kt">int</span> <span class="n">maxMainSize</span> <span class="o">=</span> <span class="n">mainCount</span> <span class="o">==</span> <span class="n">0</span> <span class="o">?</span> <span class="n">0</span> <span class="o">:</span> <span class="n">value</span><span class="o">.</span><span class="na">length</span><span class="o">()</span> <span class="o">/</span> <span class="n">mainCount</span><span class="o">;</span>
-<span class="ln">10</span>  
-<span class="ln">11</span>  <span class="kt">int</span> <span class="n">firstSubIndex</span> <span class="o">=</span> <span class="n">pattern</span><span class="o">.</span><span class="na">indexOf</span><span class="o">(</span><span class="n">subChar</span><span class="o">);</span>  
-<span class="ln">12</span>  
-<span class="ln">13</span>  <span class="c1">// 尝试所有mainChar所代表的字符串的长度
-</span><span class="ln">14</span><span class="c1"></span>  <span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">mainSize</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span> <span class="n">mainSize</span> <span class="o">&lt;=</span> <span class="n">maxMainSize</span><span class="o">;</span> <span class="n">i</span><span class="o">++)</span> <span class="o">{</span>
-<span class="ln">15</span>    <span class="c1">// 计算得到subChar所代表字符串的长度
-</span><span class="ln">16</span><span class="c1"></span>    <span class="kt">int</span> <span class="n">subSize</span> <span class="o">=</span> <span class="o">(</span><span class="n">value</span><span class="o">.</span><span class="na">length</span><span class="o">()</span> <span class="o">-</span> <span class="n">mainCount</span> <span class="o">*</span> <span class="n">mainSize</span><span class="o">)</span> <span class="o">/</span> <span class="n">subCount</span><span class="o">;</span>
-<span class="ln">17</span>    <span class="k">if</span> <span class="o">(</span><span class="n">subSize</span> <span class="o">*</span> <span class="n">subCount</span> <span class="o">+</span> <span class="n">mainSize</span> <span class="o">*</span> <span class="n">mainCount</span> <span class="o">!=</span> <span class="n">value</span><span class="o">.</span><span class="na">length</span><span class="o">())</span> <span class="o">{</span>
-<span class="ln">18</span>      <span class="c1">// 这种组合不等于value的长度
-</span><span class="ln">19</span><span class="c1"></span>      <span class="k">continue</span><span class="o">;</span>
-<span class="ln">20</span>    <span class="o">}</span>
-<span class="ln">21</span>    
-<span class="ln">22</span>    <span class="n">String</span> <span class="n">main</span> <span class="o">=</span> <span class="n">value</span><span class="o">.</span><span class="na">subString</span><span class="o">(</span><span class="n">0</span><span class="o">,</span> <span class="n">mainSize</span><span class="o">);</span>
-<span class="ln">23</span>    <span class="c1">// 跳过头部的几个mainChar所代表的字符串，得到subChar代表的字符串。
-</span><span class="ln">24</span><span class="c1"></span>    <span class="n">String</span> <span class="n">sub</span> <span class="o">=</span> <span class="n">value</span><span class="o">.</span><span class="na">subString</span><span class="o">(</span><span class="n">mainSize</span> <span class="o">*</span> <span class="n">firstSubIndex</span><span class="o">,</span> <span class="n">mainSize</span> <span class="o">*</span> <span class="n">firstSubIndex</span> <span class="o">+</span> <span class="n">subSize</span><span class="o">);</span>
-<span class="ln">25</span>    <span class="c1">// 根据pattern构建预期的字符串
-</span><span class="ln">26</span><span class="c1"></span>    <span class="n">String</span> <span class="n">expected</span> <span class="o">=</span> <span class="n">build</span><span class="o">(</span><span class="n">pattern</span><span class="o">,</span> <span class="n">main</span><span class="o">,</span> <span class="n">mainCount</span><span class="o">,</span> <span class="n">sub</span><span class="o">,</span> <span class="n">subCount</span><span class="o">);</span>
-<span class="ln">27</span>    <span class="k">if</span> <span class="o">(</span><span class="n">value</span><span class="o">.</span><span class="na">equals</span><span class="o">(</span><span class="n">expected</span><span class="o">))</span> <span class="o">{</span>
-<span class="ln">28</span>      <span class="k">return</span> <span class="kc">true</span><span class="o">;</span>
-<span class="ln">29</span>    <span class="o">}</span>
-<span class="ln">30</span>  <span class="o">}</span>
-<span class="ln">31</span>  <span class="k">return</span> <span class="kc">false</span><span class="o">;</span>
-<span class="ln">32</span><span class="o">}</span>
-<span class="ln">33</span>
-<span class="ln">34</span><span class="kd">private</span> <span class="n">String</span> <span class="nf">build</span><span class="o">(</span><span class="n">String</span> <span class="n">pattern</span><span class="o">,</span> <span class="n">String</span> <span class="n">main</span><span class="o">,</span> <span class="n">String</span> <span class="n">sub</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">35</span>  <span class="n">StringBuilder</span> <span class="n">sb</span> <span class="o">=</span> <span class="k">new</span> <span class="n">StringBuilder</span><span class="o">();</span>
-<span class="ln">36</span>  <span class="kt">char</span> <span class="n">mainChar</span> <span class="o">=</span> <span class="n">pattern</span><span class="o">.</span><span class="na">charAt</span><span class="o">(</span><span class="n">0</span><span class="o">);</span>
-<span class="ln">37</span>  <span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">pattern</span><span class="o">.</span><span class="na">length</span><span class="o">();</span> <span class="n">i</span><span class="o">++)</span> <span class="o">{</span>
-<span class="ln">38</span>    <span class="kt">char</span> <span class="n">curr</span> <span class="o">=</span> <span class="n">pattern</span><span class="o">.</span><span class="na">charAt</span><span class="o">(</span><span class="n">i</span><span class="o">);</span>
-<span class="ln">39</span>    <span class="k">if</span> <span class="o">(</span><span class="n">curr</span> <span class="o">==</span> <span class="n">mainChar</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">40</span>      <span class="n">sb</span><span class="o">.</span><span class="na">append</span><span class="o">(</span><span class="n">main</span><span class="o">);</span>
-<span class="ln">41</span>    <span class="o">}</span> <span class="k">else</span> <span class="o">{</span>
-<span class="ln">42</span>      <span class="n">sb</span><span class="o">.</span><span class="na">append</span><span class="o">(</span><span class="n">sub</span><span class="o">);</span>
-<span class="ln">43</span>    <span class="o">}</span>
-<span class="ln">44</span>  <span class="o">}</span>
-<span class="ln">45</span>  <span class="k">return</span> <span class="n">sb</span><span class="o">.</span><span class="na">toString</span><span class="o">();</span>
-<span class="ln">46</span><span class="o">}</span>
-</code></pre></div><p>时间复杂度：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span><span class="lnt">46
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="kd">public</span> <span class="kt">boolean</span> <span class="nf">patternMatches</span><span class="o">(</span><span class="n">String</span> <span class="n">value</span><span class="o">,</span> <span class="n">String</span> <span class="n">pattern</span><span class="o">)</span> <span class="o">{</span>
+  <span class="c1">// pattern的第一个字符就是mainChar，另一个则是subChar
+</span><span class="c1"></span>  <span class="kt">char</span> <span class="n">mainChar</span> <span class="o">=</span> <span class="n">pattern</span><span class="o">.</span><span class="na">charAt</span><span class="o">(</span><span class="n">0</span><span class="o">);</span>
+  <span class="c1">// mainChar的数量
+</span><span class="c1"></span>  <span class="kt">int</span> <span class="n">mainCount</span> <span class="o">=</span> <span class="n">mainChar</span> <span class="o">==</span> <span class="sc">&#39;a&#39;</span> <span class="o">?</span> <span class="n">count</span><span class="o">(</span><span class="n">pattern</span><span class="o">,</span> <span class="sc">&#39;a&#39;</span><span class="o">)</span> <span class="o">:</span> <span class="n">count</span><span class="o">(</span><span class="n">pattern</span><span class="o">,</span> <span class="sc">&#39;b&#39;</span><span class="o">);</span>
+  <span class="c1">// subChar的数量
+</span><span class="c1"></span>  <span class="kt">int</span> <span class="n">subCount</span> <span class="o">=</span> <span class="n">pattern</span><span class="o">.</span><span class="na">length</span><span class="o">()</span> <span class="o">-</span> <span class="n">mainCount</span><span class="o">;</span>
+  <span class="c1">// mainChar所代表的字符串的最大长度
+</span><span class="c1"></span>  <span class="kt">int</span> <span class="n">maxMainSize</span> <span class="o">=</span> <span class="n">mainCount</span> <span class="o">==</span> <span class="n">0</span> <span class="o">?</span> <span class="n">0</span> <span class="o">:</span> <span class="n">value</span><span class="o">.</span><span class="na">length</span><span class="o">()</span> <span class="o">/</span> <span class="n">mainCount</span><span class="o">;</span>
+  
+  <span class="kt">int</span> <span class="n">firstSubIndex</span> <span class="o">=</span> <span class="n">pattern</span><span class="o">.</span><span class="na">indexOf</span><span class="o">(</span><span class="n">subChar</span><span class="o">);</span>  
+  
+  <span class="c1">// 尝试所有mainChar所代表的字符串的长度
+</span><span class="c1"></span>  <span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">mainSize</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span> <span class="n">mainSize</span> <span class="o">&lt;=</span> <span class="n">maxMainSize</span><span class="o">;</span> <span class="n">i</span><span class="o">++)</span> <span class="o">{</span>
+    <span class="c1">// 计算得到subChar所代表字符串的长度
+</span><span class="c1"></span>    <span class="kt">int</span> <span class="n">subSize</span> <span class="o">=</span> <span class="o">(</span><span class="n">value</span><span class="o">.</span><span class="na">length</span><span class="o">()</span> <span class="o">-</span> <span class="n">mainCount</span> <span class="o">*</span> <span class="n">mainSize</span><span class="o">)</span> <span class="o">/</span> <span class="n">subCount</span><span class="o">;</span>
+    <span class="k">if</span> <span class="o">(</span><span class="n">subSize</span> <span class="o">*</span> <span class="n">subCount</span> <span class="o">+</span> <span class="n">mainSize</span> <span class="o">*</span> <span class="n">mainCount</span> <span class="o">!=</span> <span class="n">value</span><span class="o">.</span><span class="na">length</span><span class="o">())</span> <span class="o">{</span>
+      <span class="c1">// 这种组合不等于value的长度
+</span><span class="c1"></span>      <span class="k">continue</span><span class="o">;</span>
+    <span class="o">}</span>
+    
+    <span class="n">String</span> <span class="n">main</span> <span class="o">=</span> <span class="n">value</span><span class="o">.</span><span class="na">subString</span><span class="o">(</span><span class="n">0</span><span class="o">,</span> <span class="n">mainSize</span><span class="o">);</span>
+    <span class="c1">// 跳过头部的几个mainChar所代表的字符串，得到subChar代表的字符串。
+</span><span class="c1"></span>    <span class="n">String</span> <span class="n">sub</span> <span class="o">=</span> <span class="n">value</span><span class="o">.</span><span class="na">subString</span><span class="o">(</span><span class="n">mainSize</span> <span class="o">*</span> <span class="n">firstSubIndex</span><span class="o">,</span> <span class="n">mainSize</span> <span class="o">*</span> <span class="n">firstSubIndex</span> <span class="o">+</span> <span class="n">subSize</span><span class="o">);</span>
+    <span class="c1">// 根据pattern构建预期的字符串
+</span><span class="c1"></span>    <span class="n">String</span> <span class="n">expected</span> <span class="o">=</span> <span class="n">build</span><span class="o">(</span><span class="n">pattern</span><span class="o">,</span> <span class="n">main</span><span class="o">,</span> <span class="n">mainCount</span><span class="o">,</span> <span class="n">sub</span><span class="o">,</span> <span class="n">subCount</span><span class="o">);</span>
+    <span class="k">if</span> <span class="o">(</span><span class="n">value</span><span class="o">.</span><span class="na">equals</span><span class="o">(</span><span class="n">expected</span><span class="o">))</span> <span class="o">{</span>
+      <span class="k">return</span> <span class="kc">true</span><span class="o">;</span>
+    <span class="o">}</span>
+  <span class="o">}</span>
+  <span class="k">return</span> <span class="kc">false</span><span class="o">;</span>
+<span class="o">}</span>
+
+<span class="kd">private</span> <span class="n">String</span> <span class="nf">build</span><span class="o">(</span><span class="n">String</span> <span class="n">pattern</span><span class="o">,</span> <span class="n">String</span> <span class="n">main</span><span class="o">,</span> <span class="n">String</span> <span class="n">sub</span><span class="o">)</span> <span class="o">{</span>
+  <span class="n">StringBuilder</span> <span class="n">sb</span> <span class="o">=</span> <span class="k">new</span> <span class="n">StringBuilder</span><span class="o">();</span>
+  <span class="kt">char</span> <span class="n">mainChar</span> <span class="o">=</span> <span class="n">pattern</span><span class="o">.</span><span class="na">charAt</span><span class="o">(</span><span class="n">0</span><span class="o">);</span>
+  <span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">pattern</span><span class="o">.</span><span class="na">length</span><span class="o">();</span> <span class="n">i</span><span class="o">++)</span> <span class="o">{</span>
+    <span class="kt">char</span> <span class="n">curr</span> <span class="o">=</span> <span class="n">pattern</span><span class="o">.</span><span class="na">charAt</span><span class="o">(</span><span class="n">i</span><span class="o">);</span>
+    <span class="k">if</span> <span class="o">(</span><span class="n">curr</span> <span class="o">==</span> <span class="n">mainChar</span><span class="o">)</span> <span class="o">{</span>
+      <span class="n">sb</span><span class="o">.</span><span class="na">append</span><span class="o">(</span><span class="n">main</span><span class="o">);</span>
+    <span class="o">}</span> <span class="k">else</span> <span class="o">{</span>
+      <span class="n">sb</span><span class="o">.</span><span class="na">append</span><span class="o">(</span><span class="n">sub</span><span class="o">);</span>
+    <span class="o">}</span>
+  <span class="o">}</span>
+  <span class="k">return</span> <span class="n">sb</span><span class="o">.</span><span class="na">toString</span><span class="o">();</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>时间复杂度：</p>
 <ul>
 <li>尝试所有main的可能性为n次（n为value的长度），即n个循环。每个循环里：
 <ul>

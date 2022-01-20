@@ -12,7 +12,7 @@
 <meta name="description" content="" /><meta itemprop="name" content="处理Empty Mono&lt;T&gt;的方法">
 <meta itemprop="description" content=""><meta itemprop="datePublished" content="2019-04-19T09:44:52+08:00" />
 <meta itemprop="dateModified" content="2019-04-19T09:44:52+08:00" />
-<meta itemprop="wordCount" content="628">
+<meta itemprop="wordCount" content="634">
 <meta itemprop="keywords" content="reactor," /><meta property="og:title" content="处理Empty Mono&lt;T&gt;的方法" />
 <meta property="og:description" content="" />
 <meta property="og:type" content="article" />
@@ -223,63 +223,133 @@
 </div>
 <div class="post-content mb-3"><p>在<a href="https://projectreactor.io/" target="_blank" rel="noopener noreferrer">Reactor</a>
 编程中有时候我们需要对empty <code>Mono&lt;T&gt;</code>做一些特定业务逻辑。下面看一段非reactor编程的代码：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln"> 1</span><span class="kd">public</span> <span class="kt">void</span> <span class="nf">oldCheck</span><span class="o">(</span><span class="n">Token</span> <span class="n">token</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 2</span>  <span class="k">if</span> <span class="o">(</span><span class="n">token</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 3</span>    <span class="c1">// business logic
-</span><span class="ln"> 4</span><span class="c1"></span>    <span class="k">return</span><span class="o">;</span>
-<span class="ln"> 5</span>  <span class="o">}</span>
-<span class="ln"> 6</span>  <span class="k">if</span> <span class="o">(</span><span class="n">token</span><span class="o">.</span><span class="na">isExpired</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 7</span>    <span class="c1">// business logic
-</span><span class="ln"> 8</span><span class="c1"></span>    <span class="k">return</span><span class="o">;</span>
-<span class="ln"> 9</span>  <span class="o">}</span>
-<span class="ln">10</span>  <span class="c1">// business logic
-</span><span class="ln">11</span><span class="c1"></span>  <span class="k">return</span><span class="o">;</span>
-<span class="ln">12</span><span class="o">}</span>
-</code></pre></div><p>如果让你改成reactor你也许会改成这样：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln"> 1</span><span class="kd">public</span> <span class="n">Mono</span><span class="o">&lt;</span><span class="n">Void</span><span class="o">&gt;</span> <span class="nf">badCheck</span><span class="o">(</span><span class="n">Mono</span><span class="o">&lt;</span><span class="n">Token</span><span class="o">&gt;</span> <span class="n">tokenMono</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 2</span>  <span class="k">return</span> <span class="n">tokenMono</span>
-<span class="ln"> 3</span>      <span class="o">.</span><span class="na">flatMap</span><span class="o">(</span><span class="n">token</span> <span class="o">-&gt;</span> <span class="o">{</span>
-<span class="ln"> 4</span>        <span class="k">if</span> <span class="o">(</span><span class="n">token</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 5</span>          <span class="c1">// CAUTION: You will never be in here
-</span><span class="ln"> 6</span><span class="c1"></span>          <span class="c1">// business logic
-</span><span class="ln"> 7</span><span class="c1"></span>          <span class="k">return</span> <span class="n">Mono</span><span class="o">.</span><span class="na">empty</span><span class="o">();</span>
-<span class="ln"> 8</span>        <span class="o">}</span>
-<span class="ln"> 9</span>        <span class="k">if</span> <span class="o">(</span><span class="n">token</span><span class="o">.</span><span class="na">isExpired</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">10</span>          <span class="c1">// business logic
-</span><span class="ln">11</span><span class="c1"></span>          <span class="k">return</span> <span class="n">Mono</span><span class="o">.</span><span class="na">empty</span><span class="o">();</span>
-<span class="ln">12</span>        <span class="o">}</span>
-<span class="ln">13</span>        <span class="c1">// business logic
-</span><span class="ln">14</span><span class="c1"></span>        <span class="k">return</span> <span class="n">Mono</span><span class="o">.</span><span class="na">empty</span><span class="o">();</span>
-<span class="ln">15</span>      <span class="o">});</span>
-<span class="ln">16</span><span class="o">}</span>
-</code></pre></div><p>上面的示例代码里的注释已经写了<code>if (token == null) {}</code>的这个条件是永远成立的，这是因为当<code>Mono&lt;Token&gt;</code>是empty时，它是不会触发<code>flatMap</code>的。诸如<code>flatMap</code>的绝大部分Operator都依赖于<code>Publisher</code>（<code>Mono</code>和<code>Flux</code>都是<code>Pubisher</code>）推送数据（详情请看<a href="https://projectreactor.io/docs/core/release/api/index.html?overview-summary.html" target="_blank" rel="noopener noreferrer">javadoc</a>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="kd">public</span> <span class="kt">void</span> <span class="nf">oldCheck</span><span class="o">(</span><span class="n">Token</span> <span class="n">token</span><span class="o">)</span> <span class="o">{</span>
+  <span class="k">if</span> <span class="o">(</span><span class="n">token</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
+    <span class="c1">// business logic
+</span><span class="c1"></span>    <span class="k">return</span><span class="o">;</span>
+  <span class="o">}</span>
+  <span class="k">if</span> <span class="o">(</span><span class="n">token</span><span class="o">.</span><span class="na">isExpired</span><span class="o">)</span> <span class="o">{</span>
+    <span class="c1">// business logic
+</span><span class="c1"></span>    <span class="k">return</span><span class="o">;</span>
+  <span class="o">}</span>
+  <span class="c1">// business logic
+</span><span class="c1"></span>  <span class="k">return</span><span class="o">;</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>如果让你改成reactor你也许会改成这样：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="kd">public</span> <span class="n">Mono</span><span class="o">&lt;</span><span class="n">Void</span><span class="o">&gt;</span> <span class="nf">badCheck</span><span class="o">(</span><span class="n">Mono</span><span class="o">&lt;</span><span class="n">Token</span><span class="o">&gt;</span> <span class="n">tokenMono</span><span class="o">)</span> <span class="o">{</span>
+  <span class="k">return</span> <span class="n">tokenMono</span>
+      <span class="o">.</span><span class="na">flatMap</span><span class="o">(</span><span class="n">token</span> <span class="o">-&gt;</span> <span class="o">{</span>
+        <span class="k">if</span> <span class="o">(</span><span class="n">token</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
+          <span class="c1">// CAUTION: You will never be in here
+</span><span class="c1"></span>          <span class="c1">// business logic
+</span><span class="c1"></span>          <span class="k">return</span> <span class="n">Mono</span><span class="o">.</span><span class="na">empty</span><span class="o">();</span>
+        <span class="o">}</span>
+        <span class="k">if</span> <span class="o">(</span><span class="n">token</span><span class="o">.</span><span class="na">isExpired</span><span class="o">)</span> <span class="o">{</span>
+          <span class="c1">// business logic
+</span><span class="c1"></span>          <span class="k">return</span> <span class="n">Mono</span><span class="o">.</span><span class="na">empty</span><span class="o">();</span>
+        <span class="o">}</span>
+        <span class="c1">// business logic
+</span><span class="c1"></span>        <span class="k">return</span> <span class="n">Mono</span><span class="o">.</span><span class="na">empty</span><span class="o">();</span>
+      <span class="o">});</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>上面的示例代码里的注释已经写了<code>if (token == null) {}</code>的这个条件是永远成立的，这是因为当<code>Mono&lt;Token&gt;</code>是empty时，它是不会触发<code>flatMap</code>的。诸如<code>flatMap</code>的绝大部分Operator都依赖于<code>Publisher</code>（<code>Mono</code>和<code>Flux</code>都是<code>Pubisher</code>）推送数据（详情请看<a href="https://projectreactor.io/docs/core/release/api/index.html?overview-summary.html" target="_blank" rel="noopener noreferrer">javadoc</a>
 ），如果<code>Publisher</code>本身无数据可推送，那么就不会触发Operator。换句话说<code>flatMap</code>内部是不可能得到null的。</p>
 <p>那么怎么做才可以？你可以使用Java 8的<code>Optional</code>来作为中间值：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln"> 1</span><span class="kd">public</span> <span class="n">Mono</span><span class="o">&lt;</span><span class="n">Void</span><span class="o">&gt;</span> <span class="nf">goodCheck</span><span class="o">(</span><span class="n">Mono</span><span class="o">&lt;</span><span class="n">Token</span><span class="o">&gt;</span> <span class="n">tokenMono</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 2</span>  <span class="k">return</span> <span class="n">tokenMono</span>
-<span class="ln"> 3</span>      <span class="c1">// Transform Mono&lt;Token&gt; to Mono&lt;Optional&lt;Token&gt;&gt;.
-</span><span class="ln"> 4</span><span class="c1"></span>      <span class="c1">// If Mono&lt;Token&gt; is empty, flatMap will not be triggered,
-</span><span class="ln"> 5</span><span class="c1"></span>      <span class="c1">// then we will get a empty Mono&lt;Optional&lt;Token&gt;&gt;
-</span><span class="ln"> 6</span><span class="c1"></span>      <span class="o">.</span><span class="na">flatMap</span><span class="o">(</span><span class="n">token</span> <span class="o">-&gt;</span> <span class="n">Mono</span><span class="o">.</span><span class="na">just</span><span class="o">(</span><span class="n">Optional</span><span class="o">.</span><span class="na">of</span><span class="o">(</span><span class="n">token</span><span class="o">)))</span>
-<span class="ln"> 7</span>      <span class="c1">// If Mono&lt;Optional&lt;Token&gt;&gt; is empty, provide an empty Optional&lt;Token&gt;,
-</span><span class="ln"> 8</span><span class="c1"></span>      <span class="c1">// then we will get a non-empty Mono&lt;Optional&lt;Token&gt;&gt; anyway
-</span><span class="ln"> 9</span><span class="c1"></span>      <span class="o">.</span><span class="na">defaultIfEmpty</span><span class="o">(</span><span class="n">Optional</span><span class="o">.</span><span class="na">empty</span><span class="o">())</span>
-<span class="ln">10</span>      <span class="c1">// Since Mono&lt;Optional&lt;Token&gt;&gt; is not empty, flatMap will always be triggered.
-</span><span class="ln">11</span><span class="c1"></span>      <span class="o">.</span><span class="na">flatMap</span><span class="o">(</span><span class="n">tokenOptional</span> <span class="o">-&gt;</span> <span class="o">{</span>
-<span class="ln">12</span>        <span class="k">if</span> <span class="o">(!</span><span class="n">tokenOptional</span><span class="o">.</span><span class="na">isPresent</span><span class="o">())</span> <span class="o">{</span>
-<span class="ln">13</span>          <span class="c1">// business logic
-</span><span class="ln">14</span><span class="c1"></span>          <span class="k">return</span> <span class="n">Mono</span><span class="o">.</span><span class="na">empty</span><span class="o">();</span>
-<span class="ln">15</span>        <span class="o">}</span>
-<span class="ln">16</span>        <span class="n">Token</span> <span class="n">token</span> <span class="o">=</span> <span class="n">tokenOptional</span><span class="o">.</span><span class="na">get</span><span class="o">();</span>
-<span class="ln">17</span>        <span class="k">if</span> <span class="o">(</span><span class="n">token</span><span class="o">.</span><span class="na">isExpired</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">18</span>          <span class="c1">// business logic
-</span><span class="ln">19</span><span class="c1"></span>          <span class="k">return</span> <span class="n">Mono</span><span class="o">.</span><span class="na">empty</span><span class="o">();</span>
-<span class="ln">20</span>        <span class="o">}</span>
-<span class="ln">21</span>        <span class="c1">// business logic
-</span><span class="ln">22</span><span class="c1"></span>        <span class="k">return</span> <span class="n">Mono</span><span class="o">.</span><span class="na">empty</span><span class="o">();</span>
-<span class="ln">23</span>      <span class="o">});</span>
-<span class="ln">24</span><span class="o">}</span>
-</code></pre></div><p>除了<code>defaultIfEmpty</code>之外，Reactor还提供了<code>switchIfEmpty</code>、<code>repeatWhenEmpty</code>来处理empty <code>Mono</code>/<code>Flux</code>。</p></div></div>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="kd">public</span> <span class="n">Mono</span><span class="o">&lt;</span><span class="n">Void</span><span class="o">&gt;</span> <span class="nf">goodCheck</span><span class="o">(</span><span class="n">Mono</span><span class="o">&lt;</span><span class="n">Token</span><span class="o">&gt;</span> <span class="n">tokenMono</span><span class="o">)</span> <span class="o">{</span>
+  <span class="k">return</span> <span class="n">tokenMono</span>
+      <span class="c1">// Transform Mono&lt;Token&gt; to Mono&lt;Optional&lt;Token&gt;&gt;.
+</span><span class="c1"></span>      <span class="c1">// If Mono&lt;Token&gt; is empty, flatMap will not be triggered,
+</span><span class="c1"></span>      <span class="c1">// then we will get a empty Mono&lt;Optional&lt;Token&gt;&gt;
+</span><span class="c1"></span>      <span class="o">.</span><span class="na">flatMap</span><span class="o">(</span><span class="n">token</span> <span class="o">-&gt;</span> <span class="n">Mono</span><span class="o">.</span><span class="na">just</span><span class="o">(</span><span class="n">Optional</span><span class="o">.</span><span class="na">of</span><span class="o">(</span><span class="n">token</span><span class="o">)))</span>
+      <span class="c1">// If Mono&lt;Optional&lt;Token&gt;&gt; is empty, provide an empty Optional&lt;Token&gt;,
+</span><span class="c1"></span>      <span class="c1">// then we will get a non-empty Mono&lt;Optional&lt;Token&gt;&gt; anyway
+</span><span class="c1"></span>      <span class="o">.</span><span class="na">defaultIfEmpty</span><span class="o">(</span><span class="n">Optional</span><span class="o">.</span><span class="na">empty</span><span class="o">())</span>
+      <span class="c1">// Since Mono&lt;Optional&lt;Token&gt;&gt; is not empty, flatMap will always be triggered.
+</span><span class="c1"></span>      <span class="o">.</span><span class="na">flatMap</span><span class="o">(</span><span class="n">tokenOptional</span> <span class="o">-&gt;</span> <span class="o">{</span>
+        <span class="k">if</span> <span class="o">(!</span><span class="n">tokenOptional</span><span class="o">.</span><span class="na">isPresent</span><span class="o">())</span> <span class="o">{</span>
+          <span class="c1">// business logic
+</span><span class="c1"></span>          <span class="k">return</span> <span class="n">Mono</span><span class="o">.</span><span class="na">empty</span><span class="o">();</span>
+        <span class="o">}</span>
+        <span class="n">Token</span> <span class="n">token</span> <span class="o">=</span> <span class="n">tokenOptional</span><span class="o">.</span><span class="na">get</span><span class="o">();</span>
+        <span class="k">if</span> <span class="o">(</span><span class="n">token</span><span class="o">.</span><span class="na">isExpired</span><span class="o">)</span> <span class="o">{</span>
+          <span class="c1">// business logic
+</span><span class="c1"></span>          <span class="k">return</span> <span class="n">Mono</span><span class="o">.</span><span class="na">empty</span><span class="o">();</span>
+        <span class="o">}</span>
+        <span class="c1">// business logic
+</span><span class="c1"></span>        <span class="k">return</span> <span class="n">Mono</span><span class="o">.</span><span class="na">empty</span><span class="o">();</span>
+      <span class="o">});</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>除了<code>defaultIfEmpty</code>之外，Reactor还提供了<code>switchIfEmpty</code>、<code>repeatWhenEmpty</code>来处理empty <code>Mono</code>/<code>Flux</code>。</p></div></div>
   <div class="card-footer"><div class="post-navs d-flex justify-content-evenly">
   <div class="post-nav post-prev"><i class="fas fa-fw fa-chevron-left"></i>
     <a href="/post/bookmarks/bookmarks-system-arch/">收藏夹 - 系统架构（持续更新）

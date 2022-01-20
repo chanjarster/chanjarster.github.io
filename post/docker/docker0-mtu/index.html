@@ -12,7 +12,7 @@
 <meta name="description" content="" /><meta itemprop="name" content="docker0 eth设备MTU不正确导致容器无法访问外网">
 <meta itemprop="description" content=""><meta itemprop="datePublished" content="2021-02-25T09:29:54+08:00" />
 <meta itemprop="dateModified" content="2021-02-25T09:29:54+08:00" />
-<meta itemprop="wordCount" content="527">
+<meta itemprop="wordCount" content="546">
 <meta itemprop="keywords" content="docker,troubleshooting," /><meta property="og:title" content="docker0 eth设备MTU不正确导致容器无法访问外网" />
 <meta property="og:description" content="" />
 <meta property="og:type" content="article" />
@@ -224,45 +224,114 @@
   </span><span class="post-taxonomies"><a href="/tags/docker/" class="badge post-taxonomy">docker</a><a href="/tags/troubleshooting/" class="badge post-taxonomy">troubleshooting</a></span>
 </div>
 <div class="post-content mb-3"><p>发现容器内无法访问公网资源，运行下列命令卡住不动了：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>docker run --rm -it busybox
-<span class="ln">2</span>&gt; wget http://mirrors.aliyun.com/alpine/v3.12/main/x86_64/APKINDEX.tar.gz
-</code></pre></div><h2 id="排查主机网络通性">排查主机网络通性<a class="anchor ms-1" href="#排查主机网络通性"><i class="fas fa-link"></i></a></h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">docker run --rm -it busybox
+&gt; wget http://mirrors.aliyun.com/alpine/v3.12/main/x86_64/APKINDEX.tar.gz
+</code></pre></td></tr></table>
+</div>
+</div><h2 id="排查主机网络通性">排查主机网络通性<a class="anchor ms-1" href="#排查主机网络通性"><i class="fas fa-link"></i></a></h2>
 <p>检查主机网络通性，在主机上执行相同命令，没有问题，说明问题出在docker上。</p>
 <h2 id="排查docker配置">排查docker配置<a class="anchor ms-1" href="#排查docker配置"><i class="fas fa-link"></i></a></h2>
 <p>在一台没有问题的机器上对比<code>docker info</code>，没有发现区别</p>
 <p>在一台没有问题的机器上对比<code>docker network inspect bridge</code>，发现<code>com.docker.network.driver.mtu</code>值不一样，好的机器是<code>1450</code>，坏的机器是<code>1500</code>。</p>
 <p>查看<code>docker0</code>设备的mtu也是<code>1500</code>：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>ip a
-<span class="ln">2</span>...
-<span class="ln">3</span>3: docker0: &lt;BROADCAST,MULTICAST,UP,LOWER_UP&gt; mtu <span class="m">1500</span> qdisc noqueue state UP group default
-<span class="ln">4</span>...
-</code></pre></div><h2 id="排查mtu问题">排查mtu问题<a class="anchor ms-1" href="#排查mtu问题"><i class="fas fa-link"></i></a></h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">ip a
+...
+3: docker0: &lt;BROADCAST,MULTICAST,UP,LOWER_UP&gt; mtu <span class="m">1500</span> qdisc noqueue state UP group default
+...
+</code></pre></td></tr></table>
+</div>
+</div><h2 id="排查mtu问题">排查mtu问题<a class="anchor ms-1" href="#排查mtu问题"><i class="fas fa-link"></i></a></h2>
 <p><a href="http://linux.vbird.org/linux_server/0140networkcommand.php#ping_mtu" target="_blank" rel="noopener noreferrer">用ping确认mtu的合适大小</a>
 </p>
 <p>在坏的主机上ping 1422+28=1450 字节（28字节是ICMP协议的头大小）：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>docker run --rm -it nicolaka/netshoot:latest /bin/bash
-<span class="ln">2</span>&gt; ping -c <span class="m">3</span> -M <span class="k">do</span> -s <span class="m">1422</span> baidu.com
-<span class="ln">3</span>PING baidu.com <span class="o">(</span>220.181.38.148<span class="o">)</span> 1422<span class="o">(</span>1450<span class="o">)</span> bytes of data.
-<span class="ln">4</span><span class="m">1430</span> bytes from 220.181.38.148 <span class="o">(</span>220.181.38.148<span class="o">)</span>: <span class="nv">icmp_seq</span><span class="o">=</span><span class="m">1</span> <span class="nv">ttl</span><span class="o">=</span><span class="m">48</span> <span class="nv">time</span><span class="o">=</span>27.6 ms
-</code></pre></div><p>可以看到结果正常，如果ping 1423+28=1451字节，就不行了：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>&gt; ping -c <span class="m">3</span> -M <span class="k">do</span> -s <span class="m">1423</span> baidu.com
-<span class="ln">2</span>PING baidu.com <span class="o">(</span>39.156.69.79<span class="o">)</span> 1423<span class="o">(</span>1451<span class="o">)</span> bytes of data.
-<span class="ln">3</span>ping: <span class="nb">local</span> error: message too long, <span class="nv">mtu</span><span class="o">=</span><span class="m">1450</span>
-</code></pre></div><p>这个就说明mtu最大只能是1450。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">docker run --rm -it nicolaka/netshoot:latest /bin/bash
+&gt; ping -c <span class="m">3</span> -M <span class="k">do</span> -s <span class="m">1422</span> baidu.com
+PING baidu.com <span class="o">(</span>220.181.38.148<span class="o">)</span> 1422<span class="o">(</span>1450<span class="o">)</span> bytes of data.
+<span class="m">1430</span> bytes from 220.181.38.148 <span class="o">(</span>220.181.38.148<span class="o">)</span>: <span class="nv">icmp_seq</span><span class="o">=</span><span class="m">1</span> <span class="nv">ttl</span><span class="o">=</span><span class="m">48</span> <span class="nv">time</span><span class="o">=</span>27.6 ms
+</code></pre></td></tr></table>
+</div>
+</div><p>可以看到结果正常，如果ping 1423+28=1451字节，就不行了：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">&gt; ping -c <span class="m">3</span> -M <span class="k">do</span> -s <span class="m">1423</span> baidu.com
+PING baidu.com <span class="o">(</span>39.156.69.79<span class="o">)</span> 1423<span class="o">(</span>1451<span class="o">)</span> bytes of data.
+ping: <span class="nb">local</span> error: message too long, <span class="nv">mtu</span><span class="o">=</span><span class="m">1450</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>这个就说明mtu最大只能是1450。</p>
 <h2 id="修改设备mtu">修改设备mtu<a class="anchor ms-1" href="#修改设备mtu"><i class="fas fa-link"></i></a></h2>
 <p>现在已经知道问题是<code>docker0</code>设备的mtu引起的，那么执行下列命令修改：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>sudo ip link <span class="nb">set</span> docker0 mtu <span class="m">1450</span>
-</code></pre></div><p>同时修改<code>/etc/docker/daemon.json</code>：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-json" data-lang="json"><span class="ln">1</span><span class="p">{</span>
-<span class="ln">2</span>  <span class="err">...</span> <span class="err">其他配置不变</span>
-<span class="ln">3</span>  <span class="nt">&#34;mtu&#34;</span><span class="p">:</span> <span class="mi">1450</span>
-<span class="ln">4</span><span class="p">}</span>
-</code></pre></div><p>然后重启docker：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>sudo systemctl restart docker
-</code></pre></div><p>最后再试验就成功了：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>docker run --rm -it busybox
-<span class="ln">2</span>&gt; wget http://mirrors.aliyun.com/alpine/v3.12/main/x86_64/APKINDEX.tar.gz
-</code></pre></div></div></div>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">sudo ip link <span class="nb">set</span> docker0 mtu <span class="m">1450</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>同时修改<code>/etc/docker/daemon.json</code>：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-json" data-lang="json"><span class="p">{</span>
+  <span class="err">...</span> <span class="err">其他配置不变</span>
+  <span class="nt">&#34;mtu&#34;</span><span class="p">:</span> <span class="mi">1450</span>
+<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>然后重启docker：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">sudo systemctl restart docker
+</code></pre></td></tr></table>
+</div>
+</div><p>最后再试验就成功了：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">docker run --rm -it busybox
+&gt; wget http://mirrors.aliyun.com/alpine/v3.12/main/x86_64/APKINDEX.tar.gz
+</code></pre></td></tr></table>
+</div>
+</div></div></div>
   <div class="card-footer"><div class="post-navs d-flex justify-content-evenly">
   <div class="post-nav post-prev"><i class="fas fa-fw fa-chevron-left"></i>
     <a href="/post/es/kibana-alerting-es-query/">Kibana Alerting的实现分析

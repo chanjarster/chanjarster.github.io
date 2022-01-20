@@ -12,7 +12,7 @@
 <meta name="description" content="" /><meta itemprop="name" content="Cracking Coding Interview - 8.13 Stack of Boxes">
 <meta itemprop="description" content=""><meta itemprop="datePublished" content="2019-08-27T13:50:11+08:00" />
 <meta itemprop="dateModified" content="2019-08-27T13:50:11+08:00" />
-<meta itemprop="wordCount" content="664">
+<meta itemprop="wordCount" content="671">
 <meta itemprop="keywords" content="ARTS-A," /><meta property="og:title" content="Cracking Coding Interview - 8.13 Stack of Boxes" />
 <meta property="og:description" content="" />
 <meta property="og:type" content="article" />
@@ -233,59 +233,131 @@
 <li>否则，Box1.height 未必 &gt; Box2.height</li>
 </ol>
 <p>如果我们把Box排序，那么可能会发现一段连续的Box里的谁都不比谁大，但是它们中肯定存在一个最大的height，比如下面的B1～4都是谁都不比谁大的：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln">1</span> B1(w5,h=5,d=5) B2(w5,h=6,d=5) B3(w5,h=4,d=5) B4(w4,h=7,d=4)
-<span class="ln">2</span> B5(w3,h=3,d=3) B6(w2,h=2,d=2)
-</code></pre></div><p>所以：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln">1</span>maxHeight(boxes[0~n]) = max(boxes[0~i].height) + maxHeight(boxes[i+1~n])
-</code></pre></div><p>上面的<code>boxes[0~i]</code>指的是在<code>[0, i]</code>范围内的box谁都不比谁大，取这里面的最大height，再加上后面那段里的值。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"> B1(w5,h=5,d=5) B2(w5,h=6,d=5) B3(w5,h=4,d=5) B4(w4,h=7,d=4)
+ B5(w3,h=3,d=3) B6(w2,h=2,d=2)
+</code></pre></td></tr></table>
+</div>
+</div><p>所以：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt">maxHeight(boxes[0~n]) = max(boxes[0~i].height) + maxHeight(boxes[i+1~n])
+</code></pre></td></tr></table>
+</div>
+</div><p>上面的<code>boxes[0~i]</code>指的是在<code>[0, i]</code>范围内的box谁都不比谁大，取这里面的最大height，再加上后面那段里的值。</p>
 <p>Box对象：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln"> 1</span><span class="kd">class</span> <span class="nc">Box</span> <span class="o">{</span>
-<span class="ln"> 2</span>  <span class="kt">int</span> <span class="n">width</span><span class="o">;</span>
-<span class="ln"> 3</span>  <span class="kt">int</span> <span class="n">height</span><span class="o">;</span>
-<span class="ln"> 4</span>  <span class="kt">int</span> <span class="n">depth</span><span class="o">;</span>
-<span class="ln"> 5</span>  <span class="kd">public</span> <span class="kt">boolean</span> <span class="nf">isLargerThan</span><span class="o">(</span><span class="n">Box</span> <span class="n">another</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 6</span>    <span class="k">return</span> <span class="k">this</span><span class="o">.</span><span class="na">width</span> <span class="o">&gt;</span> <span class="n">another</span><span class="o">.</span><span class="na">width</span> 
-<span class="ln"> 7</span>      <span class="o">&amp;&amp;</span> <span class="k">this</span><span class="o">.</span><span class="na">height</span> <span class="o">&gt;</span> <span class="n">another</span><span class="o">.</span><span class="na">height</span>
-<span class="ln"> 8</span>      <span class="o">&amp;&amp;</span> <span class="k">this</span><span class="o">.</span><span class="na">depth</span> <span class="o">&gt;</span> <span class="n">another</span><span class="o">.</span><span class="na">depth</span><span class="o">;</span>
-<span class="ln"> 9</span>  <span class="o">}</span>
-<span class="ln">10</span>  <span class="kt">int</span> <span class="nf">compareTo</span><span class="o">(</span><span class="n">Box</span> <span class="n">another</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">11</span>    <span class="k">if</span> <span class="o">(</span><span class="k">this</span><span class="o">.</span><span class="na">isLargerThan</span><span class="o">(</span><span class="n">another</span><span class="o">))</span> <span class="o">{</span>
-<span class="ln">12</span>      <span class="k">return</span> <span class="o">-</span><span class="n">1</span><span class="o">;</span>
-<span class="ln">13</span>    <span class="o">}</span>
-<span class="ln">14</span>    <span class="k">if</span> <span class="o">(</span><span class="n">another</span><span class="o">.</span><span class="na">isLargerThan</span><span class="o">(</span><span class="k">this</span><span class="o">))</span> <span class="o">{</span>
-<span class="ln">15</span>      <span class="k">return</span> <span class="n">1</span><span class="o">;</span>
-<span class="ln">16</span>    <span class="o">}</span>
-<span class="ln">17</span>    <span class="k">return</span> <span class="n">another</span><span class="o">.</span><span class="na">height</span> <span class="o">-</span> <span class="k">this</span><span class="o">.</span><span class="na">height</span><span class="o">;</span>
-<span class="ln">18</span>  <span class="o">}</span>
-<span class="ln">19</span><span class="o">}</span>
-</code></pre></div><p>代码：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln"> 1</span><span class="kd">public</span> <span class="kt">int</span> <span class="nf">maxHeight</span><span class="o">(</span><span class="n">Box</span><span class="o">[]</span> <span class="n">boxes</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 2</span>  <span class="n">Arrays</span><span class="o">.</span><span class="na">sort</span><span class="o">(</span><span class="n">boxes</span><span class="o">);</span>
-<span class="ln"> 3</span>  <span class="k">return</span> <span class="n">maxHeight</span><span class="o">(</span><span class="n">boxes</span><span class="o">,</span> <span class="n">0</span><span class="o">);</span>
-<span class="ln"> 4</span><span class="o">}</span>
-<span class="ln"> 5</span><span class="kd">public</span> <span class="kt">int</span> <span class="nf">maxHeight</span><span class="o">(</span><span class="n">Box</span><span class="o">[]</span> <span class="n">boxes</span><span class="o">,</span> <span class="kt">int</span> <span class="n">index</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 6</span>  <span class="k">if</span> <span class="o">(</span><span class="n">index</span> <span class="o">==</span> <span class="n">boxes</span><span class="o">.</span><span class="na">length</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 7</span>    <span class="k">return</span> <span class="n">0</span><span class="o">;</span>
-<span class="ln"> 8</span>  <span class="o">}</span>
-<span class="ln"> 9</span>  <span class="n">Box</span> <span class="n">curr</span> <span class="o">=</span> <span class="n">boxes</span><span class="o">[</span><span class="n">index</span><span class="o">];</span>
-<span class="ln">10</span>  <span class="k">if</span> <span class="o">(</span><span class="n">index</span> <span class="o">==</span> <span class="n">boxes</span><span class="o">.</span><span class="na">length</span> <span class="o">-</span> <span class="n">1</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">11</span>    <span class="k">return</span> <span class="n">curr</span><span class="o">.</span><span class="na">height</span><span class="o">;</span>
-<span class="ln">12</span>  <span class="o">}</span>
-<span class="ln">13</span>  <span class="kt">int</span> <span class="n">maxHeight</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span>  
-<span class="ln">14</span>  <span class="c1">// 往后找，找到第一个比当前盒子小的盒子下标i，然后从它开始maxHeight(boxes[i...])
-</span><span class="ln">15</span><span class="c1"></span>  <span class="c1">// 结果再加上当前盒子到i之间的盒子的最大height
-</span><span class="ln">16</span><span class="c1"></span>  <span class="n">maxHeight</span> <span class="o">=</span> <span class="n">curr</span><span class="o">.</span><span class="na">height</span><span class="o">;</span>
-<span class="ln">17</span>  <span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="n">index</span> <span class="o">+</span> <span class="n">1</span><span class="o">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">boxes</span><span class="o">.</span><span class="na">length</span><span class="o">;</span> <span class="n">i</span><span class="o">++)</span> <span class="o">{</span>
-<span class="ln">18</span>    <span class="k">if</span> <span class="o">(!</span><span class="n">curr</span><span class="o">.</span><span class="na">isLargerThan</span><span class="o">(</span><span class="n">boxes</span><span class="o">[</span><span class="n">i</span><span class="o">]))</span> <span class="o">{</span>
-<span class="ln">19</span>      <span class="n">maxHeight</span> <span class="o">=</span> <span class="n">Math</span><span class="o">.</span><span class="na">max</span><span class="o">(</span><span class="n">maxHeight</span><span class="o">,</span> <span class="n">boxes</span><span class="o">[</span><span class="n">i</span><span class="o">].</span><span class="na">height</span><span class="o">);</span>
-<span class="ln">20</span>    <span class="o">}</span> <span class="k">else</span> <span class="o">{</span>
-<span class="ln">21</span>      <span class="k">break</span><span class="o">;</span>
-<span class="ln">22</span>    <span class="o">}</span>
-<span class="ln">23</span>  <span class="o">}</span>
-<span class="ln">24</span>  <span class="n">maxHeight</span> <span class="o">+=</span> <span class="n">maxHeight</span><span class="o">(</span><span class="n">boxes</span><span class="o">,</span> <span class="n">i</span><span class="o">);</span>
-<span class="ln">25</span>  <span class="k">return</span> <span class="n">maxHeight</span><span class="o">;</span>
-<span class="ln">26</span><span class="o">}</span>
-</code></pre></div></div></div>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="kd">class</span> <span class="nc">Box</span> <span class="o">{</span>
+  <span class="kt">int</span> <span class="n">width</span><span class="o">;</span>
+  <span class="kt">int</span> <span class="n">height</span><span class="o">;</span>
+  <span class="kt">int</span> <span class="n">depth</span><span class="o">;</span>
+  <span class="kd">public</span> <span class="kt">boolean</span> <span class="nf">isLargerThan</span><span class="o">(</span><span class="n">Box</span> <span class="n">another</span><span class="o">)</span> <span class="o">{</span>
+    <span class="k">return</span> <span class="k">this</span><span class="o">.</span><span class="na">width</span> <span class="o">&gt;</span> <span class="n">another</span><span class="o">.</span><span class="na">width</span> 
+      <span class="o">&amp;&amp;</span> <span class="k">this</span><span class="o">.</span><span class="na">height</span> <span class="o">&gt;</span> <span class="n">another</span><span class="o">.</span><span class="na">height</span>
+      <span class="o">&amp;&amp;</span> <span class="k">this</span><span class="o">.</span><span class="na">depth</span> <span class="o">&gt;</span> <span class="n">another</span><span class="o">.</span><span class="na">depth</span><span class="o">;</span>
+  <span class="o">}</span>
+  <span class="kt">int</span> <span class="nf">compareTo</span><span class="o">(</span><span class="n">Box</span> <span class="n">another</span><span class="o">)</span> <span class="o">{</span>
+    <span class="k">if</span> <span class="o">(</span><span class="k">this</span><span class="o">.</span><span class="na">isLargerThan</span><span class="o">(</span><span class="n">another</span><span class="o">))</span> <span class="o">{</span>
+      <span class="k">return</span> <span class="o">-</span><span class="n">1</span><span class="o">;</span>
+    <span class="o">}</span>
+    <span class="k">if</span> <span class="o">(</span><span class="n">another</span><span class="o">.</span><span class="na">isLargerThan</span><span class="o">(</span><span class="k">this</span><span class="o">))</span> <span class="o">{</span>
+      <span class="k">return</span> <span class="n">1</span><span class="o">;</span>
+    <span class="o">}</span>
+    <span class="k">return</span> <span class="n">another</span><span class="o">.</span><span class="na">height</span> <span class="o">-</span> <span class="k">this</span><span class="o">.</span><span class="na">height</span><span class="o">;</span>
+  <span class="o">}</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>代码：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="kd">public</span> <span class="kt">int</span> <span class="nf">maxHeight</span><span class="o">(</span><span class="n">Box</span><span class="o">[]</span> <span class="n">boxes</span><span class="o">)</span> <span class="o">{</span>
+  <span class="n">Arrays</span><span class="o">.</span><span class="na">sort</span><span class="o">(</span><span class="n">boxes</span><span class="o">);</span>
+  <span class="k">return</span> <span class="n">maxHeight</span><span class="o">(</span><span class="n">boxes</span><span class="o">,</span> <span class="n">0</span><span class="o">);</span>
+<span class="o">}</span>
+<span class="kd">public</span> <span class="kt">int</span> <span class="nf">maxHeight</span><span class="o">(</span><span class="n">Box</span><span class="o">[]</span> <span class="n">boxes</span><span class="o">,</span> <span class="kt">int</span> <span class="n">index</span><span class="o">)</span> <span class="o">{</span>
+  <span class="k">if</span> <span class="o">(</span><span class="n">index</span> <span class="o">==</span> <span class="n">boxes</span><span class="o">.</span><span class="na">length</span><span class="o">)</span> <span class="o">{</span>
+    <span class="k">return</span> <span class="n">0</span><span class="o">;</span>
+  <span class="o">}</span>
+  <span class="n">Box</span> <span class="n">curr</span> <span class="o">=</span> <span class="n">boxes</span><span class="o">[</span><span class="n">index</span><span class="o">];</span>
+  <span class="k">if</span> <span class="o">(</span><span class="n">index</span> <span class="o">==</span> <span class="n">boxes</span><span class="o">.</span><span class="na">length</span> <span class="o">-</span> <span class="n">1</span><span class="o">)</span> <span class="o">{</span>
+    <span class="k">return</span> <span class="n">curr</span><span class="o">.</span><span class="na">height</span><span class="o">;</span>
+  <span class="o">}</span>
+  <span class="kt">int</span> <span class="n">maxHeight</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span>  
+  <span class="c1">// 往后找，找到第一个比当前盒子小的盒子下标i，然后从它开始maxHeight(boxes[i...])
+</span><span class="c1"></span>  <span class="c1">// 结果再加上当前盒子到i之间的盒子的最大height
+</span><span class="c1"></span>  <span class="n">maxHeight</span> <span class="o">=</span> <span class="n">curr</span><span class="o">.</span><span class="na">height</span><span class="o">;</span>
+  <span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="n">index</span> <span class="o">+</span> <span class="n">1</span><span class="o">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">boxes</span><span class="o">.</span><span class="na">length</span><span class="o">;</span> <span class="n">i</span><span class="o">++)</span> <span class="o">{</span>
+    <span class="k">if</span> <span class="o">(!</span><span class="n">curr</span><span class="o">.</span><span class="na">isLargerThan</span><span class="o">(</span><span class="n">boxes</span><span class="o">[</span><span class="n">i</span><span class="o">]))</span> <span class="o">{</span>
+      <span class="n">maxHeight</span> <span class="o">=</span> <span class="n">Math</span><span class="o">.</span><span class="na">max</span><span class="o">(</span><span class="n">maxHeight</span><span class="o">,</span> <span class="n">boxes</span><span class="o">[</span><span class="n">i</span><span class="o">].</span><span class="na">height</span><span class="o">);</span>
+    <span class="o">}</span> <span class="k">else</span> <span class="o">{</span>
+      <span class="k">break</span><span class="o">;</span>
+    <span class="o">}</span>
+  <span class="o">}</span>
+  <span class="n">maxHeight</span> <span class="o">+=</span> <span class="n">maxHeight</span><span class="o">(</span><span class="n">boxes</span><span class="o">,</span> <span class="n">i</span><span class="o">);</span>
+  <span class="k">return</span> <span class="n">maxHeight</span><span class="o">;</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div></div></div>
   <div class="card-footer"><div class="post-navs d-flex justify-content-evenly">
   <div class="post-nav post-prev"><i class="fas fa-fw fa-chevron-left"></i>
     <a href="/post/cracking-coding-interview/8.12-eight-queens/">Cracking Coding Interview - 8.12 Eight Queens

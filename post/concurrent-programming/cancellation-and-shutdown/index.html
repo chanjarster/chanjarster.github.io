@@ -12,7 +12,7 @@
 <meta name="description" content="" /><meta itemprop="name" content="Cancellation and Shutdown">
 <meta itemprop="description" content=""><meta itemprop="datePublished" content="2019-10-13T13:40:29+08:00" />
 <meta itemprop="dateModified" content="2019-10-13T13:40:29+08:00" />
-<meta itemprop="wordCount" content="1502">
+<meta itemprop="wordCount" content="1534">
 <meta itemprop="keywords" content="并发编程," /><meta property="og:title" content="Cancellation and Shutdown" />
 <meta property="og:description" content="" />
 <meta property="og:type" content="article" />
@@ -220,228 +220,496 @@
   <span class="post-date" title="创建于 2019-10-13 13:40:29 &#43;0800 CST。">
     2019-10-13
   </span><span class="post-reading-time">
-    3 分钟阅读
+    4 分钟阅读
   </span><span class="post-taxonomies"><a href="/tags/%E5%B9%B6%E5%8F%91%E7%BC%96%E7%A8%8B/" class="badge post-taxonomy">并发编程</a></span>
 </div>
 <div class="post-content mb-3"><h2 id="任务取消">任务取消<a class="anchor ms-1" href="#任务取消"><i class="fas fa-link"></i></a></h2>
 <img src="task-cancellation.png" style="zoom:50%" />
 <p>一种做法是设置cancel flag，但是存在永远无法响应的风险：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln"> 1</span><span class="kd">public</span> <span class="n">Task</span> <span class="o">{</span>
-<span class="ln"> 2</span>  <span class="kd">private</span> <span class="kd">volatile</span> <span class="kt">boolean</span> <span class="n">cancelled</span> <span class="o">=</span> <span class="kc">false</span><span class="o">;</span>
-<span class="ln"> 3</span>  <span class="kd">public</span> <span class="kt">void</span> <span class="nf">cancel</span><span class="o">()</span> <span class="o">{</span>
-<span class="ln"> 4</span>    <span class="k">this</span><span class="o">.</span><span class="na">cancelled</span> <span class="o">=</span> <span class="kc">true</span><span class="o">;</span>
-<span class="ln"> 5</span>  <span class="o">}</span>
-<span class="ln"> 6</span>  <span class="kd">public</span> <span class="kt">void</span> <span class="nf">run</span><span class="o">()</span> <span class="o">{</span>
-<span class="ln"> 7</span>    <span class="k">if</span> <span class="o">(!</span><span class="n">cancelled</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 8</span>      <span class="c1">// 如果这个方法阻塞了，那么Task就永远不会cancel
-</span><span class="ln"> 9</span><span class="c1"></span>      <span class="n">someBlockingMethod</span><span class="o">();</span>      
-<span class="ln">10</span>    <span class="o">}</span>
-<span class="ln">11</span>  <span class="o">}</span>
-<span class="ln">12</span><span class="o">}</span>
-</code></pre></div><h3 id="线程中断">线程中断<a class="anchor ms-1" href="#线程中断"><i class="fas fa-link"></i></a></h3>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln">1</span><span class="kd">public</span> <span class="kd">class</span> <span class="nc">Thread</span> <span class="o">{</span>
-<span class="ln">2</span>  <span class="kd">public</span> <span class="kt">void</span> <span class="nf">interrupt</span><span class="o">();</span> <span class="c1">// 通知target thread中断
-</span><span class="ln">3</span><span class="c1"></span>  <span class="kd">public</span> <span class="kt">boolean</span> <span class="nf">isInterrupted</span><span class="o">();</span> <span class="c1">// 查询target thread的中断状态
-</span><span class="ln">4</span><span class="c1"></span>  <span class="kd">public</span> <span class="kd">static</span> <span class="kt">boolean</span> <span class="nf">interrupted</span><span class="o">();</span> <span class="c1">// 清空当前thread的中断状态，返回前一个中断状态
-</span><span class="ln">5</span><span class="c1"></span><span class="o">}</span>
-</code></pre></div><h3 id="利用线程中断来取消任务的例子">利用线程中断来取消任务的例子<a class="anchor ms-1" href="#利用线程中断来取消任务的例子"><i class="fas fa-link"></i></a></h3>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln"> 1</span><span class="kd">public</span> <span class="n">Task</span> <span class="kd">implements</span> <span class="n">Runnable</span> <span class="o">{</span>
-<span class="ln"> 2</span>  <span class="kd">public</span> <span class="kt">void</span> <span class="nf">run</span><span class="o">()</span> <span class="o">{</span>
-<span class="ln"> 3</span>    <span class="k">try</span> <span class="o">{</span>
-<span class="ln"> 4</span>      <span class="c1">// 检测中断状态
-</span><span class="ln"> 5</span><span class="c1"></span>      <span class="k">while</span> <span class="o">(!</span><span class="n">Thread</span><span class="o">.</span><span class="na">currentThread</span><span class="o">().</span><span class="na">isInterrupted</span><span class="o">())</span> <span class="o">{</span>
-<span class="ln"> 6</span>        <span class="n">someBlockingMethod</span><span class="o">();</span>
-<span class="ln"> 7</span>      <span class="o">}</span>
-<span class="ln"> 8</span>    <span class="o">}</span> <span class="k">catch</span> <span class="o">(</span><span class="n">InterruptedException</span> <span class="n">e</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 9</span>      <span class="c1">// 在阻塞方法时线程被中断了
-</span><span class="ln">10</span><span class="c1"></span>      <span class="c1">// 除非你知道自己在做什么，否则你应该rethrow 或者恢复线程的中断状态
-</span><span class="ln">11</span><span class="c1"></span>      <span class="n">Thread</span><span class="o">.</span><span class="na">currentThread</span><span class="o">().</span><span class="na">interrupt</span><span class="o">();</span>
-<span class="ln">12</span>    <span class="o">}</span>
-<span class="ln">13</span>  <span class="o">}</span>
-<span class="ln">14</span><span class="o">}</span>
-</code></pre></div><h3 id="就算某个任务不可中断也要在它结束后恢复中断状态">就算某个任务不可中断也要在它结束后恢复中断状态<a class="anchor ms-1" href="#就算某个任务不可中断也要在它结束后恢复中断状态"><i class="fas fa-link"></i></a></h3>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln"> 1</span><span class="kd">public</span> <span class="n">Task</span> <span class="o">{</span>
-<span class="ln"> 2</span>  <span class="kd">public</span> <span class="kt">void</span> <span class="nf">run</span><span class="o">()</span> <span class="o">{</span>
-<span class="ln"> 3</span>    <span class="k">try</span> <span class="o">{</span>
-<span class="ln"> 4</span>      <span class="k">while</span> <span class="o">(</span><span class="kc">true</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 5</span>        <span class="k">try</span> <span class="o">{</span>
-<span class="ln"> 6</span>          <span class="n">someBlockingMethod</span><span class="o">()</span>
-<span class="ln"> 7</span>        <span class="o">}</span> <span class="k">catch</span> <span class="o">(</span><span class="n">InterruptedException</span> <span class="n">e</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 8</span>          <span class="n">interrupted</span> <span class="o">=</span> <span class="kc">true</span><span class="o">;</span>
-<span class="ln"> 9</span>        <span class="o">}</span>
-<span class="ln">10</span>      <span class="o">}</span>      
-<span class="ln">11</span>    <span class="o">}</span> <span class="k">finally</span> <span class="o">{</span>
-<span class="ln">12</span>      <span class="k">if</span> <span class="o">(</span><span class="n">interrupted</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">13</span>        <span class="n">Thread</span><span class="o">.</span><span class="na">currentThread</span><span class="o">().</span><span class="na">interrupt</span><span class="o">();</span>
-<span class="ln">14</span>      <span class="o">}</span>
-<span class="ln">15</span>    <span class="o">}</span>
-<span class="ln">16</span>  <span class="o">}</span>
-<span class="ln">17</span><span class="o">}</span>
-</code></pre></div><p>阻塞库的方法一旦探知线程中断状态，就会抛出异常，下面代码会造成死循环，他会不停抛出InterruptedException：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln"> 1</span><span class="kd">public</span> <span class="n">Task</span> <span class="o">{</span>
-<span class="ln"> 2</span>  <span class="kd">public</span> <span class="kt">void</span> <span class="nf">run</span><span class="o">()</span> <span class="o">{</span>
-<span class="ln"> 3</span>    <span class="k">while</span> <span class="o">(!</span><span class="n">blockingQueue</span><span class="o">.</span><span class="na">isEmpty</span><span class="o">())</span> <span class="o">{</span>
-<span class="ln"> 4</span>      <span class="k">try</span> <span class="o">{</span>
-<span class="ln"> 5</span>        <span class="n">blockingQueue</span><span class="o">.</span><span class="na">take</span><span class="o">();</span>
-<span class="ln"> 6</span>      <span class="o">}</span> <span class="k">catch</span> <span class="o">(</span><span class="n">InterrupttedException</span> <span class="n">e</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 7</span>        <span class="n">Thread</span><span class="o">.</span><span class="na">currentThread</span><span class="o">().</span><span class="na">interrupt</span><span class="o">();</span>
-<span class="ln"> 8</span>      <span class="o">}</span>
-<span class="ln"> 9</span>    <span class="o">}</span>
-<span class="ln">10</span>  <span class="o">}</span>
-<span class="ln">11</span><span class="o">}</span>
-</code></pre></div><h3 id="反面例子擅自中断">反面例子，擅自中断<a class="anchor ms-1" href="#反面例子擅自中断"><i class="fas fa-link"></i></a></h3>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="kd">public</span> <span class="n">Task</span> <span class="o">{</span>
+  <span class="kd">private</span> <span class="kd">volatile</span> <span class="kt">boolean</span> <span class="n">cancelled</span> <span class="o">=</span> <span class="kc">false</span><span class="o">;</span>
+  <span class="kd">public</span> <span class="kt">void</span> <span class="nf">cancel</span><span class="o">()</span> <span class="o">{</span>
+    <span class="k">this</span><span class="o">.</span><span class="na">cancelled</span> <span class="o">=</span> <span class="kc">true</span><span class="o">;</span>
+  <span class="o">}</span>
+  <span class="kd">public</span> <span class="kt">void</span> <span class="nf">run</span><span class="o">()</span> <span class="o">{</span>
+    <span class="k">if</span> <span class="o">(!</span><span class="n">cancelled</span><span class="o">)</span> <span class="o">{</span>
+      <span class="c1">// 如果这个方法阻塞了，那么Task就永远不会cancel
+</span><span class="c1"></span>      <span class="n">someBlockingMethod</span><span class="o">();</span>      
+    <span class="o">}</span>
+  <span class="o">}</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><h3 id="线程中断">线程中断<a class="anchor ms-1" href="#线程中断"><i class="fas fa-link"></i></a></h3>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="kd">public</span> <span class="kd">class</span> <span class="nc">Thread</span> <span class="o">{</span>
+  <span class="kd">public</span> <span class="kt">void</span> <span class="nf">interrupt</span><span class="o">();</span> <span class="c1">// 通知target thread中断
+</span><span class="c1"></span>  <span class="kd">public</span> <span class="kt">boolean</span> <span class="nf">isInterrupted</span><span class="o">();</span> <span class="c1">// 查询target thread的中断状态
+</span><span class="c1"></span>  <span class="kd">public</span> <span class="kd">static</span> <span class="kt">boolean</span> <span class="nf">interrupted</span><span class="o">();</span> <span class="c1">// 清空当前thread的中断状态，返回前一个中断状态
+</span><span class="c1"></span><span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><h3 id="利用线程中断来取消任务的例子">利用线程中断来取消任务的例子<a class="anchor ms-1" href="#利用线程中断来取消任务的例子"><i class="fas fa-link"></i></a></h3>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="kd">public</span> <span class="n">Task</span> <span class="kd">implements</span> <span class="n">Runnable</span> <span class="o">{</span>
+  <span class="kd">public</span> <span class="kt">void</span> <span class="nf">run</span><span class="o">()</span> <span class="o">{</span>
+    <span class="k">try</span> <span class="o">{</span>
+      <span class="c1">// 检测中断状态
+</span><span class="c1"></span>      <span class="k">while</span> <span class="o">(!</span><span class="n">Thread</span><span class="o">.</span><span class="na">currentThread</span><span class="o">().</span><span class="na">isInterrupted</span><span class="o">())</span> <span class="o">{</span>
+        <span class="n">someBlockingMethod</span><span class="o">();</span>
+      <span class="o">}</span>
+    <span class="o">}</span> <span class="k">catch</span> <span class="o">(</span><span class="n">InterruptedException</span> <span class="n">e</span><span class="o">)</span> <span class="o">{</span>
+      <span class="c1">// 在阻塞方法时线程被中断了
+</span><span class="c1"></span>      <span class="c1">// 除非你知道自己在做什么，否则你应该rethrow 或者恢复线程的中断状态
+</span><span class="c1"></span>      <span class="n">Thread</span><span class="o">.</span><span class="na">currentThread</span><span class="o">().</span><span class="na">interrupt</span><span class="o">();</span>
+    <span class="o">}</span>
+  <span class="o">}</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><h3 id="就算某个任务不可中断也要在它结束后恢复中断状态">就算某个任务不可中断也要在它结束后恢复中断状态<a class="anchor ms-1" href="#就算某个任务不可中断也要在它结束后恢复中断状态"><i class="fas fa-link"></i></a></h3>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="kd">public</span> <span class="n">Task</span> <span class="o">{</span>
+  <span class="kd">public</span> <span class="kt">void</span> <span class="nf">run</span><span class="o">()</span> <span class="o">{</span>
+    <span class="k">try</span> <span class="o">{</span>
+      <span class="k">while</span> <span class="o">(</span><span class="kc">true</span><span class="o">)</span> <span class="o">{</span>
+        <span class="k">try</span> <span class="o">{</span>
+          <span class="n">someBlockingMethod</span><span class="o">()</span>
+        <span class="o">}</span> <span class="k">catch</span> <span class="o">(</span><span class="n">InterruptedException</span> <span class="n">e</span><span class="o">)</span> <span class="o">{</span>
+          <span class="n">interrupted</span> <span class="o">=</span> <span class="kc">true</span><span class="o">;</span>
+        <span class="o">}</span>
+      <span class="o">}</span>      
+    <span class="o">}</span> <span class="k">finally</span> <span class="o">{</span>
+      <span class="k">if</span> <span class="o">(</span><span class="n">interrupted</span><span class="o">)</span> <span class="o">{</span>
+        <span class="n">Thread</span><span class="o">.</span><span class="na">currentThread</span><span class="o">().</span><span class="na">interrupt</span><span class="o">();</span>
+      <span class="o">}</span>
+    <span class="o">}</span>
+  <span class="o">}</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>阻塞库的方法一旦探知线程中断状态，就会抛出异常，下面代码会造成死循环，他会不停抛出InterruptedException：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="kd">public</span> <span class="n">Task</span> <span class="o">{</span>
+  <span class="kd">public</span> <span class="kt">void</span> <span class="nf">run</span><span class="o">()</span> <span class="o">{</span>
+    <span class="k">while</span> <span class="o">(!</span><span class="n">blockingQueue</span><span class="o">.</span><span class="na">isEmpty</span><span class="o">())</span> <span class="o">{</span>
+      <span class="k">try</span> <span class="o">{</span>
+        <span class="n">blockingQueue</span><span class="o">.</span><span class="na">take</span><span class="o">();</span>
+      <span class="o">}</span> <span class="k">catch</span> <span class="o">(</span><span class="n">InterrupttedException</span> <span class="n">e</span><span class="o">)</span> <span class="o">{</span>
+        <span class="n">Thread</span><span class="o">.</span><span class="na">currentThread</span><span class="o">().</span><span class="na">interrupt</span><span class="o">();</span>
+      <span class="o">}</span>
+    <span class="o">}</span>
+  <span class="o">}</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><h3 id="反面例子擅自中断">反面例子，擅自中断<a class="anchor ms-1" href="#反面例子擅自中断"><i class="fas fa-link"></i></a></h3>
 <ol>
 <li>不知道线程拥有者的中断策略就擅自中断</li>
 <li><code>r.run()</code>里面如果抛出了RuntimeException，返回到了caller那里，然后时间到了触发了caller线程的interruption</li>
 <li><code>r.run()</code>先结束了，然后和第2点说的一样</li>
 <li>如果<code>r.run()</code>不响应中断，那么timedRun方法就不会返回直到r.run()结束</li>
 </ol>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln">1</span><span class="c1">// 本意是控制timeRun方法的执行时长
-</span><span class="ln">2</span><span class="c1"></span><span class="kd">public</span> <span class="kt">void</span> <span class="nf">timedRun</span><span class="o">(</span><span class="n">Runnable</span> <span class="n">r</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">3</span>  <span class="kd">final</span> <span class="n">Thread</span> <span class="n">taskThread</span> <span class="o">=</span> <span class="n">Thread</span><span class="o">.</span><span class="na">currentThread</span><span class="o">();</span>
-<span class="ln">4</span>  <span class="n">scheduledExecutor</span><span class="o">.</span><span class="na">schedule</span><span class="o">(()</span> <span class="o">-&gt;</span> <span class="n">taskThread</span><span class="o">.</span><span class="na">interrupt</span><span class="o">(),</span> <span class="n">timeout</span><span class="o">,</span> <span class="n">unit</span><span class="o">);</span>
-<span class="ln">5</span>  <span class="n">r</span><span class="o">.</span><span class="na">run</span><span class="o">();</span>
-<span class="ln">6</span><span class="o">}</span>
-</code></pre></div><h3 id="用future中断">用Future中断<a class="anchor ms-1" href="#用future中断"><i class="fas fa-link"></i></a></h3>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln"> 1</span><span class="kd">public</span> <span class="kt">void</span> <span class="nf">timedRun</span><span class="o">(</span><span class="n">Runnable</span> <span class="n">r</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 2</span>  <span class="n">Future</span> <span class="n">f</span> <span class="o">=</span> <span class="n">executorService</span><span class="o">.</span><span class="na">submit</span><span class="o">(</span><span class="n">r</span><span class="o">);</span>
-<span class="ln"> 3</span>  <span class="k">try</span> <span class="o">{</span>
-<span class="ln"> 4</span>    <span class="n">f</span><span class="o">.</span><span class="na">get</span><span class="o">(</span><span class="n">timeout</span><span class="o">,</span> <span class="n">unit</span><span class="o">);</span>
-<span class="ln"> 5</span>  <span class="o">}</span> <span class="k">catch</span> <span class="o">(</span><span class="n">TimeoutException</span> <span class="n">e</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 6</span>    <span class="c1">// 下面会取消这个task的
-</span><span class="ln"> 7</span><span class="c1"></span>  <span class="o">}</span> <span class="k">catch</span> <span class="o">(</span><span class="n">ExecutionException</span> <span class="n">e</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 8</span>    <span class="c1">// 在task里出现异常，rethrow
-</span><span class="ln"> 9</span><span class="c1"></span>    <span class="k">throw</span> <span class="n">e</span><span class="o">.</span><span class="na">getCause</span><span class="o">();</span>
-<span class="ln">10</span>  <span class="o">}</span> <span class="k">finally</span> <span class="o">{</span>
-<span class="ln">11</span>    <span class="c1">// 对一个正常结束的future执行cancel是没有伤害的
-</span><span class="ln">12</span><span class="c1"></span>    <span class="n">f</span><span class="o">.</span><span class="na">cancel</span><span class="o">(</span><span class="kc">true</span><span class="o">);</span> <span class="c1">// true代表interrupt
-</span><span class="ln">13</span><span class="c1"></span>  <span class="o">}</span>
-<span class="ln">14</span><span class="o">}</span>
-</code></pre></div><h3 id="对付不响应中断">对付不响应中断<a class="anchor ms-1" href="#对付不响应中断"><i class="fas fa-link"></i></a></h3>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="c1">// 本意是控制timeRun方法的执行时长
+</span><span class="c1"></span><span class="kd">public</span> <span class="kt">void</span> <span class="nf">timedRun</span><span class="o">(</span><span class="n">Runnable</span> <span class="n">r</span><span class="o">)</span> <span class="o">{</span>
+  <span class="kd">final</span> <span class="n">Thread</span> <span class="n">taskThread</span> <span class="o">=</span> <span class="n">Thread</span><span class="o">.</span><span class="na">currentThread</span><span class="o">();</span>
+  <span class="n">scheduledExecutor</span><span class="o">.</span><span class="na">schedule</span><span class="o">(()</span> <span class="o">-&gt;</span> <span class="n">taskThread</span><span class="o">.</span><span class="na">interrupt</span><span class="o">(),</span> <span class="n">timeout</span><span class="o">,</span> <span class="n">unit</span><span class="o">);</span>
+  <span class="n">r</span><span class="o">.</span><span class="na">run</span><span class="o">();</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><h3 id="用future中断">用Future中断<a class="anchor ms-1" href="#用future中断"><i class="fas fa-link"></i></a></h3>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="kd">public</span> <span class="kt">void</span> <span class="nf">timedRun</span><span class="o">(</span><span class="n">Runnable</span> <span class="n">r</span><span class="o">)</span> <span class="o">{</span>
+  <span class="n">Future</span> <span class="n">f</span> <span class="o">=</span> <span class="n">executorService</span><span class="o">.</span><span class="na">submit</span><span class="o">(</span><span class="n">r</span><span class="o">);</span>
+  <span class="k">try</span> <span class="o">{</span>
+    <span class="n">f</span><span class="o">.</span><span class="na">get</span><span class="o">(</span><span class="n">timeout</span><span class="o">,</span> <span class="n">unit</span><span class="o">);</span>
+  <span class="o">}</span> <span class="k">catch</span> <span class="o">(</span><span class="n">TimeoutException</span> <span class="n">e</span><span class="o">)</span> <span class="o">{</span>
+    <span class="c1">// 下面会取消这个task的
+</span><span class="c1"></span>  <span class="o">}</span> <span class="k">catch</span> <span class="o">(</span><span class="n">ExecutionException</span> <span class="n">e</span><span class="o">)</span> <span class="o">{</span>
+    <span class="c1">// 在task里出现异常，rethrow
+</span><span class="c1"></span>    <span class="k">throw</span> <span class="n">e</span><span class="o">.</span><span class="na">getCause</span><span class="o">();</span>
+  <span class="o">}</span> <span class="k">finally</span> <span class="o">{</span>
+    <span class="c1">// 对一个正常结束的future执行cancel是没有伤害的
+</span><span class="c1"></span>    <span class="n">f</span><span class="o">.</span><span class="na">cancel</span><span class="o">(</span><span class="kc">true</span><span class="o">);</span> <span class="c1">// true代表interrupt
+</span><span class="c1"></span>  <span class="o">}</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><h3 id="对付不响应中断">对付不响应中断<a class="anchor ms-1" href="#对付不响应中断"><i class="fas fa-link"></i></a></h3>
 <p>有些方法不响应中断，但是我们要中断咋整？下面给了一个思路：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln"> 1</span><span class="kd">public</span> <span class="kd">class</span> <span class="nc">ReaderThread</span> <span class="kd">extends</span> <span class="n">Thread</span> <span class="o">{</span>
-<span class="ln"> 2</span>  <span class="kd">private</span> <span class="kd">final</span> <span class="n">Socket</span> <span class="n">socket</span><span class="o">;</span>
-<span class="ln"> 3</span>  <span class="kd">private</span> <span class="kd">final</span> <span class="n">InputStream</span> <span class="n">in</span><span class="o">;</span>
-<span class="ln"> 4</span>  <span class="nd">@Override</span>
-<span class="ln"> 5</span>  <span class="kd">public</span> <span class="kt">void</span> <span class="nf">interrupt</span><span class="o">()</span> <span class="o">{</span>
-<span class="ln"> 6</span>    <span class="k">try</span> <span class="o">{</span>
-<span class="ln"> 7</span>      <span class="n">socket</span><span class="o">.</span><span class="na">close</span><span class="o">();</span>
-<span class="ln"> 8</span>    <span class="o">}</span> <span class="k">catch</span> <span class="o">(</span><span class="n">IOException</span> <span class="n">ignored</span><span class="o">)</span> <span class="o">{}</span>
-<span class="ln"> 9</span>    <span class="k">finally</span> <span class="o">{</span>
-<span class="ln">10</span>      <span class="kd">super</span><span class="o">.</span><span class="na">interrupt</span><span class="o">();</span> <span class="c1">// 注意还是得让上级中断的
-</span><span class="ln">11</span><span class="c1"></span>    <span class="o">}</span>
-<span class="ln">12</span>  <span class="o">}</span>
-<span class="ln">13</span>  <span class="nd">@Override</span>
-<span class="ln">14</span>  <span class="kd">public</span> <span class="kt">void</span> <span class="nf">run</span><span class="o">()</span> <span class="o">{</span>
-<span class="ln">15</span>    <span class="n">in</span><span class="o">.</span><span class="na">read</span><span class="o">(</span><span class="n">buf</span><span class="o">);</span> <span class="c1">// 这个方法阻塞但是不响应中断
-</span><span class="ln">16</span><span class="c1"></span>  <span class="o">}</span>
-<span class="ln">17</span><span class="o">}</span>
-</code></pre></div><h3 id="对付不响应中断2">对付不响应中断2<a class="anchor ms-1" href="#对付不响应中断2"><i class="fas fa-link"></i></a></h3>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="kd">public</span> <span class="kd">class</span> <span class="nc">ReaderThread</span> <span class="kd">extends</span> <span class="n">Thread</span> <span class="o">{</span>
+  <span class="kd">private</span> <span class="kd">final</span> <span class="n">Socket</span> <span class="n">socket</span><span class="o">;</span>
+  <span class="kd">private</span> <span class="kd">final</span> <span class="n">InputStream</span> <span class="n">in</span><span class="o">;</span>
+  <span class="nd">@Override</span>
+  <span class="kd">public</span> <span class="kt">void</span> <span class="nf">interrupt</span><span class="o">()</span> <span class="o">{</span>
+    <span class="k">try</span> <span class="o">{</span>
+      <span class="n">socket</span><span class="o">.</span><span class="na">close</span><span class="o">();</span>
+    <span class="o">}</span> <span class="k">catch</span> <span class="o">(</span><span class="n">IOException</span> <span class="n">ignored</span><span class="o">)</span> <span class="o">{}</span>
+    <span class="k">finally</span> <span class="o">{</span>
+      <span class="kd">super</span><span class="o">.</span><span class="na">interrupt</span><span class="o">();</span> <span class="c1">// 注意还是得让上级中断的
+</span><span class="c1"></span>    <span class="o">}</span>
+  <span class="o">}</span>
+  <span class="nd">@Override</span>
+  <span class="kd">public</span> <span class="kt">void</span> <span class="nf">run</span><span class="o">()</span> <span class="o">{</span>
+    <span class="n">in</span><span class="o">.</span><span class="na">read</span><span class="o">(</span><span class="n">buf</span><span class="o">);</span> <span class="c1">// 这个方法阻塞但是不响应中断
+</span><span class="c1"></span>  <span class="o">}</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><h3 id="对付不响应中断2">对付不响应中断2<a class="anchor ms-1" href="#对付不响应中断2"><i class="fas fa-link"></i></a></h3>
 <p>如果你是用Executor执行，则可以这样做提供自己的<code>ThreadPoolExecutor.newTaskFor</code>实现，并提供自己的<code>Future.cancel(boolean)</code>：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln"> 1</span><span class="kd">public</span> <span class="kd">interface</span> <span class="nc">CancellableTask</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="kd">extends</span> <span class="n">Callable</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="o">{</span>
-<span class="ln"> 2</span>  <span class="kt">void</span> <span class="nf">cancel</span><span class="o">();</span>
-<span class="ln"> 3</span>  <span class="n">RunnableFuture</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="nf">newTask</span><span class="o">();</span>
-<span class="ln"> 4</span><span class="o">}</span>
-<span class="ln"> 5</span><span class="kd">public</span> <span class="kd">class</span> <span class="nc">CancellingExecutor</span> <span class="kd">extends</span> <span class="n">ThreadPoolExecutor</span> <span class="o">{</span>
-<span class="ln"> 6</span>  <span class="c1">// 看这个方法
-</span><span class="ln"> 7</span><span class="c1"></span>  <span class="nd">@Override</span>
-<span class="ln"> 8</span>  <span class="kd">protected</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="n">RunnableFuture</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="nf">newTaskFor</span><span class="o">(</span><span class="n">Callable</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="n">callable</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 9</span>    <span class="k">if</span> <span class="o">(</span><span class="n">callable</span> <span class="k">instanceof</span> <span class="n">CancellableTask</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">10</span>      <span class="k">return</span> <span class="o">((</span><span class="n">CancellableTask</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;)</span> <span class="n">callable</span><span class="o">).</span><span class="na">newTask</span><span class="o">();</span>
-<span class="ln">11</span>    <span class="o">}</span>
-<span class="ln">12</span>    <span class="k">return</span> <span class="kd">super</span><span class="o">.</span><span class="na">newTaskFor</span><span class="o">(</span><span class="n">callable</span><span class="o">);</span>
-<span class="ln">13</span>  <span class="o">}</span>
-<span class="ln">14</span><span class="o">}</span>
-<span class="ln">15</span><span class="kd">public</span> <span class="kd">abstract</span> <span class="kd">class</span> <span class="nc">SocketUsingTask</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="kd">implements</span> <span class="n">CancellableTask</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="o">{</span>
-<span class="ln">16</span>  <span class="kd">private</span> <span class="n">Socket</span> <span class="n">socket</span><span class="o">;</span>
-<span class="ln">17</span>  <span class="kd">public</span> <span class="kd">synchronized</span> <span class="kt">void</span> <span class="nf">cancel</span><span class="o">()</span> <span class="o">{</span>
-<span class="ln">18</span>    <span class="k">try</span> <span class="o">{</span>
-<span class="ln">19</span>      <span class="k">if</span> <span class="o">(</span><span class="n">socket</span> <span class="o">!=</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">20</span>        <span class="n">socket</span><span class="o">.</span><span class="na">close</span><span class="o">();</span>
-<span class="ln">21</span>      <span class="o">}</span>
-<span class="ln">22</span>    <span class="o">}</span> <span class="k">catch</span> <span class="o">(</span><span class="n">IOException</span> <span class="n">ignored</span><span class="o">)</span> <span class="o">{}</span>
-<span class="ln">23</span>  <span class="o">}</span>
-<span class="ln">24</span>  <span class="kd">public</span> <span class="n">RunnableFuture</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="nf">newTask</span><span class="o">()</span> <span class="o">{</span>
-<span class="ln">25</span>    <span class="k">return</span> <span class="k">new</span> <span class="n">FutureTask</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;(</span><span class="k">this</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">26</span>      <span class="c1">// 看这个方法
-</span><span class="ln">27</span><span class="c1"></span>      <span class="nd">@Override</span>
-<span class="ln">28</span>      <span class="kd">public</span> <span class="kt">boolean</span> <span class="nf">cancel</span><span class="o">(</span><span class="kt">boolean</span> <span class="n">mayInterruptIfRunning</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">29</span>        <span class="k">try</span> <span class="o">{</span>
-<span class="ln">30</span>          <span class="k">try</span> <span class="o">{</span>
-<span class="ln">31</span>            <span class="n">SocketUsingTask</span><span class="o">.</span><span class="na">this</span><span class="o">.</span><span class="na">cancel</span><span class="o">()</span>            
-<span class="ln">32</span>          <span class="o">}</span> <span class="k">finally</span> <span class="o">{</span>
-<span class="ln">33</span>            <span class="k">return</span> <span class="kd">super</span><span class="o">.</span><span class="na">cancel</span><span class="o">(</span><span class="n">mayInterruptIfRunning</span><span class="o">);</span>
-<span class="ln">34</span>          <span class="o">}</span>
-<span class="ln">35</span>        <span class="o">}</span>
-<span class="ln">36</span>      <span class="o">}</span>
-<span class="ln">37</span>    <span class="o">}</span>
-<span class="ln">38</span>  <span class="o">}</span>
-<span class="ln">39</span><span class="o">}</span>
-</code></pre></div><h2 id="停止基于线程的service">停止基于线程的Service<a class="anchor ms-1" href="#停止基于线程的service"><i class="fas fa-link"></i></a></h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="kd">public</span> <span class="kd">interface</span> <span class="nc">CancellableTask</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="kd">extends</span> <span class="n">Callable</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="o">{</span>
+  <span class="kt">void</span> <span class="nf">cancel</span><span class="o">();</span>
+  <span class="n">RunnableFuture</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="nf">newTask</span><span class="o">();</span>
+<span class="o">}</span>
+<span class="kd">public</span> <span class="kd">class</span> <span class="nc">CancellingExecutor</span> <span class="kd">extends</span> <span class="n">ThreadPoolExecutor</span> <span class="o">{</span>
+  <span class="c1">// 看这个方法
+</span><span class="c1"></span>  <span class="nd">@Override</span>
+  <span class="kd">protected</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="n">RunnableFuture</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="nf">newTaskFor</span><span class="o">(</span><span class="n">Callable</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="n">callable</span><span class="o">)</span> <span class="o">{</span>
+    <span class="k">if</span> <span class="o">(</span><span class="n">callable</span> <span class="k">instanceof</span> <span class="n">CancellableTask</span><span class="o">)</span> <span class="o">{</span>
+      <span class="k">return</span> <span class="o">((</span><span class="n">CancellableTask</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;)</span> <span class="n">callable</span><span class="o">).</span><span class="na">newTask</span><span class="o">();</span>
+    <span class="o">}</span>
+    <span class="k">return</span> <span class="kd">super</span><span class="o">.</span><span class="na">newTaskFor</span><span class="o">(</span><span class="n">callable</span><span class="o">);</span>
+  <span class="o">}</span>
+<span class="o">}</span>
+<span class="kd">public</span> <span class="kd">abstract</span> <span class="kd">class</span> <span class="nc">SocketUsingTask</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="kd">implements</span> <span class="n">CancellableTask</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="o">{</span>
+  <span class="kd">private</span> <span class="n">Socket</span> <span class="n">socket</span><span class="o">;</span>
+  <span class="kd">public</span> <span class="kd">synchronized</span> <span class="kt">void</span> <span class="nf">cancel</span><span class="o">()</span> <span class="o">{</span>
+    <span class="k">try</span> <span class="o">{</span>
+      <span class="k">if</span> <span class="o">(</span><span class="n">socket</span> <span class="o">!=</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
+        <span class="n">socket</span><span class="o">.</span><span class="na">close</span><span class="o">();</span>
+      <span class="o">}</span>
+    <span class="o">}</span> <span class="k">catch</span> <span class="o">(</span><span class="n">IOException</span> <span class="n">ignored</span><span class="o">)</span> <span class="o">{}</span>
+  <span class="o">}</span>
+  <span class="kd">public</span> <span class="n">RunnableFuture</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="nf">newTask</span><span class="o">()</span> <span class="o">{</span>
+    <span class="k">return</span> <span class="k">new</span> <span class="n">FutureTask</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;(</span><span class="k">this</span><span class="o">)</span> <span class="o">{</span>
+      <span class="c1">// 看这个方法
+</span><span class="c1"></span>      <span class="nd">@Override</span>
+      <span class="kd">public</span> <span class="kt">boolean</span> <span class="nf">cancel</span><span class="o">(</span><span class="kt">boolean</span> <span class="n">mayInterruptIfRunning</span><span class="o">)</span> <span class="o">{</span>
+        <span class="k">try</span> <span class="o">{</span>
+          <span class="k">try</span> <span class="o">{</span>
+            <span class="n">SocketUsingTask</span><span class="o">.</span><span class="na">this</span><span class="o">.</span><span class="na">cancel</span><span class="o">()</span>            
+          <span class="o">}</span> <span class="k">finally</span> <span class="o">{</span>
+            <span class="k">return</span> <span class="kd">super</span><span class="o">.</span><span class="na">cancel</span><span class="o">(</span><span class="n">mayInterruptIfRunning</span><span class="o">);</span>
+          <span class="o">}</span>
+        <span class="o">}</span>
+      <span class="o">}</span>
+    <span class="o">}</span>
+  <span class="o">}</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><h2 id="停止基于线程的service">停止基于线程的Service<a class="anchor ms-1" href="#停止基于线程的service"><i class="fas fa-link"></i></a></h2>
 <img src="stopping-service.png" style="zoom:50%" />
 <h3 id="利用executorservice">利用ExecutorService<a class="anchor ms-1" href="#利用executorservice"><i class="fas fa-link"></i></a></h3>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln"> 1</span><span class="kd">public</span> <span class="kd">class</span> <span class="nc">LogService</span> <span class="o">{</span>
-<span class="ln"> 2</span>  <span class="kd">private</span> <span class="kd">final</span> <span class="n">ExecutorService</span> <span class="n">exec</span> <span class="o">=</span> <span class="o">...;</span>
-<span class="ln"> 3</span>  <span class="kd">public</span> <span class="kt">void</span> <span class="nf">stop</span><span class="o">()</span> <span class="kd">throws</span> <span class="n">InterruptionException</span> <span class="o">{</span>
-<span class="ln"> 4</span>    <span class="k">try</span> <span class="o">{</span>
-<span class="ln"> 5</span>      <span class="n">exec</span><span class="o">.</span><span class="na">shutdown</span><span class="o">();</span>
-<span class="ln"> 6</span>      <span class="n">exec</span><span class="o">.</span><span class="na">awaitTermination</span><span class="o">(</span><span class="n">timeout</span><span class="o">,</span> <span class="n">unit</span><span class="o">);</span>
-<span class="ln"> 7</span>    <span class="o">}</span> <span class="k">finally</span> <span class="o">{</span>
-<span class="ln"> 8</span>      <span class="n">writer</span><span class="o">.</span><span class="na">close</span><span class="o">();</span>
-<span class="ln"> 9</span>    <span class="o">}</span>
-<span class="ln">10</span>  <span class="o">}</span>
-<span class="ln">11</span>  <span class="kd">public</span> <span class="kt">void</span> <span class="nf">log</span><span class="o">(</span><span class="n">String</span> <span class="n">msg</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">12</span>    <span class="k">try</span> <span class="o">{</span>
-<span class="ln">13</span>      <span class="n">exec</span><span class="o">.</span><span class="na">execute</span><span class="o">(</span><span class="k">new</span> <span class="n">WriteTask</span><span class="o">(</span><span class="n">msg</span><span class="o">));</span>
-<span class="ln">14</span>    <span class="o">}</span> <span class="k">catch</span> <span class="o">(</span><span class="n">RejectedExecutionException</span> <span class="n">ignored</span><span class="o">)</span> <span class="o">{}</span>
-<span class="ln">15</span>  <span class="o">}</span>
-<span class="ln">16</span><span class="o">}</span>
-</code></pre></div><h3 id="利用poison-pills">利用Poison Pills<a class="anchor ms-1" href="#利用poison-pills"><i class="fas fa-link"></i></a></h3>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln">1</span><span class="n">producer</span><span class="o">.(</span><span class="n">POISON_PILL</span><span class="o">);</span>
-<span class="ln">2</span>
-<span class="ln">3</span><span class="k">if</span> <span class="o">(</span><span class="n">POISON_PILL</span> <span class="o">==</span> <span class="n">consumer</span><span class="o">.</span><span class="na">take</span><span class="o">())</span> <span class="o">{</span>
-<span class="ln">4</span>  <span class="n">doShutdownWork</span><span class="o">();</span>
-<span class="ln">5</span><span class="o">}</span>
-</code></pre></div><h3 id="跟踪shutdownnow时开始但未结束的任务">跟踪shutdownNow时开始但未结束的任务<a class="anchor ms-1" href="#跟踪shutdownnow时开始但未结束的任务"><i class="fas fa-link"></i></a></h3>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="kd">public</span> <span class="kd">class</span> <span class="nc">LogService</span> <span class="o">{</span>
+  <span class="kd">private</span> <span class="kd">final</span> <span class="n">ExecutorService</span> <span class="n">exec</span> <span class="o">=</span> <span class="o">...;</span>
+  <span class="kd">public</span> <span class="kt">void</span> <span class="nf">stop</span><span class="o">()</span> <span class="kd">throws</span> <span class="n">InterruptionException</span> <span class="o">{</span>
+    <span class="k">try</span> <span class="o">{</span>
+      <span class="n">exec</span><span class="o">.</span><span class="na">shutdown</span><span class="o">();</span>
+      <span class="n">exec</span><span class="o">.</span><span class="na">awaitTermination</span><span class="o">(</span><span class="n">timeout</span><span class="o">,</span> <span class="n">unit</span><span class="o">);</span>
+    <span class="o">}</span> <span class="k">finally</span> <span class="o">{</span>
+      <span class="n">writer</span><span class="o">.</span><span class="na">close</span><span class="o">();</span>
+    <span class="o">}</span>
+  <span class="o">}</span>
+  <span class="kd">public</span> <span class="kt">void</span> <span class="nf">log</span><span class="o">(</span><span class="n">String</span> <span class="n">msg</span><span class="o">)</span> <span class="o">{</span>
+    <span class="k">try</span> <span class="o">{</span>
+      <span class="n">exec</span><span class="o">.</span><span class="na">execute</span><span class="o">(</span><span class="k">new</span> <span class="n">WriteTask</span><span class="o">(</span><span class="n">msg</span><span class="o">));</span>
+    <span class="o">}</span> <span class="k">catch</span> <span class="o">(</span><span class="n">RejectedExecutionException</span> <span class="n">ignored</span><span class="o">)</span> <span class="o">{}</span>
+  <span class="o">}</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><h3 id="利用poison-pills">利用Poison Pills<a class="anchor ms-1" href="#利用poison-pills"><i class="fas fa-link"></i></a></h3>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="n">producer</span><span class="o">.(</span><span class="n">POISON_PILL</span><span class="o">);</span>
+
+<span class="k">if</span> <span class="o">(</span><span class="n">POISON_PILL</span> <span class="o">==</span> <span class="n">consumer</span><span class="o">.</span><span class="na">take</span><span class="o">())</span> <span class="o">{</span>
+  <span class="n">doShutdownWork</span><span class="o">();</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><h3 id="跟踪shutdownnow时开始但未结束的任务">跟踪shutdownNow时开始但未结束的任务<a class="anchor ms-1" href="#跟踪shutdownnow时开始但未结束的任务"><i class="fas fa-link"></i></a></h3>
 <p><code>ExecutorService.shutdownNow</code>会返回还未开始的任务，但是不会返回开始了但是没有结束的任务，用类似下面的代码可以得到这些任务：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln"> 1</span><span class="kd">public</span> <span class="kd">class</span> <span class="nc">TrackingExecutor</span> <span class="kd">extends</span> <span class="n">AbstractExecutorService</span> <span class="o">{</span>
-<span class="ln"> 2</span>  <span class="kd">private</span> <span class="kd">final</span> <span class="n">ExecutorService</span> <span class="n">exec</span><span class="o">;</span>
-<span class="ln"> 3</span>  <span class="kd">private</span> <span class="kd">final</span> <span class="n">Set</span><span class="o">&lt;</span><span class="n">Runnable</span><span class="o">&gt;</span> <span class="n">tasksCancelledAtShutdown</span> <span class="o">=</span> 
-<span class="ln"> 4</span>    <span class="n">Collections</span><span class="o">.</span><span class="na">synchronizedSet</span><span class="o">(</span><span class="k">new</span> <span class="n">HashSet</span><span class="o">&lt;</span><span class="n">Runnable</span><span class="o">&gt;());</span>
-<span class="ln"> 5</span>  <span class="kd">public</span> <span class="n">List</span><span class="o">&lt;</span><span class="n">Runnable</span><span class="o">&gt;</span> <span class="nf">getCancelledTasks</span><span class="o">()</span> <span class="o">{</span>
-<span class="ln"> 6</span>    <span class="k">if</span> <span class="o">(!</span><span class="n">exec</span><span class="o">.</span><span class="na">isTerminated</span><span class="o">())</span> <span class="o">{</span>
-<span class="ln"> 7</span>      <span class="k">throw</span> <span class="k">new</span> <span class="n">IllegalStateException</span><span class="o">(...);</span>
-<span class="ln"> 8</span>    <span class="o">}</span>
-<span class="ln"> 9</span>    <span class="k">return</span> <span class="k">new</span> <span class="n">ArrayList</span><span class="o">&lt;&gt;(</span><span class="n">tasksCancelledAtShutdown</span><span class="o">);</span>
-<span class="ln">10</span>  <span class="o">}</span>
-<span class="ln">11</span>  <span class="kd">public</span> <span class="kt">void</span> <span class="nf">execute</span><span class="o">(</span><span class="kd">final</span> <span class="n">Runnable</span> <span class="n">runnable</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">12</span>    <span class="n">exec</span><span class="o">.</span><span class="na">execute</span><span class="o">(()</span> <span class="o">-&gt;</span> <span class="o">{</span>
-<span class="ln">13</span>      <span class="k">try</span> <span class="o">{</span>
-<span class="ln">14</span>        <span class="n">runnable</span><span class="o">.</span><span class="na">run</span><span class="o">();</span>
-<span class="ln">15</span>      <span class="o">}</span> <span class="k">finally</span> <span class="o">{</span>
-<span class="ln">16</span>        <span class="k">if</span> <span class="o">(</span><span class="n">isShutdown</span><span class="o">()</span> <span class="o">&amp;&amp;</span> <span class="n">Thread</span><span class="o">.</span><span class="na">currentThread</span><span class="o">.</span><span class="na">isInterrupted</span><span class="o">())</span> <span class="o">{</span>
-<span class="ln">17</span>          <span class="n">tasksCancelledAtShutdown</span><span class="o">.</span><span class="na">add</span><span class="o">(</span><span class="n">runnable</span><span class="o">);</span>
-<span class="ln">18</span>        <span class="o">}</span>
-<span class="ln">19</span>      <span class="o">}</span>
-<span class="ln">20</span>    <span class="o">})</span>
-<span class="ln">21</span>  <span class="o">}</span>
-<span class="ln">22</span><span class="o">}</span>
-</code></pre></div><h2 id="线程异常退出">线程异常退出<a class="anchor ms-1" href="#线程异常退出"><i class="fas fa-link"></i></a></h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="kd">public</span> <span class="kd">class</span> <span class="nc">TrackingExecutor</span> <span class="kd">extends</span> <span class="n">AbstractExecutorService</span> <span class="o">{</span>
+  <span class="kd">private</span> <span class="kd">final</span> <span class="n">ExecutorService</span> <span class="n">exec</span><span class="o">;</span>
+  <span class="kd">private</span> <span class="kd">final</span> <span class="n">Set</span><span class="o">&lt;</span><span class="n">Runnable</span><span class="o">&gt;</span> <span class="n">tasksCancelledAtShutdown</span> <span class="o">=</span> 
+    <span class="n">Collections</span><span class="o">.</span><span class="na">synchronizedSet</span><span class="o">(</span><span class="k">new</span> <span class="n">HashSet</span><span class="o">&lt;</span><span class="n">Runnable</span><span class="o">&gt;());</span>
+  <span class="kd">public</span> <span class="n">List</span><span class="o">&lt;</span><span class="n">Runnable</span><span class="o">&gt;</span> <span class="nf">getCancelledTasks</span><span class="o">()</span> <span class="o">{</span>
+    <span class="k">if</span> <span class="o">(!</span><span class="n">exec</span><span class="o">.</span><span class="na">isTerminated</span><span class="o">())</span> <span class="o">{</span>
+      <span class="k">throw</span> <span class="k">new</span> <span class="n">IllegalStateException</span><span class="o">(...);</span>
+    <span class="o">}</span>
+    <span class="k">return</span> <span class="k">new</span> <span class="n">ArrayList</span><span class="o">&lt;&gt;(</span><span class="n">tasksCancelledAtShutdown</span><span class="o">);</span>
+  <span class="o">}</span>
+  <span class="kd">public</span> <span class="kt">void</span> <span class="nf">execute</span><span class="o">(</span><span class="kd">final</span> <span class="n">Runnable</span> <span class="n">runnable</span><span class="o">)</span> <span class="o">{</span>
+    <span class="n">exec</span><span class="o">.</span><span class="na">execute</span><span class="o">(()</span> <span class="o">-&gt;</span> <span class="o">{</span>
+      <span class="k">try</span> <span class="o">{</span>
+        <span class="n">runnable</span><span class="o">.</span><span class="na">run</span><span class="o">();</span>
+      <span class="o">}</span> <span class="k">finally</span> <span class="o">{</span>
+        <span class="k">if</span> <span class="o">(</span><span class="n">isShutdown</span><span class="o">()</span> <span class="o">&amp;&amp;</span> <span class="n">Thread</span><span class="o">.</span><span class="na">currentThread</span><span class="o">.</span><span class="na">isInterrupted</span><span class="o">())</span> <span class="o">{</span>
+          <span class="n">tasksCancelledAtShutdown</span><span class="o">.</span><span class="na">add</span><span class="o">(</span><span class="n">runnable</span><span class="o">);</span>
+        <span class="o">}</span>
+      <span class="o">}</span>
+    <span class="o">})</span>
+  <span class="o">}</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><h2 id="线程异常退出">线程异常退出<a class="anchor ms-1" href="#线程异常退出"><i class="fas fa-link"></i></a></h2>
 <img src="abnormal-termination.png" style="zoom:50%" />
 <p>下面的代码在线程异常退出前告知框架它死了：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln"> 1</span><span class="kd">public</span> <span class="kt">void</span> <span class="nf">run</span><span class="o">()</span> <span class="o">{</span>
-<span class="ln"> 2</span>  <span class="n">Throwable</span> <span class="n">thrown</span> <span class="o">=</span> <span class="kc">null</span><span class="o">;</span>
-<span class="ln"> 3</span>  <span class="k">try</span> <span class="o">{</span>
-<span class="ln"> 4</span>    <span class="k">while</span> <span class="o">(!</span><span class="n">isInterrupted</span><span class="o">())</span> <span class="o">{</span>
-<span class="ln"> 5</span>      <span class="n">runTask</span><span class="o">(</span><span class="n">getTaskFromWorkQueue</span><span class="o">());</span>
-<span class="ln"> 6</span>    <span class="o">}</span>
-<span class="ln"> 7</span>  <span class="o">}</span> <span class="k">catch</span> <span class="o">(</span><span class="n">Throwable</span> <span class="n">e</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 8</span>    <span class="n">thrown</span> <span class="o">=</span> <span class="n">e</span><span class="o">;</span>
-<span class="ln"> 9</span>  <span class="o">}</span> <span class="k">finally</span> <span class="o">{</span>
-<span class="ln">10</span>    <span class="n">threadExited</span><span class="o">(</span><span class="k">this</span><span class="o">,</span> <span class="n">thrown</span><span class="o">);</span>
-<span class="ln">11</span>  <span class="o">}</span>
-<span class="ln">12</span><span class="o">}</span>
-</code></pre></div><h2 id="jvm-shutdown">JVM shutdown<a class="anchor ms-1" href="#jvm-shutdown"><i class="fas fa-link"></i></a></h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="kd">public</span> <span class="kt">void</span> <span class="nf">run</span><span class="o">()</span> <span class="o">{</span>
+  <span class="n">Throwable</span> <span class="n">thrown</span> <span class="o">=</span> <span class="kc">null</span><span class="o">;</span>
+  <span class="k">try</span> <span class="o">{</span>
+    <span class="k">while</span> <span class="o">(!</span><span class="n">isInterrupted</span><span class="o">())</span> <span class="o">{</span>
+      <span class="n">runTask</span><span class="o">(</span><span class="n">getTaskFromWorkQueue</span><span class="o">());</span>
+    <span class="o">}</span>
+  <span class="o">}</span> <span class="k">catch</span> <span class="o">(</span><span class="n">Throwable</span> <span class="n">e</span><span class="o">)</span> <span class="o">{</span>
+    <span class="n">thrown</span> <span class="o">=</span> <span class="n">e</span><span class="o">;</span>
+  <span class="o">}</span> <span class="k">finally</span> <span class="o">{</span>
+    <span class="n">threadExited</span><span class="o">(</span><span class="k">this</span><span class="o">,</span> <span class="n">thrown</span><span class="o">);</span>
+  <span class="o">}</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><h2 id="jvm-shutdown">JVM shutdown<a class="anchor ms-1" href="#jvm-shutdown"><i class="fas fa-link"></i></a></h2>
 <img src="jvm-shutdown.png" style="zoom:50%" /></div></div>
   <div class="card-footer"><div class="post-navs d-flex justify-content-evenly">
   <div class="post-nav post-prev"><i class="fas fa-fw fa-chevron-left"></i>

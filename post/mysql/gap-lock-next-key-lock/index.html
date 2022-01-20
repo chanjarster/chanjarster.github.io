@@ -12,7 +12,7 @@
 <meta name="description" content="" /><meta itemprop="name" content="MySQL - 幻读、间隙锁和next-key lock">
 <meta itemprop="description" content=""><meta itemprop="datePublished" content="2021-10-09T16:03:02+08:00" />
 <meta itemprop="dateModified" content="2021-10-09T16:03:02+08:00" />
-<meta itemprop="wordCount" content="2112">
+<meta itemprop="wordCount" content="1893">
 <meta itemprop="keywords" content="mysql," /><meta property="og:title" content="MySQL - 幻读、间隙锁和next-key lock" />
 <meta property="og:description" content="" />
 <meta property="og:type" content="article" />
@@ -220,7 +220,7 @@
   <span class="post-date" title="创建于 2021-10-09 16:03:02 &#43;0800 CST。">
     2021-10-09
   </span><span class="post-reading-time">
-    5 分钟阅读
+    4 分钟阅读
   </span><span class="post-taxonomies"><a href="/tags/mysql/" class="badge post-taxonomy">mysql</a></span>
 </div>
 <div class="post-content mb-3"><p>间隙锁和next-key lock是为了解决幻读问题的，先回顾一下幻读的定义：</p>
@@ -229,14 +229,27 @@
 </blockquote>
 <h2 id="幻读">幻读<a class="anchor ms-1" href="#幻读"><i class="fas fa-link"></i></a></h2>
 <p>MySQL默认隔离级别为Repeatable Read（可重复读）：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="ln">1</span><span class="k">show</span><span class="w"> </span><span class="n">variables</span><span class="w"> </span><span class="k">like</span><span class="w"> </span><span class="s1">&#39;%isolation%&#39;</span><span class="p">;</span><span class="w">
-</span><span class="ln">2</span><span class="w">
-</span><span class="ln">3</span><span class="w"></span><span class="o">+</span><span class="c1">-----------------------+-----------------+
-</span><span class="ln">4</span><span class="c1"></span><span class="o">|</span><span class="w"> </span><span class="n">Variable_name</span><span class="w">         </span><span class="o">|</span><span class="w"> </span><span class="n">Value</span><span class="w">           </span><span class="o">|</span><span class="w">
-</span><span class="ln">5</span><span class="w"></span><span class="o">+</span><span class="c1">-----------------------+-----------------+
-</span><span class="ln">6</span><span class="c1"></span><span class="o">|</span><span class="w"> </span><span class="n">transaction_isolation</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="k">REPEATABLE</span><span class="o">-</span><span class="k">READ</span><span class="w"> </span><span class="o">|</span><span class="w">
-</span><span class="ln">7</span><span class="w"></span><span class="o">+</span><span class="c1">-----------------------+-----------------+
-</span></code></pre></div><p>在这个隔离级别下，下面所讲的间隙锁、next-key lock才会起作用。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="k">show</span><span class="w"> </span><span class="n">variables</span><span class="w"> </span><span class="k">like</span><span class="w"> </span><span class="s1">&#39;%isolation%&#39;</span><span class="p">;</span><span class="w">
+</span><span class="w">
+</span><span class="w"></span><span class="o">+</span><span class="c1">-----------------------+-----------------+
+</span><span class="c1"></span><span class="o">|</span><span class="w"> </span><span class="n">Variable_name</span><span class="w">         </span><span class="o">|</span><span class="w"> </span><span class="n">Value</span><span class="w">           </span><span class="o">|</span><span class="w">
+</span><span class="w"></span><span class="o">+</span><span class="c1">-----------------------+-----------------+
+</span><span class="c1"></span><span class="o">|</span><span class="w"> </span><span class="n">transaction_isolation</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="k">REPEATABLE</span><span class="o">-</span><span class="k">READ</span><span class="w"> </span><span class="o">|</span><span class="w">
+</span><span class="w"></span><span class="o">+</span><span class="c1">-----------------------+-----------------+
+</span></code></pre></td></tr></table>
+</div>
+</div><p>在这个隔离级别下，下面所讲的间隙锁、next-key lock才会起作用。</p>
 <p>再接下去看间隙锁和next-key lock之前，先复习一下<code>SELECT ... FOR SHARE</code>和<code>SELECT ... FOR UPDATE</code>：</p>
 <blockquote>
 <p><code>SELECT ... FOR SHARE/LOCK IN SHARE MODE</code>只会锁定扫描过程中<em><strong>使用</strong></em>的索引里的记录行，即如果你的查询正好<em><strong>使用</strong></em>了覆盖索引，那么只有这个索引里的记录行会被锁定，主键索引的记录行是不会被锁定的。</p>
@@ -256,25 +269,48 @@
 <p>传统的行锁只能锁定表中已经存在的行，因此就算你把表中所有行都锁住，也无法阻止插入新行（幻读问题）。为了解决这个问题InnoDB引入<a href="https://dev.mysql.com/doc/refman/8.0/en/glossary.html#glos_gap_lock" target="_blank" rel="noopener noreferrer">gap lock</a>
 （间隙锁）。</p>
 <p>表t就有7个间隙：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="ln"> 1</span><span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="o">`</span><span class="n">t</span><span class="o">`</span><span class="w"> </span><span class="p">(</span><span class="w">
-</span><span class="ln"> 2</span><span class="w">  </span><span class="o">`</span><span class="n">id</span><span class="o">`</span><span class="w"> </span><span class="nb">int</span><span class="p">(</span><span class="mi">11</span><span class="p">)</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="p">,</span><span class="w">
-</span><span class="ln"> 3</span><span class="w">  </span><span class="o">`</span><span class="k">c</span><span class="o">`</span><span class="w"> </span><span class="nb">int</span><span class="p">(</span><span class="mi">11</span><span class="p">)</span><span class="w"> </span><span class="k">DEFAULT</span><span class="w"> </span><span class="k">NULL</span><span class="p">,</span><span class="w">
-</span><span class="ln"> 4</span><span class="w">  </span><span class="o">`</span><span class="n">d</span><span class="o">`</span><span class="w"> </span><span class="nb">int</span><span class="p">(</span><span class="mi">11</span><span class="p">)</span><span class="w"> </span><span class="k">DEFAULT</span><span class="w"> </span><span class="k">NULL</span><span class="p">,</span><span class="w">
-</span><span class="ln"> 5</span><span class="w">  </span><span class="k">PRIMARY</span><span class="w"> </span><span class="k">KEY</span><span class="w"> </span><span class="p">(</span><span class="o">`</span><span class="n">id</span><span class="o">`</span><span class="p">),</span><span class="w">
-</span><span class="ln"> 6</span><span class="w">  </span><span class="k">KEY</span><span class="w"> </span><span class="o">`</span><span class="k">c</span><span class="o">`</span><span class="w"> </span><span class="p">(</span><span class="o">`</span><span class="k">c</span><span class="o">`</span><span class="p">)</span><span class="w">
-</span><span class="ln"> 7</span><span class="w"></span><span class="p">)</span><span class="w"> </span><span class="n">ENGINE</span><span class="o">=</span><span class="n">InnoDB</span><span class="p">;</span><span class="w">
-</span><span class="ln"> 8</span><span class="w">
-</span><span class="ln"> 9</span><span class="w"></span><span class="k">insert</span><span class="w"> </span><span class="k">into</span><span class="w"> </span><span class="n">t</span><span class="w"> </span><span class="k">values</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">),(</span><span class="mi">5</span><span class="p">,</span><span class="mi">5</span><span class="p">,</span><span class="mi">5</span><span class="p">),</span><span class="w">
-</span><span class="ln">10</span><span class="w"></span><span class="p">(</span><span class="mi">10</span><span class="p">,</span><span class="mi">10</span><span class="p">,</span><span class="mi">10</span><span class="p">),(</span><span class="mi">15</span><span class="p">,</span><span class="mi">15</span><span class="p">,</span><span class="mi">15</span><span class="p">),(</span><span class="mi">20</span><span class="p">,</span><span class="mi">20</span><span class="p">,</span><span class="mi">20</span><span class="p">),(</span><span class="mi">25</span><span class="p">,</span><span class="mi">25</span><span class="p">,</span><span class="mi">25</span><span class="p">);</span><span class="w">
-</span></code></pre></div><p><img class="img-fluid" alt="" src="/post/mysql/gap-lock-next-key-lock/gap.webp" loading="lazy"
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="o">`</span><span class="n">t</span><span class="o">`</span><span class="w"> </span><span class="p">(</span><span class="w">
+</span><span class="w">  </span><span class="o">`</span><span class="n">id</span><span class="o">`</span><span class="w"> </span><span class="nb">int</span><span class="p">(</span><span class="mi">11</span><span class="p">)</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="p">,</span><span class="w">
+</span><span class="w">  </span><span class="o">`</span><span class="k">c</span><span class="o">`</span><span class="w"> </span><span class="nb">int</span><span class="p">(</span><span class="mi">11</span><span class="p">)</span><span class="w"> </span><span class="k">DEFAULT</span><span class="w"> </span><span class="k">NULL</span><span class="p">,</span><span class="w">
+</span><span class="w">  </span><span class="o">`</span><span class="n">d</span><span class="o">`</span><span class="w"> </span><span class="nb">int</span><span class="p">(</span><span class="mi">11</span><span class="p">)</span><span class="w"> </span><span class="k">DEFAULT</span><span class="w"> </span><span class="k">NULL</span><span class="p">,</span><span class="w">
+</span><span class="w">  </span><span class="k">PRIMARY</span><span class="w"> </span><span class="k">KEY</span><span class="w"> </span><span class="p">(</span><span class="o">`</span><span class="n">id</span><span class="o">`</span><span class="p">),</span><span class="w">
+</span><span class="w">  </span><span class="k">KEY</span><span class="w"> </span><span class="o">`</span><span class="k">c</span><span class="o">`</span><span class="w"> </span><span class="p">(</span><span class="o">`</span><span class="k">c</span><span class="o">`</span><span class="p">)</span><span class="w">
+</span><span class="w"></span><span class="p">)</span><span class="w"> </span><span class="n">ENGINE</span><span class="o">=</span><span class="n">InnoDB</span><span class="p">;</span><span class="w">
+</span><span class="w">
+</span><span class="w"></span><span class="k">insert</span><span class="w"> </span><span class="k">into</span><span class="w"> </span><span class="n">t</span><span class="w"> </span><span class="k">values</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">),(</span><span class="mi">5</span><span class="p">,</span><span class="mi">5</span><span class="p">,</span><span class="mi">5</span><span class="p">),</span><span class="w">
+</span><span class="w"></span><span class="p">(</span><span class="mi">10</span><span class="p">,</span><span class="mi">10</span><span class="p">,</span><span class="mi">10</span><span class="p">),(</span><span class="mi">15</span><span class="p">,</span><span class="mi">15</span><span class="p">,</span><span class="mi">15</span><span class="p">),(</span><span class="mi">20</span><span class="p">,</span><span class="mi">20</span><span class="p">,</span><span class="mi">20</span><span class="p">),(</span><span class="mi">25</span><span class="p">,</span><span class="mi">25</span><span class="p">,</span><span class="mi">25</span><span class="p">);</span><span class="w">
+</span></code></pre></td></tr></table>
+</div>
+</div><p><img class="img-fluid" alt="" src="/post/mysql/gap-lock-next-key-lock/gap.webp" loading="lazy"
   
    />
 
 </p>
 <p>间隙锁就是把索引的间隙给锁住，防止往中间插入新行。</p>
 <p>所以下面语句在扫描全表的过程中，除了把6个已有行（主键索引）加了锁，也把主键索引的7个间隙加上锁：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="ln">1</span><span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">t</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">d</span><span class="o">=</span><span class="mi">5</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="k">update</span><span class="w">
-</span></code></pre></div><p>和行锁有冲突的关系的是“另外一个行锁”，但是<strong>跟间隙锁存在冲突关系的，是“往这个间隙中插入一个记录”这个操作</strong>。所以下面的session B不会被阻塞：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">t</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">d</span><span class="o">=</span><span class="mi">5</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="k">update</span><span class="w">
+</span></code></pre></td></tr></table>
+</div>
+</div><p>和行锁有冲突的关系的是“另外一个行锁”，但是<strong>跟间隙锁存在冲突关系的，是“往这个间隙中插入一个记录”这个操作</strong>。所以下面的session B不会被阻塞：</p>
 <p><img class="img-fluid" alt="" src="/post/mysql/gap-lock-next-key-lock/gap-2.webp" loading="lazy"
   
    />

@@ -12,7 +12,7 @@
 <meta name="description" content="" /><meta itemprop="name" content="JVM - 强软弱虚引用以及Reachability Fence">
 <meta itemprop="description" content=""><meta itemprop="datePublished" content="2020-05-19T14:18:08+08:00" />
 <meta itemprop="dateModified" content="2020-05-19T14:18:08+08:00" />
-<meta itemprop="wordCount" content="1380">
+<meta itemprop="wordCount" content="1400">
 <meta itemprop="keywords" content="jvm," /><meta property="og:title" content="JVM - 强软弱虚引用以及Reachability Fence" />
 <meta property="og:description" content="" />
 <meta property="og:type" content="article" />
@@ -236,28 +236,55 @@
 <p>当引用对象（软、弱、虚对象）的可达性发生变化的时候，它们就会被注册到<a href="https://docs.oracle.com/javase/8/docs/api/java/lang/ref/ReferenceQueue.html" target="_blank" rel="noopener noreferrer">ReferenceQueue</a>
 里。</p>
 <p>当一个软引用、弱引用被GC清理的时候（<code>get()</code>会返回null），他们会被追加到引用队列中。所以软、弱引用配合队列使用一般用处不大。除非你做了一个软、弱引用的子类，并且在里面添加了一些属性：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln"> 1</span><span class="n">ReferenceQueue</span><span class="o">&lt;</span><span class="n">Foo</span><span class="o">&gt;</span> <span class="n">fooQueue</span> <span class="o">=</span> <span class="k">new</span> <span class="n">ReferenceQueue</span><span class="o">&lt;</span><span class="n">Foo</span><span class="o">&gt;();</span>
-<span class="ln"> 2</span>
-<span class="ln"> 3</span><span class="kd">class</span> <span class="nc">ReferenceWithCleanup</span> <span class="kd">extends</span> <span class="n">WeakReference</span><span class="o">&lt;</span><span class="n">Foo</span><span class="o">&gt;</span> <span class="o">{</span>
-<span class="ln"> 4</span>  <span class="n">Bar</span> <span class="n">bar</span><span class="o">;</span>
-<span class="ln"> 5</span>  <span class="n">ReferenceWithCleanup</span><span class="o">(</span><span class="n">Foo</span> <span class="n">foo</span><span class="o">,</span> <span class="n">Bar</span> <span class="n">bar</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 6</span>    <span class="kd">super</span><span class="o">(</span><span class="n">foo</span><span class="o">,</span> <span class="n">fooQueue</span><span class="o">);</span>
-<span class="ln"> 7</span>    <span class="k">this</span><span class="o">.</span><span class="na">bar</span> <span class="o">=</span> <span class="n">bar</span><span class="o">;</span>
-<span class="ln"> 8</span>  <span class="o">}</span>
-<span class="ln"> 9</span>  <span class="kd">public</span> <span class="kt">void</span> <span class="nf">cleanUp</span><span class="o">()</span> <span class="o">{</span>
-<span class="ln">10</span>    <span class="n">bar</span><span class="o">.</span><span class="na">cleanUp</span><span class="o">();</span>
-<span class="ln">11</span>  <span class="o">}</span>
-<span class="ln">12</span><span class="o">}</span>
-<span class="ln">13</span>
-<span class="ln">14</span><span class="kd">public</span> <span class="n">Thread</span> <span class="n">cleanupThread</span> <span class="o">=</span> <span class="k">new</span> <span class="n">Thread</span><span class="o">()</span> <span class="o">{</span>
-<span class="ln">15</span>  <span class="kd">public</span> <span class="kt">void</span> <span class="nf">run</span><span class="o">()</span> <span class="o">{</span>
-<span class="ln">16</span>    <span class="k">while</span><span class="o">(</span><span class="kc">true</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">17</span>      <span class="n">ReferenceWithCleanup</span> <span class="n">ref</span> <span class="o">=</span> <span class="o">(</span><span class="n">ReferenceWithCleanup</span><span class="o">)</span><span class="n">fooQueue</span><span class="o">.</span><span class="na">remove</span><span class="o">();</span>
-<span class="ln">18</span>      <span class="n">ref</span><span class="o">.</span><span class="na">cleanUp</span><span class="o">();</span>
-<span class="ln">19</span>    <span class="o">}</span>
-<span class="ln">20</span>  <span class="o">}</span>
-<span class="ln">21</span><span class="o">}</span>
-</code></pre></div><p>当一个对象编程虚可达的时候，它的虚引用就会被添加到引用队列，当虚引用对象被清理或者虚引用对象变得不可达的时候，对象就才会变成不可达。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="n">ReferenceQueue</span><span class="o">&lt;</span><span class="n">Foo</span><span class="o">&gt;</span> <span class="n">fooQueue</span> <span class="o">=</span> <span class="k">new</span> <span class="n">ReferenceQueue</span><span class="o">&lt;</span><span class="n">Foo</span><span class="o">&gt;();</span>
+
+<span class="kd">class</span> <span class="nc">ReferenceWithCleanup</span> <span class="kd">extends</span> <span class="n">WeakReference</span><span class="o">&lt;</span><span class="n">Foo</span><span class="o">&gt;</span> <span class="o">{</span>
+  <span class="n">Bar</span> <span class="n">bar</span><span class="o">;</span>
+  <span class="n">ReferenceWithCleanup</span><span class="o">(</span><span class="n">Foo</span> <span class="n">foo</span><span class="o">,</span> <span class="n">Bar</span> <span class="n">bar</span><span class="o">)</span> <span class="o">{</span>
+    <span class="kd">super</span><span class="o">(</span><span class="n">foo</span><span class="o">,</span> <span class="n">fooQueue</span><span class="o">);</span>
+    <span class="k">this</span><span class="o">.</span><span class="na">bar</span> <span class="o">=</span> <span class="n">bar</span><span class="o">;</span>
+  <span class="o">}</span>
+  <span class="kd">public</span> <span class="kt">void</span> <span class="nf">cleanUp</span><span class="o">()</span> <span class="o">{</span>
+    <span class="n">bar</span><span class="o">.</span><span class="na">cleanUp</span><span class="o">();</span>
+  <span class="o">}</span>
+<span class="o">}</span>
+
+<span class="kd">public</span> <span class="n">Thread</span> <span class="n">cleanupThread</span> <span class="o">=</span> <span class="k">new</span> <span class="n">Thread</span><span class="o">()</span> <span class="o">{</span>
+  <span class="kd">public</span> <span class="kt">void</span> <span class="nf">run</span><span class="o">()</span> <span class="o">{</span>
+    <span class="k">while</span><span class="o">(</span><span class="kc">true</span><span class="o">)</span> <span class="o">{</span>
+      <span class="n">ReferenceWithCleanup</span> <span class="n">ref</span> <span class="o">=</span> <span class="o">(</span><span class="n">ReferenceWithCleanup</span><span class="o">)</span><span class="n">fooQueue</span><span class="o">.</span><span class="na">remove</span><span class="o">();</span>
+      <span class="n">ref</span><span class="o">.</span><span class="na">cleanUp</span><span class="o">();</span>
+    <span class="o">}</span>
+  <span class="o">}</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>当一个对象编程虚可达的时候，它的虚引用就会被添加到引用队列，当虚引用对象被清理或者虚引用对象变得不可达的时候，对象就才会变成不可达。</p>
 <h3 id="强引用strong-reference">强引用（Strong Reference）<a class="anchor ms-1" href="#强引用strong-reference"><i class="fas fa-link"></i></a></h3>
 <p>一般的引用</p>
 <h3 id="软引用soft-reference">软引用（Soft Reference）<a class="anchor ms-1" href="#软引用soft-reference"><i class="fas fa-link"></i></a></h3>
@@ -268,45 +295,97 @@
 <p><a href="https://docs.oracle.com/javase/8/docs/api/java/lang/ref/WeakReference.html" target="_blank" rel="noopener noreferrer">WeakReference</a>
 完全不影响垃圾回收，该回收的时候还是会被回收。</p>
 <p>弱引用的特性用代码表示是：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln">1</span><span class="n">Object</span> <span class="n">referent3</span> <span class="o">=</span> <span class="n">weakReference2</span><span class="o">.</span><span class="na">get</span><span class="o">();</span>
-<span class="ln">2</span><span class="k">if</span> <span class="o">(</span><span class="n">referent3</span> <span class="o">!=</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">3</span>    <span class="c1">// GC hasn&#39;t removed the instance yet
-</span><span class="ln">4</span><span class="c1"></span><span class="o">}</span> <span class="k">else</span> <span class="o">{</span>
-<span class="ln">5</span>    <span class="c1">// GC has cleared the instance
-</span><span class="ln">6</span><span class="c1"></span><span class="o">}</span>
-</code></pre></div><p>你可以用来实现，如果你不想保持对A对象的强引用，同时如果A对象没有被回收，那么我就可以干活，如果A对象被回收了，那我也无所谓的逻辑。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="n">Object</span> <span class="n">referent3</span> <span class="o">=</span> <span class="n">weakReference2</span><span class="o">.</span><span class="na">get</span><span class="o">();</span>
+<span class="k">if</span> <span class="o">(</span><span class="n">referent3</span> <span class="o">!=</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
+    <span class="c1">// GC hasn&#39;t removed the instance yet
+</span><span class="c1"></span><span class="o">}</span> <span class="k">else</span> <span class="o">{</span>
+    <span class="c1">// GC has cleared the instance
+</span><span class="c1"></span><span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>你可以用来实现，如果你不想保持对A对象的强引用，同时如果A对象没有被回收，那么我就可以干活，如果A对象被回收了，那我也无所谓的逻辑。</p>
 <h3 id="虚引用phantom-reference">虚引用（Phantom Reference）<a class="anchor ms-1" href="#虚引用phantom-reference"><i class="fas fa-link"></i></a></h3>
 <p><a href="https://docs.oracle.com/javase/8/docs/api/java/lang/ref/PhantomReference.html" target="_blank" rel="noopener noreferrer">PhantomReference</a>
 完全不影响垃圾回收，该回收的时候还是会被回收。同时也无法得到所引用的对象，<code>get()</code>方法永远返回null。虚引用一定要配合ReferenceQueue来使用：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln"> 1</span><span class="n">Object</span> <span class="n">counter</span> <span class="o">=</span> <span class="k">new</span> <span class="n">Object</span><span class="o">();</span>
-<span class="ln"> 2</span><span class="n">ReferenceQueue</span> <span class="n">refQueue</span> <span class="o">=</span> <span class="k">new</span> <span class="n">ReferenceQueue</span><span class="o">&lt;&gt;();</span>
-<span class="ln"> 3</span><span class="n">PhantomReference</span><span class="o">&lt;</span><span class="n">Object</span><span class="o">&gt;</span> <span class="n">p</span> <span class="o">=</span> <span class="k">new</span> <span class="n">PhantomReference</span><span class="o">&lt;&gt;(</span><span class="n">counter</span><span class="o">,</span> <span class="n">refQueue</span><span class="o">);</span>
-<span class="ln"> 4</span><span class="n">counter</span> <span class="o">=</span> <span class="kc">null</span><span class="o">;</span>
-<span class="ln"> 5</span><span class="n">System</span><span class="o">.</span><span class="na">gc</span><span class="o">();</span>
-<span class="ln"> 6</span><span class="k">try</span> <span class="o">{</span>
-<span class="ln"> 7</span>    <span class="c1">// Remove是一个阻塞方法，可以指定timeout，或者选择一直阻塞
-</span><span class="ln"> 8</span><span class="c1"></span>    <span class="n">Reference</span><span class="o">&lt;</span><span class="n">Object</span><span class="o">&gt;</span> <span class="n">ref</span> <span class="o">=</span> <span class="n">refQueue</span><span class="o">.</span><span class="na">remove</span><span class="o">(</span><span class="n">1000L</span><span class="o">);</span>
-<span class="ln"> 9</span>    <span class="k">if</span> <span class="o">(</span><span class="n">ref</span> <span class="o">!=</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">10</span>        <span class="c1">// do something
-</span><span class="ln">11</span><span class="c1"></span>    <span class="o">}</span>
-<span class="ln">12</span><span class="o">}</span> <span class="k">catch</span> <span class="o">(</span><span class="n">InterruptedException</span> <span class="n">e</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">13</span>    <span class="c1">// Handle it
-</span><span class="ln">14</span><span class="c1"></span><span class="o">}</span>
-</code></pre></div><p>前面可达性已经说了，“虚可达”后面的状态是“不可达”，那么一个对象变成“虚可达”的意思就是它现在已经被finalized，但是还没有被回收，配合ReferenceQueue，就能够得到“对象该清理的都清理了，都已经被finalized了，即将被回收”的事件。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="n">Object</span> <span class="n">counter</span> <span class="o">=</span> <span class="k">new</span> <span class="n">Object</span><span class="o">();</span>
+<span class="n">ReferenceQueue</span> <span class="n">refQueue</span> <span class="o">=</span> <span class="k">new</span> <span class="n">ReferenceQueue</span><span class="o">&lt;&gt;();</span>
+<span class="n">PhantomReference</span><span class="o">&lt;</span><span class="n">Object</span><span class="o">&gt;</span> <span class="n">p</span> <span class="o">=</span> <span class="k">new</span> <span class="n">PhantomReference</span><span class="o">&lt;&gt;(</span><span class="n">counter</span><span class="o">,</span> <span class="n">refQueue</span><span class="o">);</span>
+<span class="n">counter</span> <span class="o">=</span> <span class="kc">null</span><span class="o">;</span>
+<span class="n">System</span><span class="o">.</span><span class="na">gc</span><span class="o">();</span>
+<span class="k">try</span> <span class="o">{</span>
+    <span class="c1">// Remove是一个阻塞方法，可以指定timeout，或者选择一直阻塞
+</span><span class="c1"></span>    <span class="n">Reference</span><span class="o">&lt;</span><span class="n">Object</span><span class="o">&gt;</span> <span class="n">ref</span> <span class="o">=</span> <span class="n">refQueue</span><span class="o">.</span><span class="na">remove</span><span class="o">(</span><span class="n">1000L</span><span class="o">);</span>
+    <span class="k">if</span> <span class="o">(</span><span class="n">ref</span> <span class="o">!=</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
+        <span class="c1">// do something
+</span><span class="c1"></span>    <span class="o">}</span>
+<span class="o">}</span> <span class="k">catch</span> <span class="o">(</span><span class="n">InterruptedException</span> <span class="n">e</span><span class="o">)</span> <span class="o">{</span>
+    <span class="c1">// Handle it
+</span><span class="c1"></span><span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>前面可达性已经说了，“虚可达”后面的状态是“不可达”，那么一个对象变成“虚可达”的意思就是它现在已经被finalized，但是还没有被回收，配合ReferenceQueue，就能够得到“对象该清理的都清理了，都已经被finalized了，即将被回收”的事件。</p>
 <h2 id="reachability-fence">Reachability Fence<a class="anchor ms-1" href="#reachability-fence"><i class="fas fa-link"></i></a></h2>
 <p><a href="https://docs.oracle.com/javase/9/docs/api/java/lang/ref/Reference.html#reachabilityFence-java.lang.Object-" target="_blank" rel="noopener noreferrer">`java.lang.ref.Reference#reachabilityFence(Object ref)</a>
 静态方法用来将ref所指向的对象设置为强引用。</p>
 <p>这个是因为Java在垃圾回收的时候，会把下面的对象回收掉：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln">1</span><span class="k">new</span> <span class="n">Foo</span><span class="o">().</span><span class="na">action</span><span class="o">()</span><span class="err">；</span>
-</code></pre></div><p>因为GC依赖的是可达性分析，而Foo对象实际上并不可达，就算它在调用方法，也是不可达的。为了避免在<code>action()</code>方法执行时被回收，可以添加这段代码：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln">1</span><span class="kd">public</span> <span class="kt">void</span> <span class="nf">action</span><span class="o">()</span> <span class="o">{</span>
-<span class="ln">2</span>  <span class="k">try</span> <span class="o">{</span>
-<span class="ln">3</span>    <span class="c1">// do some work
-</span><span class="ln">4</span><span class="c1"></span>  <span class="o">}</span> <span class="k">finally</span> <span class="o">{</span>
-<span class="ln">5</span>    <span class="n">Reference</span><span class="o">.</span><span class="na">reachabilityFence</span><span class="o">(</span><span class="k">this</span><span class="o">);</span>
-<span class="ln">6</span>  <span class="o">}</span>
-<span class="ln">7</span><span class="o">}</span>
-</code></pre></div><p>这段代码的意思是在<code>action()</code>方法返回之前，Foo对象会保持强引用状态（虽然你会觉得代码位置不是应该放在第一行吗？但文档里是这么说的）。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="k">new</span> <span class="n">Foo</span><span class="o">().</span><span class="na">action</span><span class="o">()</span><span class="err">；</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>因为GC依赖的是可达性分析，而Foo对象实际上并不可达，就算它在调用方法，也是不可达的。为了避免在<code>action()</code>方法执行时被回收，可以添加这段代码：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="kd">public</span> <span class="kt">void</span> <span class="nf">action</span><span class="o">()</span> <span class="o">{</span>
+  <span class="k">try</span> <span class="o">{</span>
+    <span class="c1">// do some work
+</span><span class="c1"></span>  <span class="o">}</span> <span class="k">finally</span> <span class="o">{</span>
+    <span class="n">Reference</span><span class="o">.</span><span class="na">reachabilityFence</span><span class="o">(</span><span class="k">this</span><span class="o">);</span>
+  <span class="o">}</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>这段代码的意思是在<code>action()</code>方法返回之前，Foo对象会保持强引用状态（虽然你会觉得代码位置不是应该放在第一行吗？但文档里是这么说的）。</p>
 <h2 id="参考资料">参考资料<a class="anchor ms-1" href="#参考资料"><i class="fas fa-link"></i></a></h2>
 <ul>
 <li><a href="https://time.geekbang.org/column/article/6970" target="_blank" rel="noopener noreferrer">强引用、软引用、弱引用、幻象引用有什么区别？</a>

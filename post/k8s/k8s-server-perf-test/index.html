@@ -12,7 +12,7 @@
 <meta name="description" content="" /><meta itemprop="name" content="K8S服务器性能测试">
 <meta itemprop="description" content=""><meta itemprop="datePublished" content="2020-12-14T09:03:06+08:00" />
 <meta itemprop="dateModified" content="2020-12-14T09:03:06+08:00" />
-<meta itemprop="wordCount" content="235">
+<meta itemprop="wordCount" content="241">
 <meta itemprop="keywords" content="k8s,troubleshooting,性能调优," /><meta property="og:title" content="K8S服务器性能测试" />
 <meta property="og:description" content="" />
 <meta property="og:type" content="article" />
@@ -227,33 +227,87 @@
 <p>使用<a href="https://github.com/axboe/fio" target="_blank" rel="noopener noreferrer">fio</a>
 对磁盘做性能测试：</p>
 <p>顺序读测试：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>fio -filename<span class="o">=</span>/var/test.file -direct<span class="o">=</span><span class="m">1</span> <span class="se">\
-</span><span class="ln">2</span><span class="se"></span> -iodepth <span class="m">1</span> -thread -rw<span class="o">=</span><span class="nb">read</span> <span class="se">\
-</span><span class="ln">3</span><span class="se"></span> -ioengine<span class="o">=</span>psync -bs<span class="o">=</span>16k -size<span class="o">=</span>2G -numjobs<span class="o">=</span><span class="m">10</span> <span class="se">\
-</span><span class="ln">4</span><span class="se"></span> -runtime<span class="o">=</span><span class="m">60</span> -group_reporting -name<span class="o">=</span>test_r
-</code></pre></div><p>随机写测试：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>fio -filename<span class="o">=</span>/var/test.file -direct<span class="o">=</span><span class="m">1</span> <span class="se">\
-</span><span class="ln">2</span><span class="se"></span> -iodepth <span class="m">1</span> -thread -rw<span class="o">=</span>randwrite <span class="se">\
-</span><span class="ln">3</span><span class="se"></span> -ioengine<span class="o">=</span>psync -bs<span class="o">=</span>16k -size<span class="o">=</span>2G -numjobs<span class="o">=</span><span class="m">10</span> <span class="se">\
-</span><span class="ln">4</span><span class="se"></span> -runtime<span class="o">=</span><span class="m">60</span> -group_reporting -name<span class="o">=</span>test_randw
-</code></pre></div><p>顺序写测试：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>fio -filename<span class="o">=</span>/var/test.file -direct<span class="o">=</span><span class="m">1</span> <span class="se">\
-</span><span class="ln">2</span><span class="se"></span> -iodepth <span class="m">1</span> -thread -rw<span class="o">=</span>write <span class="se">\
-</span><span class="ln">3</span><span class="se"></span> -ioengine<span class="o">=</span>psync -bs<span class="o">=</span>16k -size<span class="o">=</span>2G -numjobs<span class="o">=</span><span class="m">10</span> <span class="se">\
-</span><span class="ln">4</span><span class="se"></span> -runtime<span class="o">=</span><span class="m">60</span> -group_reporting -name<span class="o">=</span>test_w
-</code></pre></div><p>混合随机读写测试：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>fio -filename<span class="o">=</span>/var/test.file -direct<span class="o">=</span><span class="m">1</span> <span class="se">\
-</span><span class="ln">2</span><span class="se"></span> -iodepth <span class="m">1</span> -thread -rw<span class="o">=</span>randrw <span class="se">\
-</span><span class="ln">3</span><span class="se"></span> -rwmixread<span class="o">=</span><span class="m">70</span> -ioengine<span class="o">=</span>psync -bs<span class="o">=</span>16k -size<span class="o">=</span>2G -numjobs<span class="o">=</span><span class="m">10</span> <span class="se">\
-</span><span class="ln">4</span><span class="se"></span> -runtime<span class="o">=</span><span class="m">60</span> -group_reporting -name<span class="o">=</span>test_r_w -ioscheduler<span class="o">=</span>noop
-</code></pre></div><h2 id="网络带宽">网络带宽<a class="anchor ms-1" href="#网络带宽"><i class="fas fa-link"></i></a></h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">fio -filename<span class="o">=</span>/var/test.file -direct<span class="o">=</span><span class="m">1</span> <span class="se">\
+</span><span class="se"></span> -iodepth <span class="m">1</span> -thread -rw<span class="o">=</span><span class="nb">read</span> <span class="se">\
+</span><span class="se"></span> -ioengine<span class="o">=</span>psync -bs<span class="o">=</span>16k -size<span class="o">=</span>2G -numjobs<span class="o">=</span><span class="m">10</span> <span class="se">\
+</span><span class="se"></span> -runtime<span class="o">=</span><span class="m">60</span> -group_reporting -name<span class="o">=</span>test_r
+</code></pre></td></tr></table>
+</div>
+</div><p>随机写测试：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">fio -filename<span class="o">=</span>/var/test.file -direct<span class="o">=</span><span class="m">1</span> <span class="se">\
+</span><span class="se"></span> -iodepth <span class="m">1</span> -thread -rw<span class="o">=</span>randwrite <span class="se">\
+</span><span class="se"></span> -ioengine<span class="o">=</span>psync -bs<span class="o">=</span>16k -size<span class="o">=</span>2G -numjobs<span class="o">=</span><span class="m">10</span> <span class="se">\
+</span><span class="se"></span> -runtime<span class="o">=</span><span class="m">60</span> -group_reporting -name<span class="o">=</span>test_randw
+</code></pre></td></tr></table>
+</div>
+</div><p>顺序写测试：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">fio -filename<span class="o">=</span>/var/test.file -direct<span class="o">=</span><span class="m">1</span> <span class="se">\
+</span><span class="se"></span> -iodepth <span class="m">1</span> -thread -rw<span class="o">=</span>write <span class="se">\
+</span><span class="se"></span> -ioengine<span class="o">=</span>psync -bs<span class="o">=</span>16k -size<span class="o">=</span>2G -numjobs<span class="o">=</span><span class="m">10</span> <span class="se">\
+</span><span class="se"></span> -runtime<span class="o">=</span><span class="m">60</span> -group_reporting -name<span class="o">=</span>test_w
+</code></pre></td></tr></table>
+</div>
+</div><p>混合随机读写测试：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">fio -filename<span class="o">=</span>/var/test.file -direct<span class="o">=</span><span class="m">1</span> <span class="se">\
+</span><span class="se"></span> -iodepth <span class="m">1</span> -thread -rw<span class="o">=</span>randrw <span class="se">\
+</span><span class="se"></span> -rwmixread<span class="o">=</span><span class="m">70</span> -ioengine<span class="o">=</span>psync -bs<span class="o">=</span>16k -size<span class="o">=</span>2G -numjobs<span class="o">=</span><span class="m">10</span> <span class="se">\
+</span><span class="se"></span> -runtime<span class="o">=</span><span class="m">60</span> -group_reporting -name<span class="o">=</span>test_r_w -ioscheduler<span class="o">=</span>noop
+</code></pre></td></tr></table>
+</div>
+</div><h2 id="网络带宽">网络带宽<a class="anchor ms-1" href="#网络带宽"><i class="fas fa-link"></i></a></h2>
 <p>使用<a href="https://iperf.fr/" target="_blank" rel="noopener noreferrer">iperf3</a>
 测试服务器间的网络带宽。</p>
 <p>现在要测试A到B的网络带宽，先在B启动iperf服务端</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>iperf3 -s
-</code></pre></div><p>再到A上启动iperf客户端：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>iperf3 -c &lt;ip-to-b&gt;
-</code></pre></div><h2 id="参考资料">参考资料<a class="anchor ms-1" href="#参考资料"><i class="fas fa-link"></i></a></h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">iperf3 -s
+</code></pre></td></tr></table>
+</div>
+</div><p>再到A上启动iperf客户端：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">iperf3 -c &lt;ip-to-b&gt;
+</code></pre></td></tr></table>
+</div>
+</div><h2 id="参考资料">参考资料<a class="anchor ms-1" href="#参考资料"><i class="fas fa-link"></i></a></h2>
 <ul>
 <li><a href="https://zhuanlan.zhihu.com/p/106409769" target="_blank" rel="noopener noreferrer">3 个方便的命令行网速度测试工具</a>
 </li>

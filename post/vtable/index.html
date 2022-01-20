@@ -12,7 +12,7 @@
 <meta name="description" content="" /><meta itemprop="name" content="虚函数表（vtable/virtual table/virtual method table）">
 <meta itemprop="description" content=""><meta itemprop="datePublished" content="2019-02-25T21:55:10+08:00" />
 <meta itemprop="dateModified" content="2019-02-25T21:55:10+08:00" />
-<meta itemprop="wordCount" content="923">
+<meta itemprop="wordCount" content="929">
 <meta itemprop="keywords" content="vtable,jvm,kernel," /><meta property="og:title" content="虚函数表（vtable/virtual table/virtual method table）" />
 <meta property="og:description" content="" />
 <meta property="og:type" content="article" />
@@ -227,17 +227,33 @@
 <p>虚函数表，又称 virtual method table (VMT), virtual function table, virtual call table, dispatch table, vtable, or vftable。是一种用于支持<a href="https://en.wikipedia.org/wiki/Dynamic_dispatch" target="_blank" rel="noopener noreferrer">dynamic dispatch</a>
 （或称为run-time method binding）的机制。而<strong>动态转发</strong>则是实现多态中重要一环——方法重写——的重要机制。</p>
 <p>考虑下面代码：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln"> 1</span><span class="kd">class</span> <span class="nc">Super</span> <span class="o">{</span>
-<span class="ln"> 2</span>  <span class="kt">void</span> <span class="nf">test</span><span class="o">()</span> <span class="o">{}</span>
-<span class="ln"> 3</span><span class="o">}</span>
-<span class="ln"> 4</span><span class="kd">class</span> <span class="nc">Derived</span> <span class="kd">extends</span> <span class="n">Super</span> <span class="o">{</span>
-<span class="ln"> 5</span>  <span class="kt">void</span> <span class="nf">test</span><span class="o">()</span> <span class="o">{</span>
-<span class="ln"> 6</span>  <span class="o">}</span>
-<span class="ln"> 7</span><span class="o">}</span>
-<span class="ln"> 8</span>
-<span class="ln"> 9</span><span class="n">Super</span> <span class="n">s</span> <span class="o">=</span> <span class="o">...;</span>
-<span class="ln">10</span><span class="n">s</span><span class="o">.</span><span class="na">test</span><span class="o">();</span>
-</code></pre></div><p><code>s.test()</code>所调用的是<code>Super#test()</code>还是<code>Derived#test()</code>在编译期是无法知道，因为<code>s</code>指向的真正类型可能是Super也可能是Derived，那么<code>s.test()</code>到底调用那个类的test方法只能在运行时知道，那么是如何知道的呢？答案是依靠vtable。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="kd">class</span> <span class="nc">Super</span> <span class="o">{</span>
+  <span class="kt">void</span> <span class="nf">test</span><span class="o">()</span> <span class="o">{}</span>
+<span class="o">}</span>
+<span class="kd">class</span> <span class="nc">Derived</span> <span class="kd">extends</span> <span class="n">Super</span> <span class="o">{</span>
+  <span class="kt">void</span> <span class="nf">test</span><span class="o">()</span> <span class="o">{</span>
+  <span class="o">}</span>
+<span class="o">}</span>
+
+<span class="n">Super</span> <span class="n">s</span> <span class="o">=</span> <span class="o">...;</span>
+<span class="n">s</span><span class="o">.</span><span class="na">test</span><span class="o">();</span>
+</code></pre></td></tr></table>
+</div>
+</div><p><code>s.test()</code>所调用的是<code>Super#test()</code>还是<code>Derived#test()</code>在编译期是无法知道，因为<code>s</code>指向的真正类型可能是Super也可能是Derived，那么<code>s.test()</code>到底调用那个类的test方法只能在运行时知道，那么是如何知道的呢？答案是依靠vtable。</p>
 <p>每个类都有一张vtable，vtable里记录了每个虚方法（PS. 在Java中除static、<code>&lt;init&gt;</code>、<code>&lt;clinit&gt;</code>、final method之外的都是虚方法）的偏移量及内存地址。父类的vtable的内容会在子类vtable中复制一份，并且保持相同的偏移量，方法的内存地址则要看子类是否覆盖了父类方法而定。下面是vtable布局大致概念：</p>
 <p>Object vtable</p>
 <table>

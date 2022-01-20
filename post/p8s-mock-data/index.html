@@ -12,7 +12,7 @@
 <meta name="description" content="学习Prometheus各种函数的时候最好能够造一些我们想要的数据来测试，但是Prometheus没有提供直接操作其数据库的功能，所以在这里安利一个工具。" /><meta itemprop="name" content="安利一个造Prometheus假数据的工具">
 <meta itemprop="description" content="学习Prometheus各种函数的时候最好能够造一些我们想要的数据来测试，但是Prometheus没有提供直接操作其数据库的功能，所以在这里安利一个工具。"><meta itemprop="datePublished" content="2018-12-28T17:06:59+08:00" />
 <meta itemprop="dateModified" content="2018-12-28T17:06:59+08:00" />
-<meta itemprop="wordCount" content="550">
+<meta itemprop="wordCount" content="515">
 <meta itemprop="keywords" content="prometheus," /><meta property="og:title" content="安利一个造Prometheus假数据的工具" />
 <meta property="og:description" content="学习Prometheus各种函数的时候最好能够造一些我们想要的数据来测试，但是Prometheus没有提供直接操作其数据库的功能，所以在这里安利一个工具。" />
 <meta property="og:type" content="article" />
@@ -231,34 +231,78 @@
 <p>新建一个文件<code>scrape-data.txt</code>，内容见<a href="https://gist.github.com/chanjarster/ae4b092d59fea9c7dc316e18cf7b56c7" target="_blank" rel="noopener noreferrer">gist</a>
 ，这个文件里定义了每次Prometheus抓指标的时候所能抓到的值，这个工具会依次提供这些指标（当然你也可以写自己的假数据）。</p>
 <p>运行：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>docker run -d --rm <span class="se">\
-</span><span class="ln">2</span><span class="se"></span>  --name<span class="o">=</span>mock-metrics <span class="se">\
-</span><span class="ln">3</span><span class="se"></span>  -v <span class="k">$(</span><span class="nb">pwd</span><span class="k">)</span>/scrape-data.txt:/home/java-app/etc/scrape-data.txt <span class="se">\
-</span><span class="ln">4</span><span class="se"></span>  -p 8080:8080 <span class="se">\
-</span><span class="ln">5</span><span class="se"></span>  chanjarster/prometheus-mock-data:latest
-</code></pre></div><p>用浏览器访问：<code>http://localhost:8080/metrics</code>，刷新几次，能够看到指标数据在循环显示。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">docker run -d --rm <span class="se">\
+</span><span class="se"></span>  --name<span class="o">=</span>mock-metrics <span class="se">\
+</span><span class="se"></span>  -v <span class="k">$(</span><span class="nb">pwd</span><span class="k">)</span>/scrape-data.txt:/home/java-app/etc/scrape-data.txt <span class="se">\
+</span><span class="se"></span>  -p 8080:8080 <span class="se">\
+</span><span class="se"></span>  chanjarster/prometheus-mock-data:latest
+</code></pre></td></tr></table>
+</div>
+</div><p>用浏览器访问：<code>http://localhost:8080/metrics</code>，刷新几次，能够看到指标数据在循环显示。</p>
 <h2 id="启动prometheus">启动Prometheus<a class="anchor ms-1" href="#启动prometheus"><i class="fas fa-link"></i></a></h2>
 <p>新建配置文件：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-yaml" data-lang="yaml"><span class="ln">1</span><span class="nt">scrape_configs</span><span class="p">:</span><span class="w">
-</span><span class="ln">2</span><span class="w">  </span>- <span class="nt">job_name</span><span class="p">:</span><span class="w"> </span><span class="s1">&#39;mock&#39;</span><span class="w">
-</span><span class="ln">3</span><span class="w">    </span><span class="nt">scrape_interval</span><span class="p">:</span><span class="w"> </span><span class="l">15s</span><span class="w">
-</span><span class="ln">4</span><span class="w">    </span><span class="nt">static_configs</span><span class="p">:</span><span class="w">
-</span><span class="ln">5</span><span class="w">    </span>- <span class="nt">targets</span><span class="p">:</span><span class="w">
-</span><span class="ln">6</span><span class="w">      </span>- <span class="s1">&#39;&lt;docker-host-machine-ip&gt;:8080&#39;</span><span class="w">
-</span></code></pre></div><p>注意：Data point的间隔通过<code>scrape_interval</code>参数控制。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-yaml" data-lang="yaml"><span class="nt">scrape_configs</span><span class="p">:</span><span class="w">
+</span><span class="w">  </span>- <span class="nt">job_name</span><span class="p">:</span><span class="w"> </span><span class="s1">&#39;mock&#39;</span><span class="w">
+</span><span class="w">    </span><span class="nt">scrape_interval</span><span class="p">:</span><span class="w"> </span><span class="l">15s</span><span class="w">
+</span><span class="w">    </span><span class="nt">static_configs</span><span class="p">:</span><span class="w">
+</span><span class="w">    </span>- <span class="nt">targets</span><span class="p">:</span><span class="w">
+</span><span class="w">      </span>- <span class="s1">&#39;&lt;docker-host-machine-ip&gt;:8080&#39;</span><span class="w">
+</span></code></pre></td></tr></table>
+</div>
+</div><p>注意：Data point的间隔通过<code>scrape_interval</code>参数控制。</p>
 <p>启动：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>docker run -d <span class="se">\
-</span><span class="ln">2</span><span class="se"></span>    --name<span class="o">=</span>prometheus <span class="se">\
-</span><span class="ln">3</span><span class="se"></span>    -p 9090:9090 <span class="se">\
-</span><span class="ln">4</span><span class="se"></span>    -v <span class="k">$(</span><span class="nb">pwd</span><span class="k">)</span>/prom-config.yml:/prometheus-config/prom-config.yml <span class="se">\
-</span><span class="ln">5</span><span class="se"></span>    prom/prometheus --config.file<span class="o">=</span>/prometheus-config/prom-config.yml
-</code></pre></div><p>打开<code>http://localhost:9090</code>看看是不是抓到指标了。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">docker run -d <span class="se">\
+</span><span class="se"></span>    --name<span class="o">=</span>prometheus <span class="se">\
+</span><span class="se"></span>    -p 9090:9090 <span class="se">\
+</span><span class="se"></span>    -v <span class="k">$(</span><span class="nb">pwd</span><span class="k">)</span>/prom-config.yml:/prometheus-config/prom-config.yml <span class="se">\
+</span><span class="se"></span>    prom/prometheus --config.file<span class="o">=</span>/prometheus-config/prom-config.yml
+</code></pre></td></tr></table>
+</div>
+</div><p>打开<code>http://localhost:9090</code>看看是不是抓到指标了。</p>
 <h2 id="启动grafana">启动Grafana<a class="anchor ms-1" href="#启动grafana"><i class="fas fa-link"></i></a></h2>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>docker run -d <span class="se">\
-</span><span class="ln">2</span><span class="se"></span>    --name<span class="o">=</span>grafana <span class="se">\
-</span><span class="ln">3</span><span class="se"></span>    -p 3000:3000 <span class="se">\
-</span><span class="ln">4</span><span class="se"></span>    grafana/grafana
-</code></pre></div><p>在Grafana里配置Prometheus数据源，然后作图。</p></div></div>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">docker run -d <span class="se">\
+</span><span class="se"></span>    --name<span class="o">=</span>grafana <span class="se">\
+</span><span class="se"></span>    -p 3000:3000 <span class="se">\
+</span><span class="se"></span>    grafana/grafana
+</code></pre></td></tr></table>
+</div>
+</div><p>在Grafana里配置Prometheus数据源，然后作图。</p></div></div>
   <div class="card-footer"><div class="post-navs d-flex justify-content-evenly">
   <div class="post-nav post-prev"><i class="fas fa-fw fa-chevron-left"></i>
     <a href="/post/p8s-step-param/">Prometheus Range Query中的step参数

@@ -12,7 +12,7 @@
 <meta name="description" content="" /><meta itemprop="name" content="K8S Node无法注册故障排查">
 <meta itemprop="description" content=""><meta itemprop="datePublished" content="2021-09-01T14:24:45+08:00" />
 <meta itemprop="dateModified" content="2021-09-01T14:24:45+08:00" />
-<meta itemprop="wordCount" content="1535">
+<meta itemprop="wordCount" content="1443">
 <meta itemprop="keywords" content="k8s,troubleshooting," /><meta property="og:title" content="K8S Node无法注册故障排查" />
 <meta property="og:description" content="" />
 <meta property="og:type" content="article" />
@@ -220,121 +220,263 @@
   <span class="post-date" title="创建于 2021-09-01 14:24:45 &#43;0800 CST。">
     2021-09-01
   </span><span class="post-reading-time">
-    4 分钟阅读
+    3 分钟阅读
   </span><span class="post-taxonomies"><a href="/tags/k8s/" class="badge post-taxonomy">k8s</a><a href="/tags/troubleshooting/" class="badge post-taxonomy">troubleshooting</a></span>
 </div>
 <div class="post-content mb-3"><h2 id="现象">现象<a class="anchor ms-1" href="#现象"><i class="fas fa-link"></i></a></h2>
 <p>机房断电，通电后，K8S集群的某些Node一直处于NotReady状态。</p>
 <h2 id="查看kubelet日志">查看kubelet日志<a class="anchor ms-1" href="#查看kubelet日志"><i class="fas fa-link"></i></a></h2>
 <p>到Node上，查看Kubelet日志：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln"> 1</span>$ journalctl -u kubelet
-<span class="ln"> 2</span>
-<span class="ln"> 3</span>Sep <span class="m">01</span> 09:24:20 node30 kubelet<span class="o">[</span>1399<span class="o">]</span>: I0901 09:24:20.953854    <span class="m">1399</span> csi_plugin.go:945<span class="o">]</span> Failed to contact API server when waiting <span class="k">for</span> CSINode publishing: Unauthorized
-<span class="ln"> 4</span>Sep <span class="m">01</span> 09:24:20 node30 kubelet<span class="o">[</span>1399<span class="o">]</span>: E0901 09:24:20.960125    <span class="m">1399</span> controller.go:136<span class="o">]</span> failed to ensure node lease exists, will retry in 3.2s, error: Unauthorized
-<span class="ln"> 5</span>Sep <span class="m">01</span> 09:24:21 node30 kubelet<span class="o">[</span>1399<span class="o">]</span>: E0901 09:24:21.051942    <span class="m">1399</span> kubelet.go:2267<span class="o">]</span> node <span class="s2">&#34;node30&#34;</span> not found
-<span class="ln"> 6</span>Sep <span class="m">01</span> 09:24:21 node30 kubelet<span class="o">[</span>1399<span class="o">]</span>: E0901 09:24:21.152071    <span class="m">1399</span> kubelet.go:2267<span class="o">]</span> node <span class="s2">&#34;node30&#34;</span> not found
-<span class="ln"> 7</span>Sep <span class="m">01</span> 09:24:21 node30 kubelet<span class="o">[</span>1399<span class="o">]</span>: I0901 09:24:21.152502    <span class="m">1399</span> kubelet_node_status.go:294<span class="o">]</span> Setting node annotation to <span class="nb">enable</span> volume controller attach/detach
-<span class="ln"> 8</span>Sep <span class="m">01</span> 09:24:21 node30 kubelet<span class="o">[</span>1399<span class="o">]</span>: I0901 09:24:21.152782    <span class="m">1399</span> setters.go:77<span class="o">]</span> Using node IP: <span class="s2">&#34;210.45.193.149&#34;</span>
-<span class="ln"> 9</span>Sep <span class="m">01</span> 09:24:21 node30 kubelet<span class="o">[</span>1399<span class="o">]</span>: I0901 09:24:21.177629    <span class="m">1399</span> kubelet_node_status.go:486<span class="o">]</span> Recording NodeHasSufficientMemory event message <span class="k">for</span> node node30
-<span class="ln">10</span>Sep <span class="m">01</span> 09:24:21 node30 kubelet<span class="o">[</span>1399<span class="o">]</span>: I0901 09:24:21.177658    <span class="m">1399</span> kubelet_node_status.go:486<span class="o">]</span> Recording NodeHasNoDiskPressure event message <span class="k">for</span> node node30
-<span class="ln">11</span>Sep <span class="m">01</span> 09:24:21 node30 kubelet<span class="o">[</span>1399<span class="o">]</span>: I0901 09:24:21.177666    <span class="m">1399</span> kubelet_node_status.go:486<span class="o">]</span> Recording NodeHasSufficientPID event message <span class="k">for</span> node node30
-<span class="ln">12</span>Sep <span class="m">01</span> 09:24:21 node30 kubelet<span class="o">[</span>1399<span class="o">]</span>: I0901 09:24:21.177686    <span class="m">1399</span> kubelet_node_status.go:70<span class="o">]</span> Attempting to register node node30
-<span class="ln">13</span>Sep <span class="m">01</span> 09:24:21 node30 kubelet<span class="o">[</span>1399<span class="o">]</span>: E0901 09:24:21.179746    <span class="m">1399</span> kubelet_node_status.go:92<span class="o">]</span> Unable to register node <span class="s2">&#34;node30&#34;</span> with API server: Unauthorized
-<span class="ln">14</span>Sep <span class="m">01</span> 09:24:21 node30 kubelet<span class="o">[</span>1399<span class="o">]</span>: E0901 09:24:21.184238    <span class="m">1399</span> reflector.go:178<span class="o">]</span> k8s.io/client-go/informers/factory.go:135: Failed to list *v1.CSIDriver: Unauthorized
-<span class="ln">15</span>Sep <span class="m">01</span> 09:24:21 node30 kubelet<span class="o">[</span>1399<span class="o">]</span>: E0901 09:24:21.252222    <span class="m">1399</span> kubelet.go:2267<span class="o">]</span> node <span class="s2">&#34;node30&#34;</span> not found
-<span class="ln">16</span>Sep <span class="m">01</span> 09:24:21 node30 kubelet<span class="o">[</span>1399<span class="o">]</span>: E0901 09:24:21.340245    <span class="m">1399</span> reflector.go:178<span class="o">]</span> k8s.io/kubernetes/pkg/kubelet/kubelet.go:526: Failed to list *v1.Node: Unauthorized
-<span class="ln">17</span>Sep <span class="m">01</span> 09:24:21 node30 kubelet<span class="o">[</span>1399<span class="o">]</span>: E0901 09:24:21.352382    <span class="m">1399</span> kubelet.go:2267<span class="o">]</span> node <span class="s2">&#34;node30&#34;</span> not found
-</code></pre></div><p>注意到关键日志：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>Sep <span class="m">01</span> 09:24:21 node30 kubelet<span class="o">[</span>1399<span class="o">]</span>: E0901 09:24:21.179746    <span class="m">1399</span> kubelet_node_status.go:92<span class="o">]</span> Unable to register node <span class="s2">&#34;node30&#34;</span> with API server: Unauthorized
-</code></pre></div><p>意思是Node无法注册到Api Server，初步判断是这个原因导致的Node一直处于NotReady状态。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">$ journalctl -u kubelet
+
+Sep <span class="m">01</span> 09:24:20 node30 kubelet<span class="o">[</span>1399<span class="o">]</span>: I0901 09:24:20.953854    <span class="m">1399</span> csi_plugin.go:945<span class="o">]</span> Failed to contact API server when waiting <span class="k">for</span> CSINode publishing: Unauthorized
+Sep <span class="m">01</span> 09:24:20 node30 kubelet<span class="o">[</span>1399<span class="o">]</span>: E0901 09:24:20.960125    <span class="m">1399</span> controller.go:136<span class="o">]</span> failed to ensure node lease exists, will retry in 3.2s, error: Unauthorized
+Sep <span class="m">01</span> 09:24:21 node30 kubelet<span class="o">[</span>1399<span class="o">]</span>: E0901 09:24:21.051942    <span class="m">1399</span> kubelet.go:2267<span class="o">]</span> node <span class="s2">&#34;node30&#34;</span> not found
+Sep <span class="m">01</span> 09:24:21 node30 kubelet<span class="o">[</span>1399<span class="o">]</span>: E0901 09:24:21.152071    <span class="m">1399</span> kubelet.go:2267<span class="o">]</span> node <span class="s2">&#34;node30&#34;</span> not found
+Sep <span class="m">01</span> 09:24:21 node30 kubelet<span class="o">[</span>1399<span class="o">]</span>: I0901 09:24:21.152502    <span class="m">1399</span> kubelet_node_status.go:294<span class="o">]</span> Setting node annotation to <span class="nb">enable</span> volume controller attach/detach
+Sep <span class="m">01</span> 09:24:21 node30 kubelet<span class="o">[</span>1399<span class="o">]</span>: I0901 09:24:21.152782    <span class="m">1399</span> setters.go:77<span class="o">]</span> Using node IP: <span class="s2">&#34;210.45.193.149&#34;</span>
+Sep <span class="m">01</span> 09:24:21 node30 kubelet<span class="o">[</span>1399<span class="o">]</span>: I0901 09:24:21.177629    <span class="m">1399</span> kubelet_node_status.go:486<span class="o">]</span> Recording NodeHasSufficientMemory event message <span class="k">for</span> node node30
+Sep <span class="m">01</span> 09:24:21 node30 kubelet<span class="o">[</span>1399<span class="o">]</span>: I0901 09:24:21.177658    <span class="m">1399</span> kubelet_node_status.go:486<span class="o">]</span> Recording NodeHasNoDiskPressure event message <span class="k">for</span> node node30
+Sep <span class="m">01</span> 09:24:21 node30 kubelet<span class="o">[</span>1399<span class="o">]</span>: I0901 09:24:21.177666    <span class="m">1399</span> kubelet_node_status.go:486<span class="o">]</span> Recording NodeHasSufficientPID event message <span class="k">for</span> node node30
+Sep <span class="m">01</span> 09:24:21 node30 kubelet<span class="o">[</span>1399<span class="o">]</span>: I0901 09:24:21.177686    <span class="m">1399</span> kubelet_node_status.go:70<span class="o">]</span> Attempting to register node node30
+Sep <span class="m">01</span> 09:24:21 node30 kubelet<span class="o">[</span>1399<span class="o">]</span>: E0901 09:24:21.179746    <span class="m">1399</span> kubelet_node_status.go:92<span class="o">]</span> Unable to register node <span class="s2">&#34;node30&#34;</span> with API server: Unauthorized
+Sep <span class="m">01</span> 09:24:21 node30 kubelet<span class="o">[</span>1399<span class="o">]</span>: E0901 09:24:21.184238    <span class="m">1399</span> reflector.go:178<span class="o">]</span> k8s.io/client-go/informers/factory.go:135: Failed to list *v1.CSIDriver: Unauthorized
+Sep <span class="m">01</span> 09:24:21 node30 kubelet<span class="o">[</span>1399<span class="o">]</span>: E0901 09:24:21.252222    <span class="m">1399</span> kubelet.go:2267<span class="o">]</span> node <span class="s2">&#34;node30&#34;</span> not found
+Sep <span class="m">01</span> 09:24:21 node30 kubelet<span class="o">[</span>1399<span class="o">]</span>: E0901 09:24:21.340245    <span class="m">1399</span> reflector.go:178<span class="o">]</span> k8s.io/kubernetes/pkg/kubelet/kubelet.go:526: Failed to list *v1.Node: Unauthorized
+Sep <span class="m">01</span> 09:24:21 node30 kubelet<span class="o">[</span>1399<span class="o">]</span>: E0901 09:24:21.352382    <span class="m">1399</span> kubelet.go:2267<span class="o">]</span> node <span class="s2">&#34;node30&#34;</span> not found
+</code></pre></td></tr></table>
+</div>
+</div><p>注意到关键日志：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">Sep <span class="m">01</span> 09:24:21 node30 kubelet<span class="o">[</span>1399<span class="o">]</span>: E0901 09:24:21.179746    <span class="m">1399</span> kubelet_node_status.go:92<span class="o">]</span> Unable to register node <span class="s2">&#34;node30&#34;</span> with API server: Unauthorized
+</code></pre></td></tr></table>
+</div>
+</div><p>意思是Node无法注册到Api Server，初步判断是这个原因导致的Node一直处于NotReady状态。</p>
 <h2 id="重启kubelet">重启kubelet<a class="anchor ms-1" href="#重启kubelet"><i class="fas fa-link"></i></a></h2>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>systemctl restart kubelet
-</code></pre></div><p>问题依旧。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">systemctl restart kubelet
+</code></pre></td></tr></table>
+</div>
+</div><p>问题依旧。</p>
 <h2 id="查资料">查资料<a class="anchor ms-1" href="#查资料"><i class="fas fa-link"></i></a></h2>
 <p>查询资料，没有找到类似问题，也没有解决办法。</p>
 <h2 id="探究为何与api-server通信被拒绝">探究为何与Api Server通信被拒绝<a class="anchor ms-1" href="#探究为何与api-server通信被拒绝"><i class="fas fa-link"></i></a></h2>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>Sep <span class="m">01</span> 09:24:21 node30 kubelet<span class="o">[</span>1399<span class="o">]</span>: E0901 09:24:21.179746    <span class="m">1399</span> kubelet_node_status.go:92<span class="o">]</span> Unable to register node <span class="s2">&#34;node30&#34;</span> with API server: Unauthorized
-</code></pre></div><p>日志的意思上看，是kubelet和Api Server通信的时候被拒绝了，拒绝原因是未授权。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">Sep <span class="m">01</span> 09:24:21 node30 kubelet<span class="o">[</span>1399<span class="o">]</span>: E0901 09:24:21.179746    <span class="m">1399</span> kubelet_node_status.go:92<span class="o">]</span> Unable to register node <span class="s2">&#34;node30&#34;</span> with API server: Unauthorized
+</code></pre></td></tr></table>
+</div>
+</div><p>日志的意思上看，是kubelet和Api Server通信的时候被拒绝了，拒绝原因是未授权。</p>
 <p>那么kubelet的和Api Server的通信配置在哪里呢？</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln"> 1</span>$ ps -ef <span class="p">|</span> grep kubelet
-<span class="ln"> 2</span>
-<span class="ln"> 3</span>/usr/local/bin/kubelet --logtostderr<span class="o">=</span><span class="nb">true</span> --v<span class="o">=</span><span class="m">2</span> --node-ip<span class="o">=</span>... 
-<span class="ln"> 4</span>--hostname-override<span class="o">=</span>node30 
-<span class="ln"> 5</span>--bootstrap-kubeconfig<span class="o">=</span>/etc/kubernetes/bootstrap-kubelet.conf 
-<span class="ln"> 6</span>--config<span class="o">=</span>/etc/kubernetes/kubelet-config.yaml 
-<span class="ln"> 7</span>--kubeconfig<span class="o">=</span>/etc/kubernetes/kubelet.conf 
-<span class="ln"> 8</span>--pod-infra-container-image<span class="o">=</span>harbor.supwisdom.com/gcr-image/pause:3.2 
-<span class="ln"> 9</span>--runtime-cgroups<span class="o">=</span>/systemd/system.slice 
-<span class="ln">10</span>--network-plugin<span class="o">=</span>cni --cni-conf-dir<span class="o">=</span>/etc/cni/net.d --cni-bin-dir<span class="o">=</span>/opt/cni/bin
-</code></pre></div><p>注意到<code>--kubeconfig=/etc/kubernetes/kubelet.conf</code>，查看这个文件内容：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-yaml" data-lang="yaml"><span class="ln"> 1</span><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l">v1</span><span class="w">
-</span><span class="ln"> 2</span><span class="w"></span><span class="nt">clusters</span><span class="p">:</span><span class="w">
-</span><span class="ln"> 3</span><span class="w"></span>- <span class="nt">cluster</span><span class="p">:</span><span class="w">
-</span><span class="ln"> 4</span><span class="w">    </span><span class="nt">certificate-authority-data</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="l">Base64]</span><span class="w">
-</span><span class="ln"> 5</span><span class="w">    </span><span class="nt">server</span><span class="p">:</span><span class="w"> </span><span class="l">https://localhost:6443</span><span class="w">
-</span><span class="ln"> 6</span><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">default-cluster</span><span class="w">
-</span><span class="ln"> 7</span><span class="w"></span><span class="nt">contexts</span><span class="p">:</span><span class="w">
-</span><span class="ln"> 8</span><span class="w"></span>- <span class="nt">context</span><span class="p">:</span><span class="w">
-</span><span class="ln"> 9</span><span class="w">    </span><span class="nt">cluster</span><span class="p">:</span><span class="w"> </span><span class="l">default-cluster</span><span class="w">
-</span><span class="ln">10</span><span class="w">    </span><span class="nt">namespace</span><span class="p">:</span><span class="w"> </span><span class="l">default</span><span class="w">
-</span><span class="ln">11</span><span class="w">    </span><span class="nt">user</span><span class="p">:</span><span class="w"> </span><span class="l">default-auth</span><span class="w">
-</span><span class="ln">12</span><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">default-context</span><span class="w">
-</span><span class="ln">13</span><span class="w"></span><span class="nt">current-context</span><span class="p">:</span><span class="w"> </span><span class="l">default-context</span><span class="w">
-</span><span class="ln">14</span><span class="w"></span><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l">Config</span><span class="w">
-</span><span class="ln">15</span><span class="w"></span><span class="nt">preferences</span><span class="p">:</span><span class="w"> </span>{}<span class="w">
-</span><span class="ln">16</span><span class="w"></span><span class="nt">users</span><span class="p">:</span><span class="w">
-</span><span class="ln">17</span><span class="w"></span>- <span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">default-auth</span><span class="w">
-</span><span class="ln">18</span><span class="w">  </span><span class="nt">user</span><span class="p">:</span><span class="w">
-</span><span class="ln">19</span><span class="w">    </span><span class="nt">client-certificate</span><span class="p">:</span><span class="w"> </span><span class="l">/var/lib/kubelet/pki/kubelet-client-current.pem</span><span class="w">
-</span><span class="ln">20</span><span class="w">    </span><span class="nt">client-key</span><span class="p">:</span><span class="w"> </span><span class="l">/var/lib/kubelet/pki/kubelet-client-current.pem</span><span class="w">
-</span></code></pre></div><p>对比其他好的Node的<code>certificate-authority-data</code>字段，发现是一样的。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">$ ps -ef <span class="p">|</span> grep kubelet
+
+/usr/local/bin/kubelet --logtostderr<span class="o">=</span><span class="nb">true</span> --v<span class="o">=</span><span class="m">2</span> --node-ip<span class="o">=</span>... 
+--hostname-override<span class="o">=</span>node30 
+--bootstrap-kubeconfig<span class="o">=</span>/etc/kubernetes/bootstrap-kubelet.conf 
+--config<span class="o">=</span>/etc/kubernetes/kubelet-config.yaml 
+--kubeconfig<span class="o">=</span>/etc/kubernetes/kubelet.conf 
+--pod-infra-container-image<span class="o">=</span>harbor.supwisdom.com/gcr-image/pause:3.2 
+--runtime-cgroups<span class="o">=</span>/systemd/system.slice 
+--network-plugin<span class="o">=</span>cni --cni-conf-dir<span class="o">=</span>/etc/cni/net.d --cni-bin-dir<span class="o">=</span>/opt/cni/bin
+</code></pre></td></tr></table>
+</div>
+</div><p>注意到<code>--kubeconfig=/etc/kubernetes/kubelet.conf</code>，查看这个文件内容：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-yaml" data-lang="yaml"><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l">v1</span><span class="w">
+</span><span class="w"></span><span class="nt">clusters</span><span class="p">:</span><span class="w">
+</span><span class="w"></span>- <span class="nt">cluster</span><span class="p">:</span><span class="w">
+</span><span class="w">    </span><span class="nt">certificate-authority-data</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="l">Base64]</span><span class="w">
+</span><span class="w">    </span><span class="nt">server</span><span class="p">:</span><span class="w"> </span><span class="l">https://localhost:6443</span><span class="w">
+</span><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">default-cluster</span><span class="w">
+</span><span class="w"></span><span class="nt">contexts</span><span class="p">:</span><span class="w">
+</span><span class="w"></span>- <span class="nt">context</span><span class="p">:</span><span class="w">
+</span><span class="w">    </span><span class="nt">cluster</span><span class="p">:</span><span class="w"> </span><span class="l">default-cluster</span><span class="w">
+</span><span class="w">    </span><span class="nt">namespace</span><span class="p">:</span><span class="w"> </span><span class="l">default</span><span class="w">
+</span><span class="w">    </span><span class="nt">user</span><span class="p">:</span><span class="w"> </span><span class="l">default-auth</span><span class="w">
+</span><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">default-context</span><span class="w">
+</span><span class="w"></span><span class="nt">current-context</span><span class="p">:</span><span class="w"> </span><span class="l">default-context</span><span class="w">
+</span><span class="w"></span><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l">Config</span><span class="w">
+</span><span class="w"></span><span class="nt">preferences</span><span class="p">:</span><span class="w"> </span>{}<span class="w">
+</span><span class="w"></span><span class="nt">users</span><span class="p">:</span><span class="w">
+</span><span class="w"></span>- <span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">default-auth</span><span class="w">
+</span><span class="w">  </span><span class="nt">user</span><span class="p">:</span><span class="w">
+</span><span class="w">    </span><span class="nt">client-certificate</span><span class="p">:</span><span class="w"> </span><span class="l">/var/lib/kubelet/pki/kubelet-client-current.pem</span><span class="w">
+</span><span class="w">    </span><span class="nt">client-key</span><span class="p">:</span><span class="w"> </span><span class="l">/var/lib/kubelet/pki/kubelet-client-current.pem</span><span class="w">
+</span></code></pre></td></tr></table>
+</div>
+</div><p>对比其他好的Node的<code>certificate-authority-data</code>字段，发现是一样的。</p>
 <p>再对比其他好的Node的<code>/var/lib/kubelet/pki/kubelet-client-current.pem</code>，发现是不一样的，问题可能出在这个文件里。推测每个Node作为一个独立的Api Server客户端有自己独特的证书。</p>
 <h2 id="查看kubelet-client-currentpem">查看kubelet-client-current.pem<a class="anchor ms-1" href="#查看kubelet-client-currentpem"><i class="fas fa-link"></i></a></h2>
 <p>这个文件是一个x509证书，显然Api Server用来做客户端认证的，kubelet也是Api Server的客户端，看一下这个文件。</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>$ ls -l /var/lib/kubelet/pki/
-<span class="ln">2</span>-rw-------. <span class="m">1</span> root root <span class="m">1090</span> Nov  <span class="m">6</span>  <span class="m">2020</span> kubelet-client-2020-11-06-02-48-49.pem
-<span class="ln">3</span>-rw-------. <span class="m">1</span> root root <span class="m">1090</span> Sep  <span class="m">1</span>  <span class="m">2021</span> kubelet-client-2021-09-01-13-21-24.pem
-<span class="ln">4</span>lrwxrwxrwx. <span class="m">1</span> root root   <span class="m">59</span> Sep  <span class="m">1</span>  <span class="m">2021</span> kubelet-client-current.pem -&gt; /var/lib/kubelet/pki/kubelet-client-2021-09-01-13-21-24.pem
-<span class="ln">5</span>-rw-r--r--. <span class="m">1</span> root root <span class="m">2279</span> Nov  <span class="m">6</span>  <span class="m">2020</span> kubelet.crt
-<span class="ln">6</span>-rw-------. <span class="m">1</span> root root <span class="m">1679</span> Nov  <span class="m">6</span>  <span class="m">2020</span> kubelet.key
-</code></pre></div><p>发现这个文件是一个软连接，指向的是<code>kubelet-client-2021-09-01-13-21-24.pem</code>，但笔者在排查问题时的时间是9月1日早上11点左右，这个文件显然是超前了。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">$ ls -l /var/lib/kubelet/pki/
+-rw-------. <span class="m">1</span> root root <span class="m">1090</span> Nov  <span class="m">6</span>  <span class="m">2020</span> kubelet-client-2020-11-06-02-48-49.pem
+-rw-------. <span class="m">1</span> root root <span class="m">1090</span> Sep  <span class="m">1</span>  <span class="m">2021</span> kubelet-client-2021-09-01-13-21-24.pem
+lrwxrwxrwx. <span class="m">1</span> root root   <span class="m">59</span> Sep  <span class="m">1</span>  <span class="m">2021</span> kubelet-client-current.pem -&gt; /var/lib/kubelet/pki/kubelet-client-2021-09-01-13-21-24.pem
+-rw-r--r--. <span class="m">1</span> root root <span class="m">2279</span> Nov  <span class="m">6</span>  <span class="m">2020</span> kubelet.crt
+-rw-------. <span class="m">1</span> root root <span class="m">1679</span> Nov  <span class="m">6</span>  <span class="m">2020</span> kubelet.key
+</code></pre></td></tr></table>
+</div>
+</div><p>发现这个文件是一个软连接，指向的是<code>kubelet-client-2021-09-01-13-21-24.pem</code>，但笔者在排查问题时的时间是9月1日早上11点左右，这个文件显然是超前了。</p>
 <p>再查看这个文件内容：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln"> 1</span>openssl x509 -in kubelet-client-2021-09-01-13-21-24.pem -noout -text
-<span class="ln"> 2</span>
-<span class="ln"> 3</span>Certificate:
-<span class="ln"> 4</span>    Data:
-<span class="ln"> 5</span>        Version: <span class="m">3</span> <span class="o">(</span>0x2<span class="o">)</span>
-<span class="ln"> 6</span>        Serial Number:
-<span class="ln"> 7</span>            <span class="o">[</span>hex block<span class="o">]</span>
-<span class="ln"> 8</span>        Signature Algorithm: sha256WithRSAEncryption
-<span class="ln"> 9</span>        Issuer: <span class="nv">CN</span> <span class="o">=</span> kubernetes
-<span class="ln">10</span>        Validity
-<span class="ln">11</span>            Not Before: Sep  <span class="m">1</span> 05:11:39 <span class="m">2021</span> GMT
-<span class="ln">12</span>            Not After : Sep  <span class="m">1</span> 05:11:39 <span class="m">2022</span> GMT
-<span class="ln">13</span>        Subject: <span class="nv">O</span> <span class="o">=</span> system:nodes, <span class="nv">CN</span> <span class="o">=</span> system:node:node30.eams.supwisdom.com
-<span class="ln">14</span>        Subject Public Key Info:
-<span class="ln">15</span>            Public Key Algorithm: id-ecPublicKey
-<span class="ln">16</span>                Public-Key: <span class="o">(</span><span class="m">256</span> bit<span class="o">)</span>
-<span class="ln">17</span>                pub:
-<span class="ln">18</span>                    <span class="o">[</span>hex block<span class="o">]</span>
-<span class="ln">19</span>                ASN1 OID: prime256v1
-<span class="ln">20</span>                NIST CURVE: P-256
-<span class="ln">21</span>        X509v3 extensions:
-<span class="ln">22</span>            X509v3 Key Usage: critical
-<span class="ln">23</span>                Digital Signature, Key Encipherment
-<span class="ln">24</span>            X509v3 Extended Key Usage:
-<span class="ln">25</span>                TLS Web Client Authentication
-<span class="ln">26</span>            X509v3 Basic Constraints: critical
-<span class="ln">27</span>                CA:FALSE
-<span class="ln">28</span>    Signature Algorithm: sha256WithRSAEncryption
-<span class="ln">29</span>         <span class="o">[</span>hex block<span class="o">]</span>
-</code></pre></div><p>发现证书有效期从 2021年9月1日13:11:39 ～2022年9月1日13:11:39（GMT转换成东八区），这个是不对的。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">openssl x509 -in kubelet-client-2021-09-01-13-21-24.pem -noout -text
+
+Certificate:
+    Data:
+        Version: <span class="m">3</span> <span class="o">(</span>0x2<span class="o">)</span>
+        Serial Number:
+            <span class="o">[</span>hex block<span class="o">]</span>
+        Signature Algorithm: sha256WithRSAEncryption
+        Issuer: <span class="nv">CN</span> <span class="o">=</span> kubernetes
+        Validity
+            Not Before: Sep  <span class="m">1</span> 05:11:39 <span class="m">2021</span> GMT
+            Not After : Sep  <span class="m">1</span> 05:11:39 <span class="m">2022</span> GMT
+        Subject: <span class="nv">O</span> <span class="o">=</span> system:nodes, <span class="nv">CN</span> <span class="o">=</span> system:node:node30.eams.supwisdom.com
+        Subject Public Key Info:
+            Public Key Algorithm: id-ecPublicKey
+                Public-Key: <span class="o">(</span><span class="m">256</span> bit<span class="o">)</span>
+                pub:
+                    <span class="o">[</span>hex block<span class="o">]</span>
+                ASN1 OID: prime256v1
+                NIST CURVE: P-256
+        X509v3 extensions:
+            X509v3 Key Usage: critical
+                Digital Signature, Key Encipherment
+            X509v3 Extended Key Usage:
+                TLS Web Client Authentication
+            X509v3 Basic Constraints: critical
+                CA:FALSE
+    Signature Algorithm: sha256WithRSAEncryption
+         <span class="o">[</span>hex block<span class="o">]</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>发现证书有效期从 2021年9月1日13:11:39 ～2022年9月1日13:11:39（GMT转换成东八区），这个是不对的。</p>
 <h2 id="解决办法">解决办法<a class="anchor ms-1" href="#解决办法"><i class="fas fa-link"></i></a></h2>
 <p>因为同目录下还有一个 <code>kubelet-client-2020-11-06-02-48-49.pem</code>，所以尝试把软连接指向这个文件，然后再启动kubelet试试。</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>$ rm /var/lib/kubelet/pki/kubelet-client-current.pem
-<span class="ln">2</span>$ ln -s /var/lib/kubelet/pki/kubelet-client-2020-11-06-02-48-49.pem  /var/lib/kubelet/pki/kubelet-client-current.pem
-<span class="ln">3</span>$ systemctl restart kubelet
-</code></pre></div><p>问题解决，Node恢复成Ready状态。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">$ rm /var/lib/kubelet/pki/kubelet-client-current.pem
+$ ln -s /var/lib/kubelet/pki/kubelet-client-2020-11-06-02-48-49.pem  /var/lib/kubelet/pki/kubelet-client-current.pem
+$ systemctl restart kubelet
+</code></pre></td></tr></table>
+</div>
+</div><p>问题解决，Node恢复成Ready状态。</p>
 <h2 id="后续">后续<a class="anchor ms-1" href="#后续"><i class="fas fa-link"></i></a></h2>
 <p>因为Node上的还有断电前的容器，为了把Node清理干净，把kubelet停止，删除所有容器，再启动kubelet。</p></div></div>
   <div class="card-footer"><div class="post-navs d-flex justify-content-evenly">

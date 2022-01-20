@@ -12,7 +12,7 @@
 <meta name="description" content="" /><meta itemprop="name" content="What every programmer should know about memory, Part 4: NUMA support">
 <meta itemprop="description" content=""><meta itemprop="datePublished" content="2019-03-12T21:20:48+08:00" />
 <meta itemprop="dateModified" content="2019-03-12T21:20:48+08:00" />
-<meta itemprop="wordCount" content="2709">
+<meta itemprop="wordCount" content="2724">
 <meta itemprop="keywords" content="kernel," /><meta property="og:title" content="What every programmer should know about memory, Part 4: NUMA support" />
 <meta property="og:description" content="" />
 <meta property="og:type" content="article" />
@@ -305,22 +305,43 @@
 <p><strong>Figure 5.3: Read/Write Performance with Multiple Nodes</strong></p>
 <p>可以0 Hop、两个1 Hop、2 Hop的读写性能差异。不过这个信息不太容易使用，Section 6.5 会将更简单好用的方法。</p>
 <p>我们有可能知道memory-mapped files, Copy-On-Write (COW) pages and anonymous memory是如何分配在各个节点上的。每个进程有自己的NUMA相关的文件<code>/proc/&lt;PID&gt;/numa_maps</code>，看Figure 5.2：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln"> 1</span>00400000 default file=/bin/cat mapped=3 N3=3
-<span class="ln"> 2</span>00504000 default file=/bin/cat anon=1 dirty=1 mapped=2 N3=2
-<span class="ln"> 3</span>00506000 default heap anon=3 dirty=3 active=0 N3=3
-<span class="ln"> 4</span>38a9000000 default file=/lib64/ld-2.4.so mapped=22 mapmax=47 N1=22
-<span class="ln"> 5</span>38a9119000 default file=/lib64/ld-2.4.so anon=1 dirty=1 N3=1
-<span class="ln"> 6</span>38a911a000 default file=/lib64/ld-2.4.so anon=1 dirty=1 N3=1
-<span class="ln"> 7</span>38a9200000 default file=/lib64/libc-2.4.so mapped=53 mapmax=52 N1=51 N2=2
-<span class="ln"> 8</span>38a933f000 default file=/lib64/libc-2.4.so
-<span class="ln"> 9</span>38a943f000 default file=/lib64/libc-2.4.so anon=1 dirty=1 mapped=3 mapmax=32 N1=2 N3=1
-<span class="ln">10</span>38a9443000 default file=/lib64/libc-2.4.so anon=1 dirty=1 N3=1
-<span class="ln">11</span>38a9444000 default anon=4 dirty=4 active=0 N3=4
-<span class="ln">12</span>2b2bbcdce000 default anon=1 dirty=1 N3=1
-<span class="ln">13</span>2b2bbcde4000 default anon=2 dirty=2 N3=2
-<span class="ln">14</span>2b2bbcde6000 default file=/usr/lib/locale/locale-archive mapped=11 mapmax=8 N0=11
-<span class="ln">15</span>7fffedcc7000 default stack anon=2 dirty=2 N3=2
-</code></pre></div><p><strong>Figure 5.2: Content of <code>/proc/PID/numa_maps</code></strong></p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt">00400000 default file=/bin/cat mapped=3 N3=3
+00504000 default file=/bin/cat anon=1 dirty=1 mapped=2 N3=2
+00506000 default heap anon=3 dirty=3 active=0 N3=3
+38a9000000 default file=/lib64/ld-2.4.so mapped=22 mapmax=47 N1=22
+38a9119000 default file=/lib64/ld-2.4.so anon=1 dirty=1 N3=1
+38a911a000 default file=/lib64/ld-2.4.so anon=1 dirty=1 N3=1
+38a9200000 default file=/lib64/libc-2.4.so mapped=53 mapmax=52 N1=51 N2=2
+38a933f000 default file=/lib64/libc-2.4.so
+38a943f000 default file=/lib64/libc-2.4.so anon=1 dirty=1 mapped=3 mapmax=32 N1=2 N3=1
+38a9443000 default file=/lib64/libc-2.4.so anon=1 dirty=1 N3=1
+38a9444000 default anon=4 dirty=4 active=0 N3=4
+2b2bbcdce000 default anon=1 dirty=1 N3=1
+2b2bbcde4000 default anon=2 dirty=2 N3=2
+2b2bbcde6000 default file=/usr/lib/locale/locale-archive mapped=11 mapmax=8 N0=11
+7fffedcc7000 default stack anon=2 dirty=2 N3=2
+</code></pre></td></tr></table>
+</div>
+</div><p><strong>Figure 5.2: Content of <code>/proc/PID/numa_maps</code></strong></p>
 <p>主要看N0和N3的值，这个是分配到node 0和3的页的数量。所以可以大概猜到进程执行在node 3的核心上。read-only mapping，比如第一个<code>ld-2.4.so</code>和<code>libc-2.4.so</code>和<code>locale-archive</code>则分配在别的node上。</p>
 <p>下面是真实的测试，和Figure 5.3的数据做比较，不过测试的是1 hop远程访问：</p>
 <p><img class="img-fluid" alt="" src="https://static.lwn.net/images/cpumemory/cpumemory.66.png" loading="lazy"

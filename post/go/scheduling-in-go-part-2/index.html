@@ -12,7 +12,7 @@
 <meta name="description" content="" /><meta itemprop="name" content="Scheduling In Go : Part II - Go Scheduler 阅读笔记">
 <meta itemprop="description" content=""><meta itemprop="datePublished" content="2020-03-30T18:10:26+08:00" />
 <meta itemprop="dateModified" content="2020-03-30T18:10:26+08:00" />
-<meta itemprop="wordCount" content="2477">
+<meta itemprop="wordCount" content="2479">
 <meta itemprop="keywords" content="go,kernel,thread,scheduling,arts,arts-r," /><meta property="og:title" content="Scheduling In Go : Part II - Go Scheduler 阅读笔记" />
 <meta property="og:description" content="" />
 <meta property="og:type" content="article" />
@@ -347,15 +347,29 @@
 </figure>
 
 <p>P1会“偷”P2 LRQ中一半的G，偷窃算法如下，简单来说就是先偷P2的G，如果没有再从GRQ中取：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="ln">1</span><span class="nx">runtime</span><span class="p">.</span><span class="nf">schedule</span><span class="p">()</span> <span class="p">{</span>
-<span class="ln">2</span>    <span class="c1">// only 1/61 of the time, check the global runnable queue for a G.
-</span><span class="ln">3</span><span class="c1"></span>    <span class="c1">// if not found, check the local queue.
-</span><span class="ln">4</span><span class="c1"></span>    <span class="c1">// if not found,
-</span><span class="ln">5</span><span class="c1"></span>    <span class="c1">//     try to steal from other Ps.
-</span><span class="ln">6</span><span class="c1"></span>    <span class="c1">//     if not, check the global runnable queue.
-</span><span class="ln">7</span><span class="c1"></span>    <span class="c1">//     if not found, poll network.
-</span><span class="ln">8</span><span class="c1"></span><span class="p">}</span>
-</code></pre></div><figure><img src="94_figure11.png" width="100%"/>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="nx">runtime</span><span class="p">.</span><span class="nf">schedule</span><span class="p">()</span> <span class="p">{</span>
+    <span class="c1">// only 1/61 of the time, check the global runnable queue for a G.
+</span><span class="c1"></span>    <span class="c1">// if not found, check the local queue.
+</span><span class="c1"></span>    <span class="c1">// if not found,
+</span><span class="c1"></span>    <span class="c1">//     try to steal from other Ps.
+</span><span class="c1"></span>    <span class="c1">//     if not, check the global runnable queue.
+</span><span class="c1"></span>    <span class="c1">//     if not found, poll network.
+</span><span class="c1"></span><span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><figure><img src="94_figure11.png" width="100%"/>
 </figure>
 
 <p>当P2把G都做完了，然后P1没有G在LRQ中时：</p>

@@ -12,7 +12,7 @@
 <meta name="description" content="" /><meta itemprop="name" content="解读pprof报告">
 <meta itemprop="description" content=""><meta itemprop="datePublished" content="2020-03-17T14:10:26+08:00" />
 <meta itemprop="dateModified" content="2020-03-17T14:10:26+08:00" />
-<meta itemprop="wordCount" content="2305">
+<meta itemprop="wordCount" content="2358">
 <meta itemprop="keywords" content="go,debug,cheatsheet," /><meta property="og:title" content="解读pprof报告" />
 <meta property="og:description" content="" />
 <meta property="og:type" content="article" />
@@ -228,20 +228,39 @@
 <h2 id="解读cpu">解读CPU<a class="anchor ms-1" href="#解读cpu"><i class="fas fa-link"></i></a></h2>
 <p>以文中提供的CPU Profile来举例说明，我们使用<code>go tool pprof -http=0.0.0.0:4231 havlak1 havalk1.prof</code>来观察</p>
 <h3 id="解读top">解读Top<a class="anchor ms-1" href="#解读top"><i class="fas fa-link"></i></a></h3>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln"> 1</span>(pprof) top10
-<span class="ln"> 2</span>Total: 2525 samples
-<span class="ln"> 3</span>    Flat  Flat%   Sum%      Cum   Cum% Name
-<span class="ln"> 4</span>     298  11.8%  11.8%      345  13.7% runtime.mapaccess1_fast64
-<span class="ln"> 5</span>     268  10.6%  22.4%     2124  84.1% main.FindLoops
-<span class="ln"> 6</span>     251   9.9%  32.4%      451  17.9% scanblock
-<span class="ln"> 7</span>     178   7.0%  39.4%      351  13.9% hash_insert
-<span class="ln"> 8</span>     131   5.2%  44.6%      158   6.3% sweepspan
-<span class="ln"> 9</span>     119   4.7%  49.3%      350  13.9% main.DFS
-<span class="ln">10</span>      96   3.8%  53.1%       98   3.9% flushptrbuf
-<span class="ln">11</span>      95   3.8%  56.9%       95   3.8% runtime.aeshash64
-<span class="ln">12</span>      95   3.8%  60.6%      101   4.0% runtime.settype_flush
-<span class="ln">13</span>      88   3.5%  64.1%      988  39.1% runtime.mallocgc
-</code></pre></div><p>先了解是如何采样的：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt">(pprof) top10
+Total: 2525 samples
+    Flat  Flat%   Sum%      Cum   Cum% Name
+     298  11.8%  11.8%      345  13.7% runtime.mapaccess1_fast64
+     268  10.6%  22.4%     2124  84.1% main.FindLoops
+     251   9.9%  32.4%      451  17.9% scanblock
+     178   7.0%  39.4%      351  13.9% hash_insert
+     131   5.2%  44.6%      158   6.3% sweepspan
+     119   4.7%  49.3%      350  13.9% main.DFS
+      96   3.8%  53.1%       98   3.9% flushptrbuf
+      95   3.8%  56.9%       95   3.8% runtime.aeshash64
+      95   3.8%  60.6%      101   4.0% runtime.settype_flush
+      88   3.5%  64.1%      988  39.1% runtime.mallocgc
+</code></pre></td></tr></table>
+</div>
+</div><p>先了解是如何采样的：</p>
 <ul>
 <li>采样频率是每秒100次</li>
 <li>一个样本包含goroutine栈的程序计数器（program counters）</li>
@@ -272,59 +291,116 @@
 </ul>
 <h3 id="解读源码">解读源码<a class="anchor ms-1" href="#解读源码"><i class="fas fa-link"></i></a></h3>
 <p>下面是在pprof交互cli界面看到的报告：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln"> 1</span>(pprof) list DFS
-<span class="ln"> 2</span>Total: 2525 samples
-<span class="ln"> 3</span>ROUTINE ====================== main.DFS in /home/rsc/g/benchgraffiti/havlak/havlak1.go
-<span class="ln"> 4</span>   119    697 Total samples (flat / cumulative)
-<span class="ln"> 5</span>     3      3  240: func DFS(currentNode *BasicBlock, nodes []*UnionFindNode, number map[*BasicBlock]int, last []int, current int) int {
-<span class="ln"> 6</span>     1      1  241:     nodes[current].Init(currentNode, current)
-<span class="ln"> 7</span>     1     37  242:     number[currentNode] = current
-<span class="ln"> 8</span>     .      .  243:
-<span class="ln"> 9</span>     1      1  244:     lastid := current
-<span class="ln">10</span>    89     89  245:     for _, target := range currentNode.OutEdges {
-<span class="ln">11</span>     9    152  246:             if number[target] == unvisited {
-<span class="ln">12</span>     7    354  247:                     lastid = DFS(target, nodes, number, last, lastid+1)
-<span class="ln">13</span>     .      .  248:             }
-<span class="ln">14</span>     .      .  249:     }
-<span class="ln">15</span>     7     59  250:     last[number[currentNode]] = lastid
-<span class="ln">16</span>     1      1  251:     return lastid
-<span class="ln">17</span>(pprof)
-</code></pre></div><ul>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt">(pprof) list DFS
+Total: 2525 samples
+ROUTINE ====================== main.DFS in /home/rsc/g/benchgraffiti/havlak/havlak1.go
+   119    697 Total samples (flat / cumulative)
+     3      3  240: func DFS(currentNode *BasicBlock, nodes []*UnionFindNode, number map[*BasicBlock]int, last []int, current int) int {
+     1      1  241:     nodes[current].Init(currentNode, current)
+     1     37  242:     number[currentNode] = current
+     .      .  243:
+     1      1  244:     lastid := current
+    89     89  245:     for _, target := range currentNode.OutEdges {
+     9    152  246:             if number[target] == unvisited {
+     7    354  247:                     lastid = DFS(target, nodes, number, last, lastid+1)
+     .      .  248:             }
+     .      .  249:     }
+     7     59  250:     last[number[currentNode]] = lastid
+     1      1  251:     return lastid
+(pprof)
+</code></pre></td></tr></table>
+</div>
+</div><ul>
 <li>第一列：Flat</li>
 <li>第二列：Cum</li>
 <li>第三列：行号</li>
 </ul>
 <p>下面是在Web界面看到的报告（基本差不多，<a href="https://rawgit.com/rsc/benchgraffiti/master/havlak/havlak1.html" target="_blank" rel="noopener noreferrer">见这里</a>
 ）：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln"> 1</span>havlak1
-<span class="ln"> 2</span>Total: 5758 samples
-<span class="ln"> 3</span>main.DFS
-<span class="ln"> 4</span>/home/rsc/g/benchgraffiti/havlak/havlak1.go
-<span class="ln"> 5</span>
-<span class="ln"> 6</span>Total:   225   2296 (flat / cumulative samples)
-<span class="ln"> 7</span>  235               	return false
-<span class="ln"> 8</span>  236               }
-<span class="ln"> 9</span>  237               
-<span class="ln">10</span>  238               // DFS - Depth-First-Search and node numbering.
-<span class="ln">11</span>  239               //
-<span class="ln">12</span>  240      3      3 func DFS(currentNode *BasicBlock, nodes []*UnionFindNode, number map[*BasicBlock]int, last []int, current int) int {
-<span class="ln">13</span>  241     18     19 	nodes[current].Init(currentNode, current)
-<span class="ln">14</span>  242           166 	number[currentNode] = current
-<span class="ln">15</span>  243               
-<span class="ln">16</span>  244      2      2 	lastid := current
-<span class="ln">17</span>  245    167    167 	for _, target := range currentNode.OutEdges {
-<span class="ln">18</span>  246     17    508 		if number[target] == unvisited {
-<span class="ln">19</span>  247     10   1157 			lastid = DFS(target, nodes, number, last, lastid+1)
-<span class="ln">20</span>  248               		}
-<span class="ln">21</span>  249               	}
-<span class="ln">22</span>  250      7    273 	last[number[currentNode]] = lastid
-<span class="ln">23</span>  251      1      1 	return lastid
-<span class="ln">24</span>  252               }
-<span class="ln">25</span>  253               
-<span class="ln">26</span>  254               // FindLoops
-<span class="ln">27</span>  255               //
-<span class="ln">28</span>  256               // Find loops and build loop forest using Havlak&#39;s algorithm, which
-</code></pre></div><ul>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt">havlak1
+Total: 5758 samples
+main.DFS
+/home/rsc/g/benchgraffiti/havlak/havlak1.go
+
+Total:   225   2296 (flat / cumulative samples)
+  235               	return false
+  236               }
+  237               
+  238               // DFS - Depth-First-Search and node numbering.
+  239               //
+  240      3      3 func DFS(currentNode *BasicBlock, nodes []*UnionFindNode, number map[*BasicBlock]int, last []int, current int) int {
+  241     18     19 	nodes[current].Init(currentNode, current)
+  242           166 	number[currentNode] = current
+  243               
+  244      2      2 	lastid := current
+  245    167    167 	for _, target := range currentNode.OutEdges {
+  246     17    508 		if number[target] == unvisited {
+  247     10   1157 			lastid = DFS(target, nodes, number, last, lastid+1)
+  248               		}
+  249               	}
+  250      7    273 	last[number[currentNode]] = lastid
+  251      1      1 	return lastid
+  252               }
+  253               
+  254               // FindLoops
+  255               //
+  256               // Find loops and build loop forest using Havlak&#39;s algorithm, which
+</code></pre></td></tr></table>
+</div>
+</div><ul>
 <li>第一列：行号</li>
 <li>第二列：Flat</li>
 <li>第三列：Cum</li>
@@ -339,16 +415,31 @@
 <li><code>-alloc_objects</code> ：程序启动到现在总共object的数量</li>
 </ul>
 <h3 id="解读top-1">解读Top<a class="anchor ms-1" href="#解读top-1"><i class="fas fa-link"></i></a></h3>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln">1</span>(pprof) top5
-<span class="ln">2</span>Total: 82.4 MB
-<span class="ln">3</span>    Flat  Flat%   Sum%      Cum   Cum% Name
-<span class="ln">4</span>    56.3  68.4%  68.4%     56.3  68.4% main.FindLoops
-<span class="ln">5</span>    17.6  21.3%  89.7%     17.6  21.3% main.(*CFG).CreateNode
-<span class="ln">6</span>     8.0   9.7%  99.4%     25.6  31.0% main.NewBasicBlockEdge
-<span class="ln">7</span>     0.5   0.6% 100.0%      0.5   0.6% itab
-<span class="ln">8</span>     0.0   0.0% 100.0%      0.5   0.6% fmt.init
-<span class="ln">9</span>(pprof)
-</code></pre></div><p>采样频率：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span><span class="lnt">9
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt">(pprof) top5
+Total: 82.4 MB
+    Flat  Flat%   Sum%      Cum   Cum% Name
+    56.3  68.4%  68.4%     56.3  68.4% main.FindLoops
+    17.6  21.3%  89.7%     17.6  21.3% main.(*CFG).CreateNode
+     8.0   9.7%  99.4%     25.6  31.0% main.NewBasicBlockEdge
+     0.5   0.6% 100.0%      0.5   0.6% itab
+     0.0   0.0% 100.0%      0.5   0.6% fmt.init
+(pprof)
+</code></pre></td></tr></table>
+</div>
+</div><p>采样频率：</p>
 <ul>
 <li>每分配512K，采样一个block（具体啥意思不知道）</li>
 </ul>
@@ -363,69 +454,146 @@
 </ul>
 <h3 id="解读源码-1">解读源码<a class="anchor ms-1" href="#解读源码-1"><i class="fas fa-link"></i></a></h3>
 <p>和CPU源码解读差不多：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln"> 1</span>(pprof) list FindLoops
-<span class="ln"> 2</span>Total: 82.4 MB
-<span class="ln"> 3</span>ROUTINE ====================== main.FindLoops in /home/rsc/g/benchgraffiti/havlak/havlak3.go
-<span class="ln"> 4</span>  56.3   56.3 Total MB (flat / cumulative)
-<span class="ln"> 5</span>...
-<span class="ln"> 6</span>   1.9    1.9  268:     nonBackPreds := make([]map[int]bool, size)
-<span class="ln"> 7</span>   5.8    5.8  269:     backPreds := make([][]int, size)
-<span class="ln"> 8</span>     .      .  270:
-<span class="ln"> 9</span>   1.9    1.9  271:     number := make([]int, size)
-<span class="ln">10</span>   1.9    1.9  272:     header := make([]int, size, size)
-<span class="ln">11</span>   1.9    1.9  273:     types := make([]int, size, size)
-<span class="ln">12</span>   1.9    1.9  274:     last := make([]int, size, size)
-<span class="ln">13</span>   1.9    1.9  275:     nodes := make([]*UnionFindNode, size, size)
-<span class="ln">14</span>     .      .  276:
-<span class="ln">15</span>     .      .  277:     for i := 0; i &lt; size; i++ {
-<span class="ln">16</span>   9.5    9.5  278:             nodes[i] = new(UnionFindNode)
-<span class="ln">17</span>     .      .  279:     }
-<span class="ln">18</span>...
-<span class="ln">19</span>     .      .  286:     for i, bb := range cfgraph.Blocks {
-<span class="ln">20</span>     .      .  287:             number[bb.Name] = unvisited
-<span class="ln">21</span>  29.5   29.5  288:             nonBackPreds[i] = make(map[int]bool)
-<span class="ln">22</span>     .      .  289:     }
-<span class="ln">23</span>...
-</code></pre></div><p>可以发现L288占用了29.5M内存。用<code>-inuse_objects</code>来观察，可以看到分配次数：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln"> 1</span>$ go tool pprof --inuse_objects havlak3 havlak3.mprof
-<span class="ln"> 2</span>Adjusting heap profiles for 1-in-524288 sampling rate
-<span class="ln"> 3</span>Welcome to pprof!  For help, type &#39;help&#39;.
-<span class="ln"> 4</span>(pprof) list FindLoops
-<span class="ln"> 5</span>Total: 1763108 objects
-<span class="ln"> 6</span>ROUTINE ====================== main.FindLoops in /home/rsc/g/benchgraffiti/havlak/havlak3.go
-<span class="ln"> 7</span>720903 720903 Total objects (flat / cumulative)
-<span class="ln"> 8</span>...
-<span class="ln"> 9</span>     .      .  277:     for i := 0; i &lt; size; i++ {
-<span class="ln">10</span>311296 311296  278:             nodes[i] = new(UnionFindNode)
-<span class="ln">11</span>     .      .  279:     }
-<span class="ln">12</span>     .      .  280:
-<span class="ln">13</span>     .      .  281:     // Step a:
-<span class="ln">14</span>     .      .  282:     //   - initialize all nodes as unvisited.
-<span class="ln">15</span>     .      .  283:     //   - depth-first traversal and numbering.
-<span class="ln">16</span>     .      .  284:     //   - unreached BB&#39;s are marked as dead.
-<span class="ln">17</span>     .      .  285:     //
-<span class="ln">18</span>     .      .  286:     for i, bb := range cfgraph.Blocks {
-<span class="ln">19</span>     .      .  287:             number[bb.Name] = unvisited
-<span class="ln">20</span>409600 409600  288:             nonBackPreds[i] = make(map[int]bool)
-<span class="ln">21</span>     .      .  289:     }
-<span class="ln">22</span>...
-<span class="ln">23</span>(pprof)
-</code></pre></div><h2 id="分析gc">分析GC<a class="anchor ms-1" href="#分析gc"><i class="fas fa-link"></i></a></h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt">(pprof) list FindLoops
+Total: 82.4 MB
+ROUTINE ====================== main.FindLoops in /home/rsc/g/benchgraffiti/havlak/havlak3.go
+  56.3   56.3 Total MB (flat / cumulative)
+...
+   1.9    1.9  268:     nonBackPreds := make([]map[int]bool, size)
+   5.8    5.8  269:     backPreds := make([][]int, size)
+     .      .  270:
+   1.9    1.9  271:     number := make([]int, size)
+   1.9    1.9  272:     header := make([]int, size, size)
+   1.9    1.9  273:     types := make([]int, size, size)
+   1.9    1.9  274:     last := make([]int, size, size)
+   1.9    1.9  275:     nodes := make([]*UnionFindNode, size, size)
+     .      .  276:
+     .      .  277:     for i := 0; i &lt; size; i++ {
+   9.5    9.5  278:             nodes[i] = new(UnionFindNode)
+     .      .  279:     }
+...
+     .      .  286:     for i, bb := range cfgraph.Blocks {
+     .      .  287:             number[bb.Name] = unvisited
+  29.5   29.5  288:             nonBackPreds[i] = make(map[int]bool)
+     .      .  289:     }
+...
+</code></pre></td></tr></table>
+</div>
+</div><p>可以发现L288占用了29.5M内存。用<code>-inuse_objects</code>来观察，可以看到分配次数：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt">$ go tool pprof --inuse_objects havlak3 havlak3.mprof
+Adjusting heap profiles for 1-in-524288 sampling rate
+Welcome to pprof!  For help, type &#39;help&#39;.
+(pprof) list FindLoops
+Total: 1763108 objects
+ROUTINE ====================== main.FindLoops in /home/rsc/g/benchgraffiti/havlak/havlak3.go
+720903 720903 Total objects (flat / cumulative)
+...
+     .      .  277:     for i := 0; i &lt; size; i++ {
+311296 311296  278:             nodes[i] = new(UnionFindNode)
+     .      .  279:     }
+     .      .  280:
+     .      .  281:     // Step a:
+     .      .  282:     //   - initialize all nodes as unvisited.
+     .      .  283:     //   - depth-first traversal and numbering.
+     .      .  284:     //   - unreached BB&#39;s are marked as dead.
+     .      .  285:     //
+     .      .  286:     for i, bb := range cfgraph.Blocks {
+     .      .  287:             number[bb.Name] = unvisited
+409600 409600  288:             nonBackPreds[i] = make(map[int]bool)
+     .      .  289:     }
+...
+(pprof)
+</code></pre></td></tr></table>
+</div>
+</div><h2 id="分析gc">分析GC<a class="anchor ms-1" href="#分析gc"><i class="fas fa-link"></i></a></h2>
 <p>你可以通过CPU Profile来分析GC：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln"> 1</span>(pprof) top10
-<span class="ln"> 2</span>Total: 1173 samples
-<span class="ln"> 3</span>     205  17.5%  17.5%     1083  92.3% main.FindLoops
-<span class="ln"> 4</span>     138  11.8%  29.2%      215  18.3% scanblock
-<span class="ln"> 5</span>      88   7.5%  36.7%       96   8.2% sweepspan
-<span class="ln"> 6</span>      76   6.5%  43.2%      597  50.9% runtime.mallocgc
-<span class="ln"> 7</span>      75   6.4%  49.6%       78   6.6% runtime.settype_flush
-<span class="ln"> 8</span>      74   6.3%  55.9%       75   6.4% flushptrbuf
-<span class="ln"> 9</span>      64   5.5%  61.4%       64   5.5% runtime.memmove
-<span class="ln">10</span>      63   5.4%  66.8%      524  44.7% runtime.growslice
-<span class="ln">11</span>      51   4.3%  71.1%       51   4.3% main.DFS
-<span class="ln">12</span>      50   4.3%  75.4%      146  12.4% runtime.MCache_Alloc
-<span class="ln">13</span>(pprof)
-</code></pre></div><p>可以看到<code>runtime.mallocgc</code>的调用次数占了50.9%。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt">(pprof) top10
+Total: 1173 samples
+     205  17.5%  17.5%     1083  92.3% main.FindLoops
+     138  11.8%  29.2%      215  18.3% scanblock
+      88   7.5%  36.7%       96   8.2% sweepspan
+      76   6.5%  43.2%      597  50.9% runtime.mallocgc
+      75   6.4%  49.6%       78   6.6% runtime.settype_flush
+      74   6.3%  55.9%       75   6.4% flushptrbuf
+      64   5.5%  61.4%       64   5.5% runtime.memmove
+      63   5.4%  66.8%      524  44.7% runtime.growslice
+      51   4.3%  71.1%       51   4.3% main.DFS
+      50   4.3%  75.4%      146  12.4% runtime.MCache_Alloc
+(pprof)
+</code></pre></td></tr></table>
+</div>
+</div><p>可以看到<code>runtime.mallocgc</code>的调用次数占了50.9%。</p>
 <p>查看系统为何进行垃圾收集的另一种方法是查看导致收集的分配，这些分配在mallocgc中花费了大部分时间。使用<code>--nodefraction=0.1</code>去掉占比小于10%的结果：</p>
 <p><img class="img-fluid" alt="" src="/post/go/pprof-explained/profiling-go-programs_havlak4a-mallocgc-trim.png" loading="lazy"
   
@@ -436,29 +604,66 @@
 <h2 id="在线profile">在线Profile<a class="anchor ms-1" href="#在线profile"><i class="fas fa-link"></i></a></h2>
 <p>如果你是一个Web应用，你可以使用<a href="https://golang.org/pkg/net/http/pprof/" target="_blank" rel="noopener noreferrer">net/http/pprof</a>
 来添加一个Handler，访问<code>http://&lt;host&gt;:&lt;port&gt;/debug/pprof/</code>可以得到功能列表：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln"> 1</span>/debug/pprof/
-<span class="ln"> 2</span>
-<span class="ln"> 3</span>Types of profiles available:
-<span class="ln"> 4</span>Count	Profile
-<span class="ln"> 5</span>8   allocs
-<span class="ln"> 6</span>0	  block
-<span class="ln"> 7</span>0	  cmdline
-<span class="ln"> 8</span>10	goroutine
-<span class="ln"> 9</span>8	  heap
-<span class="ln">10</span>0	  mutex
-<span class="ln">11</span>0	  profile
-<span class="ln">12</span>19	threadcreate
-<span class="ln">13</span>0	  trace
-<span class="ln">14</span>...
-</code></pre></div><p>然后你可以通过这样来用<code>go tool pprof &lt;url&gt;</code>来分析，比如：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span><span class="c1"># 分析CPU</span>
-<span class="ln">2</span>go tool pprof http://localhost:9090/debug/pprof/profile
-<span class="ln">3</span><span class="c1"># 打开网页分析heap</span>
-<span class="ln">4</span>go tool pprof -http<span class="o">=</span>0.0.0.0:4231 http://localhost:9090/debug/pprof/heap
-</code></pre></div><p>在生产中，你需要对<code>/debug/pprof/*</code>做<a href="https://en.wikipedia.org/wiki/Basic_access_authentication" target="_blank" rel="noopener noreferrer">HTTP BasicAuth</a>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt">/debug/pprof/
+
+Types of profiles available:
+Count	Profile
+8   allocs
+0	  block
+0	  cmdline
+10	goroutine
+8	  heap
+0	  mutex
+0	  profile
+19	threadcreate
+0	  trace
+...
+</code></pre></td></tr></table>
+</div>
+</div><p>然后你可以通过这样来用<code>go tool pprof &lt;url&gt;</code>来分析，比如：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="c1"># 分析CPU</span>
+go tool pprof http://localhost:9090/debug/pprof/profile
+<span class="c1"># 打开网页分析heap</span>
+go tool pprof -http<span class="o">=</span>0.0.0.0:4231 http://localhost:9090/debug/pprof/heap
+</code></pre></td></tr></table>
+</div>
+</div><p>在生产中，你需要对<code>/debug/pprof/*</code>做<a href="https://en.wikipedia.org/wiki/Basic_access_authentication" target="_blank" rel="noopener noreferrer">HTTP BasicAuth</a>
 保护（很简单，一个响应头和请求头罢了），那么你去抓取数据分析的时候得这样：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>go tool pprof http://&lt;user&gt;:&lt;password&gt;@localhost:9090/debug/pprof/profile
-</code></pre></div><h2 id="参考资料">参考资料<a class="anchor ms-1" href="#参考资料"><i class="fas fa-link"></i></a></h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">go tool pprof http://&lt;user&gt;:&lt;password&gt;@localhost:9090/debug/pprof/profile
+</code></pre></td></tr></table>
+</div>
+</div><h2 id="参考资料">参考资料<a class="anchor ms-1" href="#参考资料"><i class="fas fa-link"></i></a></h2>
 <ul>
 <li><a href="https://blog.golang.org/profiling-go-programs" target="_blank" rel="noopener noreferrer">Profiling Go Programs</a>
 </li>

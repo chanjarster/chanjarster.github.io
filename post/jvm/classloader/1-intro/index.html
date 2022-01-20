@@ -12,7 +12,7 @@
 <meta name="description" content="" /><meta itemprop="name" content="ClassLoader（一）- 介绍">
 <meta itemprop="description" content=""><meta itemprop="datePublished" content="2019-01-24T20:25:52+08:00" />
 <meta itemprop="dateModified" content="2019-01-24T20:25:52+08:00" />
-<meta itemprop="wordCount" content="3555">
+<meta itemprop="wordCount" content="3592">
 <meta itemprop="keywords" content="ClassLoader,JVM," /><meta property="og:title" content="ClassLoader（一）- 介绍" />
 <meta property="og:description" content="" />
 <meta property="og:type" content="article" />
@@ -243,20 +243,44 @@ A typical strategy is to transform the name into a file name and then read a &ld
 <h3 id="三种classloader实现">三种ClassLoader实现<a class="anchor ms-1" href="#三种classloader实现"><i class="fas fa-link"></i></a></h3>
 <p>讲到bootstrap class loader就不得不说三种常见的ClassLoader实现。</p>
 <p>执行下面代码会看到三种类型的ClassLoader实现：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln">1</span><span class="kn">import</span> <span class="nn">com.sun.javafx.util.Logging</span><span class="o">;</span>
-<span class="ln">2</span><span class="kn">import</span> <span class="nn">java.util.ArrayList</span><span class="o">;</span>
-<span class="ln">3</span><span class="kd">public</span> <span class="kd">class</span> <span class="nc">PrintClassLoader</span> <span class="o">{</span>
-<span class="ln">4</span>  <span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">main</span><span class="o">(</span><span class="n">String</span><span class="o">[]</span> <span class="n">args</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">5</span>    <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">&#34;Classloader for ArrayList: &#34;</span> <span class="o">+</span> <span class="n">ArrayList</span><span class="o">.</span><span class="na">class</span><span class="o">.</span><span class="na">getClassLoader</span><span class="o">());</span>
-<span class="ln">6</span>    <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">&#34;Classloader for Logging: &#34;</span> <span class="o">+</span> <span class="n">Logging</span><span class="o">.</span><span class="na">class</span><span class="o">.</span><span class="na">getClassLoader</span><span class="o">());</span>
-<span class="ln">7</span>    <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">&#34;Classloader for this class: &#34;</span> <span class="o">+</span> <span class="n">PrintClassLoader</span><span class="o">.</span><span class="na">class</span><span class="o">.</span><span class="na">getClassLoader</span><span class="o">());</span>
-<span class="ln">8</span>  <span class="o">}</span>
-<span class="ln">9</span><span class="o">}</span>
-</code></pre></div><p>结果如下：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln">1</span>Classloader for ArrayList: null
-<span class="ln">2</span>Classloader for Logging: sun.misc.Launcher$ExtClassLoader@5e2de80c
-<span class="ln">3</span>Classloader for this class: sun.misc.Launcher$AppClassLoader@18b4aac2
-</code></pre></div><ul>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span><span class="lnt">9
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="kn">import</span> <span class="nn">com.sun.javafx.util.Logging</span><span class="o">;</span>
+<span class="kn">import</span> <span class="nn">java.util.ArrayList</span><span class="o">;</span>
+<span class="kd">public</span> <span class="kd">class</span> <span class="nc">PrintClassLoader</span> <span class="o">{</span>
+  <span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">main</span><span class="o">(</span><span class="n">String</span><span class="o">[]</span> <span class="n">args</span><span class="o">)</span> <span class="o">{</span>
+    <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">&#34;Classloader for ArrayList: &#34;</span> <span class="o">+</span> <span class="n">ArrayList</span><span class="o">.</span><span class="na">class</span><span class="o">.</span><span class="na">getClassLoader</span><span class="o">());</span>
+    <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">&#34;Classloader for Logging: &#34;</span> <span class="o">+</span> <span class="n">Logging</span><span class="o">.</span><span class="na">class</span><span class="o">.</span><span class="na">getClassLoader</span><span class="o">());</span>
+    <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">&#34;Classloader for this class: &#34;</span> <span class="o">+</span> <span class="n">PrintClassLoader</span><span class="o">.</span><span class="na">class</span><span class="o">.</span><span class="na">getClassLoader</span><span class="o">());</span>
+  <span class="o">}</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>结果如下：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt">Classloader for ArrayList: null
+Classloader for Logging: sun.misc.Launcher$ExtClassLoader@5e2de80c
+Classloader for this class: sun.misc.Launcher$AppClassLoader@18b4aac2
+</code></pre></td></tr></table>
+</div>
+</div><ul>
 <li>Bootstrap class loader。bootstrap class loader是native code写的。它是所有ClassLoader的祖先，它是顶级ClassLoader。它负责加载JDK的内部类型，一般来说就是位于<code>$JAVA_HOME/jre/lib</code>下的核心库和<code>rt.jar</code>。</li>
 <li>Extension class loader。即Extension class loader，负责加载Java核心类的扩展，加载<code>$JAVA_HOME/lib/ext</code>目录和System Property <code>java.ext.dirs</code>所指定目录下的类（见<a href="https://docs.oracle.com/javase/6/docs/technotes/guides/extensions/spec.htm" target="_blank" rel="noopener noreferrer">Java Extension Mechanism Architecture</a>
 ）。</li>
@@ -284,62 +308,142 @@ A typical strategy is to transform the name into a file name and then read a &ld
 <li>如果元素是基础类型，则数组类没有ClassLoader</li>
 </ol>
 <p>下面是一段实验代码：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln">1</span><span class="kn">import</span> <span class="nn">com.sun.javafx.util.Logging</span><span class="o">;</span>
-<span class="ln">2</span><span class="kd">public</span> <span class="kd">class</span> <span class="nc">PrintArrayClassLoader</span> <span class="o">{</span>
-<span class="ln">3</span>  <span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">main</span><span class="o">(</span><span class="n">String</span><span class="o">[]</span> <span class="n">args</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">4</span>    <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">&#34;ClassLoader for int[]: &#34;</span> <span class="o">+</span> <span class="k">new</span> <span class="kt">int</span><span class="o">[</span><span class="n">0</span><span class="o">].</span><span class="na">getClass</span><span class="o">().</span><span class="na">getClassLoader</span><span class="o">());</span>
-<span class="ln">5</span>    <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">&#34;ClassLoader for string[]: &#34;</span> <span class="o">+</span> <span class="k">new</span> <span class="n">String</span><span class="o">[</span><span class="n">0</span><span class="o">].</span><span class="na">getClass</span><span class="o">().</span><span class="na">getClassLoader</span><span class="o">());</span>
-<span class="ln">6</span>    <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">&#34;ClassLoader for Logging[]: &#34;</span> <span class="o">+</span> <span class="k">new</span> <span class="n">Logging</span><span class="o">[</span><span class="n">0</span><span class="o">].</span><span class="na">getClass</span><span class="o">().</span><span class="na">getClassLoader</span><span class="o">());</span>
-<span class="ln">7</span>    <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">&#34;ClassLoader for this class[]: &#34;</span> <span class="o">+</span> <span class="k">new</span> <span class="n">PrintArrayClassLoader</span><span class="o">[</span><span class="n">0</span><span class="o">].</span><span class="na">getClass</span><span class="o">().</span><span class="na">getClassLoader</span><span class="o">());</span>
-<span class="ln">8</span>  <span class="o">}</span>
-<span class="ln">9</span><span class="o">}</span>
-</code></pre></div><p>得到的结果如下，符合上面的说法：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln">1</span>ClassLoader for int[]: null
-<span class="ln">2</span>ClassLoader for string[]: null
-<span class="ln">3</span>ClassLoader for Logging[]: sun.misc.Launcher$ExtClassLoader@5e2de80c
-<span class="ln">4</span>ClassLoader for this class[]: sun.misc.Launcher$AppClassLoader@18b4aac2
-</code></pre></div><p>那如果是二维数组会怎样呢？下面是实验代码：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln"> 1</span><span class="kn">import</span> <span class="nn">com.sun.javafx.util.Logging</span><span class="o">;</span>
-<span class="ln"> 2</span><span class="kd">public</span> <span class="kd">class</span> <span class="nc">PrintArrayArrayClassLoader</span> <span class="o">{</span>
-<span class="ln"> 3</span>  <span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">main</span><span class="o">(</span><span class="n">String</span><span class="o">[]</span> <span class="n">args</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 4</span>    <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">&#34;ClassLoader for int[][]: &#34;</span> <span class="o">+</span> <span class="k">new</span> <span class="kt">int</span><span class="o">[</span><span class="n">0</span><span class="o">][].</span><span class="na">getClass</span><span class="o">().</span><span class="na">getClassLoader</span><span class="o">());</span>
-<span class="ln"> 5</span>    <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">&#34;ClassLoader for string[][]: &#34;</span> <span class="o">+</span> <span class="k">new</span> <span class="n">String</span><span class="o">[</span><span class="n">0</span><span class="o">][].</span><span class="na">getClass</span><span class="o">().</span><span class="na">getClassLoader</span><span class="o">());</span>
-<span class="ln"> 6</span>    <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">&#34;ClassLoader for Logging[][]: &#34;</span> <span class="o">+</span> <span class="k">new</span> <span class="n">Logging</span><span class="o">[</span><span class="n">0</span><span class="o">][].</span><span class="na">getClass</span><span class="o">().</span><span class="na">getClassLoader</span><span class="o">());</span>
-<span class="ln"> 7</span>    <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">&#34;ClassLoader for this class[][]: &#34;</span> <span class="o">+</span> <span class="k">new</span> <span class="n">PrintArrayClassLoader</span><span class="o">[</span><span class="n">0</span><span class="o">][].</span><span class="na">getClass</span><span class="o">().</span><span class="na">getClassLoader</span><span class="o">());</span>
-<span class="ln"> 8</span>    <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">&#34;ClassLoader for this Object[][] of this class[]: &#34;</span> <span class="o">+</span> <span class="k">new</span> <span class="n">Object</span><span class="o">[][]{</span><span class="k">new</span> <span class="n">PrintArrayArrayClassLoader</span><span class="o">[</span><span class="n">0</span><span class="o">]}.</span><span class="na">getClass</span><span class="o">().</span><span class="na">getClassLoader</span><span class="o">());</span>
-<span class="ln"> 9</span>  <span class="o">}</span>
-<span class="ln">10</span><span class="o">}</span>
-</code></pre></div><p>结果是：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln">1</span>ClassLoader for int[][]: null
-<span class="ln">2</span>ClassLoader for string[][]: null
-<span class="ln">3</span>ClassLoader for Logging[][]: sun.misc.Launcher$ExtClassLoader@5e2de80c
-<span class="ln">4</span>ClassLoader for this class[][]: sun.misc.Launcher$AppClassLoader@18b4aac2
-<span class="ln">5</span>ClassLoader for this Object[][] of this class[]: null
-</code></pre></div><p>注意第四行的结果，我们构建了一个<code>Object[][]</code>，里面放的是<code>PrintArrayArrayClassLoader[]</code>，但结果依然是null。所以：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span><span class="lnt">9
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="kn">import</span> <span class="nn">com.sun.javafx.util.Logging</span><span class="o">;</span>
+<span class="kd">public</span> <span class="kd">class</span> <span class="nc">PrintArrayClassLoader</span> <span class="o">{</span>
+  <span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">main</span><span class="o">(</span><span class="n">String</span><span class="o">[]</span> <span class="n">args</span><span class="o">)</span> <span class="o">{</span>
+    <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">&#34;ClassLoader for int[]: &#34;</span> <span class="o">+</span> <span class="k">new</span> <span class="kt">int</span><span class="o">[</span><span class="n">0</span><span class="o">].</span><span class="na">getClass</span><span class="o">().</span><span class="na">getClassLoader</span><span class="o">());</span>
+    <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">&#34;ClassLoader for string[]: &#34;</span> <span class="o">+</span> <span class="k">new</span> <span class="n">String</span><span class="o">[</span><span class="n">0</span><span class="o">].</span><span class="na">getClass</span><span class="o">().</span><span class="na">getClassLoader</span><span class="o">());</span>
+    <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">&#34;ClassLoader for Logging[]: &#34;</span> <span class="o">+</span> <span class="k">new</span> <span class="n">Logging</span><span class="o">[</span><span class="n">0</span><span class="o">].</span><span class="na">getClass</span><span class="o">().</span><span class="na">getClassLoader</span><span class="o">());</span>
+    <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">&#34;ClassLoader for this class[]: &#34;</span> <span class="o">+</span> <span class="k">new</span> <span class="n">PrintArrayClassLoader</span><span class="o">[</span><span class="n">0</span><span class="o">].</span><span class="na">getClass</span><span class="o">().</span><span class="na">getClassLoader</span><span class="o">());</span>
+  <span class="o">}</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>得到的结果如下，符合上面的说法：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt">ClassLoader for int[]: null
+ClassLoader for string[]: null
+ClassLoader for Logging[]: sun.misc.Launcher$ExtClassLoader@5e2de80c
+ClassLoader for this class[]: sun.misc.Launcher$AppClassLoader@18b4aac2
+</code></pre></td></tr></table>
+</div>
+</div><p>那如果是二维数组会怎样呢？下面是实验代码：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="kn">import</span> <span class="nn">com.sun.javafx.util.Logging</span><span class="o">;</span>
+<span class="kd">public</span> <span class="kd">class</span> <span class="nc">PrintArrayArrayClassLoader</span> <span class="o">{</span>
+  <span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">main</span><span class="o">(</span><span class="n">String</span><span class="o">[]</span> <span class="n">args</span><span class="o">)</span> <span class="o">{</span>
+    <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">&#34;ClassLoader for int[][]: &#34;</span> <span class="o">+</span> <span class="k">new</span> <span class="kt">int</span><span class="o">[</span><span class="n">0</span><span class="o">][].</span><span class="na">getClass</span><span class="o">().</span><span class="na">getClassLoader</span><span class="o">());</span>
+    <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">&#34;ClassLoader for string[][]: &#34;</span> <span class="o">+</span> <span class="k">new</span> <span class="n">String</span><span class="o">[</span><span class="n">0</span><span class="o">][].</span><span class="na">getClass</span><span class="o">().</span><span class="na">getClassLoader</span><span class="o">());</span>
+    <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">&#34;ClassLoader for Logging[][]: &#34;</span> <span class="o">+</span> <span class="k">new</span> <span class="n">Logging</span><span class="o">[</span><span class="n">0</span><span class="o">][].</span><span class="na">getClass</span><span class="o">().</span><span class="na">getClassLoader</span><span class="o">());</span>
+    <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">&#34;ClassLoader for this class[][]: &#34;</span> <span class="o">+</span> <span class="k">new</span> <span class="n">PrintArrayClassLoader</span><span class="o">[</span><span class="n">0</span><span class="o">][].</span><span class="na">getClass</span><span class="o">().</span><span class="na">getClassLoader</span><span class="o">());</span>
+    <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">&#34;ClassLoader for this Object[][] of this class[]: &#34;</span> <span class="o">+</span> <span class="k">new</span> <span class="n">Object</span><span class="o">[][]{</span><span class="k">new</span> <span class="n">PrintArrayArrayClassLoader</span><span class="o">[</span><span class="n">0</span><span class="o">]}.</span><span class="na">getClass</span><span class="o">().</span><span class="na">getClassLoader</span><span class="o">());</span>
+  <span class="o">}</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>结果是：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt">ClassLoader for int[][]: null
+ClassLoader for string[][]: null
+ClassLoader for Logging[][]: sun.misc.Launcher$ExtClassLoader@5e2de80c
+ClassLoader for this class[][]: sun.misc.Launcher$AppClassLoader@18b4aac2
+ClassLoader for this Object[][] of this class[]: null
+</code></pre></td></tr></table>
+</div>
+</div><p>注意第四行的结果，我们构建了一个<code>Object[][]</code>，里面放的是<code>PrintArrayArrayClassLoader[]</code>，但结果依然是null。所以：</p>
 <ol>
 <li>二维数组的ClassLoader和其定义的类型（元素类型）的ClassLoader相同。</li>
 <li>与其实际内部存放的类型无关。</li>
 </ol>
 <h3 id="classloader类的classloader">ClassLoader类的ClassLoader<a class="anchor ms-1" href="#classloader类的classloader"><i class="fas fa-link"></i></a></h3>
 <p>ClassLoader本身也是类，那么是谁加载它们的呢？实际上ClassLoader类的ClassLoader就是bootstrap class loader。下面是实验代码：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln"> 1</span><span class="kn">import</span> <span class="nn">com.sun.javafx.util.Logging</span><span class="o">;</span>
-<span class="ln"> 2</span><span class="kd">public</span> <span class="kd">class</span> <span class="nc">PrintClassLoaderClassLoader</span> <span class="o">{</span>
-<span class="ln"> 3</span>  <span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">main</span><span class="o">(</span><span class="n">String</span><span class="o">[]</span> <span class="n">args</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 4</span>    <span class="c1">// Launcher$ExtClassLoader
-</span><span class="ln"> 5</span><span class="c1"></span>    <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">&#34;ClassLoader for Logging&#39;s ClassLoader: &#34;</span> <span class="o">+</span> <span class="n">Logging</span><span class="o">.</span><span class="na">class</span><span class="o">.</span><span class="na">getClassLoader</span><span class="o">().</span><span class="na">getClass</span><span class="o">().</span><span class="na">getClassLoader</span><span class="o">());</span>
-<span class="ln"> 6</span>    <span class="c1">// Launcher$AppClassLoader
-</span><span class="ln"> 7</span><span class="c1"></span>    <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">&#34;ClassLoader for this class&#39;s ClassLoader: &#34;</span> <span class="o">+</span> <span class="n">PrintClassLoaderClassLoader</span><span class="o">.</span><span class="na">class</span><span class="o">.</span><span class="na">getClassLoader</span><span class="o">().</span><span class="na">getClass</span><span class="o">().</span><span class="na">getClassLoader</span><span class="o">());</span>
-<span class="ln"> 8</span>    <span class="c1">// 自定义ClassLoader
-</span><span class="ln"> 9</span><span class="c1"></span>    <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">&#34;ClassLoader for custom ClassLoader: &#34;</span> <span class="o">+</span> <span class="n">DummyClassLoader</span><span class="o">.</span><span class="na">class</span><span class="o">.</span><span class="na">getClassLoader</span><span class="o">().</span><span class="na">getClass</span><span class="o">().</span><span class="na">getClassLoader</span><span class="o">());</span>
-<span class="ln">10</span>  <span class="o">}</span>
-<span class="ln">11</span>  <span class="kd">public</span> <span class="kd">static</span> <span class="kd">class</span> <span class="nc">DummyClassLoader</span> <span class="kd">extends</span> <span class="n">ClassLoader</span> <span class="o">{</span>
-<span class="ln">12</span>  <span class="o">}</span>
-<span class="ln">13</span><span class="o">}</span>
-</code></pre></div><p>结果是：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln">1</span>ClassLoader for Logging&#39;s ClassLoader: null
-<span class="ln">2</span>ClassLoader for this class&#39;s ClassLoader: null
-<span class="ln">3</span>ClassLoader for custom ClassLoader: null
-</code></pre></div><h2 id="classloader解决了什么问题">ClassLoader解决了什么问题<a class="anchor ms-1" href="#classloader解决了什么问题"><i class="fas fa-link"></i></a></h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="kn">import</span> <span class="nn">com.sun.javafx.util.Logging</span><span class="o">;</span>
+<span class="kd">public</span> <span class="kd">class</span> <span class="nc">PrintClassLoaderClassLoader</span> <span class="o">{</span>
+  <span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">main</span><span class="o">(</span><span class="n">String</span><span class="o">[]</span> <span class="n">args</span><span class="o">)</span> <span class="o">{</span>
+    <span class="c1">// Launcher$ExtClassLoader
+</span><span class="c1"></span>    <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">&#34;ClassLoader for Logging&#39;s ClassLoader: &#34;</span> <span class="o">+</span> <span class="n">Logging</span><span class="o">.</span><span class="na">class</span><span class="o">.</span><span class="na">getClassLoader</span><span class="o">().</span><span class="na">getClass</span><span class="o">().</span><span class="na">getClassLoader</span><span class="o">());</span>
+    <span class="c1">// Launcher$AppClassLoader
+</span><span class="c1"></span>    <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">&#34;ClassLoader for this class&#39;s ClassLoader: &#34;</span> <span class="o">+</span> <span class="n">PrintClassLoaderClassLoader</span><span class="o">.</span><span class="na">class</span><span class="o">.</span><span class="na">getClassLoader</span><span class="o">().</span><span class="na">getClass</span><span class="o">().</span><span class="na">getClassLoader</span><span class="o">());</span>
+    <span class="c1">// 自定义ClassLoader
+</span><span class="c1"></span>    <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">&#34;ClassLoader for custom ClassLoader: &#34;</span> <span class="o">+</span> <span class="n">DummyClassLoader</span><span class="o">.</span><span class="na">class</span><span class="o">.</span><span class="na">getClassLoader</span><span class="o">().</span><span class="na">getClass</span><span class="o">().</span><span class="na">getClassLoader</span><span class="o">());</span>
+  <span class="o">}</span>
+  <span class="kd">public</span> <span class="kd">static</span> <span class="kd">class</span> <span class="nc">DummyClassLoader</span> <span class="kd">extends</span> <span class="n">ClassLoader</span> <span class="o">{</span>
+  <span class="o">}</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>结果是：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt">ClassLoader for Logging&#39;s ClassLoader: null
+ClassLoader for this class&#39;s ClassLoader: null
+ClassLoader for custom ClassLoader: null
+</code></pre></td></tr></table>
+</div>
+</div><h2 id="classloader解决了什么问题">ClassLoader解决了什么问题<a class="anchor ms-1" href="#classloader解决了什么问题"><i class="fas fa-link"></i></a></h2>
 <p>简单来说ClassLoader就是解决类加载问题的，当然这是一句废话。JDK里的ClassLoader是一个抽象类，这样做的目的是能够让应用开发者定制自己的ClassLoader实现（比如添加解密/加密）、动态插入字节码等，我认为这才是ClassLoader存在的最大意义。</p>
 <h2 id="classloader的工作原理">ClassLoader的工作原理<a class="anchor ms-1" href="#classloader的工作原理"><i class="fas fa-link"></i></a></h2>
 <p>还是看<a href="https://docs.oracle.com/javase/7/docs/api/java/lang/ClassLoader.html" target="_blank" rel="noopener noreferrer">javadoc的说法</a>
@@ -367,60 +471,129 @@ A typical strategy is to transform the name into a file name and then read a &ld
 <p>为何SPI A不直接使用System class loader来加载呢？我想这是因为如果写死了System class loader那就缺少灵活性的关系吧。</p>
 <h2 id="class的唯一性">Class的唯一性<a class="anchor ms-1" href="#class的唯一性"><i class="fas fa-link"></i></a></h2>
 <p>如果一个类被一个ClassLoader加载两次，那么两次的结果应该是一致的，并且这个加载过程是线程安全的，见ClassLoader.java源码：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln"> 1</span><span class="kd">protected</span> <span class="n">Class</span><span class="o">&lt;?&gt;</span> <span class="n">loadClass</span><span class="o">(</span><span class="n">String</span> <span class="n">name</span><span class="o">,</span> <span class="kt">boolean</span> <span class="n">resolve</span><span class="o">)</span>
-<span class="ln"> 2</span>      <span class="kd">throws</span> <span class="n">ClassNotFoundException</span>
-<span class="ln"> 3</span><span class="o">{</span>
-<span class="ln"> 4</span>  <span class="kd">synchronized</span> <span class="o">(</span><span class="n">getClassLoadingLock</span><span class="o">(</span><span class="n">name</span><span class="o">))</span> <span class="o">{</span>
-<span class="ln"> 5</span>    <span class="c1">// First, check if the class has already been loaded
-</span><span class="ln"> 6</span><span class="c1"></span>    <span class="n">Class</span><span class="o">&lt;?&gt;</span> <span class="n">c</span> <span class="o">=</span> <span class="n">findLoadedClass</span><span class="o">(</span><span class="n">name</span><span class="o">);</span>
-<span class="ln"> 7</span>    <span class="k">if</span> <span class="o">(</span><span class="n">c</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 8</span>      <span class="c1">// ...
-</span><span class="ln"> 9</span><span class="c1"></span>      <span class="k">try</span> <span class="o">{</span>
-<span class="ln">10</span>        <span class="k">if</span> <span class="o">(</span><span class="n">parent</span> <span class="o">!=</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">11</span>            <span class="n">c</span> <span class="o">=</span> <span class="n">parent</span><span class="o">.</span><span class="na">loadClass</span><span class="o">(</span><span class="n">name</span><span class="o">,</span> <span class="kc">false</span><span class="o">);</span>
-<span class="ln">12</span>        <span class="o">}</span> <span class="k">else</span> <span class="o">{</span>
-<span class="ln">13</span>            <span class="n">c</span> <span class="o">=</span> <span class="n">findBootstrapClassOrNull</span><span class="o">(</span><span class="n">name</span><span class="o">);</span>
-<span class="ln">14</span>        <span class="o">}</span>
-<span class="ln">15</span>      <span class="o">}</span> <span class="k">catch</span> <span class="o">(</span><span class="n">ClassNotFoundException</span> <span class="n">e</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">16</span>        <span class="c1">// ClassNotFoundException thrown if class not found
-</span><span class="ln">17</span><span class="c1"></span>        <span class="c1">// from the non-null parent class loader
-</span><span class="ln">18</span><span class="c1"></span>      <span class="o">}</span>
-<span class="ln">19</span>
-<span class="ln">20</span>      <span class="k">if</span> <span class="o">(</span><span class="n">c</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">21</span>        <span class="c1">// If still not found, then invoke findClass in order
-</span><span class="ln">22</span><span class="c1"></span>        <span class="c1">// to find the class.
-</span><span class="ln">23</span><span class="c1"></span>        <span class="c1">// ...
-</span><span class="ln">24</span><span class="c1"></span>        <span class="n">c</span> <span class="o">=</span> <span class="n">findClass</span><span class="o">(</span><span class="n">name</span><span class="o">);</span>
-<span class="ln">25</span>
-<span class="ln">26</span>        <span class="c1">// ...
-</span><span class="ln">27</span><span class="c1"></span>      <span class="o">}</span>
-<span class="ln">28</span>    <span class="o">}</span>
-<span class="ln">29</span>    <span class="c1">// ...
-</span><span class="ln">30</span><span class="c1"></span>    <span class="k">return</span> <span class="n">c</span><span class="o">;</span>
-<span class="ln">31</span>  <span class="o">}</span>
-<span class="ln">32</span><span class="o">}</span>
-</code></pre></div><p>如果一个类被两个不同的ClassLoader加载会怎样呢？看下面代码：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln"> 1</span><span class="c1">// 把这个项目打包然后放到/tmp目录下
-</span><span class="ln"> 2</span><span class="c1"></span><span class="kd">public</span> <span class="kd">class</span> <span class="nc">ClassUniqueness</span> <span class="o">{</span>
-<span class="ln"> 3</span>
-<span class="ln"> 4</span>  <span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">main</span><span class="o">(</span><span class="n">String</span><span class="o">[]</span> <span class="n">args</span><span class="o">)</span> <span class="kd">throws</span> <span class="n">Exception</span> <span class="o">{</span>
-<span class="ln"> 5</span>    <span class="n">Class</span><span class="o">&lt;?&gt;</span> <span class="n">fooClass1</span> <span class="o">=</span> <span class="n">Class</span><span class="o">.</span><span class="na">forName</span><span class="o">(</span><span class="s">&#34;me.chanjar.javarelearn.classloader.ClassUniqueness&#34;</span><span class="o">);</span>
-<span class="ln"> 6</span>    <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">&#34;1st ClassUniqueness&#39;s ClassLoader: &#34;</span> <span class="o">+</span> <span class="n">fooClass1</span><span class="o">.</span><span class="na">getClassLoader</span><span class="o">());</span>
-<span class="ln"> 7</span>
-<span class="ln"> 8</span>    <span class="c1">// 故意将parent class loader设置为null，否则就是SystemClassLoader（即ApplicationClassLoader）
-</span><span class="ln"> 9</span><span class="c1"></span>    <span class="n">URLClassLoader</span> <span class="n">ucl</span> <span class="o">=</span> <span class="k">new</span> <span class="n">URLClassLoader</span><span class="o">(</span><span class="k">new</span> <span class="n">URL</span><span class="o">[]</span> <span class="o">{</span> <span class="k">new</span> <span class="n">URL</span><span class="o">(</span><span class="s">&#34;file:///tmp/classloader.jar&#34;</span><span class="o">)</span> <span class="o">},</span> <span class="kc">null</span><span class="o">);</span>
-<span class="ln">10</span>    <span class="n">Class</span><span class="o">&lt;?&gt;</span> <span class="n">fooClass2</span> <span class="o">=</span> <span class="n">ucl</span><span class="o">.</span><span class="na">loadClass</span><span class="o">(</span><span class="s">&#34;me.chanjar.javarelearn.classloader.ClassUniqueness&#34;</span><span class="o">);</span>
-<span class="ln">11</span>    <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">&#34;2nd ClassUniqueness&#39;s ClassLoader: &#34;</span> <span class="o">+</span> <span class="n">fooClass2</span><span class="o">.</span><span class="na">getClassLoader</span><span class="o">());</span>
-<span class="ln">12</span>
-<span class="ln">13</span>    <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">&#34;Two ClassUniqueness class equals? &#34;</span> <span class="o">+</span> <span class="n">fooClass1</span><span class="o">.</span><span class="na">equals</span><span class="o">(</span><span class="n">fooClass2</span><span class="o">));</span>
-<span class="ln">14</span>  <span class="o">}</span>
-<span class="ln">15</span>
-<span class="ln">16</span><span class="o">}</span>
-</code></pre></div><p>运行结果是：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln">1</span>1st ClassUniqueness&#39;s ClassLoader: sun.misc.Launcher$AppClassLoader@18b4aac2
-<span class="ln">2</span>2nd ClassUniqueness&#39;s ClassLoader: java.net.URLClassLoader@66d3c617
-<span class="ln">3</span>Two ClassUniqueness class equals? false```
-</code></pre></div><p>观察到两点：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="kd">protected</span> <span class="n">Class</span><span class="o">&lt;?&gt;</span> <span class="n">loadClass</span><span class="o">(</span><span class="n">String</span> <span class="n">name</span><span class="o">,</span> <span class="kt">boolean</span> <span class="n">resolve</span><span class="o">)</span>
+      <span class="kd">throws</span> <span class="n">ClassNotFoundException</span>
+<span class="o">{</span>
+  <span class="kd">synchronized</span> <span class="o">(</span><span class="n">getClassLoadingLock</span><span class="o">(</span><span class="n">name</span><span class="o">))</span> <span class="o">{</span>
+    <span class="c1">// First, check if the class has already been loaded
+</span><span class="c1"></span>    <span class="n">Class</span><span class="o">&lt;?&gt;</span> <span class="n">c</span> <span class="o">=</span> <span class="n">findLoadedClass</span><span class="o">(</span><span class="n">name</span><span class="o">);</span>
+    <span class="k">if</span> <span class="o">(</span><span class="n">c</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
+      <span class="c1">// ...
+</span><span class="c1"></span>      <span class="k">try</span> <span class="o">{</span>
+        <span class="k">if</span> <span class="o">(</span><span class="n">parent</span> <span class="o">!=</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
+            <span class="n">c</span> <span class="o">=</span> <span class="n">parent</span><span class="o">.</span><span class="na">loadClass</span><span class="o">(</span><span class="n">name</span><span class="o">,</span> <span class="kc">false</span><span class="o">);</span>
+        <span class="o">}</span> <span class="k">else</span> <span class="o">{</span>
+            <span class="n">c</span> <span class="o">=</span> <span class="n">findBootstrapClassOrNull</span><span class="o">(</span><span class="n">name</span><span class="o">);</span>
+        <span class="o">}</span>
+      <span class="o">}</span> <span class="k">catch</span> <span class="o">(</span><span class="n">ClassNotFoundException</span> <span class="n">e</span><span class="o">)</span> <span class="o">{</span>
+        <span class="c1">// ClassNotFoundException thrown if class not found
+</span><span class="c1"></span>        <span class="c1">// from the non-null parent class loader
+</span><span class="c1"></span>      <span class="o">}</span>
+
+      <span class="k">if</span> <span class="o">(</span><span class="n">c</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
+        <span class="c1">// If still not found, then invoke findClass in order
+</span><span class="c1"></span>        <span class="c1">// to find the class.
+</span><span class="c1"></span>        <span class="c1">// ...
+</span><span class="c1"></span>        <span class="n">c</span> <span class="o">=</span> <span class="n">findClass</span><span class="o">(</span><span class="n">name</span><span class="o">);</span>
+
+        <span class="c1">// ...
+</span><span class="c1"></span>      <span class="o">}</span>
+    <span class="o">}</span>
+    <span class="c1">// ...
+</span><span class="c1"></span>    <span class="k">return</span> <span class="n">c</span><span class="o">;</span>
+  <span class="o">}</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>如果一个类被两个不同的ClassLoader加载会怎样呢？看下面代码：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="c1">// 把这个项目打包然后放到/tmp目录下
+</span><span class="c1"></span><span class="kd">public</span> <span class="kd">class</span> <span class="nc">ClassUniqueness</span> <span class="o">{</span>
+
+  <span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">main</span><span class="o">(</span><span class="n">String</span><span class="o">[]</span> <span class="n">args</span><span class="o">)</span> <span class="kd">throws</span> <span class="n">Exception</span> <span class="o">{</span>
+    <span class="n">Class</span><span class="o">&lt;?&gt;</span> <span class="n">fooClass1</span> <span class="o">=</span> <span class="n">Class</span><span class="o">.</span><span class="na">forName</span><span class="o">(</span><span class="s">&#34;me.chanjar.javarelearn.classloader.ClassUniqueness&#34;</span><span class="o">);</span>
+    <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">&#34;1st ClassUniqueness&#39;s ClassLoader: &#34;</span> <span class="o">+</span> <span class="n">fooClass1</span><span class="o">.</span><span class="na">getClassLoader</span><span class="o">());</span>
+
+    <span class="c1">// 故意将parent class loader设置为null，否则就是SystemClassLoader（即ApplicationClassLoader）
+</span><span class="c1"></span>    <span class="n">URLClassLoader</span> <span class="n">ucl</span> <span class="o">=</span> <span class="k">new</span> <span class="n">URLClassLoader</span><span class="o">(</span><span class="k">new</span> <span class="n">URL</span><span class="o">[]</span> <span class="o">{</span> <span class="k">new</span> <span class="n">URL</span><span class="o">(</span><span class="s">&#34;file:///tmp/classloader.jar&#34;</span><span class="o">)</span> <span class="o">},</span> <span class="kc">null</span><span class="o">);</span>
+    <span class="n">Class</span><span class="o">&lt;?&gt;</span> <span class="n">fooClass2</span> <span class="o">=</span> <span class="n">ucl</span><span class="o">.</span><span class="na">loadClass</span><span class="o">(</span><span class="s">&#34;me.chanjar.javarelearn.classloader.ClassUniqueness&#34;</span><span class="o">);</span>
+    <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">&#34;2nd ClassUniqueness&#39;s ClassLoader: &#34;</span> <span class="o">+</span> <span class="n">fooClass2</span><span class="o">.</span><span class="na">getClassLoader</span><span class="o">());</span>
+
+    <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">&#34;Two ClassUniqueness class equals? &#34;</span> <span class="o">+</span> <span class="n">fooClass1</span><span class="o">.</span><span class="na">equals</span><span class="o">(</span><span class="n">fooClass2</span><span class="o">));</span>
+  <span class="o">}</span>
+
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>运行结果是：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt">1st ClassUniqueness&#39;s ClassLoader: sun.misc.Launcher$AppClassLoader@18b4aac2
+2nd ClassUniqueness&#39;s ClassLoader: java.net.URLClassLoader@66d3c617
+Two ClassUniqueness class equals? false```
+</code></pre></td></tr></table>
+</div>
+</div><p>观察到两点：</p>
 <ol>
 <li>虽然是同一个类，但是加载它们的ClassLoader不同。</li>
 <li>虽然是同一个类，但是它们并不相等。</li>

@@ -12,7 +12,7 @@
 <meta name="description" content="" /><meta itemprop="name" content="SQL优化:一个含有JOIN&#43;LIMIT&#43;ORDER BY的SQL(上)">
 <meta itemprop="description" content=""><meta itemprop="datePublished" content="2021-09-27T11:39:00+08:00" />
 <meta itemprop="dateModified" content="2021-09-27T11:39:00+08:00" />
-<meta itemprop="wordCount" content="8267">
+<meta itemprop="wordCount" content="2633">
 <meta itemprop="keywords" content="mysql,性能调优," /><meta property="og:title" content="SQL优化:一个含有JOIN&#43;LIMIT&#43;ORDER BY的SQL(上)" />
 <meta property="og:description" content="" />
 <meta property="og:type" content="article" />
@@ -220,69 +220,138 @@
   <span class="post-date" title="创建于 2021-09-27 11:39:00 &#43;0800 CST。">
     2021-09-27
   </span><span class="post-reading-time">
-    17 分钟阅读
+    6 分钟阅读
   </span><span class="post-taxonomies"><a href="/tags/mysql/" class="badge post-taxonomy">mysql</a><a href="/tags/%E6%80%A7%E8%83%BD%E8%B0%83%E4%BC%98/" class="badge post-taxonomy">性能调优</a></span>
 </div>
 <div class="post-content mb-3"><p>有一条SQL语句执行比较慢，在并发情况下存在瓶颈：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="ln"> 1</span><span class="k">select</span><span class="w"> </span><span class="n">account</span><span class="p">.</span><span class="n">ID</span><span class="w">                  </span><span class="k">as</span><span class="w"> </span><span class="n">id</span><span class="p">,</span><span class="w">
-</span><span class="ln"> 2</span><span class="w">       </span><span class="n">account</span><span class="p">.</span><span class="n">GENDER_ID</span><span class="w">           </span><span class="k">as</span><span class="w"> </span><span class="n">genderId</span><span class="p">,</span><span class="w">
-</span><span class="ln"> 3</span><span class="w">       </span><span class="n">userGender</span><span class="p">.</span><span class="n">CODE</span><span class="w">             </span><span class="k">as</span><span class="w"> </span><span class="n">genderCode</span><span class="p">,</span><span class="w">
-</span><span class="ln"> 4</span><span class="w">       </span><span class="n">userGender</span><span class="p">.</span><span class="n">NAME</span><span class="w">             </span><span class="k">as</span><span class="w"> </span><span class="n">genderName</span><span class="p">,</span><span class="w">
-</span><span class="ln"> 5</span><span class="w">       </span><span class="n">account</span><span class="p">.</span><span class="n">NATION_ID</span><span class="w">           </span><span class="k">as</span><span class="w"> </span><span class="n">nationId</span><span class="p">,</span><span class="w">
-</span><span class="ln"> 6</span><span class="w">       </span><span class="n">userNation</span><span class="p">.</span><span class="n">CODE</span><span class="w">             </span><span class="k">as</span><span class="w"> </span><span class="n">nationCode</span><span class="p">,</span><span class="w">
-</span><span class="ln"> 7</span><span class="w">       </span><span class="n">userNation</span><span class="p">.</span><span class="n">NAME</span><span class="w">             </span><span class="k">as</span><span class="w"> </span><span class="n">nationName</span><span class="p">,</span><span class="w">
-</span><span class="ln"> 8</span><span class="w">       </span><span class="n">account</span><span class="p">.</span><span class="n">COUNTRY_ID</span><span class="w">          </span><span class="k">as</span><span class="w"> </span><span class="n">countryId</span><span class="p">,</span><span class="w">
-</span><span class="ln"> 9</span><span class="w">       </span><span class="n">userCountry</span><span class="p">.</span><span class="n">CODE</span><span class="w">            </span><span class="k">as</span><span class="w"> </span><span class="n">countryCode</span><span class="p">,</span><span class="w">
-</span><span class="ln">10</span><span class="w">       </span><span class="n">userCountry</span><span class="p">.</span><span class="n">NAME</span><span class="w">            </span><span class="k">as</span><span class="w"> </span><span class="n">countryName</span><span class="p">,</span><span class="w">
-</span><span class="ln">11</span><span class="w">       </span><span class="n">account</span><span class="p">.</span><span class="n">ADDRESS_ID</span><span class="w">          </span><span class="k">as</span><span class="w"> </span><span class="n">addressId</span><span class="p">,</span><span class="w">
-</span><span class="ln">12</span><span class="w">       </span><span class="n">userAddress</span><span class="p">.</span><span class="n">CODE</span><span class="w">            </span><span class="k">as</span><span class="w"> </span><span class="n">addressCode</span><span class="p">,</span><span class="w">
-</span><span class="ln">13</span><span class="w">       </span><span class="n">userAddress</span><span class="p">.</span><span class="n">NAME</span><span class="w">            </span><span class="k">as</span><span class="w"> </span><span class="n">addressName</span><span class="p">,</span><span class="w">
-</span><span class="ln">14</span><span class="w">       </span><span class="n">account</span><span class="p">.</span><span class="n">USER_ID</span><span class="w">             </span><span class="k">as</span><span class="w"> </span><span class="n">userId</span><span class="p">,</span><span class="w">
-</span><span class="ln">15</span><span class="w">       </span><span class="n">account</span><span class="p">.</span><span class="n">USER_NAME</span><span class="w">           </span><span class="k">as</span><span class="w"> </span><span class="n">userName</span><span class="p">,</span><span class="w">
-</span><span class="ln">16</span><span class="w">       </span><span class="n">account</span><span class="p">.</span><span class="n">USER_UID</span><span class="w">            </span><span class="k">as</span><span class="w"> </span><span class="n">userUid</span><span class="p">,</span><span class="w">
-</span><span class="ln">17</span><span class="w">       </span><span class="n">account</span><span class="p">.</span><span class="n">ACCOUNT_NAME</span><span class="w">        </span><span class="k">as</span><span class="w"> </span><span class="n">accountName</span><span class="p">,</span><span class="w">
-</span><span class="ln">18</span><span class="w">       </span><span class="n">account</span><span class="p">.</span><span class="n">IDENTITY_TYPE_ID</span><span class="w">    </span><span class="k">as</span><span class="w"> </span><span class="n">identityTypeId</span><span class="p">,</span><span class="w">
-</span><span class="ln">19</span><span class="w">       </span><span class="n">accountIdentity</span><span class="p">.</span><span class="n">CODE</span><span class="w">        </span><span class="k">as</span><span class="w"> </span><span class="n">identityTypeCode</span><span class="p">,</span><span class="w">
-</span><span class="ln">20</span><span class="w">       </span><span class="n">accountIdentity</span><span class="p">.</span><span class="n">NAME</span><span class="w">        </span><span class="k">as</span><span class="w"> </span><span class="n">identityTypeName</span><span class="p">,</span><span class="w">
-</span><span class="ln">21</span><span class="w">       </span><span class="n">account</span><span class="p">.</span><span class="n">ORGANIZATION_ID</span><span class="w">     </span><span class="k">as</span><span class="w"> </span><span class="n">organizationId</span><span class="p">,</span><span class="w">
-</span><span class="ln">22</span><span class="w">       </span><span class="n">accountOrganization</span><span class="p">.</span><span class="n">CODE</span><span class="w">    </span><span class="k">as</span><span class="w"> </span><span class="n">organizationCode</span><span class="p">,</span><span class="w">
-</span><span class="ln">23</span><span class="w">       </span><span class="n">accountOrganization</span><span class="p">.</span><span class="n">NAME</span><span class="w">    </span><span class="k">as</span><span class="w"> </span><span class="n">organizationName</span><span class="p">,</span><span class="w">
-</span><span class="ln">24</span><span class="w">       </span><span class="n">account</span><span class="p">.</span><span class="n">IS_DATA_CENTER</span><span class="w">      </span><span class="k">as</span><span class="w"> </span><span class="n">isDataCenter</span><span class="p">,</span><span class="w">
-</span><span class="ln">25</span><span class="w">       </span><span class="n">account</span><span class="p">.</span><span class="n">ACTIVATION</span><span class="w">          </span><span class="k">as</span><span class="w"> </span><span class="n">activation</span><span class="p">,</span><span class="w">
-</span><span class="ln">26</span><span class="w">       </span><span class="n">account</span><span class="p">.</span><span class="k">STATE</span><span class="w">               </span><span class="k">as</span><span class="w"> </span><span class="k">state</span><span class="p">,</span><span class="w">
-</span><span class="ln">27</span><span class="w">       </span><span class="n">account</span><span class="p">.</span><span class="n">ACCOUNT_EXPIRY_DATE</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">accountExpiryDate</span><span class="p">,</span><span class="w">
-</span><span class="ln">28</span><span class="w">       </span><span class="n">account</span><span class="p">.</span><span class="n">ACCOUNT_LOCKED</span><span class="w">      </span><span class="k">as</span><span class="w"> </span><span class="n">accountLocked</span><span class="p">,</span><span class="w">
-</span><span class="ln">29</span><span class="w">       </span><span class="n">account</span><span class="p">.</span><span class="n">PHONE_NUMBER</span><span class="w">        </span><span class="k">as</span><span class="w"> </span><span class="n">phoneNumber</span><span class="p">,</span><span class="w">
-</span><span class="ln">30</span><span class="w">       </span><span class="n">account</span><span class="p">.</span><span class="n">EMAIL</span><span class="w">               </span><span class="k">as</span><span class="w"> </span><span class="n">email</span><span class="p">,</span><span class="w">
-</span><span class="ln">31</span><span class="w">       </span><span class="k">user</span><span class="p">.</span><span class="n">IMAGE_URL</span><span class="w">              </span><span class="k">as</span><span class="w"> </span><span class="n">imageUrl</span><span class="w">
-</span><span class="ln">32</span><span class="w"></span><span class="k">from</span><span class="w"> </span><span class="n">TB_B_ACCOUNT</span><span class="w"> </span><span class="n">account</span><span class="w">
-</span><span class="ln">33</span><span class="w">         </span><span class="k">inner</span><span class="w"> </span><span class="k">join</span><span class="w"> </span><span class="n">TB_B_ORGANIZATION</span><span class="w"> </span><span class="n">accountOrganization</span><span class="w">
-</span><span class="ln">34</span><span class="w">                    </span><span class="k">on</span><span class="w"> </span><span class="n">account</span><span class="p">.</span><span class="n">ORGANIZATION_ID</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">accountOrganization</span><span class="p">.</span><span class="n">ID</span><span class="w"> </span><span class="k">AND</span><span class="w"> </span><span class="n">accountOrganization</span><span class="p">.</span><span class="n">DELETED</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="w">
-</span><span class="ln">35</span><span class="w">         </span><span class="k">inner</span><span class="w"> </span><span class="k">join</span><span class="w"> </span><span class="n">TB_B_IDENTITY_TYPE</span><span class="w"> </span><span class="n">accountIdentity</span><span class="w"> </span><span class="k">on</span><span class="w"> </span><span class="n">account</span><span class="p">.</span><span class="n">IDENTITY_TYPE_ID</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">accountIdentity</span><span class="p">.</span><span class="n">ID</span><span class="w">
-</span><span class="ln">36</span><span class="w">         </span><span class="k">inner</span><span class="w"> </span><span class="k">join</span><span class="w"> </span><span class="n">TB_B_DICTIONARY</span><span class="w"> </span><span class="n">userCertificateType</span><span class="w"> </span><span class="k">on</span><span class="w"> </span><span class="n">account</span><span class="p">.</span><span class="n">certificate_type_id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">userCertificateType</span><span class="p">.</span><span class="n">ID</span><span class="w">
-</span><span class="ln">37</span><span class="w">         </span><span class="k">left</span><span class="w"> </span><span class="k">join</span><span class="w"> </span><span class="n">TB_B_DICTIONARY</span><span class="w"> </span><span class="n">userGender</span><span class="w"> </span><span class="k">on</span><span class="w"> </span><span class="n">account</span><span class="p">.</span><span class="n">GENDER_ID</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">userGender</span><span class="p">.</span><span class="n">ID</span><span class="w">
-</span><span class="ln">38</span><span class="w">         </span><span class="k">left</span><span class="w"> </span><span class="k">join</span><span class="w"> </span><span class="n">TB_B_DICTIONARY</span><span class="w"> </span><span class="n">userNation</span><span class="w"> </span><span class="k">on</span><span class="w"> </span><span class="n">account</span><span class="p">.</span><span class="n">NATION_ID</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">userNation</span><span class="p">.</span><span class="n">ID</span><span class="w">
-</span><span class="ln">39</span><span class="w">         </span><span class="k">left</span><span class="w"> </span><span class="k">join</span><span class="w"> </span><span class="n">TB_B_DICTIONARY</span><span class="w"> </span><span class="n">userCountry</span><span class="w"> </span><span class="k">on</span><span class="w"> </span><span class="n">account</span><span class="p">.</span><span class="n">COUNTRY_ID</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">userCountry</span><span class="p">.</span><span class="n">ID</span><span class="w">
-</span><span class="ln">40</span><span class="w">         </span><span class="k">left</span><span class="w"> </span><span class="k">join</span><span class="w"> </span><span class="n">TB_B_DICTIONARY</span><span class="w"> </span><span class="n">userAddress</span><span class="w"> </span><span class="k">on</span><span class="w"> </span><span class="n">account</span><span class="p">.</span><span class="n">ADDRESS_ID</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">userAddress</span><span class="p">.</span><span class="n">ID</span><span class="w">
-</span><span class="ln">41</span><span class="w">         </span><span class="k">left</span><span class="w"> </span><span class="k">join</span><span class="w"> </span><span class="n">TB_B_USER</span><span class="w"> </span><span class="k">user</span><span class="w"> </span><span class="k">on</span><span class="w"> </span><span class="n">account</span><span class="p">.</span><span class="n">USER_ID</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">user</span><span class="p">.</span><span class="n">ID</span><span class="w">
-</span><span class="ln">42</span><span class="w"></span><span class="k">where</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="w">
-</span><span class="ln">43</span><span class="w">  </span><span class="k">and</span><span class="w"> </span><span class="p">(</span><span class="w">
-</span><span class="ln">44</span><span class="w">        </span><span class="n">account</span><span class="p">.</span><span class="n">ACCOUNT_NAME</span><span class="w"> </span><span class="k">like</span><span class="w"> </span><span class="s1">&#39;%user%&#39;</span><span class="w">
-</span><span class="ln">45</span><span class="w">        </span><span class="k">OR</span><span class="w"> </span><span class="n">account</span><span class="p">.</span><span class="n">USER_NAME</span><span class="w"> </span><span class="k">like</span><span class="w"> </span><span class="s1">&#39;%user%&#39;</span><span class="w">
-</span><span class="ln">46</span><span class="w">        </span><span class="k">OR</span><span class="w"> </span><span class="n">accountIdentity</span><span class="p">.</span><span class="n">NAME</span><span class="w"> </span><span class="k">like</span><span class="w"> </span><span class="s1">&#39;%user%&#39;</span><span class="w">
-</span><span class="ln">47</span><span class="w">        </span><span class="k">OR</span><span class="w"> </span><span class="n">accountOrganization</span><span class="p">.</span><span class="n">NAME</span><span class="w"> </span><span class="k">like</span><span class="w"> </span><span class="s1">&#39;%user%&#39;</span><span class="w">
-</span><span class="ln">48</span><span class="w">    </span><span class="p">)</span><span class="w">
-</span><span class="ln">49</span><span class="w">  </span><span class="k">and</span><span class="w"> </span><span class="n">account</span><span class="p">.</span><span class="n">USER_NAME</span><span class="w"> </span><span class="k">like</span><span class="w"> </span><span class="s1">&#39;%user%&#39;</span><span class="w">
-</span><span class="ln">50</span><span class="w">  </span><span class="k">and</span><span class="w"> </span><span class="n">account</span><span class="p">.</span><span class="n">ACCOUNT_NAME</span><span class="w"> </span><span class="k">like</span><span class="w"> </span><span class="s1">&#39;%user%&#39;</span><span class="w">
-</span><span class="ln">51</span><span class="w"></span><span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="k">length</span><span class="p">(</span><span class="n">account</span><span class="p">.</span><span class="n">ACCOUNT_NAME</span><span class="p">),</span><span class="w"> </span><span class="n">account</span><span class="p">.</span><span class="n">ACCOUNT_NAME</span><span class="w">
-</span><span class="ln">52</span><span class="w"></span><span class="k">limit</span><span class="w"> </span><span class="mi">20</span><span class="p">;</span><span class="w">
-</span></code></pre></div><p>在优化之前先刷新相关表的统计数据：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-SQL" data-lang="SQL"><span class="ln">1</span><span class="k">ANALYZE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">TB_B_ACCOUNT</span><span class="p">;</span><span class="w">
-</span><span class="ln">2</span><span class="w"></span><span class="k">ANALYZE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">TB_B_ORGANIZATION</span><span class="p">;</span><span class="w">
-</span><span class="ln">3</span><span class="w"></span><span class="k">ANALYZE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">TB_B_IDENTITY_TYPE</span><span class="p">;</span><span class="w">
-</span><span class="ln">4</span><span class="w"></span><span class="k">ANALYZE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">TB_B_DICTIONARY</span><span class="p">;</span><span class="w">
-</span><span class="ln">5</span><span class="w"></span><span class="k">ANALYZE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">TB_B_USER</span><span class="p">;</span><span class="w">
-</span></code></pre></div><h2 id="1排除order-by和limit">1）排除ORDER BY和LIMIT<a class="anchor ms-1" href="#1排除order-by和limit"><i class="fas fa-link"></i></a></h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span><span class="lnt">46
+</span><span class="lnt">47
+</span><span class="lnt">48
+</span><span class="lnt">49
+</span><span class="lnt">50
+</span><span class="lnt">51
+</span><span class="lnt">52
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="k">select</span><span class="w"> </span><span class="n">account</span><span class="p">.</span><span class="n">ID</span><span class="w">                  </span><span class="k">as</span><span class="w"> </span><span class="n">id</span><span class="p">,</span><span class="w">
+</span><span class="w">       </span><span class="n">account</span><span class="p">.</span><span class="n">GENDER_ID</span><span class="w">           </span><span class="k">as</span><span class="w"> </span><span class="n">genderId</span><span class="p">,</span><span class="w">
+</span><span class="w">       </span><span class="n">userGender</span><span class="p">.</span><span class="n">CODE</span><span class="w">             </span><span class="k">as</span><span class="w"> </span><span class="n">genderCode</span><span class="p">,</span><span class="w">
+</span><span class="w">       </span><span class="n">userGender</span><span class="p">.</span><span class="n">NAME</span><span class="w">             </span><span class="k">as</span><span class="w"> </span><span class="n">genderName</span><span class="p">,</span><span class="w">
+</span><span class="w">       </span><span class="n">account</span><span class="p">.</span><span class="n">NATION_ID</span><span class="w">           </span><span class="k">as</span><span class="w"> </span><span class="n">nationId</span><span class="p">,</span><span class="w">
+</span><span class="w">       </span><span class="n">userNation</span><span class="p">.</span><span class="n">CODE</span><span class="w">             </span><span class="k">as</span><span class="w"> </span><span class="n">nationCode</span><span class="p">,</span><span class="w">
+</span><span class="w">       </span><span class="n">userNation</span><span class="p">.</span><span class="n">NAME</span><span class="w">             </span><span class="k">as</span><span class="w"> </span><span class="n">nationName</span><span class="p">,</span><span class="w">
+</span><span class="w">       </span><span class="n">account</span><span class="p">.</span><span class="n">COUNTRY_ID</span><span class="w">          </span><span class="k">as</span><span class="w"> </span><span class="n">countryId</span><span class="p">,</span><span class="w">
+</span><span class="w">       </span><span class="n">userCountry</span><span class="p">.</span><span class="n">CODE</span><span class="w">            </span><span class="k">as</span><span class="w"> </span><span class="n">countryCode</span><span class="p">,</span><span class="w">
+</span><span class="w">       </span><span class="n">userCountry</span><span class="p">.</span><span class="n">NAME</span><span class="w">            </span><span class="k">as</span><span class="w"> </span><span class="n">countryName</span><span class="p">,</span><span class="w">
+</span><span class="w">       </span><span class="n">account</span><span class="p">.</span><span class="n">ADDRESS_ID</span><span class="w">          </span><span class="k">as</span><span class="w"> </span><span class="n">addressId</span><span class="p">,</span><span class="w">
+</span><span class="w">       </span><span class="n">userAddress</span><span class="p">.</span><span class="n">CODE</span><span class="w">            </span><span class="k">as</span><span class="w"> </span><span class="n">addressCode</span><span class="p">,</span><span class="w">
+</span><span class="w">       </span><span class="n">userAddress</span><span class="p">.</span><span class="n">NAME</span><span class="w">            </span><span class="k">as</span><span class="w"> </span><span class="n">addressName</span><span class="p">,</span><span class="w">
+</span><span class="w">       </span><span class="n">account</span><span class="p">.</span><span class="n">USER_ID</span><span class="w">             </span><span class="k">as</span><span class="w"> </span><span class="n">userId</span><span class="p">,</span><span class="w">
+</span><span class="w">       </span><span class="n">account</span><span class="p">.</span><span class="n">USER_NAME</span><span class="w">           </span><span class="k">as</span><span class="w"> </span><span class="n">userName</span><span class="p">,</span><span class="w">
+</span><span class="w">       </span><span class="n">account</span><span class="p">.</span><span class="n">USER_UID</span><span class="w">            </span><span class="k">as</span><span class="w"> </span><span class="n">userUid</span><span class="p">,</span><span class="w">
+</span><span class="w">       </span><span class="n">account</span><span class="p">.</span><span class="n">ACCOUNT_NAME</span><span class="w">        </span><span class="k">as</span><span class="w"> </span><span class="n">accountName</span><span class="p">,</span><span class="w">
+</span><span class="w">       </span><span class="n">account</span><span class="p">.</span><span class="n">IDENTITY_TYPE_ID</span><span class="w">    </span><span class="k">as</span><span class="w"> </span><span class="n">identityTypeId</span><span class="p">,</span><span class="w">
+</span><span class="w">       </span><span class="n">accountIdentity</span><span class="p">.</span><span class="n">CODE</span><span class="w">        </span><span class="k">as</span><span class="w"> </span><span class="n">identityTypeCode</span><span class="p">,</span><span class="w">
+</span><span class="w">       </span><span class="n">accountIdentity</span><span class="p">.</span><span class="n">NAME</span><span class="w">        </span><span class="k">as</span><span class="w"> </span><span class="n">identityTypeName</span><span class="p">,</span><span class="w">
+</span><span class="w">       </span><span class="n">account</span><span class="p">.</span><span class="n">ORGANIZATION_ID</span><span class="w">     </span><span class="k">as</span><span class="w"> </span><span class="n">organizationId</span><span class="p">,</span><span class="w">
+</span><span class="w">       </span><span class="n">accountOrganization</span><span class="p">.</span><span class="n">CODE</span><span class="w">    </span><span class="k">as</span><span class="w"> </span><span class="n">organizationCode</span><span class="p">,</span><span class="w">
+</span><span class="w">       </span><span class="n">accountOrganization</span><span class="p">.</span><span class="n">NAME</span><span class="w">    </span><span class="k">as</span><span class="w"> </span><span class="n">organizationName</span><span class="p">,</span><span class="w">
+</span><span class="w">       </span><span class="n">account</span><span class="p">.</span><span class="n">IS_DATA_CENTER</span><span class="w">      </span><span class="k">as</span><span class="w"> </span><span class="n">isDataCenter</span><span class="p">,</span><span class="w">
+</span><span class="w">       </span><span class="n">account</span><span class="p">.</span><span class="n">ACTIVATION</span><span class="w">          </span><span class="k">as</span><span class="w"> </span><span class="n">activation</span><span class="p">,</span><span class="w">
+</span><span class="w">       </span><span class="n">account</span><span class="p">.</span><span class="k">STATE</span><span class="w">               </span><span class="k">as</span><span class="w"> </span><span class="k">state</span><span class="p">,</span><span class="w">
+</span><span class="w">       </span><span class="n">account</span><span class="p">.</span><span class="n">ACCOUNT_EXPIRY_DATE</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">accountExpiryDate</span><span class="p">,</span><span class="w">
+</span><span class="w">       </span><span class="n">account</span><span class="p">.</span><span class="n">ACCOUNT_LOCKED</span><span class="w">      </span><span class="k">as</span><span class="w"> </span><span class="n">accountLocked</span><span class="p">,</span><span class="w">
+</span><span class="w">       </span><span class="n">account</span><span class="p">.</span><span class="n">PHONE_NUMBER</span><span class="w">        </span><span class="k">as</span><span class="w"> </span><span class="n">phoneNumber</span><span class="p">,</span><span class="w">
+</span><span class="w">       </span><span class="n">account</span><span class="p">.</span><span class="n">EMAIL</span><span class="w">               </span><span class="k">as</span><span class="w"> </span><span class="n">email</span><span class="p">,</span><span class="w">
+</span><span class="w">       </span><span class="k">user</span><span class="p">.</span><span class="n">IMAGE_URL</span><span class="w">              </span><span class="k">as</span><span class="w"> </span><span class="n">imageUrl</span><span class="w">
+</span><span class="w"></span><span class="k">from</span><span class="w"> </span><span class="n">TB_B_ACCOUNT</span><span class="w"> </span><span class="n">account</span><span class="w">
+</span><span class="w">         </span><span class="k">inner</span><span class="w"> </span><span class="k">join</span><span class="w"> </span><span class="n">TB_B_ORGANIZATION</span><span class="w"> </span><span class="n">accountOrganization</span><span class="w">
+</span><span class="w">                    </span><span class="k">on</span><span class="w"> </span><span class="n">account</span><span class="p">.</span><span class="n">ORGANIZATION_ID</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">accountOrganization</span><span class="p">.</span><span class="n">ID</span><span class="w"> </span><span class="k">AND</span><span class="w"> </span><span class="n">accountOrganization</span><span class="p">.</span><span class="n">DELETED</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="w">
+</span><span class="w">         </span><span class="k">inner</span><span class="w"> </span><span class="k">join</span><span class="w"> </span><span class="n">TB_B_IDENTITY_TYPE</span><span class="w"> </span><span class="n">accountIdentity</span><span class="w"> </span><span class="k">on</span><span class="w"> </span><span class="n">account</span><span class="p">.</span><span class="n">IDENTITY_TYPE_ID</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">accountIdentity</span><span class="p">.</span><span class="n">ID</span><span class="w">
+</span><span class="w">         </span><span class="k">inner</span><span class="w"> </span><span class="k">join</span><span class="w"> </span><span class="n">TB_B_DICTIONARY</span><span class="w"> </span><span class="n">userCertificateType</span><span class="w"> </span><span class="k">on</span><span class="w"> </span><span class="n">account</span><span class="p">.</span><span class="n">certificate_type_id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">userCertificateType</span><span class="p">.</span><span class="n">ID</span><span class="w">
+</span><span class="w">         </span><span class="k">left</span><span class="w"> </span><span class="k">join</span><span class="w"> </span><span class="n">TB_B_DICTIONARY</span><span class="w"> </span><span class="n">userGender</span><span class="w"> </span><span class="k">on</span><span class="w"> </span><span class="n">account</span><span class="p">.</span><span class="n">GENDER_ID</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">userGender</span><span class="p">.</span><span class="n">ID</span><span class="w">
+</span><span class="w">         </span><span class="k">left</span><span class="w"> </span><span class="k">join</span><span class="w"> </span><span class="n">TB_B_DICTIONARY</span><span class="w"> </span><span class="n">userNation</span><span class="w"> </span><span class="k">on</span><span class="w"> </span><span class="n">account</span><span class="p">.</span><span class="n">NATION_ID</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">userNation</span><span class="p">.</span><span class="n">ID</span><span class="w">
+</span><span class="w">         </span><span class="k">left</span><span class="w"> </span><span class="k">join</span><span class="w"> </span><span class="n">TB_B_DICTIONARY</span><span class="w"> </span><span class="n">userCountry</span><span class="w"> </span><span class="k">on</span><span class="w"> </span><span class="n">account</span><span class="p">.</span><span class="n">COUNTRY_ID</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">userCountry</span><span class="p">.</span><span class="n">ID</span><span class="w">
+</span><span class="w">         </span><span class="k">left</span><span class="w"> </span><span class="k">join</span><span class="w"> </span><span class="n">TB_B_DICTIONARY</span><span class="w"> </span><span class="n">userAddress</span><span class="w"> </span><span class="k">on</span><span class="w"> </span><span class="n">account</span><span class="p">.</span><span class="n">ADDRESS_ID</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">userAddress</span><span class="p">.</span><span class="n">ID</span><span class="w">
+</span><span class="w">         </span><span class="k">left</span><span class="w"> </span><span class="k">join</span><span class="w"> </span><span class="n">TB_B_USER</span><span class="w"> </span><span class="k">user</span><span class="w"> </span><span class="k">on</span><span class="w"> </span><span class="n">account</span><span class="p">.</span><span class="n">USER_ID</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">user</span><span class="p">.</span><span class="n">ID</span><span class="w">
+</span><span class="w"></span><span class="k">where</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="w">
+</span><span class="w">  </span><span class="k">and</span><span class="w"> </span><span class="p">(</span><span class="w">
+</span><span class="w">        </span><span class="n">account</span><span class="p">.</span><span class="n">ACCOUNT_NAME</span><span class="w"> </span><span class="k">like</span><span class="w"> </span><span class="s1">&#39;%user%&#39;</span><span class="w">
+</span><span class="w">        </span><span class="k">OR</span><span class="w"> </span><span class="n">account</span><span class="p">.</span><span class="n">USER_NAME</span><span class="w"> </span><span class="k">like</span><span class="w"> </span><span class="s1">&#39;%user%&#39;</span><span class="w">
+</span><span class="w">        </span><span class="k">OR</span><span class="w"> </span><span class="n">accountIdentity</span><span class="p">.</span><span class="n">NAME</span><span class="w"> </span><span class="k">like</span><span class="w"> </span><span class="s1">&#39;%user%&#39;</span><span class="w">
+</span><span class="w">        </span><span class="k">OR</span><span class="w"> </span><span class="n">accountOrganization</span><span class="p">.</span><span class="n">NAME</span><span class="w"> </span><span class="k">like</span><span class="w"> </span><span class="s1">&#39;%user%&#39;</span><span class="w">
+</span><span class="w">    </span><span class="p">)</span><span class="w">
+</span><span class="w">  </span><span class="k">and</span><span class="w"> </span><span class="n">account</span><span class="p">.</span><span class="n">USER_NAME</span><span class="w"> </span><span class="k">like</span><span class="w"> </span><span class="s1">&#39;%user%&#39;</span><span class="w">
+</span><span class="w">  </span><span class="k">and</span><span class="w"> </span><span class="n">account</span><span class="p">.</span><span class="n">ACCOUNT_NAME</span><span class="w"> </span><span class="k">like</span><span class="w"> </span><span class="s1">&#39;%user%&#39;</span><span class="w">
+</span><span class="w"></span><span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="k">length</span><span class="p">(</span><span class="n">account</span><span class="p">.</span><span class="n">ACCOUNT_NAME</span><span class="p">),</span><span class="w"> </span><span class="n">account</span><span class="p">.</span><span class="n">ACCOUNT_NAME</span><span class="w">
+</span><span class="w"></span><span class="k">limit</span><span class="w"> </span><span class="mi">20</span><span class="p">;</span><span class="w">
+</span></code></pre></td></tr></table>
+</div>
+</div><p>在优化之前先刷新相关表的统计数据：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-SQL" data-lang="SQL"><span class="k">ANALYZE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">TB_B_ACCOUNT</span><span class="p">;</span><span class="w">
+</span><span class="w"></span><span class="k">ANALYZE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">TB_B_ORGANIZATION</span><span class="p">;</span><span class="w">
+</span><span class="w"></span><span class="k">ANALYZE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">TB_B_IDENTITY_TYPE</span><span class="p">;</span><span class="w">
+</span><span class="w"></span><span class="k">ANALYZE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">TB_B_DICTIONARY</span><span class="p">;</span><span class="w">
+</span><span class="w"></span><span class="k">ANALYZE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">TB_B_USER</span><span class="p">;</span><span class="w">
+</span></code></pre></td></tr></table>
+</div>
+</div><h2 id="1排除order-by和limit">1）排除ORDER BY和LIMIT<a class="anchor ms-1" href="#1排除order-by和limit"><i class="fas fa-link"></i></a></h2>
 <h4 id="检查字段索引">检查字段索引<a class="anchor ms-1" href="#检查字段索引"><i class="fas fa-link"></i></a></h4>
 <p>检查查询条件中的相关字段，把相关字段的索引加上。</p>
 <p>EXPLAIN结果：</p>
@@ -434,20 +503,39 @@
 </table>
 <h3 id="去掉join">去掉JOIN<a class="anchor ms-1" href="#去掉join"><i class="fas fa-link"></i></a></h3>
 <p>根据业务逻辑，把查询分成两部分，第一步先查ACCOUNT_NAME，第二步查其他字段，第一步SQL：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="ln"> 1</span><span class="k">select</span><span class="w"> </span><span class="n">account</span><span class="p">.</span><span class="n">ACCOUNT_NAME</span><span class="w">
-</span><span class="ln"> 2</span><span class="w"></span><span class="k">from</span><span class="w"> </span><span class="n">TB_B_ACCOUNT</span><span class="w"> </span><span class="n">account</span><span class="w">
-</span><span class="ln"> 3</span><span class="w"></span><span class="k">where</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="w">
-</span><span class="ln"> 4</span><span class="w">  </span><span class="k">and</span><span class="w"> </span><span class="p">(</span><span class="w">
-</span><span class="ln"> 5</span><span class="w">        </span><span class="n">account</span><span class="p">.</span><span class="n">ACCOUNT_NAME</span><span class="w"> </span><span class="k">like</span><span class="w"> </span><span class="s1">&#39;%user%&#39;</span><span class="w">
-</span><span class="ln"> 6</span><span class="w">        </span><span class="k">OR</span><span class="w"> </span><span class="n">account</span><span class="p">.</span><span class="n">USER_NAME</span><span class="w"> </span><span class="k">like</span><span class="w"> </span><span class="s1">&#39;%user%&#39;</span><span class="w">
-</span><span class="ln"> 7</span><span class="w">        </span><span class="k">OR</span><span class="w"> </span><span class="n">account</span><span class="p">.</span><span class="n">IDENTITY_TYPE_ID</span><span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="p">(</span><span class="k">select</span><span class="w"> </span><span class="n">accountIdentity</span><span class="p">.</span><span class="n">ID</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">TB_B_IDENTITY_TYPE</span><span class="w"> </span><span class="n">accountIdentity</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">accountIdentity</span><span class="p">.</span><span class="n">NAME</span><span class="w"> </span><span class="k">like</span><span class="w"> </span><span class="s1">&#39;%user%&#39;</span><span class="p">)</span><span class="w">
-</span><span class="ln"> 8</span><span class="w">        </span><span class="k">OR</span><span class="w"> </span><span class="n">account</span><span class="p">.</span><span class="n">ORGANIZATION_ID</span><span class="w"> </span><span class="k">in</span><span class="w">  </span><span class="p">(</span><span class="k">select</span><span class="w"> </span><span class="n">accountOrganization</span><span class="p">.</span><span class="n">ID</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">TB_B_ORGANIZATION</span><span class="w"> </span><span class="n">accountOrganization</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">accountOrganization</span><span class="p">.</span><span class="n">NAME</span><span class="w"> </span><span class="k">like</span><span class="w"> </span><span class="s1">&#39;%user%&#39;</span><span class="p">)</span><span class="w">
-</span><span class="ln"> 9</span><span class="w">    </span><span class="p">)</span><span class="w">
-</span><span class="ln">10</span><span class="w">  </span><span class="k">and</span><span class="w"> </span><span class="n">account</span><span class="p">.</span><span class="n">USER_NAME</span><span class="w"> </span><span class="k">like</span><span class="w"> </span><span class="s1">&#39;%user%&#39;</span><span class="w">
-</span><span class="ln">11</span><span class="w">  </span><span class="k">and</span><span class="w"> </span><span class="n">account</span><span class="p">.</span><span class="n">ACCOUNT_NAME</span><span class="w"> </span><span class="k">like</span><span class="w"> </span><span class="s1">&#39;%user%&#39;</span><span class="w">
-</span><span class="ln">12</span><span class="w">  </span><span class="k">and</span><span class="w"> </span><span class="n">account</span><span class="p">.</span><span class="n">ORGANIZATION_ID</span><span class="w"> </span><span class="k">in</span><span class="w">
-</span><span class="ln">13</span><span class="w">      </span><span class="p">(</span><span class="k">select</span><span class="w"> </span><span class="n">accountOrganization</span><span class="p">.</span><span class="n">ID</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">TB_B_ORGANIZATION</span><span class="w"> </span><span class="n">accountOrganization</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">DELETED</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">);</span><span class="w">
-</span></code></pre></div><p>EXPLAIN如下：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="k">select</span><span class="w"> </span><span class="n">account</span><span class="p">.</span><span class="n">ACCOUNT_NAME</span><span class="w">
+</span><span class="w"></span><span class="k">from</span><span class="w"> </span><span class="n">TB_B_ACCOUNT</span><span class="w"> </span><span class="n">account</span><span class="w">
+</span><span class="w"></span><span class="k">where</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="w">
+</span><span class="w">  </span><span class="k">and</span><span class="w"> </span><span class="p">(</span><span class="w">
+</span><span class="w">        </span><span class="n">account</span><span class="p">.</span><span class="n">ACCOUNT_NAME</span><span class="w"> </span><span class="k">like</span><span class="w"> </span><span class="s1">&#39;%user%&#39;</span><span class="w">
+</span><span class="w">        </span><span class="k">OR</span><span class="w"> </span><span class="n">account</span><span class="p">.</span><span class="n">USER_NAME</span><span class="w"> </span><span class="k">like</span><span class="w"> </span><span class="s1">&#39;%user%&#39;</span><span class="w">
+</span><span class="w">        </span><span class="k">OR</span><span class="w"> </span><span class="n">account</span><span class="p">.</span><span class="n">IDENTITY_TYPE_ID</span><span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="p">(</span><span class="k">select</span><span class="w"> </span><span class="n">accountIdentity</span><span class="p">.</span><span class="n">ID</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">TB_B_IDENTITY_TYPE</span><span class="w"> </span><span class="n">accountIdentity</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">accountIdentity</span><span class="p">.</span><span class="n">NAME</span><span class="w"> </span><span class="k">like</span><span class="w"> </span><span class="s1">&#39;%user%&#39;</span><span class="p">)</span><span class="w">
+</span><span class="w">        </span><span class="k">OR</span><span class="w"> </span><span class="n">account</span><span class="p">.</span><span class="n">ORGANIZATION_ID</span><span class="w"> </span><span class="k">in</span><span class="w">  </span><span class="p">(</span><span class="k">select</span><span class="w"> </span><span class="n">accountOrganization</span><span class="p">.</span><span class="n">ID</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">TB_B_ORGANIZATION</span><span class="w"> </span><span class="n">accountOrganization</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">accountOrganization</span><span class="p">.</span><span class="n">NAME</span><span class="w"> </span><span class="k">like</span><span class="w"> </span><span class="s1">&#39;%user%&#39;</span><span class="p">)</span><span class="w">
+</span><span class="w">    </span><span class="p">)</span><span class="w">
+</span><span class="w">  </span><span class="k">and</span><span class="w"> </span><span class="n">account</span><span class="p">.</span><span class="n">USER_NAME</span><span class="w"> </span><span class="k">like</span><span class="w"> </span><span class="s1">&#39;%user%&#39;</span><span class="w">
+</span><span class="w">  </span><span class="k">and</span><span class="w"> </span><span class="n">account</span><span class="p">.</span><span class="n">ACCOUNT_NAME</span><span class="w"> </span><span class="k">like</span><span class="w"> </span><span class="s1">&#39;%user%&#39;</span><span class="w">
+</span><span class="w">  </span><span class="k">and</span><span class="w"> </span><span class="n">account</span><span class="p">.</span><span class="n">ORGANIZATION_ID</span><span class="w"> </span><span class="k">in</span><span class="w">
+</span><span class="w">      </span><span class="p">(</span><span class="k">select</span><span class="w"> </span><span class="n">accountOrganization</span><span class="p">.</span><span class="n">ID</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">TB_B_ORGANIZATION</span><span class="w"> </span><span class="n">accountOrganization</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">DELETED</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">);</span><span class="w">
+</span></code></pre></td></tr></table>
+</div>
+</div><p>EXPLAIN如下：</p>
 <table>
 <thead>
 <tr>
@@ -526,20 +614,39 @@
 </table>
 <h3 id="优化like">优化LIKE<a class="anchor ms-1" href="#优化like"><i class="fas fa-link"></i></a></h3>
 <p>看到LIKE用的是中间匹配<code>%...%</code>，这种是无法利用索引的，遂改成前缀匹配，所以做出以下优化：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="ln"> 1</span><span class="k">select</span><span class="w"> </span><span class="n">account</span><span class="p">.</span><span class="n">ACCOUNT_NAME</span><span class="w">
-</span><span class="ln"> 2</span><span class="w"></span><span class="k">from</span><span class="w"> </span><span class="n">TB_B_ACCOUNT</span><span class="w"> </span><span class="n">account</span><span class="w">
-</span><span class="ln"> 3</span><span class="w"></span><span class="k">where</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="w">
-</span><span class="ln"> 4</span><span class="w">  </span><span class="k">and</span><span class="w"> </span><span class="p">(</span><span class="w">
-</span><span class="ln"> 5</span><span class="w">        </span><span class="n">account</span><span class="p">.</span><span class="n">ACCOUNT_NAME</span><span class="w"> </span><span class="k">like</span><span class="w"> </span><span class="s1">&#39;user%&#39;</span><span class="w">
-</span><span class="ln"> 6</span><span class="w">        </span><span class="k">OR</span><span class="w"> </span><span class="n">account</span><span class="p">.</span><span class="n">USER_NAME</span><span class="w"> </span><span class="k">like</span><span class="w"> </span><span class="s1">&#39;user%&#39;</span><span class="w">
-</span><span class="ln"> 7</span><span class="w">        </span><span class="k">OR</span><span class="w"> </span><span class="n">account</span><span class="p">.</span><span class="n">IDENTITY_TYPE_ID</span><span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="p">(</span><span class="k">select</span><span class="w"> </span><span class="n">accountIdentity</span><span class="p">.</span><span class="n">ID</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">TB_B_IDENTITY_TYPE</span><span class="w"> </span><span class="n">accountIdentity</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">accountIdentity</span><span class="p">.</span><span class="n">NAME</span><span class="w"> </span><span class="k">like</span><span class="w"> </span><span class="s1">&#39;user%&#39;</span><span class="p">)</span><span class="w">
-</span><span class="ln"> 8</span><span class="w">        </span><span class="k">OR</span><span class="w"> </span><span class="n">account</span><span class="p">.</span><span class="n">ORGANIZATION_ID</span><span class="w"> </span><span class="k">in</span><span class="w">  </span><span class="p">(</span><span class="k">select</span><span class="w"> </span><span class="n">accountOrganization</span><span class="p">.</span><span class="n">ID</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">TB_B_ORGANIZATION</span><span class="w"> </span><span class="n">accountOrganization</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">accountOrganization</span><span class="p">.</span><span class="n">NAME</span><span class="w"> </span><span class="k">like</span><span class="w"> </span><span class="s1">&#39;user%&#39;</span><span class="p">)</span><span class="w">
-</span><span class="ln"> 9</span><span class="w">    </span><span class="p">)</span><span class="w">
-</span><span class="ln">10</span><span class="w">  </span><span class="k">and</span><span class="w"> </span><span class="n">account</span><span class="p">.</span><span class="n">USER_NAME</span><span class="w"> </span><span class="k">like</span><span class="w"> </span><span class="s1">&#39;user%&#39;</span><span class="w">
-</span><span class="ln">11</span><span class="w">  </span><span class="k">and</span><span class="w"> </span><span class="n">account</span><span class="p">.</span><span class="n">ACCOUNT_NAME</span><span class="w"> </span><span class="k">like</span><span class="w"> </span><span class="s1">&#39;user%&#39;</span><span class="w">
-</span><span class="ln">12</span><span class="w">  </span><span class="k">and</span><span class="w"> </span><span class="n">account</span><span class="p">.</span><span class="n">ORGANIZATION_ID</span><span class="w"> </span><span class="k">in</span><span class="w">
-</span><span class="ln">13</span><span class="w">      </span><span class="p">(</span><span class="k">select</span><span class="w"> </span><span class="n">accountOrganization</span><span class="p">.</span><span class="n">ID</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">TB_B_ORGANIZATION</span><span class="w"> </span><span class="n">accountOrganization</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">DELETED</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">);</span><span class="w">
-</span></code></pre></div><p>EXPLAIN结果：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="k">select</span><span class="w"> </span><span class="n">account</span><span class="p">.</span><span class="n">ACCOUNT_NAME</span><span class="w">
+</span><span class="w"></span><span class="k">from</span><span class="w"> </span><span class="n">TB_B_ACCOUNT</span><span class="w"> </span><span class="n">account</span><span class="w">
+</span><span class="w"></span><span class="k">where</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="w">
+</span><span class="w">  </span><span class="k">and</span><span class="w"> </span><span class="p">(</span><span class="w">
+</span><span class="w">        </span><span class="n">account</span><span class="p">.</span><span class="n">ACCOUNT_NAME</span><span class="w"> </span><span class="k">like</span><span class="w"> </span><span class="s1">&#39;user%&#39;</span><span class="w">
+</span><span class="w">        </span><span class="k">OR</span><span class="w"> </span><span class="n">account</span><span class="p">.</span><span class="n">USER_NAME</span><span class="w"> </span><span class="k">like</span><span class="w"> </span><span class="s1">&#39;user%&#39;</span><span class="w">
+</span><span class="w">        </span><span class="k">OR</span><span class="w"> </span><span class="n">account</span><span class="p">.</span><span class="n">IDENTITY_TYPE_ID</span><span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="p">(</span><span class="k">select</span><span class="w"> </span><span class="n">accountIdentity</span><span class="p">.</span><span class="n">ID</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">TB_B_IDENTITY_TYPE</span><span class="w"> </span><span class="n">accountIdentity</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">accountIdentity</span><span class="p">.</span><span class="n">NAME</span><span class="w"> </span><span class="k">like</span><span class="w"> </span><span class="s1">&#39;user%&#39;</span><span class="p">)</span><span class="w">
+</span><span class="w">        </span><span class="k">OR</span><span class="w"> </span><span class="n">account</span><span class="p">.</span><span class="n">ORGANIZATION_ID</span><span class="w"> </span><span class="k">in</span><span class="w">  </span><span class="p">(</span><span class="k">select</span><span class="w"> </span><span class="n">accountOrganization</span><span class="p">.</span><span class="n">ID</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">TB_B_ORGANIZATION</span><span class="w"> </span><span class="n">accountOrganization</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">accountOrganization</span><span class="p">.</span><span class="n">NAME</span><span class="w"> </span><span class="k">like</span><span class="w"> </span><span class="s1">&#39;user%&#39;</span><span class="p">)</span><span class="w">
+</span><span class="w">    </span><span class="p">)</span><span class="w">
+</span><span class="w">  </span><span class="k">and</span><span class="w"> </span><span class="n">account</span><span class="p">.</span><span class="n">USER_NAME</span><span class="w"> </span><span class="k">like</span><span class="w"> </span><span class="s1">&#39;user%&#39;</span><span class="w">
+</span><span class="w">  </span><span class="k">and</span><span class="w"> </span><span class="n">account</span><span class="p">.</span><span class="n">ACCOUNT_NAME</span><span class="w"> </span><span class="k">like</span><span class="w"> </span><span class="s1">&#39;user%&#39;</span><span class="w">
+</span><span class="w">  </span><span class="k">and</span><span class="w"> </span><span class="n">account</span><span class="p">.</span><span class="n">ORGANIZATION_ID</span><span class="w"> </span><span class="k">in</span><span class="w">
+</span><span class="w">      </span><span class="p">(</span><span class="k">select</span><span class="w"> </span><span class="n">accountOrganization</span><span class="p">.</span><span class="n">ID</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">TB_B_ORGANIZATION</span><span class="w"> </span><span class="n">accountOrganization</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">DELETED</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">);</span><span class="w">
+</span></code></pre></td></tr></table>
+</div>
+</div><p>EXPLAIN结果：</p>
 <table>
 <thead>
 <tr>
@@ -618,21 +725,41 @@
 </table>
 <h2 id="2考虑order-by优化">2）考虑ORDER BY优化<a class="anchor ms-1" href="#2考虑order-by优化"><i class="fas fa-link"></i></a></h2>
 <p>加上原先的ORDER BY之后，SQL如下：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="ln"> 1</span><span class="k">select</span><span class="w"> </span><span class="n">account</span><span class="p">.</span><span class="n">ACCOUNT_NAME</span><span class="w">
-</span><span class="ln"> 2</span><span class="w"></span><span class="k">from</span><span class="w"> </span><span class="n">TB_B_ACCOUNT</span><span class="w"> </span><span class="n">account</span><span class="w">
-</span><span class="ln"> 3</span><span class="w"></span><span class="k">where</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="w">
-</span><span class="ln"> 4</span><span class="w">  </span><span class="k">and</span><span class="w"> </span><span class="p">(</span><span class="w">
-</span><span class="ln"> 5</span><span class="w">        </span><span class="n">account</span><span class="p">.</span><span class="n">ACCOUNT_NAME</span><span class="w"> </span><span class="k">like</span><span class="w"> </span><span class="s1">&#39;user%&#39;</span><span class="w">
-</span><span class="ln"> 6</span><span class="w">        </span><span class="k">OR</span><span class="w"> </span><span class="n">account</span><span class="p">.</span><span class="n">USER_NAME</span><span class="w"> </span><span class="k">like</span><span class="w"> </span><span class="s1">&#39;user%&#39;</span><span class="w">
-</span><span class="ln"> 7</span><span class="w">        </span><span class="k">OR</span><span class="w"> </span><span class="n">account</span><span class="p">.</span><span class="n">IDENTITY_TYPE_ID</span><span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="p">(</span><span class="k">select</span><span class="w"> </span><span class="n">accountIdentity</span><span class="p">.</span><span class="n">ID</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">TB_B_IDENTITY_TYPE</span><span class="w"> </span><span class="n">accountIdentity</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">accountIdentity</span><span class="p">.</span><span class="n">NAME</span><span class="w"> </span><span class="k">like</span><span class="w"> </span><span class="s1">&#39;user%&#39;</span><span class="p">)</span><span class="w">
-</span><span class="ln"> 8</span><span class="w">        </span><span class="k">OR</span><span class="w"> </span><span class="n">account</span><span class="p">.</span><span class="n">ORGANIZATION_ID</span><span class="w"> </span><span class="k">in</span><span class="w">  </span><span class="p">(</span><span class="k">select</span><span class="w"> </span><span class="n">accountOrganization</span><span class="p">.</span><span class="n">ID</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">TB_B_ORGANIZATION</span><span class="w"> </span><span class="n">accountOrganization</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">accountOrganization</span><span class="p">.</span><span class="n">NAME</span><span class="w"> </span><span class="k">like</span><span class="w"> </span><span class="s1">&#39;user%&#39;</span><span class="p">)</span><span class="w">
-</span><span class="ln"> 9</span><span class="w">    </span><span class="p">)</span><span class="w">
-</span><span class="ln">10</span><span class="w">  </span><span class="k">and</span><span class="w"> </span><span class="n">account</span><span class="p">.</span><span class="n">USER_NAME</span><span class="w"> </span><span class="k">like</span><span class="w"> </span><span class="s1">&#39;user%&#39;</span><span class="w">
-</span><span class="ln">11</span><span class="w">  </span><span class="k">and</span><span class="w"> </span><span class="n">account</span><span class="p">.</span><span class="n">ACCOUNT_NAME</span><span class="w"> </span><span class="k">like</span><span class="w"> </span><span class="s1">&#39;user%&#39;</span><span class="w">
-</span><span class="ln">12</span><span class="w">  </span><span class="k">and</span><span class="w"> </span><span class="n">account</span><span class="p">.</span><span class="n">ORGANIZATION_ID</span><span class="w"> </span><span class="k">in</span><span class="w">
-</span><span class="ln">13</span><span class="w">      </span><span class="p">(</span><span class="k">select</span><span class="w"> </span><span class="n">accountOrganization</span><span class="p">.</span><span class="n">ID</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">TB_B_ORGANIZATION</span><span class="w"> </span><span class="n">accountOrganization</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">DELETED</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w">
-</span><span class="ln">14</span><span class="w"></span><span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="k">length</span><span class="p">(</span><span class="n">account</span><span class="p">.</span><span class="n">ACCOUNT_NAME</span><span class="p">),</span><span class="w"> </span><span class="n">account</span><span class="p">.</span><span class="n">ACCOUNT_NAME</span><span class="p">;</span><span class="w">
-</span></code></pre></div><p>EXPLAIN结果：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="k">select</span><span class="w"> </span><span class="n">account</span><span class="p">.</span><span class="n">ACCOUNT_NAME</span><span class="w">
+</span><span class="w"></span><span class="k">from</span><span class="w"> </span><span class="n">TB_B_ACCOUNT</span><span class="w"> </span><span class="n">account</span><span class="w">
+</span><span class="w"></span><span class="k">where</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="w">
+</span><span class="w">  </span><span class="k">and</span><span class="w"> </span><span class="p">(</span><span class="w">
+</span><span class="w">        </span><span class="n">account</span><span class="p">.</span><span class="n">ACCOUNT_NAME</span><span class="w"> </span><span class="k">like</span><span class="w"> </span><span class="s1">&#39;user%&#39;</span><span class="w">
+</span><span class="w">        </span><span class="k">OR</span><span class="w"> </span><span class="n">account</span><span class="p">.</span><span class="n">USER_NAME</span><span class="w"> </span><span class="k">like</span><span class="w"> </span><span class="s1">&#39;user%&#39;</span><span class="w">
+</span><span class="w">        </span><span class="k">OR</span><span class="w"> </span><span class="n">account</span><span class="p">.</span><span class="n">IDENTITY_TYPE_ID</span><span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="p">(</span><span class="k">select</span><span class="w"> </span><span class="n">accountIdentity</span><span class="p">.</span><span class="n">ID</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">TB_B_IDENTITY_TYPE</span><span class="w"> </span><span class="n">accountIdentity</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">accountIdentity</span><span class="p">.</span><span class="n">NAME</span><span class="w"> </span><span class="k">like</span><span class="w"> </span><span class="s1">&#39;user%&#39;</span><span class="p">)</span><span class="w">
+</span><span class="w">        </span><span class="k">OR</span><span class="w"> </span><span class="n">account</span><span class="p">.</span><span class="n">ORGANIZATION_ID</span><span class="w"> </span><span class="k">in</span><span class="w">  </span><span class="p">(</span><span class="k">select</span><span class="w"> </span><span class="n">accountOrganization</span><span class="p">.</span><span class="n">ID</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">TB_B_ORGANIZATION</span><span class="w"> </span><span class="n">accountOrganization</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">accountOrganization</span><span class="p">.</span><span class="n">NAME</span><span class="w"> </span><span class="k">like</span><span class="w"> </span><span class="s1">&#39;user%&#39;</span><span class="p">)</span><span class="w">
+</span><span class="w">    </span><span class="p">)</span><span class="w">
+</span><span class="w">  </span><span class="k">and</span><span class="w"> </span><span class="n">account</span><span class="p">.</span><span class="n">USER_NAME</span><span class="w"> </span><span class="k">like</span><span class="w"> </span><span class="s1">&#39;user%&#39;</span><span class="w">
+</span><span class="w">  </span><span class="k">and</span><span class="w"> </span><span class="n">account</span><span class="p">.</span><span class="n">ACCOUNT_NAME</span><span class="w"> </span><span class="k">like</span><span class="w"> </span><span class="s1">&#39;user%&#39;</span><span class="w">
+</span><span class="w">  </span><span class="k">and</span><span class="w"> </span><span class="n">account</span><span class="p">.</span><span class="n">ORGANIZATION_ID</span><span class="w"> </span><span class="k">in</span><span class="w">
+</span><span class="w">      </span><span class="p">(</span><span class="k">select</span><span class="w"> </span><span class="n">accountOrganization</span><span class="p">.</span><span class="n">ID</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">TB_B_ORGANIZATION</span><span class="w"> </span><span class="n">accountOrganization</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">DELETED</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w">
+</span><span class="w"></span><span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="k">length</span><span class="p">(</span><span class="n">account</span><span class="p">.</span><span class="n">ACCOUNT_NAME</span><span class="p">),</span><span class="w"> </span><span class="n">account</span><span class="p">.</span><span class="n">ACCOUNT_NAME</span><span class="p">;</span><span class="w">
+</span></code></pre></td></tr></table>
+</div>
+</div><p>EXPLAIN结果：</p>
 <table>
 <thead>
 <tr>
@@ -741,54 +868,117 @@
 <p>A做驱动表 N=500，B是被驱动表 M=14w，对结果做普通排序。</p>
 <p>算法复杂度分析：</p>
 <p>扫描A表 + A表每一行利用B表索引查找 + B表每条记录查找主键索引（回表） + B表记录的排序。</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>  N + N * Log2<span class="o">(</span>M<span class="o">)</span> + M * Log2<span class="o">(</span>M<span class="o">)</span> + M * Log2<span class="o">(</span>M<span class="o">)</span>
-<span class="ln">2</span><span class="o">=</span> <span class="m">500</span> + <span class="m">500</span> * Log2<span class="o">(</span>14w<span class="o">)</span> + 14w * Log2<span class="o">(</span>14w<span class="o">)</span> + 14w * Log2<span class="o">(</span>14w<span class="o">)</span>
-<span class="ln">3</span><span class="o">=</span> 4,372,745
-</code></pre></div><h4 id="优化方案一">优化方案一<a class="anchor ms-1" href="#优化方案一"><i class="fas fa-link"></i></a></h4>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">  N + N * Log2<span class="o">(</span>M<span class="o">)</span> + M * Log2<span class="o">(</span>M<span class="o">)</span> + M * Log2<span class="o">(</span>M<span class="o">)</span>
+<span class="o">=</span> <span class="m">500</span> + <span class="m">500</span> * Log2<span class="o">(</span>14w<span class="o">)</span> + 14w * Log2<span class="o">(</span>14w<span class="o">)</span> + 14w * Log2<span class="o">(</span>14w<span class="o">)</span>
+<span class="o">=</span> 4,372,745
+</code></pre></td></tr></table>
+</div>
+</div><h4 id="优化方案一">优化方案一<a class="anchor ms-1" href="#优化方案一"><i class="fas fa-link"></i></a></h4>
 <p>A做驱动表 N=500，B是被驱动表 M=14w，利用<a href="http://mysql.taobao.org/monthly/2014/11/10/" target="_blank" rel="noopener noreferrer">filesort with small LIMIT optimization</a>
 优化，即利用一个尺寸20的堆（LIMIT 20）来取前20条数据，前提是数据能够在<code>sort_buffer_size</code>里放得下。</p>
 <p>算法复杂度分析：</p>
 <p>扫描A表 + A表每一行利用B表索引查找 + B表每行查找主键索引（回表） + B表每行过一遍堆。</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>  N + N * Log2<span class="o">(</span>M<span class="o">)</span> + M * Log2<span class="o">(</span>M<span class="o">)</span> + M * Log2<span class="o">(</span>20<span class="o">)</span>
-<span class="ln">2</span><span class="o">=</span> <span class="m">500</span> + <span class="m">500</span> * Log2<span class="o">(</span>14w<span class="o">)</span> + 14w * Log2<span class="o">(</span>14w<span class="o">)</span> + 14w * Log2<span class="o">(</span>20<span class="o">)</span>
-<span class="ln">3</span><span class="o">=</span> 2,612,945
-</code></pre></div><h4 id="优化方案二">优化方案二<a class="anchor ms-1" href="#优化方案二"><i class="fas fa-link"></i></a></h4>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">  N + N * Log2<span class="o">(</span>M<span class="o">)</span> + M * Log2<span class="o">(</span>M<span class="o">)</span> + M * Log2<span class="o">(</span>20<span class="o">)</span>
+<span class="o">=</span> <span class="m">500</span> + <span class="m">500</span> * Log2<span class="o">(</span>14w<span class="o">)</span> + 14w * Log2<span class="o">(</span>14w<span class="o">)</span> + 14w * Log2<span class="o">(</span>20<span class="o">)</span>
+<span class="o">=</span> 2,612,945
+</code></pre></td></tr></table>
+</div>
+</div><h4 id="优化方案二">优化方案二<a class="anchor ms-1" href="#优化方案二"><i class="fas fa-link"></i></a></h4>
 <p>B做驱动表 M=14w，A是被驱动表 N=500，在B表新建字段<code>ACCOUNT_NAME_LEN</code>，并建立索引<code>ACCOUNT_NAME_LEN,ACCOUNT_NAME</code>，查询时<strong>强制</strong>走<code>ACCOUNT_LEN_NAME</code>索引从而达避免排序。</p>
 <p>算法复杂度分析：</p>
 <p>扫描B表索引 + B表每一行利用A表主键查找。</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>  M + M * Log2<span class="o">(</span>N<span class="o">)</span>
-<span class="ln">2</span><span class="o">=</span> 14w + 14w * Log2<span class="o">(</span>500<span class="o">)</span>
-<span class="ln">3</span><span class="o">=</span> 1,394,400
-</code></pre></div><h4 id="方案抉择">方案抉择<a class="anchor ms-1" href="#方案抉择"><i class="fas fa-link"></i></a></h4>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">  M + M * Log2<span class="o">(</span>N<span class="o">)</span>
+<span class="o">=</span> 14w + 14w * Log2<span class="o">(</span>500<span class="o">)</span>
+<span class="o">=</span> 1,394,400
+</code></pre></td></tr></table>
+</div>
+</div><h4 id="方案抉择">方案抉择<a class="anchor ms-1" href="#方案抉择"><i class="fas fa-link"></i></a></h4>
 <p>虽然从分析结果看，方案二更好，但是方案二强制使用了某个索引。而方案一看上去不好，但是MySQL可能会根据查询条件使用合适的索引来过滤数据避免全表扫描，所以选择方案一。</p>
 <h3 id="实现优化方案一">实现优化方案一<a class="anchor ms-1" href="#实现优化方案一"><i class="fas fa-link"></i></a></h3>
 <p>实现优化方案一的关键是让filesort在内存中发生，然后配合LIMIT，我们需要跟踪优化器来查看原始SQL执行情况：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-SQL" data-lang="SQL"><span class="ln">1</span><span class="k">SET</span><span class="w"> </span><span class="n">optimizer_trace</span><span class="o">=</span><span class="s2">&#34;enabled=on&#34;</span><span class="p">;</span><span class="w">
-</span><span class="ln">2</span><span class="w"></span><span class="k">SET</span><span class="w"> </span><span class="n">OPTIMIZER_TRACE_MAX_MEM_SIZE</span><span class="o">=</span><span class="mi">10485760</span><span class="p">;</span><span class="w"> 
-</span><span class="ln">3</span><span class="w"></span><span class="k">SELECT</span><span class="w"> </span><span class="p">...;</span><span class="w"> </span><span class="o">#</span><span class="w"> </span><span class="n">your</span><span class="w"> </span><span class="n">query</span><span class="w"> </span><span class="n">here</span><span class="w">
-</span><span class="ln">4</span><span class="w"></span><span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">INFORMATION_SCHEMA</span><span class="p">.</span><span class="n">OPTIMIZER_TRACE</span><span class="p">;</span><span class="w">
-</span><span class="ln">5</span><span class="w"></span><span class="o">#</span><span class="w"> </span><span class="n">possibly</span><span class="w"> </span><span class="k">more</span><span class="w"> </span><span class="n">queries</span><span class="p">...</span><span class="w">
-</span><span class="ln">6</span><span class="w"></span><span class="o">#</span><span class="w"> </span><span class="k">When</span><span class="w"> </span><span class="n">done</span><span class="w"> </span><span class="k">with</span><span class="w"> </span><span class="n">tracing</span><span class="p">,</span><span class="w"> </span><span class="n">disable</span><span class="w"> </span><span class="n">it</span><span class="p">:</span><span class="w">
-</span><span class="ln">7</span><span class="w"></span><span class="k">SET</span><span class="w"> </span><span class="n">optimizer_trace</span><span class="o">=</span><span class="s2">&#34;enabled=off&#34;</span><span class="p">;</span><span class="w">
-</span></code></pre></div><p>得到结果：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-json" data-lang="json"><span class="ln"> 1</span><span class="s2">&#34;filesort_priority_queue_optimization&#34;</span><span class="err">:</span> <span class="p">{</span>
-<span class="ln"> 2</span>  <span class="nt">&#34;limit&#34;</span><span class="p">:</span> <span class="mi">1000</span><span class="p">,</span>
-<span class="ln"> 3</span>  <span class="nt">&#34;chosen&#34;</span><span class="p">:</span> <span class="kc">false</span><span class="p">,</span>
-<span class="ln"> 4</span>  <span class="nt">&#34;cause&#34;</span><span class="p">:</span> <span class="s2">&#34;sort_is_cheaper&#34;</span>
-<span class="ln"> 5</span><span class="p">}</span><span class="err">,</span>
-<span class="ln"> 6</span><span class="s2">&#34;filesort_summary&#34;</span><span class="err">:</span> <span class="p">{</span>
-<span class="ln"> 7</span>  <span class="nt">&#34;memory_available&#34;</span><span class="p">:</span> <span class="mi">262144</span><span class="p">,</span>
-<span class="ln"> 8</span>  <span class="nt">&#34;key_size&#34;</span><span class="p">:</span> <span class="mi">248</span><span class="p">,</span>
-<span class="ln"> 9</span>  <span class="nt">&#34;row_size&#34;</span><span class="p">:</span> <span class="mi">622</span><span class="p">,</span>
-<span class="ln">10</span>  <span class="nt">&#34;max_rows_per_buffer&#34;</span><span class="p">:</span> <span class="mi">421</span><span class="p">,</span>
-<span class="ln">11</span>  <span class="nt">&#34;num_rows_estimate&#34;</span><span class="p">:</span> <span class="mi">15</span><span class="p">,</span>
-<span class="ln">12</span>  <span class="nt">&#34;num_rows_found&#34;</span><span class="p">:</span> <span class="mi">131072</span><span class="p">,</span>
-<span class="ln">13</span>  <span class="nt">&#34;num_initial_chunks_spilled_to_disk&#34;</span><span class="p">:</span> <span class="mi">141</span><span class="p">,</span>
-<span class="ln">14</span>  <span class="nt">&#34;peak_memory_used&#34;</span><span class="p">:</span> <span class="mi">262144</span><span class="p">,</span>
-<span class="ln">15</span>  <span class="nt">&#34;sort_algorithm&#34;</span><span class="p">:</span> <span class="s2">&#34;std::stable_sort&#34;</span><span class="p">,</span>
-<span class="ln">16</span>  <span class="nt">&#34;sort_mode&#34;</span><span class="p">:</span> <span class="s2">&#34;&lt;fixed_sort_key, packed_additional_fields&gt;&#34;</span>
-<span class="ln">17</span><span class="p">}</span>
-</code></pre></div><p>可以看到<code>num_initial_chunks_spilled_to_disk:141</code>，写了141个临时文件。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-SQL" data-lang="SQL"><span class="k">SET</span><span class="w"> </span><span class="n">optimizer_trace</span><span class="o">=</span><span class="s2">&#34;enabled=on&#34;</span><span class="p">;</span><span class="w">
+</span><span class="w"></span><span class="k">SET</span><span class="w"> </span><span class="n">OPTIMIZER_TRACE_MAX_MEM_SIZE</span><span class="o">=</span><span class="mi">10485760</span><span class="p">;</span><span class="w"> 
+</span><span class="w"></span><span class="k">SELECT</span><span class="w"> </span><span class="p">...;</span><span class="w"> </span><span class="o">#</span><span class="w"> </span><span class="n">your</span><span class="w"> </span><span class="n">query</span><span class="w"> </span><span class="n">here</span><span class="w">
+</span><span class="w"></span><span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">INFORMATION_SCHEMA</span><span class="p">.</span><span class="n">OPTIMIZER_TRACE</span><span class="p">;</span><span class="w">
+</span><span class="w"></span><span class="o">#</span><span class="w"> </span><span class="n">possibly</span><span class="w"> </span><span class="k">more</span><span class="w"> </span><span class="n">queries</span><span class="p">...</span><span class="w">
+</span><span class="w"></span><span class="o">#</span><span class="w"> </span><span class="k">When</span><span class="w"> </span><span class="n">done</span><span class="w"> </span><span class="k">with</span><span class="w"> </span><span class="n">tracing</span><span class="p">,</span><span class="w"> </span><span class="n">disable</span><span class="w"> </span><span class="n">it</span><span class="p">:</span><span class="w">
+</span><span class="w"></span><span class="k">SET</span><span class="w"> </span><span class="n">optimizer_trace</span><span class="o">=</span><span class="s2">&#34;enabled=off&#34;</span><span class="p">;</span><span class="w">
+</span></code></pre></td></tr></table>
+</div>
+</div><p>得到结果：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-json" data-lang="json"><span class="s2">&#34;filesort_priority_queue_optimization&#34;</span><span class="err">:</span> <span class="p">{</span>
+  <span class="nt">&#34;limit&#34;</span><span class="p">:</span> <span class="mi">1000</span><span class="p">,</span>
+  <span class="nt">&#34;chosen&#34;</span><span class="p">:</span> <span class="kc">false</span><span class="p">,</span>
+  <span class="nt">&#34;cause&#34;</span><span class="p">:</span> <span class="s2">&#34;sort_is_cheaper&#34;</span>
+<span class="p">}</span><span class="err">,</span>
+<span class="s2">&#34;filesort_summary&#34;</span><span class="err">:</span> <span class="p">{</span>
+  <span class="nt">&#34;memory_available&#34;</span><span class="p">:</span> <span class="mi">262144</span><span class="p">,</span>
+  <span class="nt">&#34;key_size&#34;</span><span class="p">:</span> <span class="mi">248</span><span class="p">,</span>
+  <span class="nt">&#34;row_size&#34;</span><span class="p">:</span> <span class="mi">622</span><span class="p">,</span>
+  <span class="nt">&#34;max_rows_per_buffer&#34;</span><span class="p">:</span> <span class="mi">421</span><span class="p">,</span>
+  <span class="nt">&#34;num_rows_estimate&#34;</span><span class="p">:</span> <span class="mi">15</span><span class="p">,</span>
+  <span class="nt">&#34;num_rows_found&#34;</span><span class="p">:</span> <span class="mi">131072</span><span class="p">,</span>
+  <span class="nt">&#34;num_initial_chunks_spilled_to_disk&#34;</span><span class="p">:</span> <span class="mi">141</span><span class="p">,</span>
+  <span class="nt">&#34;peak_memory_used&#34;</span><span class="p">:</span> <span class="mi">262144</span><span class="p">,</span>
+  <span class="nt">&#34;sort_algorithm&#34;</span><span class="p">:</span> <span class="s2">&#34;std::stable_sort&#34;</span><span class="p">,</span>
+  <span class="nt">&#34;sort_mode&#34;</span><span class="p">:</span> <span class="s2">&#34;&lt;fixed_sort_key, packed_additional_fields&gt;&#34;</span>
+<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>可以看到<code>num_initial_chunks_spilled_to_disk:141</code>，写了141个临时文件。</p>
 <p>让filesort在内存中发生的相关系统参数有：</p>
 <ul>
 <li><a href="https://dev.mysql.com/doc/refman/8.0/en/server-system-variables.html#sysvar_sort_buffer_size" target="_blank" rel="noopener noreferrer">sort_buffer_size</a>
@@ -799,79 +989,175 @@
 ，是一个状态变量，表示了排序合并的次数。</li>
 </ul>
 <p>我们先设置<code>sort_buffer_size</code>到1M（默认256K）</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="ln">1</span><span class="k">set</span><span class="w"> </span><span class="n">sort_buffer_size</span><span class="o">=</span><span class="mi">1048576</span><span class="p">;</span><span class="w">         </span><span class="o">#</span><span class="w"> </span><span class="err">只针对当前</span><span class="n">session有效</span><span class="w">
-</span><span class="ln">2</span><span class="w"></span><span class="k">set</span><span class="w"> </span><span class="n">persist</span><span class="w"> </span><span class="n">sort_buffer_size</span><span class="o">=</span><span class="mi">1048576</span><span class="p">;</span><span class="w"> </span><span class="o">#</span><span class="w"> </span><span class="err">全局有效</span><span class="w">
-</span></code></pre></div><p>执行SQL，注意添加了LIMIT：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="ln"> 1</span><span class="k">select</span><span class="w"> </span><span class="n">account</span><span class="p">.</span><span class="n">ACCOUNT_NAME</span><span class="w">
-</span><span class="ln"> 2</span><span class="w"></span><span class="k">from</span><span class="w"> </span><span class="n">TB_B_ACCOUNT</span><span class="w"> </span><span class="n">account</span><span class="w">
-</span><span class="ln"> 3</span><span class="w"></span><span class="k">where</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="w">
-</span><span class="ln"> 4</span><span class="w">  </span><span class="k">and</span><span class="w"> </span><span class="p">(</span><span class="w">
-</span><span class="ln"> 5</span><span class="w">        </span><span class="n">account</span><span class="p">.</span><span class="n">ACCOUNT_NAME</span><span class="w"> </span><span class="k">like</span><span class="w"> </span><span class="s1">&#39;user%&#39;</span><span class="w">
-</span><span class="ln"> 6</span><span class="w">        </span><span class="k">OR</span><span class="w"> </span><span class="n">account</span><span class="p">.</span><span class="n">USER_NAME</span><span class="w"> </span><span class="k">like</span><span class="w"> </span><span class="s1">&#39;user%&#39;</span><span class="w">
-</span><span class="ln"> 7</span><span class="w">        </span><span class="k">OR</span><span class="w"> </span><span class="n">account</span><span class="p">.</span><span class="n">IDENTITY_TYPE_ID</span><span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="p">(</span><span class="k">select</span><span class="w"> </span><span class="n">accountIdentity</span><span class="p">.</span><span class="n">ID</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">TB_B_IDENTITY_TYPE</span><span class="w"> </span><span class="n">accountIdentity</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">accountIdentity</span><span class="p">.</span><span class="n">NAME</span><span class="w"> </span><span class="k">like</span><span class="w"> </span><span class="s1">&#39;user%&#39;</span><span class="p">)</span><span class="w">
-</span><span class="ln"> 8</span><span class="w">        </span><span class="k">OR</span><span class="w"> </span><span class="n">account</span><span class="p">.</span><span class="n">ORGANIZATION_ID</span><span class="w"> </span><span class="k">in</span><span class="w">  </span><span class="p">(</span><span class="k">select</span><span class="w"> </span><span class="n">accountOrganization</span><span class="p">.</span><span class="n">ID</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">TB_B_ORGANIZATION</span><span class="w"> </span><span class="n">accountOrganization</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">accountOrganization</span><span class="p">.</span><span class="n">NAME</span><span class="w"> </span><span class="k">like</span><span class="w"> </span><span class="s1">&#39;user%&#39;</span><span class="p">)</span><span class="w">
-</span><span class="ln"> 9</span><span class="w">    </span><span class="p">)</span><span class="w">
-</span><span class="ln">10</span><span class="w">  </span><span class="k">and</span><span class="w"> </span><span class="n">account</span><span class="p">.</span><span class="n">USER_NAME</span><span class="w"> </span><span class="k">like</span><span class="w"> </span><span class="s1">&#39;user%&#39;</span><span class="w">
-</span><span class="ln">11</span><span class="w">  </span><span class="k">and</span><span class="w"> </span><span class="n">account</span><span class="p">.</span><span class="n">ACCOUNT_NAME</span><span class="w"> </span><span class="k">like</span><span class="w"> </span><span class="s1">&#39;user%&#39;</span><span class="w">
-</span><span class="ln">12</span><span class="w">  </span><span class="k">and</span><span class="w"> </span><span class="n">account</span><span class="p">.</span><span class="n">ORGANIZATION_ID</span><span class="w"> </span><span class="k">in</span><span class="w">
-</span><span class="ln">13</span><span class="w">      </span><span class="p">(</span><span class="k">select</span><span class="w"> </span><span class="n">accountOrganization</span><span class="p">.</span><span class="n">ID</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">TB_B_ORGANIZATION</span><span class="w"> </span><span class="n">accountOrganization</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">DELETED</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w">
-</span><span class="ln">14</span><span class="w"></span><span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="k">length</span><span class="p">(</span><span class="n">account</span><span class="p">.</span><span class="n">ACCOUNT_NAME</span><span class="p">),</span><span class="w"> </span><span class="n">account</span><span class="p">.</span><span class="n">ACCOUNT_NAME</span><span class="w">
-</span><span class="ln">15</span><span class="w"></span><span class="k">LIMIT</span><span class="w"> </span><span class="mi">20</span><span class="p">;</span><span class="w">
-</span></code></pre></div><p>然后跟踪优化器：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-json" data-lang="json"><span class="ln"> 1</span><span class="s2">&#34;filesort_priority_queue_optimization&#34;</span><span class="err">:</span> <span class="p">{</span>
-<span class="ln"> 2</span>  <span class="nt">&#34;limit&#34;</span><span class="p">:</span> <span class="mi">1000</span><span class="p">,</span>
-<span class="ln"> 3</span>  <span class="nt">&#34;chosen&#34;</span><span class="p">:</span> <span class="kc">true</span>
-<span class="ln"> 4</span><span class="p">}</span><span class="err">,</span>
-<span class="ln"> 5</span><span class="s2">&#34;filesort_summary&#34;</span><span class="err">:</span> <span class="p">{</span>
-<span class="ln"> 6</span>  <span class="nt">&#34;memory_available&#34;</span><span class="p">:</span> <span class="mi">1048576</span><span class="p">,</span>
-<span class="ln"> 7</span>  <span class="nt">&#34;key_size&#34;</span><span class="p">:</span> <span class="mi">248</span><span class="p">,</span>
-<span class="ln"> 8</span>  <span class="nt">&#34;row_size&#34;</span><span class="p">:</span> <span class="mi">618</span><span class="p">,</span>
-<span class="ln"> 9</span>  <span class="nt">&#34;max_rows_per_buffer&#34;</span><span class="p">:</span> <span class="mi">1001</span><span class="p">,</span>
-<span class="ln">10</span>  <span class="nt">&#34;num_rows_estimate&#34;</span><span class="p">:</span> <span class="mi">7623</span><span class="p">,</span>
-<span class="ln">11</span>  <span class="nt">&#34;num_rows_found&#34;</span><span class="p">:</span> <span class="mi">131072</span><span class="p">,</span>
-<span class="ln">12</span>  <span class="nt">&#34;num_initial_chunks_spilled_to_disk&#34;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
-<span class="ln">13</span>  <span class="nt">&#34;peak_memory_used&#34;</span><span class="p">:</span> <span class="mi">626626</span><span class="p">,</span>
-<span class="ln">14</span>  <span class="nt">&#34;sort_algorithm&#34;</span><span class="p">:</span> <span class="s2">&#34;std::stable_sort&#34;</span><span class="p">,</span>
-<span class="ln">15</span>  <span class="nt">&#34;unpacked_addon_fields&#34;</span><span class="p">:</span> <span class="s2">&#34;using_priority_queue&#34;</span><span class="p">,</span>
-<span class="ln">16</span>  <span class="nt">&#34;sort_mode&#34;</span><span class="p">:</span> <span class="s2">&#34;&lt;fixed_sort_key, additional_fields&gt;&#34;</span>
-<span class="ln">17</span><span class="p">}</span>
-</code></pre></div><p>可以看到<code>filesort_priority_queue_optimization</code>启用了，同时<code>num_initial_chunks_spilled_to_disk</code>变成了0。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="k">set</span><span class="w"> </span><span class="n">sort_buffer_size</span><span class="o">=</span><span class="mi">1048576</span><span class="p">;</span><span class="w">         </span><span class="o">#</span><span class="w"> </span><span class="err">只针对当前</span><span class="n">session有效</span><span class="w">
+</span><span class="w"></span><span class="k">set</span><span class="w"> </span><span class="n">persist</span><span class="w"> </span><span class="n">sort_buffer_size</span><span class="o">=</span><span class="mi">1048576</span><span class="p">;</span><span class="w"> </span><span class="o">#</span><span class="w"> </span><span class="err">全局有效</span><span class="w">
+</span></code></pre></td></tr></table>
+</div>
+</div><p>执行SQL，注意添加了LIMIT：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="k">select</span><span class="w"> </span><span class="n">account</span><span class="p">.</span><span class="n">ACCOUNT_NAME</span><span class="w">
+</span><span class="w"></span><span class="k">from</span><span class="w"> </span><span class="n">TB_B_ACCOUNT</span><span class="w"> </span><span class="n">account</span><span class="w">
+</span><span class="w"></span><span class="k">where</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="w">
+</span><span class="w">  </span><span class="k">and</span><span class="w"> </span><span class="p">(</span><span class="w">
+</span><span class="w">        </span><span class="n">account</span><span class="p">.</span><span class="n">ACCOUNT_NAME</span><span class="w"> </span><span class="k">like</span><span class="w"> </span><span class="s1">&#39;user%&#39;</span><span class="w">
+</span><span class="w">        </span><span class="k">OR</span><span class="w"> </span><span class="n">account</span><span class="p">.</span><span class="n">USER_NAME</span><span class="w"> </span><span class="k">like</span><span class="w"> </span><span class="s1">&#39;user%&#39;</span><span class="w">
+</span><span class="w">        </span><span class="k">OR</span><span class="w"> </span><span class="n">account</span><span class="p">.</span><span class="n">IDENTITY_TYPE_ID</span><span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="p">(</span><span class="k">select</span><span class="w"> </span><span class="n">accountIdentity</span><span class="p">.</span><span class="n">ID</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">TB_B_IDENTITY_TYPE</span><span class="w"> </span><span class="n">accountIdentity</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">accountIdentity</span><span class="p">.</span><span class="n">NAME</span><span class="w"> </span><span class="k">like</span><span class="w"> </span><span class="s1">&#39;user%&#39;</span><span class="p">)</span><span class="w">
+</span><span class="w">        </span><span class="k">OR</span><span class="w"> </span><span class="n">account</span><span class="p">.</span><span class="n">ORGANIZATION_ID</span><span class="w"> </span><span class="k">in</span><span class="w">  </span><span class="p">(</span><span class="k">select</span><span class="w"> </span><span class="n">accountOrganization</span><span class="p">.</span><span class="n">ID</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">TB_B_ORGANIZATION</span><span class="w"> </span><span class="n">accountOrganization</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">accountOrganization</span><span class="p">.</span><span class="n">NAME</span><span class="w"> </span><span class="k">like</span><span class="w"> </span><span class="s1">&#39;user%&#39;</span><span class="p">)</span><span class="w">
+</span><span class="w">    </span><span class="p">)</span><span class="w">
+</span><span class="w">  </span><span class="k">and</span><span class="w"> </span><span class="n">account</span><span class="p">.</span><span class="n">USER_NAME</span><span class="w"> </span><span class="k">like</span><span class="w"> </span><span class="s1">&#39;user%&#39;</span><span class="w">
+</span><span class="w">  </span><span class="k">and</span><span class="w"> </span><span class="n">account</span><span class="p">.</span><span class="n">ACCOUNT_NAME</span><span class="w"> </span><span class="k">like</span><span class="w"> </span><span class="s1">&#39;user%&#39;</span><span class="w">
+</span><span class="w">  </span><span class="k">and</span><span class="w"> </span><span class="n">account</span><span class="p">.</span><span class="n">ORGANIZATION_ID</span><span class="w"> </span><span class="k">in</span><span class="w">
+</span><span class="w">      </span><span class="p">(</span><span class="k">select</span><span class="w"> </span><span class="n">accountOrganization</span><span class="p">.</span><span class="n">ID</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">TB_B_ORGANIZATION</span><span class="w"> </span><span class="n">accountOrganization</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">DELETED</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w">
+</span><span class="w"></span><span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="k">length</span><span class="p">(</span><span class="n">account</span><span class="p">.</span><span class="n">ACCOUNT_NAME</span><span class="p">),</span><span class="w"> </span><span class="n">account</span><span class="p">.</span><span class="n">ACCOUNT_NAME</span><span class="w">
+</span><span class="w"></span><span class="k">LIMIT</span><span class="w"> </span><span class="mi">20</span><span class="p">;</span><span class="w">
+</span></code></pre></td></tr></table>
+</div>
+</div><p>然后跟踪优化器：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-json" data-lang="json"><span class="s2">&#34;filesort_priority_queue_optimization&#34;</span><span class="err">:</span> <span class="p">{</span>
+  <span class="nt">&#34;limit&#34;</span><span class="p">:</span> <span class="mi">1000</span><span class="p">,</span>
+  <span class="nt">&#34;chosen&#34;</span><span class="p">:</span> <span class="kc">true</span>
+<span class="p">}</span><span class="err">,</span>
+<span class="s2">&#34;filesort_summary&#34;</span><span class="err">:</span> <span class="p">{</span>
+  <span class="nt">&#34;memory_available&#34;</span><span class="p">:</span> <span class="mi">1048576</span><span class="p">,</span>
+  <span class="nt">&#34;key_size&#34;</span><span class="p">:</span> <span class="mi">248</span><span class="p">,</span>
+  <span class="nt">&#34;row_size&#34;</span><span class="p">:</span> <span class="mi">618</span><span class="p">,</span>
+  <span class="nt">&#34;max_rows_per_buffer&#34;</span><span class="p">:</span> <span class="mi">1001</span><span class="p">,</span>
+  <span class="nt">&#34;num_rows_estimate&#34;</span><span class="p">:</span> <span class="mi">7623</span><span class="p">,</span>
+  <span class="nt">&#34;num_rows_found&#34;</span><span class="p">:</span> <span class="mi">131072</span><span class="p">,</span>
+  <span class="nt">&#34;num_initial_chunks_spilled_to_disk&#34;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+  <span class="nt">&#34;peak_memory_used&#34;</span><span class="p">:</span> <span class="mi">626626</span><span class="p">,</span>
+  <span class="nt">&#34;sort_algorithm&#34;</span><span class="p">:</span> <span class="s2">&#34;std::stable_sort&#34;</span><span class="p">,</span>
+  <span class="nt">&#34;unpacked_addon_fields&#34;</span><span class="p">:</span> <span class="s2">&#34;using_priority_queue&#34;</span><span class="p">,</span>
+  <span class="nt">&#34;sort_mode&#34;</span><span class="p">:</span> <span class="s2">&#34;&lt;fixed_sort_key, additional_fields&gt;&#34;</span>
+<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>可以看到<code>filesort_priority_queue_optimization</code>启用了，同时<code>num_initial_chunks_spilled_to_disk</code>变成了0。</p>
 <p><code>filesort_priority_queue_optimization</code>启用意味着MySQL采用了优先级队列（堆）来从结果集中取最小的N个元素。</p>
 <p>在业务场景下，大部分分页每页20条，极少超过10页，因此这里不考虑深分页问题，所以加上<code>LIMIT 200, 220</code>看看：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="ln"> 1</span><span class="k">select</span><span class="w"> </span><span class="n">account</span><span class="p">.</span><span class="n">ACCOUNT_NAME</span><span class="w">
-</span><span class="ln"> 2</span><span class="w"></span><span class="k">from</span><span class="w"> </span><span class="n">TB_B_ACCOUNT</span><span class="w"> </span><span class="n">account</span><span class="w">
-</span><span class="ln"> 3</span><span class="w"></span><span class="k">where</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="w">
-</span><span class="ln"> 4</span><span class="w">  </span><span class="k">and</span><span class="w"> </span><span class="p">(</span><span class="w">
-</span><span class="ln"> 5</span><span class="w">        </span><span class="n">account</span><span class="p">.</span><span class="n">ACCOUNT_NAME</span><span class="w"> </span><span class="k">like</span><span class="w"> </span><span class="s1">&#39;user%&#39;</span><span class="w">
-</span><span class="ln"> 6</span><span class="w">        </span><span class="k">OR</span><span class="w"> </span><span class="n">account</span><span class="p">.</span><span class="n">USER_NAME</span><span class="w"> </span><span class="k">like</span><span class="w"> </span><span class="s1">&#39;user%&#39;</span><span class="w">
-</span><span class="ln"> 7</span><span class="w">        </span><span class="k">OR</span><span class="w"> </span><span class="n">account</span><span class="p">.</span><span class="n">IDENTITY_TYPE_ID</span><span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="p">(</span><span class="k">select</span><span class="w"> </span><span class="n">accountIdentity</span><span class="p">.</span><span class="n">ID</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">TB_B_IDENTITY_TYPE</span><span class="w"> </span><span class="n">accountIdentity</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">accountIdentity</span><span class="p">.</span><span class="n">NAME</span><span class="w"> </span><span class="k">like</span><span class="w"> </span><span class="s1">&#39;user%&#39;</span><span class="p">)</span><span class="w">
-</span><span class="ln"> 8</span><span class="w">        </span><span class="k">OR</span><span class="w"> </span><span class="n">account</span><span class="p">.</span><span class="n">ORGANIZATION_ID</span><span class="w"> </span><span class="k">in</span><span class="w">  </span><span class="p">(</span><span class="k">select</span><span class="w"> </span><span class="n">accountOrganization</span><span class="p">.</span><span class="n">ID</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">TB_B_ORGANIZATION</span><span class="w"> </span><span class="n">accountOrganization</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">accountOrganization</span><span class="p">.</span><span class="n">NAME</span><span class="w"> </span><span class="k">like</span><span class="w"> </span><span class="s1">&#39;user%&#39;</span><span class="p">)</span><span class="w">
-</span><span class="ln"> 9</span><span class="w">    </span><span class="p">)</span><span class="w">
-</span><span class="ln">10</span><span class="w">  </span><span class="k">and</span><span class="w"> </span><span class="n">account</span><span class="p">.</span><span class="n">USER_NAME</span><span class="w"> </span><span class="k">like</span><span class="w"> </span><span class="s1">&#39;user%&#39;</span><span class="w">
-</span><span class="ln">11</span><span class="w">  </span><span class="k">and</span><span class="w"> </span><span class="n">account</span><span class="p">.</span><span class="n">ACCOUNT_NAME</span><span class="w"> </span><span class="k">like</span><span class="w"> </span><span class="s1">&#39;user%&#39;</span><span class="w">
-</span><span class="ln">12</span><span class="w">  </span><span class="k">and</span><span class="w"> </span><span class="n">account</span><span class="p">.</span><span class="n">ORGANIZATION_ID</span><span class="w"> </span><span class="k">in</span><span class="w">
-</span><span class="ln">13</span><span class="w">      </span><span class="p">(</span><span class="k">select</span><span class="w"> </span><span class="n">accountOrganization</span><span class="p">.</span><span class="n">ID</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">TB_B_ORGANIZATION</span><span class="w"> </span><span class="n">accountOrganization</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">DELETED</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w">
-</span><span class="ln">14</span><span class="w"></span><span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="k">length</span><span class="p">(</span><span class="n">account</span><span class="p">.</span><span class="n">ACCOUNT_NAME</span><span class="p">),</span><span class="w"> </span><span class="n">account</span><span class="p">.</span><span class="n">ACCOUNT_NAME</span><span class="w">
-</span><span class="ln">15</span><span class="w"></span><span class="k">LIMIT</span><span class="w"> </span><span class="mi">200</span><span class="p">,</span><span class="w"> </span><span class="mi">220</span><span class="p">;</span><span class="w">
-</span></code></pre></div><p>跟踪优化器结果：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-json" data-lang="json"><span class="ln"> 1</span><span class="s2">&#34;filesort_priority_queue_optimization&#34;</span><span class="err">:</span> <span class="p">{</span>
-<span class="ln"> 2</span>  <span class="nt">&#34;limit&#34;</span><span class="p">:</span> <span class="mi">420</span><span class="p">,</span>
-<span class="ln"> 3</span>  <span class="nt">&#34;chosen&#34;</span><span class="p">:</span> <span class="kc">true</span>
-<span class="ln"> 4</span><span class="p">}</span><span class="err">,</span>
-<span class="ln"> 5</span><span class="s2">&#34;filesort_summary&#34;</span><span class="err">:</span> <span class="p">{</span>
-<span class="ln"> 6</span>  <span class="nt">&#34;memory_available&#34;</span><span class="p">:</span> <span class="mi">1048576</span><span class="p">,</span>
-<span class="ln"> 7</span>  <span class="nt">&#34;key_size&#34;</span><span class="p">:</span> <span class="mi">248</span><span class="p">,</span>
-<span class="ln"> 8</span>  <span class="nt">&#34;row_size&#34;</span><span class="p">:</span> <span class="mi">618</span><span class="p">,</span>
-<span class="ln"> 9</span>  <span class="nt">&#34;max_rows_per_buffer&#34;</span><span class="p">:</span> <span class="mi">421</span><span class="p">,</span>
-<span class="ln">10</span>  <span class="nt">&#34;num_rows_estimate&#34;</span><span class="p">:</span> <span class="mi">7623</span><span class="p">,</span>
-<span class="ln">11</span>  <span class="nt">&#34;num_rows_found&#34;</span><span class="p">:</span> <span class="mi">131072</span><span class="p">,</span>
-<span class="ln">12</span>  <span class="nt">&#34;num_initial_chunks_spilled_to_disk&#34;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
-<span class="ln">13</span>  <span class="nt">&#34;peak_memory_used&#34;</span><span class="p">:</span> <span class="mi">263546</span><span class="p">,</span>
-<span class="ln">14</span>  <span class="nt">&#34;sort_algorithm&#34;</span><span class="p">:</span> <span class="s2">&#34;std::stable_sort&#34;</span><span class="p">,</span>
-<span class="ln">15</span>  <span class="nt">&#34;unpacked_addon_fields&#34;</span><span class="p">:</span> <span class="s2">&#34;using_priority_queue&#34;</span><span class="p">,</span>
-<span class="ln">16</span>  <span class="nt">&#34;sort_mode&#34;</span><span class="p">:</span> <span class="s2">&#34;&lt;fixed_sort_key, additional_fields&gt;&#34;</span>
-<span class="ln">17</span><span class="p">}</span>
-</code></pre></div><p>可以看到<code>filesort_priority_queue_optimization</code>依然启用，而且<code>num_initial_chunks_spilled_to_disk</code>依然是0。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="k">select</span><span class="w"> </span><span class="n">account</span><span class="p">.</span><span class="n">ACCOUNT_NAME</span><span class="w">
+</span><span class="w"></span><span class="k">from</span><span class="w"> </span><span class="n">TB_B_ACCOUNT</span><span class="w"> </span><span class="n">account</span><span class="w">
+</span><span class="w"></span><span class="k">where</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="w">
+</span><span class="w">  </span><span class="k">and</span><span class="w"> </span><span class="p">(</span><span class="w">
+</span><span class="w">        </span><span class="n">account</span><span class="p">.</span><span class="n">ACCOUNT_NAME</span><span class="w"> </span><span class="k">like</span><span class="w"> </span><span class="s1">&#39;user%&#39;</span><span class="w">
+</span><span class="w">        </span><span class="k">OR</span><span class="w"> </span><span class="n">account</span><span class="p">.</span><span class="n">USER_NAME</span><span class="w"> </span><span class="k">like</span><span class="w"> </span><span class="s1">&#39;user%&#39;</span><span class="w">
+</span><span class="w">        </span><span class="k">OR</span><span class="w"> </span><span class="n">account</span><span class="p">.</span><span class="n">IDENTITY_TYPE_ID</span><span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="p">(</span><span class="k">select</span><span class="w"> </span><span class="n">accountIdentity</span><span class="p">.</span><span class="n">ID</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">TB_B_IDENTITY_TYPE</span><span class="w"> </span><span class="n">accountIdentity</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">accountIdentity</span><span class="p">.</span><span class="n">NAME</span><span class="w"> </span><span class="k">like</span><span class="w"> </span><span class="s1">&#39;user%&#39;</span><span class="p">)</span><span class="w">
+</span><span class="w">        </span><span class="k">OR</span><span class="w"> </span><span class="n">account</span><span class="p">.</span><span class="n">ORGANIZATION_ID</span><span class="w"> </span><span class="k">in</span><span class="w">  </span><span class="p">(</span><span class="k">select</span><span class="w"> </span><span class="n">accountOrganization</span><span class="p">.</span><span class="n">ID</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">TB_B_ORGANIZATION</span><span class="w"> </span><span class="n">accountOrganization</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">accountOrganization</span><span class="p">.</span><span class="n">NAME</span><span class="w"> </span><span class="k">like</span><span class="w"> </span><span class="s1">&#39;user%&#39;</span><span class="p">)</span><span class="w">
+</span><span class="w">    </span><span class="p">)</span><span class="w">
+</span><span class="w">  </span><span class="k">and</span><span class="w"> </span><span class="n">account</span><span class="p">.</span><span class="n">USER_NAME</span><span class="w"> </span><span class="k">like</span><span class="w"> </span><span class="s1">&#39;user%&#39;</span><span class="w">
+</span><span class="w">  </span><span class="k">and</span><span class="w"> </span><span class="n">account</span><span class="p">.</span><span class="n">ACCOUNT_NAME</span><span class="w"> </span><span class="k">like</span><span class="w"> </span><span class="s1">&#39;user%&#39;</span><span class="w">
+</span><span class="w">  </span><span class="k">and</span><span class="w"> </span><span class="n">account</span><span class="p">.</span><span class="n">ORGANIZATION_ID</span><span class="w"> </span><span class="k">in</span><span class="w">
+</span><span class="w">      </span><span class="p">(</span><span class="k">select</span><span class="w"> </span><span class="n">accountOrganization</span><span class="p">.</span><span class="n">ID</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">TB_B_ORGANIZATION</span><span class="w"> </span><span class="n">accountOrganization</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">DELETED</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w">
+</span><span class="w"></span><span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="k">length</span><span class="p">(</span><span class="n">account</span><span class="p">.</span><span class="n">ACCOUNT_NAME</span><span class="p">),</span><span class="w"> </span><span class="n">account</span><span class="p">.</span><span class="n">ACCOUNT_NAME</span><span class="w">
+</span><span class="w"></span><span class="k">LIMIT</span><span class="w"> </span><span class="mi">200</span><span class="p">,</span><span class="w"> </span><span class="mi">220</span><span class="p">;</span><span class="w">
+</span></code></pre></td></tr></table>
+</div>
+</div><p>跟踪优化器结果：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-json" data-lang="json"><span class="s2">&#34;filesort_priority_queue_optimization&#34;</span><span class="err">:</span> <span class="p">{</span>
+  <span class="nt">&#34;limit&#34;</span><span class="p">:</span> <span class="mi">420</span><span class="p">,</span>
+  <span class="nt">&#34;chosen&#34;</span><span class="p">:</span> <span class="kc">true</span>
+<span class="p">}</span><span class="err">,</span>
+<span class="s2">&#34;filesort_summary&#34;</span><span class="err">:</span> <span class="p">{</span>
+  <span class="nt">&#34;memory_available&#34;</span><span class="p">:</span> <span class="mi">1048576</span><span class="p">,</span>
+  <span class="nt">&#34;key_size&#34;</span><span class="p">:</span> <span class="mi">248</span><span class="p">,</span>
+  <span class="nt">&#34;row_size&#34;</span><span class="p">:</span> <span class="mi">618</span><span class="p">,</span>
+  <span class="nt">&#34;max_rows_per_buffer&#34;</span><span class="p">:</span> <span class="mi">421</span><span class="p">,</span>
+  <span class="nt">&#34;num_rows_estimate&#34;</span><span class="p">:</span> <span class="mi">7623</span><span class="p">,</span>
+  <span class="nt">&#34;num_rows_found&#34;</span><span class="p">:</span> <span class="mi">131072</span><span class="p">,</span>
+  <span class="nt">&#34;num_initial_chunks_spilled_to_disk&#34;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+  <span class="nt">&#34;peak_memory_used&#34;</span><span class="p">:</span> <span class="mi">263546</span><span class="p">,</span>
+  <span class="nt">&#34;sort_algorithm&#34;</span><span class="p">:</span> <span class="s2">&#34;std::stable_sort&#34;</span><span class="p">,</span>
+  <span class="nt">&#34;unpacked_addon_fields&#34;</span><span class="p">:</span> <span class="s2">&#34;using_priority_queue&#34;</span><span class="p">,</span>
+  <span class="nt">&#34;sort_mode&#34;</span><span class="p">:</span> <span class="s2">&#34;&lt;fixed_sort_key, additional_fields&gt;&#34;</span>
+<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>可以看到<code>filesort_priority_queue_optimization</code>依然启用，而且<code>num_initial_chunks_spilled_to_disk</code>依然是0。</p>
 <h2 id="结论">结论<a class="anchor ms-1" href="#结论"><i class="fas fa-link"></i></a></h2>
 <p>做了以下优化：</p>
 <ul>

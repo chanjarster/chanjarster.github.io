@@ -12,7 +12,7 @@
 <meta name="description" content="" /><meta itemprop="name" content="Container Isolation Gone Wrong">
 <meta itemprop="description" content=""><meta itemprop="datePublished" content="2019-02-23T16:31:04+08:00" />
 <meta itemprop="dateModified" content="2019-02-23T16:31:04+08:00" />
-<meta itemprop="wordCount" content="2154">
+<meta itemprop="wordCount" content="2162">
 <meta itemprop="keywords" content="linux,docker,troubleshooting," /><meta property="og:title" content="Container Isolation Gone Wrong" />
 <meta property="og:description" content="" />
 <meta property="og:type" content="article" />
@@ -271,52 +271,113 @@
 </blockquote>
 <p>那么如何解释<code>__d_lookup</code>慢呢？这是因为大量的dentry产生了大量的hash冲突，导致单个hash槽里的链表变长，增加了查询时间。文章里用了一堆神奇的方法观察到了这一点：</p>
 <p>观察 <code>__d_lookup</code> 函数：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln"> 1</span>$ sudo perf probe -L __d_lookup
-<span class="ln"> 2</span>      <span class="m">0</span>  struct dentry * __d_lookup<span class="o">(</span>struct dentry * parent, struct qstr * name<span class="o">)</span>
-<span class="ln"> 3</span>      <span class="m">1</span>  <span class="o">{</span>
-<span class="ln"> 4</span>      <span class="m">2</span>         unsigned int <span class="nv">len</span> <span class="o">=</span> name-&gt;len<span class="p">;</span>
-<span class="ln"> 5</span>      <span class="m">3</span>         unsigned int <span class="nb">hash</span> <span class="o">=</span> name-&gt;hash<span class="p">;</span>
-<span class="ln"> 6</span>      <span class="m">4</span>         const unsigned char *str <span class="o">=</span> name-&gt;name<span class="p">;</span>
-<span class="ln"> 7</span>      <span class="m">5</span>         struct hlist_head *head <span class="o">=</span> d_hash<span class="o">(</span>parent,hash<span class="o">)</span><span class="p">;</span>
-<span class="ln"> 8</span>                struct dentry *found <span class="o">=</span> NULL<span class="p">;</span>
-<span class="ln"> 9</span>                struct hlist_node *node<span class="p">;</span>
-<span class="ln">10</span>                struct dentry *dentry<span class="p">;</span>
-<span class="ln">11</span>
-<span class="ln">12</span>                rcu_read_lock<span class="o">()</span><span class="p">;</span>
-<span class="ln">13</span>
-<span class="ln">14</span>     <span class="m">12</span>         hlist_for_each_entry_rcu<span class="o">(</span>dentry, node, head, d_hash<span class="o">)</span> <span class="o">{</span>
-<span class="ln">15</span>                        struct qstr *qstr<span class="p">;</span>
-<span class="ln">16</span>
-<span class="ln">17</span>     <span class="m">15</span>                 <span class="k">if</span> <span class="o">(</span>dentry-&gt;d_name.hash !<span class="o">=</span> <span class="nb">hash</span><span class="o">)</span>
-<span class="ln">18</span>                                <span class="k">continue</span><span class="p">;</span>
-<span class="ln">19</span>     <span class="m">17</span>                 <span class="k">if</span> <span class="o">(</span>dentry-&gt;d_parent !<span class="o">=</span> parent<span class="o">)</span>
-<span class="ln">20</span>                                Continue<span class="p">;</span>
-<span class="ln">21</span>...
-</code></pre></div><p>分别在函数调用处和函数第15行打入probe：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>$ sudo perf probe --add __d_lookup
-<span class="ln">2</span>Added new event:
-<span class="ln">3</span>  probe:__d_lookup     <span class="o">(</span>on __d_lookup<span class="o">)</span>
-<span class="ln">4</span>
-<span class="ln">5</span>$ sudo perf probe --add <span class="nv">__d_lookup_loop</span><span class="o">=</span>__d_lookup:15
-<span class="ln">6</span>Added new events:
-<span class="ln">7</span>  probe:__d_lookup_loop <span class="o">(</span>on __d_lookup:15<span class="o">)</span>
-</code></pre></div><p>分别观察trasher启动时和trasher没有启动时调用次数：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln"> 1</span>$ sudo perf stat -p <span class="m">18189</span> -e <span class="s2">&#34;probe:__d_lookup&#34;</span> -e <span class="s2">&#34;probe:__d_lookup_loop&#34;</span> -- sleep <span class="m">60</span>
-<span class="ln"> 2</span> Performance counter stats <span class="k">for</span> process id <span class="s1">&#39;18189&#39;</span>:
-<span class="ln"> 3</span>
-<span class="ln"> 4</span>         2,763,816      probe:__d_lookup
-<span class="ln"> 5</span>        75,503,432      probe:__d_lookup_loop
-<span class="ln"> 6</span>
-<span class="ln"> 7</span>      60.001285559 seconds <span class="nb">time</span> elapsed
-<span class="ln"> 8</span>
-<span class="ln"> 9</span>$ sudo perf stat -p <span class="m">18189</span> -e <span class="s2">&#34;probe:__d_lookup&#34;</span> -e <span class="s2">&#34;probe:__d_lookup_loop&#34;</span> -- sleep <span class="m">60</span>
-<span class="ln">10</span> Performance counter stats <span class="k">for</span> process id <span class="s1">&#39;18189&#39;</span>:
-<span class="ln">11</span>
-<span class="ln">12</span>         3,800,247      probe:__d_lookup
-<span class="ln">13</span>         3,811,830      probe:__d_lookup_loop
-<span class="ln">14</span>
-<span class="ln">15</span>      60.002976808 seconds <span class="nb">time</span> elapsed
-</code></pre></div><p>发现trasher启动时第二个probe有~30倍于第一个probe的调用次数。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">$ sudo perf probe -L __d_lookup
+      <span class="m">0</span>  struct dentry * __d_lookup<span class="o">(</span>struct dentry * parent, struct qstr * name<span class="o">)</span>
+      <span class="m">1</span>  <span class="o">{</span>
+      <span class="m">2</span>         unsigned int <span class="nv">len</span> <span class="o">=</span> name-&gt;len<span class="p">;</span>
+      <span class="m">3</span>         unsigned int <span class="nb">hash</span> <span class="o">=</span> name-&gt;hash<span class="p">;</span>
+      <span class="m">4</span>         const unsigned char *str <span class="o">=</span> name-&gt;name<span class="p">;</span>
+      <span class="m">5</span>         struct hlist_head *head <span class="o">=</span> d_hash<span class="o">(</span>parent,hash<span class="o">)</span><span class="p">;</span>
+                struct dentry *found <span class="o">=</span> NULL<span class="p">;</span>
+                struct hlist_node *node<span class="p">;</span>
+                struct dentry *dentry<span class="p">;</span>
+
+                rcu_read_lock<span class="o">()</span><span class="p">;</span>
+
+     <span class="m">12</span>         hlist_for_each_entry_rcu<span class="o">(</span>dentry, node, head, d_hash<span class="o">)</span> <span class="o">{</span>
+                        struct qstr *qstr<span class="p">;</span>
+
+     <span class="m">15</span>                 <span class="k">if</span> <span class="o">(</span>dentry-&gt;d_name.hash !<span class="o">=</span> <span class="nb">hash</span><span class="o">)</span>
+                                <span class="k">continue</span><span class="p">;</span>
+     <span class="m">17</span>                 <span class="k">if</span> <span class="o">(</span>dentry-&gt;d_parent !<span class="o">=</span> parent<span class="o">)</span>
+                                Continue<span class="p">;</span>
+...
+</code></pre></td></tr></table>
+</div>
+</div><p>分别在函数调用处和函数第15行打入probe：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">$ sudo perf probe --add __d_lookup
+Added new event:
+  probe:__d_lookup     <span class="o">(</span>on __d_lookup<span class="o">)</span>
+
+$ sudo perf probe --add <span class="nv">__d_lookup_loop</span><span class="o">=</span>__d_lookup:15
+Added new events:
+  probe:__d_lookup_loop <span class="o">(</span>on __d_lookup:15<span class="o">)</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>分别观察trasher启动时和trasher没有启动时调用次数：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">$ sudo perf stat -p <span class="m">18189</span> -e <span class="s2">&#34;probe:__d_lookup&#34;</span> -e <span class="s2">&#34;probe:__d_lookup_loop&#34;</span> -- sleep <span class="m">60</span>
+ Performance counter stats <span class="k">for</span> process id <span class="s1">&#39;18189&#39;</span>:
+
+         2,763,816      probe:__d_lookup
+        75,503,432      probe:__d_lookup_loop
+
+      60.001285559 seconds <span class="nb">time</span> elapsed
+
+$ sudo perf stat -p <span class="m">18189</span> -e <span class="s2">&#34;probe:__d_lookup&#34;</span> -e <span class="s2">&#34;probe:__d_lookup_loop&#34;</span> -- sleep <span class="m">60</span>
+ Performance counter stats <span class="k">for</span> process id <span class="s1">&#39;18189&#39;</span>:
+
+         3,800,247      probe:__d_lookup
+         3,811,830      probe:__d_lookup_loop
+
+      60.002976808 seconds <span class="nb">time</span> elapsed
+</code></pre></td></tr></table>
+</div>
+</div><p>发现trasher启动时第二个probe有~30倍于第一个probe的调用次数。</p>
 <h2 id="总结">总结<a class="anchor ms-1" href="#总结"><i class="fas fa-link"></i></a></h2>
 <ul>
 <li>kill trasher container会释放dentry，在trasher container内部kill 进程则不会。</li>

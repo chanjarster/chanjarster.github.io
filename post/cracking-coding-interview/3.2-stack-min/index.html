@@ -12,7 +12,7 @@
 <meta name="description" content="" /><meta itemprop="name" content="Cracking Coding Interview - 3.2 Stack Min">
 <meta itemprop="description" content=""><meta itemprop="datePublished" content="2019-08-12T21:29:12+08:00" />
 <meta itemprop="dateModified" content="2019-08-12T21:29:12+08:00" />
-<meta itemprop="wordCount" content="286">
+<meta itemprop="wordCount" content="288">
 <meta itemprop="keywords" content="ARTS-A," /><meta property="og:title" content="Cracking Coding Interview - 3.2 Stack Min" />
 <meta property="og:description" content="" />
 <meta property="og:type" content="article" />
@@ -228,34 +228,67 @@
 <h2 id="解答">解答<a class="anchor ms-1" href="#解答"><i class="fas fa-link"></i></a></h2>
 <p>如果在stack里放一个min属性用来跟踪min，那么push的时候min到还好说，但是pop的时候要把次min的恢复出来就麻烦了。</p>
 <p>弄两个stack，一个正常存储value，另一个只存储min values。</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln"> 1</span><span class="kd">public</span> <span class="kd">class</span> <span class="nc">StackMin</span> <span class="o">{</span>
-<span class="ln"> 2</span>  <span class="kd">private</span> <span class="n">Stack</span><span class="o">&lt;</span><span class="n">Integer</span><span class="o">&gt;</span> <span class="n">num</span> <span class="o">=</span> <span class="k">new</span> <span class="n">Stack</span><span class="o">&lt;&gt;();</span>
-<span class="ln"> 3</span>  <span class="kd">private</span> <span class="n">Stack</span><span class="o">&lt;</span><span class="n">Integer</span><span class="o">&gt;</span> <span class="n">min</span> <span class="o">=</span> <span class="k">new</span> <span class="n">Stack</span><span class="o">&lt;&gt;();</span>
-<span class="ln"> 4</span>  <span class="kd">public</span> <span class="kt">void</span> <span class="nf">push</span><span class="o">(</span><span class="n">Integer</span> <span class="n">value</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 5</span>    <span class="k">if</span> <span class="o">(</span><span class="n">num</span><span class="o">.</span><span class="na">isEmpty</span><span class="o">())</span> <span class="o">{</span>
-<span class="ln"> 6</span>      <span class="n">num</span><span class="o">.</span><span class="na">push</span><span class="o">(</span><span class="n">value</span><span class="o">);</span>
-<span class="ln"> 7</span>      <span class="n">min</span><span class="o">.</span><span class="na">push</span><span class="o">(</span><span class="n">value</span><span class="o">);</span>
-<span class="ln"> 8</span>      <span class="k">return</span><span class="o">;</span>
-<span class="ln"> 9</span>    <span class="o">}</span>
-<span class="ln">10</span>    <span class="k">if</span> <span class="o">(</span><span class="n">value</span> <span class="o">&lt;=</span> <span class="n">min</span><span class="o">.</span><span class="na">peek</span><span class="o">())</span> <span class="o">{</span>
-<span class="ln">11</span>      <span class="c1">// 只存比当前min更小的数字，这里用&lt;=是为了应对连续push相同数字的情况
-</span><span class="ln">12</span><span class="c1"></span>      <span class="n">min</span><span class="o">.</span><span class="na">push</span><span class="o">(</span><span class="n">value</span><span class="o">);</span>
-<span class="ln">13</span>    <span class="o">}</span>
-<span class="ln">14</span>    <span class="n">num</span><span class="o">.</span><span class="na">push</span><span class="o">(</span><span class="n">value</span><span class="o">);</span>
-<span class="ln">15</span>  <span class="o">}</span>
-<span class="ln">16</span>  <span class="kd">public</span> <span class="n">Integer</span> <span class="nf">pop</span><span class="o">()</span> <span class="o">{</span>
-<span class="ln">17</span>    <span class="n">Integer</span> <span class="n">val</span> <span class="o">=</span> <span class="n">num</span><span class="o">.</span><span class="na">pop</span><span class="o">();</span>
-<span class="ln">18</span>    <span class="k">if</span> <span class="o">(</span><span class="n">val</span><span class="o">.</span><span class="na">equals</span><span class="o">(</span><span class="n">min</span><span class="o">.</span><span class="na">peek</span><span class="o">()))</span> <span class="o">{</span>
-<span class="ln">19</span>      <span class="c1">// 如果pop了最小值，那么min也
-</span><span class="ln">20</span><span class="c1"></span>      <span class="n">min</span><span class="o">.</span><span class="na">pop</span><span class="o">();</span>
-<span class="ln">21</span>    <span class="o">}</span>
-<span class="ln">22</span>    <span class="k">return</span> <span class="n">val</span><span class="o">;</span>
-<span class="ln">23</span>  <span class="o">}</span>
-<span class="ln">24</span>  <span class="kd">public</span> <span class="n">Integer</span> <span class="nf">min</span><span class="o">()</span> <span class="o">{</span>
-<span class="ln">25</span>    <span class="k">return</span> <span class="n">min</span><span class="o">.</span><span class="na">peek</span><span class="o">();</span>
-<span class="ln">26</span>  <span class="o">}</span>
-<span class="ln">27</span><span class="o">}</span>
-</code></pre></div></div></div>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="kd">public</span> <span class="kd">class</span> <span class="nc">StackMin</span> <span class="o">{</span>
+  <span class="kd">private</span> <span class="n">Stack</span><span class="o">&lt;</span><span class="n">Integer</span><span class="o">&gt;</span> <span class="n">num</span> <span class="o">=</span> <span class="k">new</span> <span class="n">Stack</span><span class="o">&lt;&gt;();</span>
+  <span class="kd">private</span> <span class="n">Stack</span><span class="o">&lt;</span><span class="n">Integer</span><span class="o">&gt;</span> <span class="n">min</span> <span class="o">=</span> <span class="k">new</span> <span class="n">Stack</span><span class="o">&lt;&gt;();</span>
+  <span class="kd">public</span> <span class="kt">void</span> <span class="nf">push</span><span class="o">(</span><span class="n">Integer</span> <span class="n">value</span><span class="o">)</span> <span class="o">{</span>
+    <span class="k">if</span> <span class="o">(</span><span class="n">num</span><span class="o">.</span><span class="na">isEmpty</span><span class="o">())</span> <span class="o">{</span>
+      <span class="n">num</span><span class="o">.</span><span class="na">push</span><span class="o">(</span><span class="n">value</span><span class="o">);</span>
+      <span class="n">min</span><span class="o">.</span><span class="na">push</span><span class="o">(</span><span class="n">value</span><span class="o">);</span>
+      <span class="k">return</span><span class="o">;</span>
+    <span class="o">}</span>
+    <span class="k">if</span> <span class="o">(</span><span class="n">value</span> <span class="o">&lt;=</span> <span class="n">min</span><span class="o">.</span><span class="na">peek</span><span class="o">())</span> <span class="o">{</span>
+      <span class="c1">// 只存比当前min更小的数字，这里用&lt;=是为了应对连续push相同数字的情况
+</span><span class="c1"></span>      <span class="n">min</span><span class="o">.</span><span class="na">push</span><span class="o">(</span><span class="n">value</span><span class="o">);</span>
+    <span class="o">}</span>
+    <span class="n">num</span><span class="o">.</span><span class="na">push</span><span class="o">(</span><span class="n">value</span><span class="o">);</span>
+  <span class="o">}</span>
+  <span class="kd">public</span> <span class="n">Integer</span> <span class="nf">pop</span><span class="o">()</span> <span class="o">{</span>
+    <span class="n">Integer</span> <span class="n">val</span> <span class="o">=</span> <span class="n">num</span><span class="o">.</span><span class="na">pop</span><span class="o">();</span>
+    <span class="k">if</span> <span class="o">(</span><span class="n">val</span><span class="o">.</span><span class="na">equals</span><span class="o">(</span><span class="n">min</span><span class="o">.</span><span class="na">peek</span><span class="o">()))</span> <span class="o">{</span>
+      <span class="c1">// 如果pop了最小值，那么min也
+</span><span class="c1"></span>      <span class="n">min</span><span class="o">.</span><span class="na">pop</span><span class="o">();</span>
+    <span class="o">}</span>
+    <span class="k">return</span> <span class="n">val</span><span class="o">;</span>
+  <span class="o">}</span>
+  <span class="kd">public</span> <span class="n">Integer</span> <span class="nf">min</span><span class="o">()</span> <span class="o">{</span>
+    <span class="k">return</span> <span class="n">min</span><span class="o">.</span><span class="na">peek</span><span class="o">();</span>
+  <span class="o">}</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div></div></div>
   <div class="card-footer"><div class="post-navs d-flex justify-content-evenly">
   <div class="post-nav post-prev"><i class="fas fa-fw fa-chevron-left"></i>
     <a href="/post/cracking-coding-interview/3.1-three-in-one/">Cracking Coding Interview - 3.1 Three in One

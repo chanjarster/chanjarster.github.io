@@ -12,7 +12,7 @@
 <meta name="description" content="" /><meta itemprop="name" content="算法 - 合并若干有序文件">
 <meta itemprop="description" content=""><meta itemprop="datePublished" content="2019-02-25T11:25:10+08:00" />
 <meta itemprop="dateModified" content="2019-02-25T11:25:10+08:00" />
-<meta itemprop="wordCount" content="647">
+<meta itemprop="wordCount" content="671">
 <meta itemprop="keywords" content="ARTS-A," /><meta property="og:title" content="算法 - 合并若干有序文件" />
 <meta property="og:description" content="" />
 <meta property="og:type" content="article" />
@@ -228,76 +228,151 @@
 <p>问题描述：现在你有 10 个接口访问日志文件，每个日志文件大小约 300MB，每个文件里的日志都是按照时间戳从小到大排序的。你希望将这 10 个较小的日志文件，合并为 1 个日志文件，合并之后的日志仍然按照时间戳从小到大排列。如果处理上述排序任务的机器内存只有 1GB，你有什么好的解决思路，能“快速”地将这 10 个日志文件合并吗？</p>
 <p>思路：其实就是归并排序的里的归并步骤，只不过从归并两个数组变成了归并多个数组。PS. 看这类问题的时候一定仔细看看空间限制条件，不要被吓到也不要随意做判断。</p>
 <p>代码：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln"> 1</span><span class="kd">public</span> <span class="kd">class</span> <span class="nc">MergeSortedFiles</span> <span class="o">{</span>
-<span class="ln"> 2</span>  <span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">merge</span><span class="o">(</span><span class="n">List</span><span class="o">&lt;</span><span class="n">FileIterator</span><span class="o">&gt;</span> <span class="n">fileIteratorList</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 3</span>
-<span class="ln"> 4</span>    <span class="n">FileWriter</span> <span class="n">fileWriter</span> <span class="o">=</span> <span class="kc">null</span><span class="o">;</span>
-<span class="ln"> 5</span>
-<span class="ln"> 6</span>    <span class="c1">// 记录还没有遍历结束的文件
-</span><span class="ln"> 7</span><span class="c1"></span>    <span class="n">List</span><span class="o">&lt;</span><span class="n">FileIterator</span><span class="o">&gt;</span> <span class="n">notEndingFileIterators</span> <span class="o">=</span> <span class="k">new</span> <span class="n">ArrayList</span><span class="o">&lt;&gt;(</span><span class="n">fileIteratorList</span><span class="o">);</span>
-<span class="ln"> 8</span>
-<span class="ln"> 9</span>    <span class="k">while</span> <span class="o">(!</span><span class="n">notEndingFileIterators</span><span class="o">.</span><span class="na">isEmpty</span><span class="o">())</span> <span class="o">{</span>
-<span class="ln">10</span>
-<span class="ln">11</span>      <span class="n">FileIterator</span> <span class="n">min</span> <span class="o">=</span> <span class="n">getMin</span><span class="o">(</span><span class="n">notEndingFileIterators</span><span class="o">);</span>
-<span class="ln">12</span>      <span class="n">fileWriter</span><span class="o">.</span><span class="na">writeLine</span><span class="o">(</span><span class="n">min</span><span class="o">.</span><span class="na">getLine</span><span class="o">());</span>
-<span class="ln">13</span>
-<span class="ln">14</span>      <span class="k">if</span> <span class="o">(!</span><span class="n">min</span><span class="o">.</span><span class="na">nextLine</span><span class="o">())</span> <span class="o">{</span>
-<span class="ln">15</span>        <span class="c1">// 该文件已经遍历到尾了，将其移除
-</span><span class="ln">16</span><span class="c1"></span>        <span class="n">notEndingFileIterators</span><span class="o">.</span><span class="na">remove</span><span class="o">(</span><span class="n">min</span><span class="o">);</span>
-<span class="ln">17</span>      <span class="o">}</span>
-<span class="ln">18</span>
-<span class="ln">19</span>    <span class="o">}</span>
-<span class="ln">20</span>  <span class="o">}</span>
-<span class="ln">21</span>
-<span class="ln">22</span>  <span class="kd">private</span> <span class="kd">static</span> <span class="n">FileIterator</span> <span class="nf">getMin</span><span class="o">(</span><span class="n">List</span><span class="o">&lt;</span><span class="n">FileIterator</span><span class="o">&gt;</span> <span class="n">notEndingFileIterators</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">23</span>
-<span class="ln">24</span>    <span class="n">FileIterator</span> <span class="n">min</span> <span class="o">=</span> <span class="kc">null</span><span class="o">;</span>
-<span class="ln">25</span>
-<span class="ln">26</span>    <span class="k">for</span> <span class="o">(</span><span class="n">FileIterator</span> <span class="n">fi</span> <span class="o">:</span> <span class="n">notEndingFileIterators</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">27</span>      <span class="k">if</span> <span class="o">(</span><span class="n">min</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">28</span>        <span class="n">min</span> <span class="o">=</span> <span class="n">fi</span><span class="o">;</span>
-<span class="ln">29</span>        <span class="k">continue</span><span class="o">;</span>
-<span class="ln">30</span>      <span class="o">}</span>
-<span class="ln">31</span>
-<span class="ln">32</span>      <span class="k">if</span> <span class="o">(</span><span class="n">fi</span><span class="o">.</span><span class="na">getLine</span><span class="o">().</span><span class="na">compareTo</span><span class="o">(</span><span class="n">min</span><span class="o">.</span><span class="na">getLine</span><span class="o">())</span> <span class="o">&lt;</span> <span class="n">0</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">33</span>        <span class="n">min</span> <span class="o">=</span> <span class="n">fi</span><span class="o">;</span>
-<span class="ln">34</span>      <span class="o">}</span>
-<span class="ln">35</span>    <span class="o">}</span>
-<span class="ln">36</span>    <span class="k">return</span> <span class="n">min</span><span class="o">;</span>
-<span class="ln">37</span>  <span class="o">}</span>
-<span class="ln">38</span><span class="o">}</span>
-<span class="ln">39</span>
-<span class="ln">40</span><span class="cm">/**
-</span><span class="ln">41</span><span class="cm"> * 这里不做实现，只表达意思
-</span><span class="ln">42</span><span class="cm"> */</span>
-<span class="ln">43</span><span class="kd">interface</span> <span class="nc">FileIterator</span> <span class="o">{</span>
-<span class="ln">44</span>  <span class="cm">/**
-</span><span class="ln">45</span><span class="cm">   * 返回当前行
-</span><span class="ln">46</span><span class="cm">   *
-</span><span class="ln">47</span><span class="cm">   * @return
-</span><span class="ln">48</span><span class="cm">   */</span>
-<span class="ln">49</span>  <span class="n">String</span> <span class="nf">getLine</span><span class="o">();</span>
-<span class="ln">50</span>
-<span class="ln">51</span>  <span class="cm">/**
-</span><span class="ln">52</span><span class="cm">   * 前进到下一行
-</span><span class="ln">53</span><span class="cm">   *
-</span><span class="ln">54</span><span class="cm">   * @return 如果已经是最后一行了，返回false。否则返回true。
-</span><span class="ln">55</span><span class="cm">   */</span>
-<span class="ln">56</span>  <span class="kt">boolean</span> <span class="nf">nextLine</span><span class="o">();</span>
-<span class="ln">57</span><span class="o">}</span>
-<span class="ln">58</span>
-<span class="ln">59</span><span class="cm">/**
-</span><span class="ln">60</span><span class="cm"> * 这里不做实现，只表达意思
-</span><span class="ln">61</span><span class="cm"> */</span>
-<span class="ln">62</span><span class="kd">interface</span> <span class="nc">FileWriter</span> <span class="o">{</span>
-<span class="ln">63</span>  <span class="cm">/**
-</span><span class="ln">64</span><span class="cm">   * 写一行到文件中
-</span><span class="ln">65</span><span class="cm">   *
-</span><span class="ln">66</span><span class="cm">   * @param line
-</span><span class="ln">67</span><span class="cm">   */</span>
-<span class="ln">68</span>  <span class="kt">void</span> <span class="nf">writeLine</span><span class="o">(</span><span class="n">String</span> <span class="n">line</span><span class="o">);</span>
-<span class="ln">69</span><span class="o">}</span>
-</code></pre></div><p>算法复杂度分析：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span><span class="lnt">46
+</span><span class="lnt">47
+</span><span class="lnt">48
+</span><span class="lnt">49
+</span><span class="lnt">50
+</span><span class="lnt">51
+</span><span class="lnt">52
+</span><span class="lnt">53
+</span><span class="lnt">54
+</span><span class="lnt">55
+</span><span class="lnt">56
+</span><span class="lnt">57
+</span><span class="lnt">58
+</span><span class="lnt">59
+</span><span class="lnt">60
+</span><span class="lnt">61
+</span><span class="lnt">62
+</span><span class="lnt">63
+</span><span class="lnt">64
+</span><span class="lnt">65
+</span><span class="lnt">66
+</span><span class="lnt">67
+</span><span class="lnt">68
+</span><span class="lnt">69
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="kd">public</span> <span class="kd">class</span> <span class="nc">MergeSortedFiles</span> <span class="o">{</span>
+  <span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">merge</span><span class="o">(</span><span class="n">List</span><span class="o">&lt;</span><span class="n">FileIterator</span><span class="o">&gt;</span> <span class="n">fileIteratorList</span><span class="o">)</span> <span class="o">{</span>
+
+    <span class="n">FileWriter</span> <span class="n">fileWriter</span> <span class="o">=</span> <span class="kc">null</span><span class="o">;</span>
+
+    <span class="c1">// 记录还没有遍历结束的文件
+</span><span class="c1"></span>    <span class="n">List</span><span class="o">&lt;</span><span class="n">FileIterator</span><span class="o">&gt;</span> <span class="n">notEndingFileIterators</span> <span class="o">=</span> <span class="k">new</span> <span class="n">ArrayList</span><span class="o">&lt;&gt;(</span><span class="n">fileIteratorList</span><span class="o">);</span>
+
+    <span class="k">while</span> <span class="o">(!</span><span class="n">notEndingFileIterators</span><span class="o">.</span><span class="na">isEmpty</span><span class="o">())</span> <span class="o">{</span>
+
+      <span class="n">FileIterator</span> <span class="n">min</span> <span class="o">=</span> <span class="n">getMin</span><span class="o">(</span><span class="n">notEndingFileIterators</span><span class="o">);</span>
+      <span class="n">fileWriter</span><span class="o">.</span><span class="na">writeLine</span><span class="o">(</span><span class="n">min</span><span class="o">.</span><span class="na">getLine</span><span class="o">());</span>
+
+      <span class="k">if</span> <span class="o">(!</span><span class="n">min</span><span class="o">.</span><span class="na">nextLine</span><span class="o">())</span> <span class="o">{</span>
+        <span class="c1">// 该文件已经遍历到尾了，将其移除
+</span><span class="c1"></span>        <span class="n">notEndingFileIterators</span><span class="o">.</span><span class="na">remove</span><span class="o">(</span><span class="n">min</span><span class="o">);</span>
+      <span class="o">}</span>
+
+    <span class="o">}</span>
+  <span class="o">}</span>
+
+  <span class="kd">private</span> <span class="kd">static</span> <span class="n">FileIterator</span> <span class="nf">getMin</span><span class="o">(</span><span class="n">List</span><span class="o">&lt;</span><span class="n">FileIterator</span><span class="o">&gt;</span> <span class="n">notEndingFileIterators</span><span class="o">)</span> <span class="o">{</span>
+
+    <span class="n">FileIterator</span> <span class="n">min</span> <span class="o">=</span> <span class="kc">null</span><span class="o">;</span>
+
+    <span class="k">for</span> <span class="o">(</span><span class="n">FileIterator</span> <span class="n">fi</span> <span class="o">:</span> <span class="n">notEndingFileIterators</span><span class="o">)</span> <span class="o">{</span>
+      <span class="k">if</span> <span class="o">(</span><span class="n">min</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
+        <span class="n">min</span> <span class="o">=</span> <span class="n">fi</span><span class="o">;</span>
+        <span class="k">continue</span><span class="o">;</span>
+      <span class="o">}</span>
+
+      <span class="k">if</span> <span class="o">(</span><span class="n">fi</span><span class="o">.</span><span class="na">getLine</span><span class="o">().</span><span class="na">compareTo</span><span class="o">(</span><span class="n">min</span><span class="o">.</span><span class="na">getLine</span><span class="o">())</span> <span class="o">&lt;</span> <span class="n">0</span><span class="o">)</span> <span class="o">{</span>
+        <span class="n">min</span> <span class="o">=</span> <span class="n">fi</span><span class="o">;</span>
+      <span class="o">}</span>
+    <span class="o">}</span>
+    <span class="k">return</span> <span class="n">min</span><span class="o">;</span>
+  <span class="o">}</span>
+<span class="o">}</span>
+
+<span class="cm">/**
+</span><span class="cm"> * 这里不做实现，只表达意思
+</span><span class="cm"> */</span>
+<span class="kd">interface</span> <span class="nc">FileIterator</span> <span class="o">{</span>
+  <span class="cm">/**
+</span><span class="cm">   * 返回当前行
+</span><span class="cm">   *
+</span><span class="cm">   * @return
+</span><span class="cm">   */</span>
+  <span class="n">String</span> <span class="nf">getLine</span><span class="o">();</span>
+
+  <span class="cm">/**
+</span><span class="cm">   * 前进到下一行
+</span><span class="cm">   *
+</span><span class="cm">   * @return 如果已经是最后一行了，返回false。否则返回true。
+</span><span class="cm">   */</span>
+  <span class="kt">boolean</span> <span class="nf">nextLine</span><span class="o">();</span>
+<span class="o">}</span>
+
+<span class="cm">/**
+</span><span class="cm"> * 这里不做实现，只表达意思
+</span><span class="cm"> */</span>
+<span class="kd">interface</span> <span class="nc">FileWriter</span> <span class="o">{</span>
+  <span class="cm">/**
+</span><span class="cm">   * 写一行到文件中
+</span><span class="cm">   *
+</span><span class="cm">   * @param line
+</span><span class="cm">   */</span>
+  <span class="kt">void</span> <span class="nf">writeLine</span><span class="o">(</span><span class="n">String</span> <span class="n">line</span><span class="o">);</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>算法复杂度分析：</p>
 <ul>
 <li>不存在最好最坏情况，因为遍历次数是固定的。</li>
 <li>总行数n、文件数k、每个文件行数m，如果数据特征正好能够达成每次把一个文件遍历完再遍历其余的，那么遍历次数是 <code>m*k + m*(k-1) + m*(k-2) + ... + m*1 = m*(k*(k+1)/2)</code>，把<code>m=n/k</code>代入得到，<code>n(k+1)/2</code>，为O(n)。</li>

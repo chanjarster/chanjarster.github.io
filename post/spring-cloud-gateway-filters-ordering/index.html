@@ -12,7 +12,7 @@
 <meta name="description" content="" /><meta itemprop="name" content="理解Spring Cloud Gateway Filters的执行顺序">
 <meta itemprop="description" content=""><meta itemprop="datePublished" content="2019-04-22T10:31:54+08:00" />
 <meta itemprop="dateModified" content="2019-04-22T10:31:54+08:00" />
-<meta itemprop="wordCount" content="2496">
+<meta itemprop="wordCount" content="2481">
 <meta itemprop="keywords" content="微服务,java," /><meta property="og:title" content="理解Spring Cloud Gateway Filters的执行顺序" />
 <meta property="og:description" content="" />
 <meta property="og:type" content="article" />
@@ -231,63 +231,131 @@
 <li>Zuul2则都是Global Filter</li>
 </ul>
 <p>SCG所谓Route Filter就是像下面这样的：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-yaml" data-lang="yaml"><span class="ln"> 1</span><span class="nt">spring</span><span class="p">:</span><span class="w">
-</span><span class="ln"> 2</span><span class="w">  </span><span class="nt">cloud</span><span class="p">:</span><span class="w">
-</span><span class="ln"> 3</span><span class="w">    </span><span class="nt">gateway</span><span class="p">:</span><span class="w">
-</span><span class="ln"> 4</span><span class="w">      </span><span class="nt">routes</span><span class="p">:</span><span class="w">
-</span><span class="ln"> 5</span><span class="w">        </span>- <span class="nt">id</span><span class="p">:</span><span class="w"> </span><span class="l">tomcat_route</span><span class="w">
-</span><span class="ln"> 6</span><span class="w">          </span><span class="nt">uri</span><span class="p">:</span><span class="w"> </span><span class="l">http://tomcat:8080</span><span class="w">
-</span><span class="ln"> 7</span><span class="w">          </span><span class="nt">predicates</span><span class="p">:</span><span class="w">
-</span><span class="ln"> 8</span><span class="w">            </span>- <span class="l">Path=/tomcat/docs</span><span class="w">
-</span><span class="ln"> 9</span><span class="w">          </span><span class="nt">filters</span><span class="p">:</span><span class="w">
-</span><span class="ln">10</span><span class="w">            </span>- <span class="l">StripPrefix=1</span><span class="w">
-</span><span class="ln">11</span><span class="w">            </span>- <span class="l">RemoveRequestHeader=X-Request-Foo</span><span class="w">
-</span></code></pre></div><p>上面的<code>StripPrefix</code>和<code>RemoveRequestHeader</code>就是Route Filter，而SCG的Global Filter则是隐式的，无需显式配置，它们会在请求过来的时候被SCG调用。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-yaml" data-lang="yaml"><span class="nt">spring</span><span class="p">:</span><span class="w">
+</span><span class="w">  </span><span class="nt">cloud</span><span class="p">:</span><span class="w">
+</span><span class="w">    </span><span class="nt">gateway</span><span class="p">:</span><span class="w">
+</span><span class="w">      </span><span class="nt">routes</span><span class="p">:</span><span class="w">
+</span><span class="w">        </span>- <span class="nt">id</span><span class="p">:</span><span class="w"> </span><span class="l">tomcat_route</span><span class="w">
+</span><span class="w">          </span><span class="nt">uri</span><span class="p">:</span><span class="w"> </span><span class="l">http://tomcat:8080</span><span class="w">
+</span><span class="w">          </span><span class="nt">predicates</span><span class="p">:</span><span class="w">
+</span><span class="w">            </span>- <span class="l">Path=/tomcat/docs</span><span class="w">
+</span><span class="w">          </span><span class="nt">filters</span><span class="p">:</span><span class="w">
+</span><span class="w">            </span>- <span class="l">StripPrefix=1</span><span class="w">
+</span><span class="w">            </span>- <span class="l">RemoveRequestHeader=X-Request-Foo</span><span class="w">
+</span></code></pre></td></tr></table>
+</div>
+</div><p>上面的<code>StripPrefix</code>和<code>RemoveRequestHeader</code>就是Route Filter，而SCG的Global Filter则是隐式的，无需显式配置，它们会在请求过来的时候被SCG调用。</p>
 <p>也就是说你可以配置不同的Route，然后为每个Route配置不同的Route Filter，这一切都是在配置阶段就决定下来的。</p>
 <p>而Zuul2则都是Global Filter，因此你得运行时在每个Filter内部自己决定是否要干活，除此之外，发送到Origin（被代理的服务）的url也得你自己设置，下面是一个例子（来自<a href="https://github.com/Netflix/zuul/tree/2.1/zuul-sample" target="_blank" rel="noopener noreferrer">Zuul2 Sample</a>
 ）：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln"> 1</span><span class="kd">public</span> <span class="kd">class</span> <span class="nc">Routes</span> <span class="kd">extends</span> <span class="n">HttpInboundSyncFilter</span> <span class="o">{</span>
-<span class="ln"> 2</span>  <span class="nd">@Override</span>
-<span class="ln"> 3</span>  <span class="kd">public</span> <span class="kt">boolean</span> <span class="nf">shouldFilter</span><span class="o">(</span><span class="n">HttpRequestMessage</span> <span class="n">httpRequestMessage</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 4</span>    <span class="c1">// ...
-</span><span class="ln"> 5</span><span class="c1"></span>    <span class="k">return</span> <span class="kc">true</span><span class="o">;</span>
-<span class="ln"> 6</span>  <span class="o">}</span>
-<span class="ln"> 7</span>  <span class="nd">@Override</span>
-<span class="ln"> 8</span>  <span class="kd">public</span> <span class="n">HttpRequestMessage</span> <span class="nf">apply</span><span class="o">(</span><span class="n">HttpRequestMessage</span> <span class="n">request</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 9</span>    <span class="c1">// ...
-</span><span class="ln">10</span><span class="c1"></span>    <span class="c1">// Route healthchecks to the healthcheck endpoint.;
-</span><span class="ln">11</span><span class="c1"></span>    <span class="n">context</span><span class="o">.</span><span class="na">setEndpoint</span><span class="o">(</span><span class="n">ZuulEndPointRunner</span><span class="o">.</span><span class="na">PROXY_ENDPOINT_FILTER_NAME</span><span class="o">);</span>
-<span class="ln">12</span>    <span class="n">context</span><span class="o">.</span><span class="na">setRouteVIP</span><span class="o">(</span><span class="s">&#34;tomcat&#34;</span><span class="o">);</span>
-<span class="ln">13</span>
-<span class="ln">14</span>    <span class="k">return</span> <span class="n">request</span><span class="o">;</span>
-<span class="ln">15</span>  <span class="o">}</span>
-<span class="ln">16</span><span class="o">}</span>
-</code></pre></div><h2 id="filter的角色">Filter的角色<a class="anchor ms-1" href="#filter的角色"><i class="fas fa-link"></i></a></h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="kd">public</span> <span class="kd">class</span> <span class="nc">Routes</span> <span class="kd">extends</span> <span class="n">HttpInboundSyncFilter</span> <span class="o">{</span>
+  <span class="nd">@Override</span>
+  <span class="kd">public</span> <span class="kt">boolean</span> <span class="nf">shouldFilter</span><span class="o">(</span><span class="n">HttpRequestMessage</span> <span class="n">httpRequestMessage</span><span class="o">)</span> <span class="o">{</span>
+    <span class="c1">// ...
+</span><span class="c1"></span>    <span class="k">return</span> <span class="kc">true</span><span class="o">;</span>
+  <span class="o">}</span>
+  <span class="nd">@Override</span>
+  <span class="kd">public</span> <span class="n">HttpRequestMessage</span> <span class="nf">apply</span><span class="o">(</span><span class="n">HttpRequestMessage</span> <span class="n">request</span><span class="o">)</span> <span class="o">{</span>
+    <span class="c1">// ...
+</span><span class="c1"></span>    <span class="c1">// Route healthchecks to the healthcheck endpoint.;
+</span><span class="c1"></span>    <span class="n">context</span><span class="o">.</span><span class="na">setEndpoint</span><span class="o">(</span><span class="n">ZuulEndPointRunner</span><span class="o">.</span><span class="na">PROXY_ENDPOINT_FILTER_NAME</span><span class="o">);</span>
+    <span class="n">context</span><span class="o">.</span><span class="na">setRouteVIP</span><span class="o">(</span><span class="s">&#34;tomcat&#34;</span><span class="o">);</span>
+
+    <span class="k">return</span> <span class="n">request</span><span class="o">;</span>
+  <span class="o">}</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><h2 id="filter的角色">Filter的角色<a class="anchor ms-1" href="#filter的角色"><i class="fas fa-link"></i></a></h2>
 <ul>
 <li>在SCG概念中只有一种Filter（撇开Global和Route的区别），它用代码来区分Pre Filter、Post Filter。在文档中还提到了Routing Filter，其实也是Pre Filter。</li>
 <li>Zuul2在代码中显示得提供了InboundFilter（负责进来的请求）、OutboundFilter（负责出去的响应）、ProxyEndpoint（负责请求到Origin，串起Inbound和Outbound）。</li>
 </ul>
 <p>下面是SCG的Pre Filter（裁剪自官方例子<a href="https://cloud.spring.io/spring-cloud-static/spring-cloud-gateway/2.1.1.RELEASE/single/spring-cloud-gateway.html#_writing_custom_gatewayfilter_factories" target="_blank" rel="noopener noreferrer">12.2 Writing Custom GatewayFilter Factories</a>
 ）：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln">1</span><span class="kd">public</span> <span class="kd">class</span> <span class="nc">PreGatewayFilterFactory</span> <span class="kd">extends</span> <span class="n">AbstractGatewayFilterFactory</span> <span class="o">{</span>
-<span class="ln">2</span>	<span class="nd">@Override</span>
-<span class="ln">3</span>	<span class="kd">public</span> <span class="n">GatewayFilter</span> <span class="nf">apply</span><span class="o">(</span><span class="n">Config</span> <span class="n">config</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">4</span>		<span class="k">return</span> <span class="o">(</span><span class="n">exchange</span><span class="o">,</span> <span class="n">chain</span><span class="o">)</span> <span class="o">-&gt;</span> <span class="o">{</span>
-<span class="ln">5</span>            <span class="c1">// business logic
-</span><span class="ln">6</span><span class="c1"></span>            <span class="k">return</span> <span class="n">chain</span><span class="o">.</span><span class="na">filter</span><span class="o">();</span>
-<span class="ln">7</span>		<span class="o">};</span>
-<span class="ln">8</span>	<span class="o">}</span>
-<span class="ln">9</span><span class="o">}</span>
-</code></pre></div><p>Post Filter的例子：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln">1</span><span class="kd">public</span> <span class="kd">class</span> <span class="nc">PostGatewayFilterFactory</span> <span class="kd">extends</span> <span class="n">AbstractGatewayFilterFactory</span> <span class="o">{</span>
-<span class="ln">2</span>	<span class="nd">@Override</span>
-<span class="ln">3</span>	<span class="kd">public</span> <span class="n">GatewayFilter</span> <span class="nf">apply</span><span class="o">(</span><span class="n">Config</span> <span class="n">config</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">4</span>		<span class="k">return</span> <span class="o">(</span><span class="n">exchange</span><span class="o">,</span> <span class="n">chain</span><span class="o">)</span> <span class="o">-&gt;</span> <span class="o">{</span>
-<span class="ln">5</span>			<span class="k">return</span> <span class="n">chain</span><span class="o">.</span><span class="na">filter</span><span class="o">(</span><span class="n">exchange</span><span class="o">).</span><span class="na">then</span><span class="o">(</span><span class="cm">/* business logic */</span><span class="o">);</span>
-<span class="ln">6</span>		<span class="o">};</span>
-<span class="ln">7</span>	<span class="o">}</span>
-<span class="ln">8</span><span class="o">}</span>
-</code></pre></div><p>在Zuul2里，你则得分别实现<code>HttpInboundSyncFilter</code>和<code>HttpOutboundSyncFilter</code>，<code>ProxyEndpoint</code>不需要你自己实现。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span><span class="lnt">9
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="kd">public</span> <span class="kd">class</span> <span class="nc">PreGatewayFilterFactory</span> <span class="kd">extends</span> <span class="n">AbstractGatewayFilterFactory</span> <span class="o">{</span>
+	<span class="nd">@Override</span>
+	<span class="kd">public</span> <span class="n">GatewayFilter</span> <span class="nf">apply</span><span class="o">(</span><span class="n">Config</span> <span class="n">config</span><span class="o">)</span> <span class="o">{</span>
+		<span class="k">return</span> <span class="o">(</span><span class="n">exchange</span><span class="o">,</span> <span class="n">chain</span><span class="o">)</span> <span class="o">-&gt;</span> <span class="o">{</span>
+            <span class="c1">// business logic
+</span><span class="c1"></span>            <span class="k">return</span> <span class="n">chain</span><span class="o">.</span><span class="na">filter</span><span class="o">();</span>
+		<span class="o">};</span>
+	<span class="o">}</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>Post Filter的例子：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="kd">public</span> <span class="kd">class</span> <span class="nc">PostGatewayFilterFactory</span> <span class="kd">extends</span> <span class="n">AbstractGatewayFilterFactory</span> <span class="o">{</span>
+	<span class="nd">@Override</span>
+	<span class="kd">public</span> <span class="n">GatewayFilter</span> <span class="nf">apply</span><span class="o">(</span><span class="n">Config</span> <span class="n">config</span><span class="o">)</span> <span class="o">{</span>
+		<span class="k">return</span> <span class="o">(</span><span class="n">exchange</span><span class="o">,</span> <span class="n">chain</span><span class="o">)</span> <span class="o">-&gt;</span> <span class="o">{</span>
+			<span class="k">return</span> <span class="n">chain</span><span class="o">.</span><span class="na">filter</span><span class="o">(</span><span class="n">exchange</span><span class="o">).</span><span class="na">then</span><span class="o">(</span><span class="cm">/* business logic */</span><span class="o">);</span>
+		<span class="o">};</span>
+	<span class="o">}</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>在Zuul2里，你则得分别实现<code>HttpInboundSyncFilter</code>和<code>HttpOutboundSyncFilter</code>，<code>ProxyEndpoint</code>不需要你自己实现。</p>
 <h2 id="scg-filter的问题">SCG Filter的问题<a class="anchor ms-1" href="#scg-filter的问题"><i class="fas fa-link"></i></a></h2>
 <p>SCG的优点很明显，它做了Zuul2不做的事情：</p>
 <ol>

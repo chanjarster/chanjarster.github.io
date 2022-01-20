@@ -12,7 +12,7 @@
 <meta name="description" content="" /><meta itemprop="name" content="Cracking Coding Interview - 10.4 Sorted Search, No Size">
 <meta itemprop="description" content=""><meta itemprop="datePublished" content="2019-08-28T15:17:11+08:00" />
 <meta itemprop="dateModified" content="2019-08-28T15:17:11+08:00" />
-<meta itemprop="wordCount" content="779">
+<meta itemprop="wordCount" content="789">
 <meta itemprop="keywords" content="ARTS-A," /><meta property="og:title" content="Cracking Coding Interview - 10.4 Sorted Search, No Size" />
 <meta property="og:description" content="" />
 <meta property="og:type" content="article" />
@@ -228,60 +228,118 @@
 <h2 id="解法1">解法1<a class="anchor ms-1" href="#解法1"><i class="fas fa-link"></i></a></h2>
 <p><code>Listy</code>没有提供size方法，所以没有办法用二分查找。那么问题的关键是否在于如何知道它的size，知道之后就可以用二分查找。</p>
 <p>是否可以这样呢，尝试在1、2、4、8、16、……的位置<code>elementAt(i)</code>，如果返回<code>-1</code>，那么就在前一个试探点到当前试探点之间的位置用二分找到<code>elementAt(i) != -1 &amp;&amp; elementAt(i + 1) == -1</code>的点，从而知道它的size。</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln"> 1</span><span class="kd">public</span> <span class="kt">int</span> <span class="nf">getSize</span><span class="o">(</span><span class="n">Listy</span> <span class="n">list</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 2</span>  <span class="k">if</span> <span class="o">(</span><span class="n">list</span><span class="o">.</span><span class="na">elementAt</span><span class="o">(</span><span class="n">0</span><span class="o">)</span> <span class="o">==</span> <span class="o">-</span><span class="n">1</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 3</span>    <span class="k">return</span> <span class="n">0</span><span class="o">;</span>
-<span class="ln"> 4</span>  <span class="o">}</span>
-<span class="ln"> 5</span>  <span class="k">return</span> <span class="n">getSize</span><span class="o">(</span><span class="n">list</span><span class="o">,</span> <span class="n">1</span><span class="o">,</span> <span class="n">1</span><span class="o">);</span>
-<span class="ln"> 6</span><span class="o">}</span>
-<span class="ln"> 7</span>
-<span class="ln"> 8</span><span class="kd">public</span> <span class="kt">int</span> <span class="nf">getSize</span><span class="o">(</span><span class="n">Listy</span> <span class="n">list</span><span class="o">,</span> <span class="kt">int</span> <span class="n">curr</span><span class="o">,</span> <span class="kt">int</span> <span class="n">prev</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 9</span>  <span class="k">if</span> <span class="o">(</span><span class="n">list</span><span class="o">.</span><span class="na">elementAt</span><span class="o">(</span><span class="n">curr</span><span class="o">)</span> <span class="o">==</span> <span class="o">-</span><span class="n">1</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">10</span>    <span class="k">return</span> <span class="n">getSizeBinary</span><span class="o">(</span><span class="n">list</span><span class="o">,</span> <span class="n">prev</span><span class="o">,</span> <span class="n">curr</span> <span class="o">-</span> <span class="n">1</span><span class="o">);</span>
-<span class="ln">11</span>  <span class="o">}</span>
-<span class="ln">12</span>  <span class="k">return</span> <span class="n">getSize</span><span class="o">(</span><span class="n">list</span><span class="o">,</span> <span class="n">curr</span> <span class="o">*</span> <span class="n">2</span><span class="o">,</span> <span class="n">curr</span><span class="o">);</span>
-<span class="ln">13</span><span class="o">}</span>
-<span class="ln">14</span>
-<span class="ln">15</span><span class="kd">public</span> <span class="kt">int</span> <span class="nf">getSizeBinary</span><span class="o">(</span><span class="n">Listy</span> <span class="n">list</span><span class="o">,</span> <span class="kt">int</span> <span class="n">start</span><span class="o">,</span> <span class="kt">int</span> <span class="n">end</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">16</span>  <span class="kt">int</span> <span class="n">mid</span> <span class="o">=</span> <span class="o">(</span><span class="n">start</span> <span class="o">+</span> <span class="n">end</span><span class="o">)</span> <span class="o">/</span> <span class="n">2</span><span class="o">;</span>
-<span class="ln">17</span>  <span class="k">if</span> <span class="o">(</span><span class="n">list</span><span class="o">.</span><span class="na">elementAt</span><span class="o">(</span><span class="n">mid</span><span class="o">)</span> <span class="o">==</span> <span class="n">1</span> <span class="o">&amp;&amp;</span> <span class="n">list</span><span class="o">.</span><span class="na">elementAt</span><span class="o">(</span><span class="n">mid</span> <span class="o">+</span> <span class="n">1</span><span class="o">)</span> <span class="o">==</span> <span class="o">-</span><span class="n">1</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">18</span>    <span class="k">return</span> <span class="n">mid</span> <span class="o">-</span> <span class="n">1</span><span class="o">;</span>
-<span class="ln">19</span>  <span class="o">}</span>
-<span class="ln">20</span>  <span class="k">if</span> <span class="o">(</span><span class="n">list</span><span class="o">.</span><span class="na">elementAt</span><span class="o">(</span><span class="n">mid</span><span class="o">)</span> <span class="o">==</span> <span class="o">-</span><span class="n">1</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">21</span>    <span class="k">return</span> <span class="n">getSizeBinary</span><span class="o">(</span><span class="n">list</span><span class="o">,</span> <span class="n">start</span><span class="o">,</span> <span class="n">mid</span> <span class="o">-</span> <span class="n">1</span><span class="o">;)</span>
-<span class="ln">22</span>  <span class="o">}</span>
-<span class="ln">23</span>  <span class="k">return</span> <span class="n">getSizeBinary</span><span class="o">(</span><span class="n">list</span><span class="o">,</span> <span class="n">mid</span> <span class="o">+</span> <span class="n">1</span><span class="o">,</span> <span class="n">end</span><span class="o">);</span>
-<span class="ln">24</span><span class="o">}</span>
-</code></pre></div><p>查找<code>Listy</code>长度的时间复杂度：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="kd">public</span> <span class="kt">int</span> <span class="nf">getSize</span><span class="o">(</span><span class="n">Listy</span> <span class="n">list</span><span class="o">)</span> <span class="o">{</span>
+  <span class="k">if</span> <span class="o">(</span><span class="n">list</span><span class="o">.</span><span class="na">elementAt</span><span class="o">(</span><span class="n">0</span><span class="o">)</span> <span class="o">==</span> <span class="o">-</span><span class="n">1</span><span class="o">)</span> <span class="o">{</span>
+    <span class="k">return</span> <span class="n">0</span><span class="o">;</span>
+  <span class="o">}</span>
+  <span class="k">return</span> <span class="n">getSize</span><span class="o">(</span><span class="n">list</span><span class="o">,</span> <span class="n">1</span><span class="o">,</span> <span class="n">1</span><span class="o">);</span>
+<span class="o">}</span>
+
+<span class="kd">public</span> <span class="kt">int</span> <span class="nf">getSize</span><span class="o">(</span><span class="n">Listy</span> <span class="n">list</span><span class="o">,</span> <span class="kt">int</span> <span class="n">curr</span><span class="o">,</span> <span class="kt">int</span> <span class="n">prev</span><span class="o">)</span> <span class="o">{</span>
+  <span class="k">if</span> <span class="o">(</span><span class="n">list</span><span class="o">.</span><span class="na">elementAt</span><span class="o">(</span><span class="n">curr</span><span class="o">)</span> <span class="o">==</span> <span class="o">-</span><span class="n">1</span><span class="o">)</span> <span class="o">{</span>
+    <span class="k">return</span> <span class="n">getSizeBinary</span><span class="o">(</span><span class="n">list</span><span class="o">,</span> <span class="n">prev</span><span class="o">,</span> <span class="n">curr</span> <span class="o">-</span> <span class="n">1</span><span class="o">);</span>
+  <span class="o">}</span>
+  <span class="k">return</span> <span class="n">getSize</span><span class="o">(</span><span class="n">list</span><span class="o">,</span> <span class="n">curr</span> <span class="o">*</span> <span class="n">2</span><span class="o">,</span> <span class="n">curr</span><span class="o">);</span>
+<span class="o">}</span>
+
+<span class="kd">public</span> <span class="kt">int</span> <span class="nf">getSizeBinary</span><span class="o">(</span><span class="n">Listy</span> <span class="n">list</span><span class="o">,</span> <span class="kt">int</span> <span class="n">start</span><span class="o">,</span> <span class="kt">int</span> <span class="n">end</span><span class="o">)</span> <span class="o">{</span>
+  <span class="kt">int</span> <span class="n">mid</span> <span class="o">=</span> <span class="o">(</span><span class="n">start</span> <span class="o">+</span> <span class="n">end</span><span class="o">)</span> <span class="o">/</span> <span class="n">2</span><span class="o">;</span>
+  <span class="k">if</span> <span class="o">(</span><span class="n">list</span><span class="o">.</span><span class="na">elementAt</span><span class="o">(</span><span class="n">mid</span><span class="o">)</span> <span class="o">==</span> <span class="n">1</span> <span class="o">&amp;&amp;</span> <span class="n">list</span><span class="o">.</span><span class="na">elementAt</span><span class="o">(</span><span class="n">mid</span> <span class="o">+</span> <span class="n">1</span><span class="o">)</span> <span class="o">==</span> <span class="o">-</span><span class="n">1</span><span class="o">)</span> <span class="o">{</span>
+    <span class="k">return</span> <span class="n">mid</span> <span class="o">-</span> <span class="n">1</span><span class="o">;</span>
+  <span class="o">}</span>
+  <span class="k">if</span> <span class="o">(</span><span class="n">list</span><span class="o">.</span><span class="na">elementAt</span><span class="o">(</span><span class="n">mid</span><span class="o">)</span> <span class="o">==</span> <span class="o">-</span><span class="n">1</span><span class="o">)</span> <span class="o">{</span>
+    <span class="k">return</span> <span class="n">getSizeBinary</span><span class="o">(</span><span class="n">list</span><span class="o">,</span> <span class="n">start</span><span class="o">,</span> <span class="n">mid</span> <span class="o">-</span> <span class="n">1</span><span class="o">;)</span>
+  <span class="o">}</span>
+  <span class="k">return</span> <span class="n">getSizeBinary</span><span class="o">(</span><span class="n">list</span><span class="o">,</span> <span class="n">mid</span> <span class="o">+</span> <span class="n">1</span><span class="o">,</span> <span class="n">end</span><span class="o">);</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>查找<code>Listy</code>长度的时间复杂度：</p>
 <ul>
 <li>最坏情况下，我们要试探logn次，并且在最后一段里也就是在n/2的长度里二分查找size。那也就是说复杂度是：O(logn + log(n/2))，也就是O(logn)</li>
 </ul>
 <h2 id="解法2更好">解法2（更好）<a class="anchor ms-1" href="#解法2更好"><i class="fas fa-link"></i></a></h2>
 <p>我们可以不要精确知道size，只需要知道<code>n</code>大概在哪个范围内。比如我们可以在1、2、4、8、……范围内试探，看一旦发现<code>Listy.elementAt(i) &gt; n</code>，那么就知道<code>n</code>可能在<code>[i / 2, i]</code>这个范围内。当然，如果<code>Listy.elementAt(i) == -1</code>，也意味着<code>n</code>可能在<code>[i / 2, i]</code>这个范围内。</p>
 <p>然后对这个返回做二分查找，二分的时候要注意，可以把<code>-1</code>认为是无限大。</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln"> 1</span><span class="kd">public</span> <span class="kt">int</span> <span class="nf">search</span><span class="o">(</span><span class="n">Listy</span> <span class="n">list</span><span class="o">,</span> <span class="kt">int</span> <span class="n">n</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 2</span>  <span class="kt">int</span> <span class="n">index</span> <span class="o">=</span> <span class="n">1</span><span class="o">;</span>
-<span class="ln"> 3</span>  <span class="k">while</span> <span class="o">(</span><span class="n">list</span><span class="o">.</span><span class="na">elementAt</span><span class="o">(</span><span class="n">index</span><span class="o">)</span> <span class="o">!=</span> <span class="o">-</span><span class="n">1</span> <span class="o">&amp;&amp;</span> <span class="n">list</span><span class="o">.</span><span class="na">elementAt</span><span class="o">(</span><span class="n">index</span><span class="o">)</span> <span class="o">&lt;</span> <span class="n">n</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 4</span>    <span class="n">index</span> <span class="o">=</span> <span class="n">index</span> <span class="o">*</span> <span class="n">2</span><span class="o">;</span>
-<span class="ln"> 5</span>  <span class="o">}</span>
-<span class="ln"> 6</span>  <span class="k">return</span> <span class="n">binarySearch</span><span class="o">(</span><span class="n">list</span><span class="o">,</span> <span class="n">n</span><span class="o">,</span> <span class="n">index</span> <span class="o">/</span> <span class="n">2</span><span class="o">,</span> <span class="n">index</span><span class="o">);</span>
-<span class="ln"> 7</span><span class="o">}</span>
-<span class="ln"> 8</span>
-<span class="ln"> 9</span><span class="kd">private</span> <span class="kt">int</span> <span class="nf">binarySearch</span><span class="o">(</span><span class="n">Listy</span> <span class="n">list</span><span class="o">,</span> <span class="kt">int</span> <span class="n">n</span><span class="o">,</span> <span class="kt">int</span> <span class="n">start</span><span class="o">,</span> <span class="kt">int</span> <span class="n">end</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">10</span>  <span class="k">if</span> <span class="o">(</span><span class="n">start</span> <span class="o">&gt;</span> <span class="n">end</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">11</span>    <span class="k">return</span> <span class="o">-</span><span class="n">1</span><span class="o">;</span>
-<span class="ln">12</span>  <span class="o">}</span>
-<span class="ln">13</span>  <span class="kt">int</span> <span class="n">mid</span> <span class="o">=</span> <span class="o">(</span><span class="n">start</span> <span class="o">+</span> <span class="n">end</span><span class="o">)</span> <span class="o">/</span> <span class="n">2</span><span class="o">;</span>
-<span class="ln">14</span>  <span class="kt">int</span> <span class="n">midVal</span> <span class="o">=</span> <span class="n">list</span><span class="o">.</span><span class="na">elementAt</span><span class="o">(</span><span class="n">mid</span><span class="o">);</span>
-<span class="ln">15</span>  <span class="k">if</span> <span class="o">(</span><span class="n">midVal</span> <span class="o">==</span> <span class="n">n</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">16</span>    <span class="k">return</span> <span class="n">mid</span><span class="o">;</span>
-<span class="ln">17</span>  <span class="o">}</span>
-<span class="ln">18</span>  <span class="k">if</span> <span class="o">(</span><span class="n">midVal</span> <span class="o">&gt;</span> <span class="n">n</span> <span class="o">||</span> <span class="n">midVal</span> <span class="o">==</span> <span class="o">-</span><span class="n">1</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">19</span>    <span class="k">return</span> <span class="n">binarySearch</span><span class="o">(</span><span class="n">list</span><span class="o">,</span> <span class="n">n</span><span class="o">,</span> <span class="n">start</span><span class="o">,</span> <span class="n">mid</span> <span class="o">-</span> <span class="n">1</span><span class="o">);</span>
-<span class="ln">20</span>  <span class="o">}</span>
-<span class="ln">21</span>  <span class="k">return</span> <span class="n">binarySearch</span><span class="o">(</span><span class="n">list</span><span class="o">,</span> <span class="n">n</span> <span class="n">mid</span> <span class="o">+</span> <span class="n">1</span><span class="o">,</span> <span class="n">end</span><span class="o">);</span>
-<span class="ln">22</span><span class="o">}</span>
-</code></pre></div></div></div>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="kd">public</span> <span class="kt">int</span> <span class="nf">search</span><span class="o">(</span><span class="n">Listy</span> <span class="n">list</span><span class="o">,</span> <span class="kt">int</span> <span class="n">n</span><span class="o">)</span> <span class="o">{</span>
+  <span class="kt">int</span> <span class="n">index</span> <span class="o">=</span> <span class="n">1</span><span class="o">;</span>
+  <span class="k">while</span> <span class="o">(</span><span class="n">list</span><span class="o">.</span><span class="na">elementAt</span><span class="o">(</span><span class="n">index</span><span class="o">)</span> <span class="o">!=</span> <span class="o">-</span><span class="n">1</span> <span class="o">&amp;&amp;</span> <span class="n">list</span><span class="o">.</span><span class="na">elementAt</span><span class="o">(</span><span class="n">index</span><span class="o">)</span> <span class="o">&lt;</span> <span class="n">n</span><span class="o">)</span> <span class="o">{</span>
+    <span class="n">index</span> <span class="o">=</span> <span class="n">index</span> <span class="o">*</span> <span class="n">2</span><span class="o">;</span>
+  <span class="o">}</span>
+  <span class="k">return</span> <span class="n">binarySearch</span><span class="o">(</span><span class="n">list</span><span class="o">,</span> <span class="n">n</span><span class="o">,</span> <span class="n">index</span> <span class="o">/</span> <span class="n">2</span><span class="o">,</span> <span class="n">index</span><span class="o">);</span>
+<span class="o">}</span>
+
+<span class="kd">private</span> <span class="kt">int</span> <span class="nf">binarySearch</span><span class="o">(</span><span class="n">Listy</span> <span class="n">list</span><span class="o">,</span> <span class="kt">int</span> <span class="n">n</span><span class="o">,</span> <span class="kt">int</span> <span class="n">start</span><span class="o">,</span> <span class="kt">int</span> <span class="n">end</span><span class="o">)</span> <span class="o">{</span>
+  <span class="k">if</span> <span class="o">(</span><span class="n">start</span> <span class="o">&gt;</span> <span class="n">end</span><span class="o">)</span> <span class="o">{</span>
+    <span class="k">return</span> <span class="o">-</span><span class="n">1</span><span class="o">;</span>
+  <span class="o">}</span>
+  <span class="kt">int</span> <span class="n">mid</span> <span class="o">=</span> <span class="o">(</span><span class="n">start</span> <span class="o">+</span> <span class="n">end</span><span class="o">)</span> <span class="o">/</span> <span class="n">2</span><span class="o">;</span>
+  <span class="kt">int</span> <span class="n">midVal</span> <span class="o">=</span> <span class="n">list</span><span class="o">.</span><span class="na">elementAt</span><span class="o">(</span><span class="n">mid</span><span class="o">);</span>
+  <span class="k">if</span> <span class="o">(</span><span class="n">midVal</span> <span class="o">==</span> <span class="n">n</span><span class="o">)</span> <span class="o">{</span>
+    <span class="k">return</span> <span class="n">mid</span><span class="o">;</span>
+  <span class="o">}</span>
+  <span class="k">if</span> <span class="o">(</span><span class="n">midVal</span> <span class="o">&gt;</span> <span class="n">n</span> <span class="o">||</span> <span class="n">midVal</span> <span class="o">==</span> <span class="o">-</span><span class="n">1</span><span class="o">)</span> <span class="o">{</span>
+    <span class="k">return</span> <span class="n">binarySearch</span><span class="o">(</span><span class="n">list</span><span class="o">,</span> <span class="n">n</span><span class="o">,</span> <span class="n">start</span><span class="o">,</span> <span class="n">mid</span> <span class="o">-</span> <span class="n">1</span><span class="o">);</span>
+  <span class="o">}</span>
+  <span class="k">return</span> <span class="n">binarySearch</span><span class="o">(</span><span class="n">list</span><span class="o">,</span> <span class="n">n</span> <span class="n">mid</span> <span class="o">+</span> <span class="n">1</span><span class="o">,</span> <span class="n">end</span><span class="o">);</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div></div></div>
   <div class="card-footer"><div class="post-navs d-flex justify-content-evenly">
   <div class="post-nav post-prev"><i class="fas fa-fw fa-chevron-left"></i>
     <a href="/post/cracking-coding-interview/10.3-search-in-rotated-array/">Cracking Coding Interview - 10.3 Search in Rotated Array

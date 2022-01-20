@@ -12,7 +12,7 @@
 <meta name="description" content="阿里云上的启用IPVS的K8S集群，无法从Pod经外部访问自己的排障流水账。" /><meta itemprop="name" content="启用IPVS的K8S集群无法从Pod经外部访问自己的排障">
 <meta itemprop="description" content="阿里云上的启用IPVS的K8S集群，无法从Pod经外部访问自己的排障流水账。"><meta itemprop="datePublished" content="2019-10-21T08:52:21+08:00" />
 <meta itemprop="dateModified" content="2019-10-21T08:52:21+08:00" />
-<meta itemprop="wordCount" content="1220">
+<meta itemprop="wordCount" content="1229">
 <meta itemprop="keywords" content="k8s," /><meta property="og:title" content="启用IPVS的K8S集群无法从Pod经外部访问自己的排障" />
 <meta property="og:description" content="阿里云上的启用IPVS的K8S集群，无法从Pod经外部访问自己的排障流水账。" />
 <meta property="og:type" content="article" />
@@ -235,11 +235,21 @@
 <p>curl <a href="http://bar.xx.com" target="_blank" rel="noopener noreferrer">http://bar.xx.com</a>
  能够返回结果</p>
 <p>ping bar.xxx.com，能够ping通：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln">1</span>PING xxx.bar.com (&lt;SLB-IP&gt;): 56 data bytes
-<span class="ln">2</span>64 bytes from &lt;SLB-IP&gt;: icmp_seq=0 ttl=91 time=3.091 ms
-<span class="ln">3</span>64 bytes from &lt;SLB-IP&gt;: icmp_seq=1 ttl=91 time=3.212 ms
-<span class="ln">4</span>64 bytes from &lt;SLB-IP&gt;: icmp_seq=2 ttl=91 time=3.267 ms
-</code></pre></div><p>注意：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt">PING xxx.bar.com (&lt;SLB-IP&gt;): 56 data bytes
+64 bytes from &lt;SLB-IP&gt;: icmp_seq=0 ttl=91 time=3.091 ms
+64 bytes from &lt;SLB-IP&gt;: icmp_seq=1 ttl=91 time=3.212 ms
+64 bytes from &lt;SLB-IP&gt;: icmp_seq=2 ttl=91 time=3.267 ms
+</code></pre></td></tr></table>
+</div>
+</div><p>注意：</p>
 <ul>
 <li>解析得到的IP是ACK创建时自动创建的SLB实例的公网IP。</li>
 </ul>
@@ -249,19 +259,36 @@
 </p>
 <p>得到错误：<code>curl: (7) Failed to connect to bar.xxx.com port 80: Connection refused</code></p>
 <p>ping bar.xxx.com，能够ping通，得到结果</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln">1</span>PING xxx.bar.com (&lt;SLB-IP&gt;) 56(84) bytes of data.
-<span class="ln">2</span>64 bytes from nginx-ingress-lb.kube-system.svc.cluster.local (&lt;SLB-IP&gt;): icmp_seq=1 ttl=64 time=0.035 ms
-<span class="ln">3</span>64 bytes from nginx-ingress-lb.kube-system.svc.cluster.local (&lt;SLB-IP&gt;): icmp_seq=2 ttl=64 time=0.036 ms
-</code></pre></div><p>注意：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt">PING xxx.bar.com (&lt;SLB-IP&gt;) 56(84) bytes of data.
+64 bytes from nginx-ingress-lb.kube-system.svc.cluster.local (&lt;SLB-IP&gt;): icmp_seq=1 ttl=64 time=0.035 ms
+64 bytes from nginx-ingress-lb.kube-system.svc.cluster.local (&lt;SLB-IP&gt;): icmp_seq=2 ttl=64 time=0.036 ms
+</code></pre></td></tr></table>
+</div>
+</div><p>注意：</p>
 <ul>
 <li>得到的IP同样是SLB实例的公网IP</li>
 <li>解析得到名字是Ingress Controller在集群内部的SVC的DNS Name。</li>
 </ul>
 <p>用tcpdump抓包：</p>
 <p>tcpdump -nn host bar.xxx.com，得到 port 80 unreachable的结果</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln">1</span>02:23:25.524028 IP 172.20.1.88.57138 &gt; &lt;SLB-IP&gt;.80: Flags [S], seq 1634983746, win 29200, options [mss 1460,sackOK,TS val 3961214492 ecr 0,nop,wscale 9], length 0
-<span class="ln">2</span>02:23:25.525043 IP &lt;SLB-IP&gt; &gt; 172.20.1.88: ICMP 139.224.167.163 tcp port 80 unreachable, length 68
-</code></pre></div><h2 id="和阿里同学沟通">和阿里同学沟通<a class="anchor ms-1" href="#和阿里同学沟通"><i class="fas fa-link"></i></a></h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt">02:23:25.524028 IP 172.20.1.88.57138 &gt; &lt;SLB-IP&gt;.80: Flags [S], seq 1634983746, win 29200, options [mss 1460,sackOK,TS val 3961214492 ecr 0,nop,wscale 9], length 0
+02:23:25.525043 IP &lt;SLB-IP&gt; &gt; 172.20.1.88: ICMP 139.224.167.163 tcp port 80 unreachable, length 68
+</code></pre></td></tr></table>
+</div>
+</div><h2 id="和阿里同学沟通">和阿里同学沟通<a class="anchor ms-1" href="#和阿里同学沟通"><i class="fas fa-link"></i></a></h2>
 <p>建了工单描述了情况，得到的反馈如下：</p>
 <p>Ingress Controller Service的externalTrafficPolicy这个为Local（ACK初始化的默认值）的时候跨节点访问SVC SLB地址就是不行，这个和Nginx Ingress Controller没有关系。<strong>这个行为在ipvs和kube-proxy实现的service集群上行为是一致的</strong>，如果之前是好的，现在不行了，只有一种可能，就是之前访问Ingress入口Url的Pod和两个Nginx Ingress Controller Pod在一个节点上。建议把externalTrafficPolicy改成Cluster。</p>
 <h2 id="解决办法">解决办法<a class="anchor ms-1" href="#解决办法"><i class="fas fa-link"></i></a></h2>

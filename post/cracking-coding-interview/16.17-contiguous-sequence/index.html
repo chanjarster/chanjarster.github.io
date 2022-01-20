@@ -12,7 +12,7 @@
 <meta name="description" content="" /><meta itemprop="name" content="Cracking Coding Interview - 16.17 Contiguous Sequence">
 <meta itemprop="description" content=""><meta itemprop="datePublished" content="2019-09-15T14:00:11+08:00" />
 <meta itemprop="dateModified" content="2019-09-15T14:00:11+08:00" />
-<meta itemprop="wordCount" content="908">
+<meta itemprop="wordCount" content="933">
 <meta itemprop="keywords" content="ARTS-A," /><meta property="og:title" content="Cracking Coding Interview - 16.17 Contiguous Sequence" />
 <meta property="og:description" content="" />
 <meta property="og:type" content="article" />
@@ -225,107 +225,227 @@
 </div>
 <div class="post-content mb-3"><p><strong>Contiguous Sequence</strong>: You are given an array of integers (both positive and negative). Find the contiguous sequence with the largest sum. Return the sum.</p>
 <p>EXAMPLE</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln">1</span>Input:  2, -8, 3, -2, 4, -10
-<span class="ln">2</span>Output: 5 (i.e, {3, -2, 4})
-</code></pre></div><p>Hints: #537, #551, #567, #594, #614</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt">Input:  2, -8, 3, -2, 4, -10
+Output: 5 (i.e, {3, -2, 4})
+</code></pre></td></tr></table>
+</div>
+</div><p>Hints: #537, #551, #567, #594, #614</p>
 <h2 id="解法1">解法1<a class="anchor ms-1" href="#解法1"><i class="fas fa-link"></i></a></h2>
 <p>可以先把数组变成一个累加数列，当前index sum值 = sum(当前元素 + 所有前面元素的)。</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln">1</span>array:    2, -8, 3,  -2,  4, -10
-<span class="ln">2</span>sumarray: 2, -6, -3, -5, -1, -11
-</code></pre></div><p>然后我们知道array[n~m]元素之和 =  sumarray[m] - sumarray[n - 1]，所以在计算区间之和的时候就能够减少很多循环。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt">array:    2, -8, 3,  -2,  4, -10
+sumarray: 2, -6, -3, -5, -1, -11
+</code></pre></td></tr></table>
+</div>
+</div><p>然后我们知道array[n~m]元素之和 =  sumarray[m] - sumarray[n - 1]，所以在计算区间之和的时候就能够减少很多循环。</p>
 <p>如果给定一个index m，那么它能够形成的连续数列可以是：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln">1</span>array[0...m]   -&gt; sumarray[m]
-<span class="ln">2</span>array[1...m]   -&gt; sumarray[m] - sumarray[0]
-<span class="ln">3</span>array[2...m]   -&gt; sumarray[m] - sumarray[1]
-<span class="ln">4</span>...
-<span class="ln">5</span>array[m-1...m] -&gt; sumarray[m] - sumarray[m-2]
-<span class="ln">6</span>array[m...m]   -&gt; sumarray[m] - sumarray[m-1]
-</code></pre></div><p>那么我们可以从第一个元素开始，计算它所有的连续数列所能组成的和，然后是第二个元素，第三个元素。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt">array[0...m]   -&gt; sumarray[m]
+array[1...m]   -&gt; sumarray[m] - sumarray[0]
+array[2...m]   -&gt; sumarray[m] - sumarray[1]
+...
+array[m-1...m] -&gt; sumarray[m] - sumarray[m-2]
+array[m...m]   -&gt; sumarray[m] - sumarray[m-1]
+</code></pre></td></tr></table>
+</div>
+</div><p>那么我们可以从第一个元素开始，计算它所有的连续数列所能组成的和，然后是第二个元素，第三个元素。</p>
 <p>代码：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln"> 1</span><span class="kd">public</span> <span class="kt">int</span> <span class="nf">maxContiguous</span><span class="o">(</span><span class="kt">int</span><span class="o">[]</span> <span class="n">array</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 2</span>  <span class="kt">int</span><span class="o">[]</span> <span class="n">sumarray</span> <span class="o">=</span> <span class="n">array</span><span class="o">.</span><span class="na">clone</span><span class="o">();</span>
-<span class="ln"> 3</span>  <span class="c1">// 构建累加数列
-</span><span class="ln"> 4</span><span class="c1"></span>  <span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="n">1</span><span class="o">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">sumarray</span><span class="o">.</span><span class="na">length</span><span class="o">;</span> <span class="n">i</span><span class="o">++)</span> <span class="o">{</span>
-<span class="ln"> 5</span>    <span class="n">sumarray</span><span class="o">[</span><span class="n">i</span><span class="o">]</span> <span class="o">=</span> <span class="n">sumarray</span><span class="o">[</span><span class="n">i</span><span class="o">]</span> <span class="o">+</span> <span class="n">sumarray</span><span class="o">[</span><span class="n">i</span> <span class="o">-</span> <span class="n">1</span><span class="o">];</span>
-<span class="ln"> 6</span>  <span class="o">}</span>
-<span class="ln"> 7</span>  <span class="c1">// 找到最大的连续数列值
-</span><span class="ln"> 8</span><span class="c1"></span>  <span class="kt">int</span> <span class="n">maxSum</span> <span class="o">=</span> <span class="n">Integer</span><span class="o">.</span><span class="na">MIN_VALUE</span><span class="o">;</span>
-<span class="ln"> 9</span>  <span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">sumarray</span><span class="o">.</span><span class="na">length</span><span class="o">;</span> <span class="n">i</span><span class="o">++)</span> <span class="o">{</span>
-<span class="ln">10</span>    <span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">j</span> <span class="o">=</span> <span class="o">-</span><span class="n">1</span><span class="o">;</span> <span class="n">j</span> <span class="o">&lt;</span> <span class="n">i</span><span class="o">;</span> <span class="n">j</span><span class="o">++)</span> <span class="o">{</span>
-<span class="ln">11</span>      <span class="kt">int</span> <span class="n">sum</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span>
-<span class="ln">12</span>      <span class="k">if</span> <span class="o">(</span><span class="n">j</span> <span class="o">==</span> <span class="o">-</span><span class="n">1</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">13</span>        <span class="n">sum</span> <span class="o">=</span> <span class="n">sumarray</span><span class="o">[</span><span class="n">i</span><span class="o">];</span>
-<span class="ln">14</span>      <span class="o">}</span> <span class="k">else</span> <span class="o">{</span>
-<span class="ln">15</span>        <span class="n">sum</span> <span class="o">=</span> <span class="n">sumarray</span><span class="o">[</span><span class="n">i</span><span class="o">]</span> <span class="o">-</span> <span class="n">sumarray</span><span class="o">[</span><span class="n">j</span><span class="o">];</span>
-<span class="ln">16</span>      <span class="o">}</span>
-<span class="ln">17</span>      <span class="k">if</span> <span class="o">(</span><span class="n">sum</span> <span class="o">&gt;</span> <span class="n">maxSum</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">18</span>        <span class="n">maxSum</span> <span class="o">=</span> <span class="n">sum</span><span class="o">;</span>
-<span class="ln">19</span>      <span class="o">}</span>
-<span class="ln">20</span>    <span class="o">}</span>
-<span class="ln">21</span>  <span class="o">}</span>
-<span class="ln">22</span>  <span class="k">return</span> <span class="n">maxSum</span><span class="o">;</span>
-<span class="ln">23</span><span class="o">}</span>
-</code></pre></div><p>那么时间复杂度是：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="kd">public</span> <span class="kt">int</span> <span class="nf">maxContiguous</span><span class="o">(</span><span class="kt">int</span><span class="o">[]</span> <span class="n">array</span><span class="o">)</span> <span class="o">{</span>
+  <span class="kt">int</span><span class="o">[]</span> <span class="n">sumarray</span> <span class="o">=</span> <span class="n">array</span><span class="o">.</span><span class="na">clone</span><span class="o">();</span>
+  <span class="c1">// 构建累加数列
+</span><span class="c1"></span>  <span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="n">1</span><span class="o">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">sumarray</span><span class="o">.</span><span class="na">length</span><span class="o">;</span> <span class="n">i</span><span class="o">++)</span> <span class="o">{</span>
+    <span class="n">sumarray</span><span class="o">[</span><span class="n">i</span><span class="o">]</span> <span class="o">=</span> <span class="n">sumarray</span><span class="o">[</span><span class="n">i</span><span class="o">]</span> <span class="o">+</span> <span class="n">sumarray</span><span class="o">[</span><span class="n">i</span> <span class="o">-</span> <span class="n">1</span><span class="o">];</span>
+  <span class="o">}</span>
+  <span class="c1">// 找到最大的连续数列值
+</span><span class="c1"></span>  <span class="kt">int</span> <span class="n">maxSum</span> <span class="o">=</span> <span class="n">Integer</span><span class="o">.</span><span class="na">MIN_VALUE</span><span class="o">;</span>
+  <span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">sumarray</span><span class="o">.</span><span class="na">length</span><span class="o">;</span> <span class="n">i</span><span class="o">++)</span> <span class="o">{</span>
+    <span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">j</span> <span class="o">=</span> <span class="o">-</span><span class="n">1</span><span class="o">;</span> <span class="n">j</span> <span class="o">&lt;</span> <span class="n">i</span><span class="o">;</span> <span class="n">j</span><span class="o">++)</span> <span class="o">{</span>
+      <span class="kt">int</span> <span class="n">sum</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span>
+      <span class="k">if</span> <span class="o">(</span><span class="n">j</span> <span class="o">==</span> <span class="o">-</span><span class="n">1</span><span class="o">)</span> <span class="o">{</span>
+        <span class="n">sum</span> <span class="o">=</span> <span class="n">sumarray</span><span class="o">[</span><span class="n">i</span><span class="o">];</span>
+      <span class="o">}</span> <span class="k">else</span> <span class="o">{</span>
+        <span class="n">sum</span> <span class="o">=</span> <span class="n">sumarray</span><span class="o">[</span><span class="n">i</span><span class="o">]</span> <span class="o">-</span> <span class="n">sumarray</span><span class="o">[</span><span class="n">j</span><span class="o">];</span>
+      <span class="o">}</span>
+      <span class="k">if</span> <span class="o">(</span><span class="n">sum</span> <span class="o">&gt;</span> <span class="n">maxSum</span><span class="o">)</span> <span class="o">{</span>
+        <span class="n">maxSum</span> <span class="o">=</span> <span class="n">sum</span><span class="o">;</span>
+      <span class="o">}</span>
+    <span class="o">}</span>
+  <span class="o">}</span>
+  <span class="k">return</span> <span class="n">maxSum</span><span class="o">;</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>那么时间复杂度是：</p>
 <ul>
 <li>构建累加数列，O(n)，n是数组长度。</li>
 <li>求最大值，1 + 2 + &hellip; + n = O(n<sup>2</sup>)</li>
 </ul>
 <h2 id="解法2">解法2<a class="anchor ms-1" href="#解法2"><i class="fas fa-link"></i></a></h2>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln">1</span>
-</code></pre></div><p>换个思路：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt">
+</code></pre></td></tr></table>
+</div>
+</div><p>换个思路：</p>
 <ul>
 <li>记录两个数字：maxSum（最大sum值），prevSum（当前下标之前元素里的sum值）</li>
 <li>遍历这个数组，如果prevSum + array[curr] &gt; array[curr]，那么prevSum += array[curr]；否则 prevSum = array[curr]。</li>
 <li>同时判断，prevSum 和 maxSum的大小。</li>
 </ul>
 <p>举例：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln"> 1</span>Round 1
-<span class="ln"> 2</span>maxSum = 2, prevSum = 2
-<span class="ln"> 3</span>    v
-<span class="ln"> 4</span>2, -8, 3, -2, 4, -10
-<span class="ln"> 5</span>因为 -8 + 2 = -6 &gt; -8，所以 prevSum = -6
-<span class="ln"> 6</span>
-<span class="ln"> 7</span>Round 2
-<span class="ln"> 8</span>maxSum = 2, prevSum = -6
-<span class="ln"> 9</span>       v
-<span class="ln">10</span>2, -8, 3, -2, 4, -10
-<span class="ln">11</span>因为 -6 + 3 = -3 &lt; 3，所以 prevSum = 3，所以 maxSum = 3
-<span class="ln">12</span>
-<span class="ln">13</span>Round 3
-<span class="ln">14</span>maxSum = 3, prevSum = 3
-<span class="ln">15</span>           v
-<span class="ln">16</span>2, -8, 3, -2, 4, -10
-<span class="ln">17</span>因为 3 + (-2) = 1 &gt; -2，所以 prevSum = 1
-<span class="ln">18</span>
-<span class="ln">19</span>Round 4
-<span class="ln">20</span>maxSum = 3, prevSum = 1
-<span class="ln">21</span>              v
-<span class="ln">22</span>2, -8, 3, -2, 4, -10
-<span class="ln">23</span>因为 1 + 4 = 5 &gt; 4，所以 prevSum = 5，所以 maxSum = 5
-<span class="ln">24</span>
-<span class="ln">25</span>Round 5
-<span class="ln">26</span>maxSum = 5, prevSum = 5
-<span class="ln">27</span>                   v
-<span class="ln">28</span>2, -8, 3, -2, 4, -10
-<span class="ln">29</span>因为 5 + (-10) = -5 &gt; -10，所以 prevSum = -5
-</code></pre></div><p>这个方法的意思是，如果之前的sum加上当前数字对当前情况有提升，那么就将其相加。否则的话还不如直接用当前数字。然后在过程中取得最大的sum。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt">Round 1
+maxSum = 2, prevSum = 2
+    v
+2, -8, 3, -2, 4, -10
+因为 -8 + 2 = -6 &gt; -8，所以 prevSum = -6
+
+Round 2
+maxSum = 2, prevSum = -6
+       v
+2, -8, 3, -2, 4, -10
+因为 -6 + 3 = -3 &lt; 3，所以 prevSum = 3，所以 maxSum = 3
+
+Round 3
+maxSum = 3, prevSum = 3
+           v
+2, -8, 3, -2, 4, -10
+因为 3 + (-2) = 1 &gt; -2，所以 prevSum = 1
+
+Round 4
+maxSum = 3, prevSum = 1
+              v
+2, -8, 3, -2, 4, -10
+因为 1 + 4 = 5 &gt; 4，所以 prevSum = 5，所以 maxSum = 5
+
+Round 5
+maxSum = 5, prevSum = 5
+                   v
+2, -8, 3, -2, 4, -10
+因为 5 + (-10) = -5 &gt; -10，所以 prevSum = -5
+</code></pre></td></tr></table>
+</div>
+</div><p>这个方法的意思是，如果之前的sum加上当前数字对当前情况有提升，那么就将其相加。否则的话还不如直接用当前数字。然后在过程中取得最大的sum。</p>
 <p>代码：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln"> 1</span><span class="kd">public</span> <span class="kt">int</span> <span class="nf">maxContiguous</span><span class="o">(</span><span class="kt">int</span><span class="o">[]</span> <span class="n">array</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 2</span>  <span class="kt">int</span> <span class="n">maxSum</span> <span class="o">=</span> <span class="n">array</span><span class="o">[</span><span class="n">0</span><span class="o">];</span>
-<span class="ln"> 3</span>  <span class="kt">int</span> <span class="n">prevSum</span> <span class="o">=</span> <span class="n">array</span><span class="o">[</span><span class="n">0</span><span class="o">];</span>
-<span class="ln"> 4</span>  <span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="n">1</span><span class="o">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">array</span><span class="o">.</span><span class="na">length</span><span class="o">;</span> <span class="n">i</span><span class="o">++)</span> <span class="o">{</span>
-<span class="ln"> 5</span>    <span class="k">if</span> <span class="o">(</span><span class="n">prevSum</span> <span class="o">+</span> <span class="n">array</span><span class="o">[</span><span class="n">i</span><span class="o">]</span> <span class="o">&gt;</span> <span class="n">array</span><span class="o">[</span><span class="n">i</span><span class="o">])</span> <span class="o">{</span>
-<span class="ln"> 6</span>      <span class="n">prevSum</span> <span class="o">+=</span> <span class="n">array</span><span class="o">[</span><span class="n">i</span><span class="o">];</span>
-<span class="ln"> 7</span>    <span class="o">}</span> <span class="k">else</span> <span class="o">{</span>
-<span class="ln"> 8</span>      <span class="n">prevSum</span> <span class="o">=</span> <span class="n">array</span><span class="o">[</span><span class="n">i</span><span class="o">];</span>
-<span class="ln"> 9</span>    <span class="o">}</span>
-<span class="ln">10</span>    <span class="k">if</span> <span class="o">(</span><span class="n">prevSum</span> <span class="o">&gt;</span> <span class="n">maxSum</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">11</span>      <span class="n">maxSum</span> <span class="o">=</span> <span class="n">prevSum</span><span class="o">;</span>
-<span class="ln">12</span>    <span class="o">}</span>
-<span class="ln">13</span>  <span class="o">}</span>
-<span class="ln">14</span>  <span class="k">return</span> <span class="n">maxSum</span><span class="o">;</span>
-<span class="ln">15</span><span class="o">}</span>
-</code></pre></div><p>时间复杂度：O(n)</p></div></div>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="kd">public</span> <span class="kt">int</span> <span class="nf">maxContiguous</span><span class="o">(</span><span class="kt">int</span><span class="o">[]</span> <span class="n">array</span><span class="o">)</span> <span class="o">{</span>
+  <span class="kt">int</span> <span class="n">maxSum</span> <span class="o">=</span> <span class="n">array</span><span class="o">[</span><span class="n">0</span><span class="o">];</span>
+  <span class="kt">int</span> <span class="n">prevSum</span> <span class="o">=</span> <span class="n">array</span><span class="o">[</span><span class="n">0</span><span class="o">];</span>
+  <span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="n">1</span><span class="o">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">array</span><span class="o">.</span><span class="na">length</span><span class="o">;</span> <span class="n">i</span><span class="o">++)</span> <span class="o">{</span>
+    <span class="k">if</span> <span class="o">(</span><span class="n">prevSum</span> <span class="o">+</span> <span class="n">array</span><span class="o">[</span><span class="n">i</span><span class="o">]</span> <span class="o">&gt;</span> <span class="n">array</span><span class="o">[</span><span class="n">i</span><span class="o">])</span> <span class="o">{</span>
+      <span class="n">prevSum</span> <span class="o">+=</span> <span class="n">array</span><span class="o">[</span><span class="n">i</span><span class="o">];</span>
+    <span class="o">}</span> <span class="k">else</span> <span class="o">{</span>
+      <span class="n">prevSum</span> <span class="o">=</span> <span class="n">array</span><span class="o">[</span><span class="n">i</span><span class="o">];</span>
+    <span class="o">}</span>
+    <span class="k">if</span> <span class="o">(</span><span class="n">prevSum</span> <span class="o">&gt;</span> <span class="n">maxSum</span><span class="o">)</span> <span class="o">{</span>
+      <span class="n">maxSum</span> <span class="o">=</span> <span class="n">prevSum</span><span class="o">;</span>
+    <span class="o">}</span>
+  <span class="o">}</span>
+  <span class="k">return</span> <span class="n">maxSum</span><span class="o">;</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>时间复杂度：O(n)</p></div></div>
   <div class="card-footer"><div class="post-navs d-flex justify-content-evenly">
   <div class="post-nav post-prev"><i class="fas fa-fw fa-chevron-left"></i>
     <a href="/post/cracking-coding-interview/16.16-sub-sort/">Cracking Coding Interview - 16.16 Sub Sort

@@ -12,7 +12,7 @@
 <meta name="description" content="" /><meta itemprop="name" content="StatefulSets迁移PV的方法">
 <meta itemprop="description" content=""><meta itemprop="datePublished" content="2019-12-09T10:59:27+08:00" />
 <meta itemprop="dateModified" content="2019-12-09T10:59:27+08:00" />
-<meta itemprop="wordCount" content="1263">
+<meta itemprop="wordCount" content="1118">
 <meta itemprop="keywords" content="k8s," /><meta property="og:title" content="StatefulSets迁移PV的方法" />
 <meta property="og:description" content="" />
 <meta property="og:type" content="article" />
@@ -234,130 +234,266 @@
 <p>下面是详细步骤：</p>
 <h2 id="备份statefulsets">备份StatefulSets<a class="anchor ms-1" href="#备份statefulsets"><i class="fas fa-link"></i></a></h2>
 <p>把StatefulSets的Yaml备份下来，下面是代码片段，注意volumeClaimTemplate和volumeMounts部分：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-yaml" data-lang="yaml"><span class="ln"> 1</span><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l">apps/v1</span><span class="w">
-</span><span class="ln"> 2</span><span class="w"></span><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l">StatefulSet</span><span class="w">
-</span><span class="ln"> 3</span><span class="w"></span><span class="nt">metadata</span><span class="p">:</span><span class="w">
-</span><span class="ln"> 4</span><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">zookeeper</span><span class="w">
-</span><span class="ln"> 5</span><span class="w">  </span><span class="c"># ...</span><span class="w">
-</span><span class="ln"> 6</span><span class="w"></span><span class="nt">spec</span><span class="p">:</span><span class="w">
-</span><span class="ln"> 7</span><span class="w">  </span><span class="c"># ...</span><span class="w">
-</span><span class="ln"> 8</span><span class="w">  </span><span class="nt">template</span><span class="p">:</span><span class="w">
-</span><span class="ln"> 9</span><span class="w">    </span><span class="c"># ...</span><span class="w">
-</span><span class="ln">10</span><span class="w">    </span><span class="nt">spec</span><span class="p">:</span><span class="w">
-</span><span class="ln">11</span><span class="w">      </span><span class="nt">containers</span><span class="p">:</span><span class="w">
-</span><span class="ln">12</span><span class="w">      </span>- <span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l">ranchercharts/confluentinc-cp-zookeeper:5.3.0</span><span class="w">
-</span><span class="ln">13</span><span class="w">        </span><span class="c"># ...</span><span class="w">
-</span><span class="ln">14</span><span class="w">        </span><span class="nt">volumeMounts</span><span class="p">:</span><span class="w">
-</span><span class="ln">15</span><span class="w">        </span>- <span class="nt">mountPath</span><span class="p">:</span><span class="w"> </span><span class="l">/var/lib/zookeeper/data</span><span class="w">
-</span><span class="ln">16</span><span class="w">          </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">datadir</span><span class="w">
-</span><span class="ln">17</span><span class="w">  </span><span class="c"># ...</span><span class="w">
-</span><span class="ln">18</span><span class="w">  </span><span class="nt">volumeClaimTemplates</span><span class="p">:</span><span class="w">
-</span><span class="ln">19</span><span class="w">  </span>- <span class="nt">metadata</span><span class="p">:</span><span class="w">
-</span><span class="ln">20</span><span class="w">      </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">datadir</span><span class="w">
-</span><span class="ln">21</span><span class="w">    </span><span class="nt">spec</span><span class="p">:</span><span class="w">
-</span><span class="ln">22</span><span class="w">      </span><span class="nt">accessModes</span><span class="p">:</span><span class="w">
-</span><span class="ln">23</span><span class="w">      </span>- <span class="l">ReadWriteOnce</span><span class="w">
-</span><span class="ln">24</span><span class="w">      </span><span class="nt">resources</span><span class="p">:</span><span class="w">
-</span><span class="ln">25</span><span class="w">        </span><span class="nt">requests</span><span class="p">:</span><span class="w">
-</span><span class="ln">26</span><span class="w">          </span><span class="nt">storage</span><span class="p">:</span><span class="w"> </span><span class="l">5Gi</span><span class="w">
-</span><span class="ln">27</span><span class="w">      </span><span class="nt">volumeMode</span><span class="p">:</span><span class="w"> </span><span class="l">Filesystem</span><span class="w">
-</span></code></pre></div><p>然后删掉它，删掉StatefulSets不会删除对应的PVC。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-yaml" data-lang="yaml"><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l">apps/v1</span><span class="w">
+</span><span class="w"></span><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l">StatefulSet</span><span class="w">
+</span><span class="w"></span><span class="nt">metadata</span><span class="p">:</span><span class="w">
+</span><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">zookeeper</span><span class="w">
+</span><span class="w">  </span><span class="c"># ...</span><span class="w">
+</span><span class="w"></span><span class="nt">spec</span><span class="p">:</span><span class="w">
+</span><span class="w">  </span><span class="c"># ...</span><span class="w">
+</span><span class="w">  </span><span class="nt">template</span><span class="p">:</span><span class="w">
+</span><span class="w">    </span><span class="c"># ...</span><span class="w">
+</span><span class="w">    </span><span class="nt">spec</span><span class="p">:</span><span class="w">
+</span><span class="w">      </span><span class="nt">containers</span><span class="p">:</span><span class="w">
+</span><span class="w">      </span>- <span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l">ranchercharts/confluentinc-cp-zookeeper:5.3.0</span><span class="w">
+</span><span class="w">        </span><span class="c"># ...</span><span class="w">
+</span><span class="w">        </span><span class="nt">volumeMounts</span><span class="p">:</span><span class="w">
+</span><span class="w">        </span>- <span class="nt">mountPath</span><span class="p">:</span><span class="w"> </span><span class="l">/var/lib/zookeeper/data</span><span class="w">
+</span><span class="w">          </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">datadir</span><span class="w">
+</span><span class="w">  </span><span class="c"># ...</span><span class="w">
+</span><span class="w">  </span><span class="nt">volumeClaimTemplates</span><span class="p">:</span><span class="w">
+</span><span class="w">  </span>- <span class="nt">metadata</span><span class="p">:</span><span class="w">
+</span><span class="w">      </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">datadir</span><span class="w">
+</span><span class="w">    </span><span class="nt">spec</span><span class="p">:</span><span class="w">
+</span><span class="w">      </span><span class="nt">accessModes</span><span class="p">:</span><span class="w">
+</span><span class="w">      </span>- <span class="l">ReadWriteOnce</span><span class="w">
+</span><span class="w">      </span><span class="nt">resources</span><span class="p">:</span><span class="w">
+</span><span class="w">        </span><span class="nt">requests</span><span class="p">:</span><span class="w">
+</span><span class="w">          </span><span class="nt">storage</span><span class="p">:</span><span class="w"> </span><span class="l">5Gi</span><span class="w">
+</span><span class="w">      </span><span class="nt">volumeMode</span><span class="p">:</span><span class="w"> </span><span class="l">Filesystem</span><span class="w">
+</span></code></pre></td></tr></table>
+</div>
+</div><p>然后删掉它，删掉StatefulSets不会删除对应的PVC。</p>
 <h2 id="复制数据">复制数据<a class="anchor ms-1" href="#复制数据"><i class="fas fa-link"></i></a></h2>
 <p>StatefulSets的volumeClaimTemplate所生成的PVC的名字是这样的格式：<code>{volume-name}-{statefulsets-name}-数字</code>，比如<code>datadir-zookeeper-0</code>。</p>
 <p>所以我们可以创建一个busybox StatefulSets，名字也是zookeeper，并且它的volumeClaimTemplate和原来的一样，这样它就可以使用旧PVC了。同时它还得创建一个新的volumeClaimTemplate来创建新的PVC。</p>
 <p>注意replicas得和原来的一样。</p>
 <p>下面是例子：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-yaml" data-lang="yaml"><span class="ln"> 1</span><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l">apps/v1</span><span class="w">
-</span><span class="ln"> 2</span><span class="w"></span><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l">StatefulSet</span><span class="w">
-</span><span class="ln"> 3</span><span class="w"></span><span class="nt">metadata</span><span class="p">:</span><span class="w">
-</span><span class="ln"> 4</span><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">zookeeper</span><span class="w">
-</span><span class="ln"> 5</span><span class="w"></span><span class="nt">spec</span><span class="p">:</span><span class="w">
-</span><span class="ln"> 6</span><span class="w">  </span><span class="nt">podManagementPolicy</span><span class="p">:</span><span class="w"> </span><span class="l">OrderedReady</span><span class="w">
-</span><span class="ln"> 7</span><span class="w">  </span><span class="c"># 得和原来的一样</span><span class="w">
-</span><span class="ln"> 8</span><span class="w">  </span><span class="nt">replicas</span><span class="p">:</span><span class="w"> </span><span class="m">3</span><span class="w">
-</span><span class="ln"> 9</span><span class="w">  </span><span class="nt">selector</span><span class="p">:</span><span class="w">
-</span><span class="ln">10</span><span class="w">    </span><span class="nt">matchLabels</span><span class="p">:</span><span class="w">
-</span><span class="ln">11</span><span class="w">      </span><span class="nt">app</span><span class="p">:</span><span class="w"> </span><span class="l">busybox-pvc-migration</span><span class="w">
-</span><span class="ln">12</span><span class="w">  </span><span class="nt">serviceName</span><span class="p">:</span><span class="w"> </span><span class="l">portal-cp-zookeeper</span><span class="w">
-</span><span class="ln">13</span><span class="w">  </span><span class="nt">template</span><span class="p">:</span><span class="w">
-</span><span class="ln">14</span><span class="w">    </span><span class="nt">metadata</span><span class="p">:</span><span class="w">
-</span><span class="ln">15</span><span class="w">      </span><span class="nt">labels</span><span class="p">:</span><span class="w">
-</span><span class="ln">16</span><span class="w">        </span><span class="nt">app</span><span class="p">:</span><span class="w"> </span><span class="l">busybox-pvc-migration</span><span class="w">
-</span><span class="ln">17</span><span class="w">    </span><span class="nt">spec</span><span class="p">:</span><span class="w">
-</span><span class="ln">18</span><span class="w">      </span><span class="nt">containers</span><span class="p">:</span><span class="w">
-</span><span class="ln">19</span><span class="w">      </span>- <span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l">busybox</span><span class="w">
-</span><span class="ln">20</span><span class="w">        </span><span class="nt">imagePullPolicy</span><span class="p">:</span><span class="w"> </span><span class="l">Always</span><span class="w">
-</span><span class="ln">21</span><span class="w">        </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">zookeeper</span><span class="w">
-</span><span class="ln">22</span><span class="w">        </span><span class="nt">stdin</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w">
-</span><span class="ln">23</span><span class="w">        </span><span class="nt">tty</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w">
-</span><span class="ln">24</span><span class="w">        </span><span class="nt">volumeMounts</span><span class="p">:</span><span class="w">
-</span><span class="ln">25</span><span class="w">        </span><span class="c"># 旧PVC</span><span class="w">
-</span><span class="ln">26</span><span class="w">        </span>- <span class="nt">mountPath</span><span class="p">:</span><span class="w"> </span><span class="l">/datadir-old</span><span class="w">
-</span><span class="ln">27</span><span class="w">          </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">datadir</span><span class="w">
-</span><span class="ln">28</span><span class="w">        </span><span class="c"># 新PVC</span><span class="w">
-</span><span class="ln">29</span><span class="w">        </span>- <span class="nt">mountPath</span><span class="p">:</span><span class="w"> </span><span class="l">/datadir-new</span><span class="w">
-</span><span class="ln">30</span><span class="w">          </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">datadir-new</span><span class="w">
-</span><span class="ln">31</span><span class="w">      </span><span class="nt">dnsPolicy</span><span class="p">:</span><span class="w"> </span><span class="l">ClusterFirst</span><span class="w">
-</span><span class="ln">32</span><span class="w">      </span><span class="nt">restartPolicy</span><span class="p">:</span><span class="w"> </span><span class="l">Always</span><span class="w">
-</span><span class="ln">33</span><span class="w">  </span><span class="nt">updateStrategy</span><span class="p">:</span><span class="w">
-</span><span class="ln">34</span><span class="w">    </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l">RollingUpdate</span><span class="w">
-</span><span class="ln">35</span><span class="w">  </span><span class="nt">volumeClaimTemplates</span><span class="p">:</span><span class="w">
-</span><span class="ln">36</span><span class="w">  </span><span class="c"># 旧claim</span><span class="w">
-</span><span class="ln">37</span><span class="w">  </span>- <span class="nt">metadata</span><span class="p">:</span><span class="w">
-</span><span class="ln">38</span><span class="w">      </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">datadir</span><span class="w">
-</span><span class="ln">39</span><span class="w">    </span><span class="nt">spec</span><span class="p">:</span><span class="w">
-</span><span class="ln">40</span><span class="w">      </span><span class="nt">accessModes</span><span class="p">:</span><span class="w">
-</span><span class="ln">41</span><span class="w">      </span>- <span class="l">ReadWriteOnce</span><span class="w">
-</span><span class="ln">42</span><span class="w">      </span><span class="nt">resources</span><span class="p">:</span><span class="w">
-</span><span class="ln">43</span><span class="w">        </span><span class="nt">requests</span><span class="p">:</span><span class="w">
-</span><span class="ln">44</span><span class="w">          </span><span class="nt">storage</span><span class="p">:</span><span class="w"> </span><span class="l">5Gi</span><span class="w">
-</span><span class="ln">45</span><span class="w">      </span><span class="nt">volumeMode</span><span class="p">:</span><span class="w"> </span><span class="l">Filesystem</span><span class="w">
-</span><span class="ln">46</span><span class="w">   </span><span class="c"># 新claim</span><span class="w">
-</span><span class="ln">47</span><span class="w">  </span>- <span class="nt">metadata</span><span class="p">:</span><span class="w">
-</span><span class="ln">48</span><span class="w">      </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">datadir-new</span><span class="w">
-</span><span class="ln">49</span><span class="w">    </span><span class="nt">spec</span><span class="p">:</span><span class="w">
-</span><span class="ln">50</span><span class="w">      </span><span class="nt">accessModes</span><span class="p">:</span><span class="w">
-</span><span class="ln">51</span><span class="w">      </span>- <span class="l">ReadWriteOnce</span><span class="w">
-</span><span class="ln">52</span><span class="w">      </span><span class="nt">resources</span><span class="p">:</span><span class="w">
-</span><span class="ln">53</span><span class="w">        </span><span class="nt">requests</span><span class="p">:</span><span class="w">
-</span><span class="ln">54</span><span class="w">          </span><span class="nt">storage</span><span class="p">:</span><span class="w"> </span><span class="l">10Gi</span><span class="w">
-</span><span class="ln">55</span><span class="w">      </span><span class="nt">volumeMode</span><span class="p">:</span><span class="w"> </span><span class="l">Filesystem</span><span class="w">
-</span></code></pre></div><p>进入每个busybox的shell，复制旧PVC的内容到新的PVC：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>cp -r /datadir-old/* /datadir-new/
-</code></pre></div><p>复制完之后注意检查一下文件的权限和所属用户与用户组。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span><span class="lnt">46
+</span><span class="lnt">47
+</span><span class="lnt">48
+</span><span class="lnt">49
+</span><span class="lnt">50
+</span><span class="lnt">51
+</span><span class="lnt">52
+</span><span class="lnt">53
+</span><span class="lnt">54
+</span><span class="lnt">55
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-yaml" data-lang="yaml"><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l">apps/v1</span><span class="w">
+</span><span class="w"></span><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l">StatefulSet</span><span class="w">
+</span><span class="w"></span><span class="nt">metadata</span><span class="p">:</span><span class="w">
+</span><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">zookeeper</span><span class="w">
+</span><span class="w"></span><span class="nt">spec</span><span class="p">:</span><span class="w">
+</span><span class="w">  </span><span class="nt">podManagementPolicy</span><span class="p">:</span><span class="w"> </span><span class="l">OrderedReady</span><span class="w">
+</span><span class="w">  </span><span class="c"># 得和原来的一样</span><span class="w">
+</span><span class="w">  </span><span class="nt">replicas</span><span class="p">:</span><span class="w"> </span><span class="m">3</span><span class="w">
+</span><span class="w">  </span><span class="nt">selector</span><span class="p">:</span><span class="w">
+</span><span class="w">    </span><span class="nt">matchLabels</span><span class="p">:</span><span class="w">
+</span><span class="w">      </span><span class="nt">app</span><span class="p">:</span><span class="w"> </span><span class="l">busybox-pvc-migration</span><span class="w">
+</span><span class="w">  </span><span class="nt">serviceName</span><span class="p">:</span><span class="w"> </span><span class="l">portal-cp-zookeeper</span><span class="w">
+</span><span class="w">  </span><span class="nt">template</span><span class="p">:</span><span class="w">
+</span><span class="w">    </span><span class="nt">metadata</span><span class="p">:</span><span class="w">
+</span><span class="w">      </span><span class="nt">labels</span><span class="p">:</span><span class="w">
+</span><span class="w">        </span><span class="nt">app</span><span class="p">:</span><span class="w"> </span><span class="l">busybox-pvc-migration</span><span class="w">
+</span><span class="w">    </span><span class="nt">spec</span><span class="p">:</span><span class="w">
+</span><span class="w">      </span><span class="nt">containers</span><span class="p">:</span><span class="w">
+</span><span class="w">      </span>- <span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l">busybox</span><span class="w">
+</span><span class="w">        </span><span class="nt">imagePullPolicy</span><span class="p">:</span><span class="w"> </span><span class="l">Always</span><span class="w">
+</span><span class="w">        </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">zookeeper</span><span class="w">
+</span><span class="w">        </span><span class="nt">stdin</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w">
+</span><span class="w">        </span><span class="nt">tty</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w">
+</span><span class="w">        </span><span class="nt">volumeMounts</span><span class="p">:</span><span class="w">
+</span><span class="w">        </span><span class="c"># 旧PVC</span><span class="w">
+</span><span class="w">        </span>- <span class="nt">mountPath</span><span class="p">:</span><span class="w"> </span><span class="l">/datadir-old</span><span class="w">
+</span><span class="w">          </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">datadir</span><span class="w">
+</span><span class="w">        </span><span class="c"># 新PVC</span><span class="w">
+</span><span class="w">        </span>- <span class="nt">mountPath</span><span class="p">:</span><span class="w"> </span><span class="l">/datadir-new</span><span class="w">
+</span><span class="w">          </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">datadir-new</span><span class="w">
+</span><span class="w">      </span><span class="nt">dnsPolicy</span><span class="p">:</span><span class="w"> </span><span class="l">ClusterFirst</span><span class="w">
+</span><span class="w">      </span><span class="nt">restartPolicy</span><span class="p">:</span><span class="w"> </span><span class="l">Always</span><span class="w">
+</span><span class="w">  </span><span class="nt">updateStrategy</span><span class="p">:</span><span class="w">
+</span><span class="w">    </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l">RollingUpdate</span><span class="w">
+</span><span class="w">  </span><span class="nt">volumeClaimTemplates</span><span class="p">:</span><span class="w">
+</span><span class="w">  </span><span class="c"># 旧claim</span><span class="w">
+</span><span class="w">  </span>- <span class="nt">metadata</span><span class="p">:</span><span class="w">
+</span><span class="w">      </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">datadir</span><span class="w">
+</span><span class="w">    </span><span class="nt">spec</span><span class="p">:</span><span class="w">
+</span><span class="w">      </span><span class="nt">accessModes</span><span class="p">:</span><span class="w">
+</span><span class="w">      </span>- <span class="l">ReadWriteOnce</span><span class="w">
+</span><span class="w">      </span><span class="nt">resources</span><span class="p">:</span><span class="w">
+</span><span class="w">        </span><span class="nt">requests</span><span class="p">:</span><span class="w">
+</span><span class="w">          </span><span class="nt">storage</span><span class="p">:</span><span class="w"> </span><span class="l">5Gi</span><span class="w">
+</span><span class="w">      </span><span class="nt">volumeMode</span><span class="p">:</span><span class="w"> </span><span class="l">Filesystem</span><span class="w">
+</span><span class="w">   </span><span class="c"># 新claim</span><span class="w">
+</span><span class="w">  </span>- <span class="nt">metadata</span><span class="p">:</span><span class="w">
+</span><span class="w">      </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">datadir-new</span><span class="w">
+</span><span class="w">    </span><span class="nt">spec</span><span class="p">:</span><span class="w">
+</span><span class="w">      </span><span class="nt">accessModes</span><span class="p">:</span><span class="w">
+</span><span class="w">      </span>- <span class="l">ReadWriteOnce</span><span class="w">
+</span><span class="w">      </span><span class="nt">resources</span><span class="p">:</span><span class="w">
+</span><span class="w">        </span><span class="nt">requests</span><span class="p">:</span><span class="w">
+</span><span class="w">          </span><span class="nt">storage</span><span class="p">:</span><span class="w"> </span><span class="l">10Gi</span><span class="w">
+</span><span class="w">      </span><span class="nt">volumeMode</span><span class="p">:</span><span class="w"> </span><span class="l">Filesystem</span><span class="w">
+</span></code></pre></td></tr></table>
+</div>
+</div><p>进入每个busybox的shell，复制旧PVC的内容到新的PVC：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">cp -r /datadir-old/* /datadir-new/
+</code></pre></td></tr></table>
+</div>
+</div><p>复制完之后注意检查一下文件的权限和所属用户与用户组。</p>
 <p>最后删除busybox。同理，它所新建的PVC也不会被删除，这些PVC后面要被使用。</p>
 <h2 id="使用新pvc">使用新PVC<a class="anchor ms-1" href="#使用新pvc"><i class="fas fa-link"></i></a></h2>
 <p>修改之前备份下来的Yaml，让它使用新的PVC，修改volumeClaimTemplate和volumeMounts部分：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-yaml" data-lang="yaml"><span class="ln"> 1</span><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l">apps/v1</span><span class="w">
-</span><span class="ln"> 2</span><span class="w"></span><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l">StatefulSet</span><span class="w">
-</span><span class="ln"> 3</span><span class="w"></span><span class="nt">metadata</span><span class="p">:</span><span class="w">
-</span><span class="ln"> 4</span><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">zookeeper</span><span class="w">
-</span><span class="ln"> 5</span><span class="w">  </span><span class="c"># ...</span><span class="w">
-</span><span class="ln"> 6</span><span class="w"></span><span class="nt">spec</span><span class="p">:</span><span class="w">
-</span><span class="ln"> 7</span><span class="w">  </span><span class="c"># ...</span><span class="w">
-</span><span class="ln"> 8</span><span class="w">  </span><span class="nt">template</span><span class="p">:</span><span class="w">
-</span><span class="ln"> 9</span><span class="w">    </span><span class="c"># ...</span><span class="w">
-</span><span class="ln">10</span><span class="w">    </span><span class="nt">spec</span><span class="p">:</span><span class="w">
-</span><span class="ln">11</span><span class="w">      </span><span class="nt">containers</span><span class="p">:</span><span class="w">
-</span><span class="ln">12</span><span class="w">      </span>- <span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l">ranchercharts/confluentinc-cp-zookeeper:5.3.0</span><span class="w">
-</span><span class="ln">13</span><span class="w">        </span><span class="c"># ...</span><span class="w">
-</span><span class="ln">14</span><span class="w">        </span><span class="nt">volumeMounts</span><span class="p">:</span><span class="w">
-</span><span class="ln">15</span><span class="w">        </span>- <span class="nt">mountPath</span><span class="p">:</span><span class="w"> </span><span class="l">/var/lib/zookeeper/data</span><span class="w">
-</span><span class="ln">16</span><span class="w">          </span><span class="c"># 使用了新的PVC</span><span class="w">
-</span><span class="ln">17</span><span class="w">          </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">datadir-new</span><span class="w">
-</span><span class="ln">18</span><span class="w">  </span><span class="c"># ...</span><span class="w">
-</span><span class="ln">19</span><span class="w">  </span><span class="nt">volumeClaimTemplates</span><span class="p">:</span><span class="w">
-</span><span class="ln">20</span><span class="w">  </span>- <span class="nt">metadata</span><span class="p">:</span><span class="w">
-</span><span class="ln">21</span><span class="w">      </span><span class="c"># 使用了新的PVC</span><span class="w">
-</span><span class="ln">22</span><span class="w">      </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">datadir-new</span><span class="w">
-</span><span class="ln">23</span><span class="w">    </span><span class="nt">spec</span><span class="p">:</span><span class="w">
-</span><span class="ln">24</span><span class="w">      </span><span class="nt">accessModes</span><span class="p">:</span><span class="w">
-</span><span class="ln">25</span><span class="w">      </span>- <span class="l">ReadWriteOnce</span><span class="w">
-</span><span class="ln">26</span><span class="w">      </span><span class="nt">resources</span><span class="p">:</span><span class="w">
-</span><span class="ln">27</span><span class="w">        </span><span class="nt">requests</span><span class="p">:</span><span class="w">
-</span><span class="ln">28</span><span class="w">          </span><span class="nt">storage</span><span class="p">:</span><span class="w"> </span><span class="l">10Gi</span><span class="w">
-</span><span class="ln">29</span><span class="w">      </span><span class="nt">volumeMode</span><span class="p">:</span><span class="w"> </span><span class="l">Filesystem</span><span class="w">
-</span></code></pre></div><h2 id="清理pvc">清理PVC<a class="anchor ms-1" href="#清理pvc"><i class="fas fa-link"></i></a></h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-yaml" data-lang="yaml"><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l">apps/v1</span><span class="w">
+</span><span class="w"></span><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l">StatefulSet</span><span class="w">
+</span><span class="w"></span><span class="nt">metadata</span><span class="p">:</span><span class="w">
+</span><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">zookeeper</span><span class="w">
+</span><span class="w">  </span><span class="c"># ...</span><span class="w">
+</span><span class="w"></span><span class="nt">spec</span><span class="p">:</span><span class="w">
+</span><span class="w">  </span><span class="c"># ...</span><span class="w">
+</span><span class="w">  </span><span class="nt">template</span><span class="p">:</span><span class="w">
+</span><span class="w">    </span><span class="c"># ...</span><span class="w">
+</span><span class="w">    </span><span class="nt">spec</span><span class="p">:</span><span class="w">
+</span><span class="w">      </span><span class="nt">containers</span><span class="p">:</span><span class="w">
+</span><span class="w">      </span>- <span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l">ranchercharts/confluentinc-cp-zookeeper:5.3.0</span><span class="w">
+</span><span class="w">        </span><span class="c"># ...</span><span class="w">
+</span><span class="w">        </span><span class="nt">volumeMounts</span><span class="p">:</span><span class="w">
+</span><span class="w">        </span>- <span class="nt">mountPath</span><span class="p">:</span><span class="w"> </span><span class="l">/var/lib/zookeeper/data</span><span class="w">
+</span><span class="w">          </span><span class="c"># 使用了新的PVC</span><span class="w">
+</span><span class="w">          </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">datadir-new</span><span class="w">
+</span><span class="w">  </span><span class="c"># ...</span><span class="w">
+</span><span class="w">  </span><span class="nt">volumeClaimTemplates</span><span class="p">:</span><span class="w">
+</span><span class="w">  </span>- <span class="nt">metadata</span><span class="p">:</span><span class="w">
+</span><span class="w">      </span><span class="c"># 使用了新的PVC</span><span class="w">
+</span><span class="w">      </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">datadir-new</span><span class="w">
+</span><span class="w">    </span><span class="nt">spec</span><span class="p">:</span><span class="w">
+</span><span class="w">      </span><span class="nt">accessModes</span><span class="p">:</span><span class="w">
+</span><span class="w">      </span>- <span class="l">ReadWriteOnce</span><span class="w">
+</span><span class="w">      </span><span class="nt">resources</span><span class="p">:</span><span class="w">
+</span><span class="w">        </span><span class="nt">requests</span><span class="p">:</span><span class="w">
+</span><span class="w">          </span><span class="nt">storage</span><span class="p">:</span><span class="w"> </span><span class="l">10Gi</span><span class="w">
+</span><span class="w">      </span><span class="nt">volumeMode</span><span class="p">:</span><span class="w"> </span><span class="l">Filesystem</span><span class="w">
+</span></code></pre></td></tr></table>
+</div>
+</div><h2 id="清理pvc">清理PVC<a class="anchor ms-1" href="#清理pvc"><i class="fas fa-link"></i></a></h2>
 <p>确认没有问题后，可以清理掉旧的PVC。</p></div></div>
   <div class="card-footer"><div class="post-navs d-flex justify-content-evenly">
   <div class="post-nav post-prev"><i class="fas fa-fw fa-chevron-left"></i>

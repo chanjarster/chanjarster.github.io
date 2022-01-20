@@ -12,7 +12,7 @@
 <meta name="description" content="" /><meta itemprop="name" content="Cracking Coding Interview - 4.4 Check Balanced">
 <meta itemprop="description" content=""><meta itemprop="datePublished" content="2019-08-14T13:44:11+08:00" />
 <meta itemprop="dateModified" content="2019-08-14T13:44:11+08:00" />
-<meta itemprop="wordCount" content="1040">
+<meta itemprop="wordCount" content="1064">
 <meta itemprop="keywords" content="ARTS-A," /><meta property="og:title" content="Cracking Coding Interview - 4.4 Check Balanced" />
 <meta property="og:description" content="" />
 <meta property="og:type" content="article" />
@@ -227,173 +227,384 @@
 <p>Hints:#21, #33, #49, #105, #124</p>
 <h2 id="解法1---深度优先审题错误">解法1 - 深度优先（审题错误）<a class="anchor ms-1" href="#解法1---深度优先审题错误"><i class="fas fa-link"></i></a></h2>
 <p>平衡的定义是一颗树中任意节点的两颗子树高度不的超过1。比如下面就是平衡的：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln"> 1</span>   1
-<span class="ln"> 2</span>  /
-<span class="ln"> 3</span> 2
-<span class="ln"> 4</span>
-<span class="ln"> 5</span>   1
-<span class="ln"> 6</span>  / \
-<span class="ln"> 7</span> 2   3
-<span class="ln"> 8</span> 
-<span class="ln"> 9</span>    1
-<span class="ln">10</span>   / \
-<span class="ln">11</span>  2   3
-<span class="ln">12</span> / \
-<span class="ln">13</span>4   5
-</code></pre></div><p>下面是不平衡的：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln">1</span>      1
-<span class="ln">2</span>     / \
-<span class="ln">3</span>    2   3
-<span class="ln">4</span>   / \
-<span class="ln">5</span>  4   5
-<span class="ln">6</span> /
-<span class="ln">7</span>6
-</code></pre></div><p>可以看到（2）这个子树的高度是3，而（3）这个子树的高度是1，高度相差2，所以不平衡。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt">   1
+  /
+ 2
+
+   1
+  / \
+ 2   3
+ 
+    1
+   / \
+  2   3
+ / \
+4   5
+</code></pre></td></tr></table>
+</div>
+</div><p>下面是不平衡的：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt">      1
+     / \
+    2   3
+   / \
+  4   5
+ /
+6
+</code></pre></td></tr></table>
+</div>
+</div><p>可以看到（2）这个子树的高度是3，而（3）这个子树的高度是1，高度相差2，所以不平衡。</p>
 <p>首先想到的是计算左右子树高度，然后判断差是否超过1：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln"> 1</span><span class="kd">public</span> <span class="kt">boolean</span> <span class="nf">checkBalanced</span><span class="o">(</span><span class="n">Node</span> <span class="n">root</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 2</span>  <span class="kt">int</span> <span class="n">lHeight</span> <span class="o">=</span> <span class="n">height</span><span class="o">(</span><span class="n">root</span><span class="o">.</span><span class="na">left</span><span class="o">);</span>
-<span class="ln"> 3</span>  <span class="kt">int</span> <span class="n">rHeight</span> <span class="o">=</span> <span class="n">height</span><span class="o">(</span><span class="n">root</span><span class="o">.</span><span class="na">right</span><span class="o">);</span>
-<span class="ln"> 4</span>  <span class="k">return</span> <span class="n">Math</span><span class="o">.</span><span class="na">abs</span><span class="o">(</span><span class="n">lHeight</span> <span class="o">-</span> <span class="n">rHeight</span><span class="o">)</span> <span class="o">&lt;=</span> <span class="n">1</span><span class="o">;</span>
-<span class="ln"> 5</span><span class="o">}</span>
-<span class="ln"> 6</span>
-<span class="ln"> 7</span><span class="kd">private</span> <span class="kt">int</span> <span class="nf">height</span><span class="o">(</span><span class="n">Node</span> <span class="n">node</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 8</span>  <span class="k">if</span> <span class="o">(</span><span class="n">node</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 9</span>    <span class="k">return</span> <span class="n">0</span><span class="o">;</span>
-<span class="ln">10</span>  <span class="o">}</span>
-<span class="ln">11</span>  <span class="kt">int</span> <span class="n">lHeight</span> <span class="o">=</span> <span class="n">height</span><span class="o">(</span><span class="n">node</span><span class="o">.</span><span class="na">left</span><span class="o">);</span>
-<span class="ln">12</span>  <span class="kt">int</span> <span class="n">rHeight</span> <span class="o">=</span> <span class="n">height</span><span class="o">(</span><span class="n">node</span><span class="o">.</span><span class="na">right</span><span class="o">);</span>
-<span class="ln">13</span>  <span class="k">return</span> <span class="n">Math</span><span class="o">.</span><span class="na">max</span><span class="o">(</span><span class="n">lHeight</span><span class="o">,</span> <span class="n">rHeight</span><span class="o">)</span> <span class="o">+</span> <span class="n">1</span><span class="o">;</span>
-<span class="ln">14</span><span class="o">}</span>
-</code></pre></div><h2 id="解法2---广度优先审题错误">解法2 - 广度优先（审题错误）<a class="anchor ms-1" href="#解法2---广度优先审题错误"><i class="fas fa-link"></i></a></h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="kd">public</span> <span class="kt">boolean</span> <span class="nf">checkBalanced</span><span class="o">(</span><span class="n">Node</span> <span class="n">root</span><span class="o">)</span> <span class="o">{</span>
+  <span class="kt">int</span> <span class="n">lHeight</span> <span class="o">=</span> <span class="n">height</span><span class="o">(</span><span class="n">root</span><span class="o">.</span><span class="na">left</span><span class="o">);</span>
+  <span class="kt">int</span> <span class="n">rHeight</span> <span class="o">=</span> <span class="n">height</span><span class="o">(</span><span class="n">root</span><span class="o">.</span><span class="na">right</span><span class="o">);</span>
+  <span class="k">return</span> <span class="n">Math</span><span class="o">.</span><span class="na">abs</span><span class="o">(</span><span class="n">lHeight</span> <span class="o">-</span> <span class="n">rHeight</span><span class="o">)</span> <span class="o">&lt;=</span> <span class="n">1</span><span class="o">;</span>
+<span class="o">}</span>
+
+<span class="kd">private</span> <span class="kt">int</span> <span class="nf">height</span><span class="o">(</span><span class="n">Node</span> <span class="n">node</span><span class="o">)</span> <span class="o">{</span>
+  <span class="k">if</span> <span class="o">(</span><span class="n">node</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
+    <span class="k">return</span> <span class="n">0</span><span class="o">;</span>
+  <span class="o">}</span>
+  <span class="kt">int</span> <span class="n">lHeight</span> <span class="o">=</span> <span class="n">height</span><span class="o">(</span><span class="n">node</span><span class="o">.</span><span class="na">left</span><span class="o">);</span>
+  <span class="kt">int</span> <span class="n">rHeight</span> <span class="o">=</span> <span class="n">height</span><span class="o">(</span><span class="n">node</span><span class="o">.</span><span class="na">right</span><span class="o">);</span>
+  <span class="k">return</span> <span class="n">Math</span><span class="o">.</span><span class="na">max</span><span class="o">(</span><span class="n">lHeight</span><span class="o">,</span> <span class="n">rHeight</span><span class="o">)</span> <span class="o">+</span> <span class="n">1</span><span class="o">;</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><h2 id="解法2---广度优先审题错误">解法2 - 广度优先（审题错误）<a class="anchor ms-1" href="#解法2---广度优先审题错误"><i class="fas fa-link"></i></a></h2>
 <p>解法1是深度优先的，他会遍历到所有节点，是否可以用广度优先的算法来解。</p>
 <p>因为广度优先是一层一层遍历的，在遍历过程中记录第一个叶子节点的层数，并且比较当前遍历的层数的差，超过1就说明不平衡：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln">1</span>      1
-<span class="ln">2</span>     / \
-<span class="ln">3</span>    2   3   &lt;- 叶子节点
-<span class="ln">4</span>   / \
-<span class="ln">5</span>  4   5
-<span class="ln">6</span> /
-<span class="ln">7</span>6           &lt;- 当前层
-</code></pre></div><p>这样就不需要遍历所有节点了。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt">      1
+     / \
+    2   3   &lt;- 叶子节点
+   / \
+  4   5
+ /
+6           &lt;- 当前层
+</code></pre></td></tr></table>
+</div>
+</div><p>这样就不需要遍历所有节点了。</p>
 <p>要注意以下处理这种情况：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln">1</span>      1
-<span class="ln">2</span>     /
-<span class="ln">3</span>    2   
-<span class="ln">4</span>   /
-<span class="ln">5</span>  3
-<span class="ln">6</span> /
-<span class="ln">7</span>4
-</code></pre></div><p>这种情况下可以认为叶子节点的层数为1。</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln"> 1</span><span class="kd">public</span> <span class="kt">boolean</span> <span class="nf">checkBalanced</span><span class="o">(</span><span class="n">Node</span> <span class="n">root</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 2</span>  <span class="kt">int</span> <span class="n">firstLeafLevel</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span>
-<span class="ln"> 3</span>  <span class="k">if</span> <span class="o">(</span><span class="n">root</span><span class="o">.</span><span class="na">left</span> <span class="o">==</span> <span class="kc">null</span> <span class="o">||</span> <span class="n">root</span><span class="o">.</span><span class="na">right</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 4</span>    <span class="n">firstLeafLevel</span> <span class="o">=</span> <span class="n">1</span><span class="o">;</span>
-<span class="ln"> 5</span>  <span class="o">}</span>
-<span class="ln"> 6</span>  <span class="kt">int</span> <span class="n">currentLevel</span> <span class="o">=</span> <span class="n">1</span><span class="o">;</span>
-<span class="ln"> 7</span>  <span class="n">List</span><span class="o">&lt;</span><span class="n">Node</span><span class="o">&gt;</span> <span class="n">current</span> <span class="o">=</span> <span class="k">new</span> <span class="n">ArrayList</span><span class="o">&lt;&gt;();</span>
-<span class="ln"> 8</span>  <span class="n">current</span><span class="o">.</span><span class="na">add</span><span class="o">(</span><span class="n">root</span><span class="o">);</span>
-<span class="ln"> 9</span>  <span class="k">while</span> <span class="o">(!</span><span class="n">current</span><span class="o">.</span><span class="na">isEmpty</span><span class="o">())</span> <span class="o">{</span>
-<span class="ln">10</span>    <span class="k">if</span> <span class="o">(</span><span class="n">currentLevel</span> <span class="o">-</span> <span class="n">firstLeafLevel</span> <span class="o">&gt;</span> <span class="n">1</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">11</span>      <span class="k">return</span> <span class="kc">false</span><span class="o">;</span>
-<span class="ln">12</span>    <span class="o">}</span>
-<span class="ln">13</span>    <span class="n">List</span><span class="o">&lt;</span><span class="n">Node</span><span class="o">&gt;</span> <span class="n">parent</span> <span class="o">=</span> <span class="n">current</span><span class="o">;</span>
-<span class="ln">14</span>    <span class="n">current</span> <span class="o">=</span> <span class="k">new</span> <span class="n">ArrayList</span><span class="o">&lt;&gt;();</span>
-<span class="ln">15</span>    <span class="k">for</span> <span class="o">(</span><span class="n">Node</span> <span class="n">p</span> <span class="o">:</span> <span class="n">parent</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">16</span>      <span class="k">if</span> <span class="o">(</span><span class="n">p</span><span class="o">.</span><span class="na">left</span> <span class="o">!=</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">17</span>        <span class="n">current</span><span class="o">.</span><span class="na">add</span><span class="o">(</span><span class="n">p</span><span class="o">.</span><span class="na">left</span><span class="o">);</span>
-<span class="ln">18</span>      <span class="o">}</span>
-<span class="ln">19</span>      <span class="k">if</span> <span class="o">(</span><span class="n">p</span><span class="o">.</span><span class="na">right</span> <span class="o">!=</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">20</span>        <span class="n">current</span><span class="o">.</span><span class="na">add</span><span class="o">(</span><span class="n">p</span><span class="o">.</span><span class="na">right</span><span class="o">);</span>
-<span class="ln">21</span>      <span class="o">}</span>
-<span class="ln">22</span>      <span class="k">if</span> <span class="o">(</span><span class="n">firstLeafLevel</span> <span class="o">!=</span> <span class="n">0</span> <span class="o">&amp;&amp;</span> <span class="n">p</span><span class="o">.</span><span class="na">left</span> <span class="o">==</span> <span class="kc">null</span> <span class="o">&amp;&amp;</span> <span class="n">p</span><span class="o">.</span><span class="na">right</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">23</span>        <span class="c1">// 第一个叶子节点的深度
-</span><span class="ln">24</span><span class="c1"></span>        <span class="n">firstLeafLevel</span> <span class="o">=</span> <span class="n">currentLevel</span><span class="o">;</span>
-<span class="ln">25</span>      <span class="o">}</span>
-<span class="ln">26</span>    <span class="o">}</span>
-<span class="ln">27</span>    <span class="k">if</span> <span class="o">(!</span><span class="n">current</span><span class="o">.</span><span class="na">isEmpty</span><span class="o">())</span> <span class="o">{</span>
-<span class="ln">28</span>      <span class="n">current</span><span class="o">.</span><span class="na">level</span><span class="o">++;</span>
-<span class="ln">29</span>    <span class="o">}</span>
-<span class="ln">30</span>  <span class="o">}</span>
-<span class="ln">31</span>  <span class="k">return</span> <span class="kc">true</span><span class="o">;</span>
-<span class="ln">32</span><span class="o">}</span>
-</code></pre></div><h2 id="解法3">解法3<a class="anchor ms-1" href="#解法3"><i class="fas fa-link"></i></a></h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt">      1
+     /
+    2   
+   /
+  3
+ /
+4
+</code></pre></td></tr></table>
+</div>
+</div><p>这种情况下可以认为叶子节点的层数为1。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="kd">public</span> <span class="kt">boolean</span> <span class="nf">checkBalanced</span><span class="o">(</span><span class="n">Node</span> <span class="n">root</span><span class="o">)</span> <span class="o">{</span>
+  <span class="kt">int</span> <span class="n">firstLeafLevel</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span>
+  <span class="k">if</span> <span class="o">(</span><span class="n">root</span><span class="o">.</span><span class="na">left</span> <span class="o">==</span> <span class="kc">null</span> <span class="o">||</span> <span class="n">root</span><span class="o">.</span><span class="na">right</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
+    <span class="n">firstLeafLevel</span> <span class="o">=</span> <span class="n">1</span><span class="o">;</span>
+  <span class="o">}</span>
+  <span class="kt">int</span> <span class="n">currentLevel</span> <span class="o">=</span> <span class="n">1</span><span class="o">;</span>
+  <span class="n">List</span><span class="o">&lt;</span><span class="n">Node</span><span class="o">&gt;</span> <span class="n">current</span> <span class="o">=</span> <span class="k">new</span> <span class="n">ArrayList</span><span class="o">&lt;&gt;();</span>
+  <span class="n">current</span><span class="o">.</span><span class="na">add</span><span class="o">(</span><span class="n">root</span><span class="o">);</span>
+  <span class="k">while</span> <span class="o">(!</span><span class="n">current</span><span class="o">.</span><span class="na">isEmpty</span><span class="o">())</span> <span class="o">{</span>
+    <span class="k">if</span> <span class="o">(</span><span class="n">currentLevel</span> <span class="o">-</span> <span class="n">firstLeafLevel</span> <span class="o">&gt;</span> <span class="n">1</span><span class="o">)</span> <span class="o">{</span>
+      <span class="k">return</span> <span class="kc">false</span><span class="o">;</span>
+    <span class="o">}</span>
+    <span class="n">List</span><span class="o">&lt;</span><span class="n">Node</span><span class="o">&gt;</span> <span class="n">parent</span> <span class="o">=</span> <span class="n">current</span><span class="o">;</span>
+    <span class="n">current</span> <span class="o">=</span> <span class="k">new</span> <span class="n">ArrayList</span><span class="o">&lt;&gt;();</span>
+    <span class="k">for</span> <span class="o">(</span><span class="n">Node</span> <span class="n">p</span> <span class="o">:</span> <span class="n">parent</span><span class="o">)</span> <span class="o">{</span>
+      <span class="k">if</span> <span class="o">(</span><span class="n">p</span><span class="o">.</span><span class="na">left</span> <span class="o">!=</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
+        <span class="n">current</span><span class="o">.</span><span class="na">add</span><span class="o">(</span><span class="n">p</span><span class="o">.</span><span class="na">left</span><span class="o">);</span>
+      <span class="o">}</span>
+      <span class="k">if</span> <span class="o">(</span><span class="n">p</span><span class="o">.</span><span class="na">right</span> <span class="o">!=</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
+        <span class="n">current</span><span class="o">.</span><span class="na">add</span><span class="o">(</span><span class="n">p</span><span class="o">.</span><span class="na">right</span><span class="o">);</span>
+      <span class="o">}</span>
+      <span class="k">if</span> <span class="o">(</span><span class="n">firstLeafLevel</span> <span class="o">!=</span> <span class="n">0</span> <span class="o">&amp;&amp;</span> <span class="n">p</span><span class="o">.</span><span class="na">left</span> <span class="o">==</span> <span class="kc">null</span> <span class="o">&amp;&amp;</span> <span class="n">p</span><span class="o">.</span><span class="na">right</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
+        <span class="c1">// 第一个叶子节点的深度
+</span><span class="c1"></span>        <span class="n">firstLeafLevel</span> <span class="o">=</span> <span class="n">currentLevel</span><span class="o">;</span>
+      <span class="o">}</span>
+    <span class="o">}</span>
+    <span class="k">if</span> <span class="o">(!</span><span class="n">current</span><span class="o">.</span><span class="na">isEmpty</span><span class="o">())</span> <span class="o">{</span>
+      <span class="n">current</span><span class="o">.</span><span class="na">level</span><span class="o">++;</span>
+    <span class="o">}</span>
+  <span class="o">}</span>
+  <span class="k">return</span> <span class="kc">true</span><span class="o">;</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><h2 id="解法3">解法3<a class="anchor ms-1" href="#解法3"><i class="fas fa-link"></i></a></h2>
 <p>上面两个解法审题错误，从根节点来看左右子树高度不超过1不代表左子树的左右子树高度不超过1。所以要对每个节点都计算一下：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln"> 1</span><span class="kd">public</span> <span class="kt">boolean</span> <span class="nf">checkBalanced</span><span class="o">(</span><span class="n">Node</span> <span class="n">root</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 2</span>  <span class="kt">int</span> <span class="n">lHeight</span> <span class="o">=</span> <span class="n">height</span><span class="o">(</span><span class="n">root</span><span class="o">.</span><span class="na">left</span><span class="o">);</span>
-<span class="ln"> 3</span>  <span class="kt">int</span> <span class="n">rHeight</span> <span class="o">=</span> <span class="n">height</span><span class="o">(</span><span class="n">root</span><span class="o">.</span><span class="na">right</span><span class="o">);</span>
-<span class="ln"> 4</span>  <span class="k">if</span> <span class="o">(</span><span class="n">Math</span><span class="o">.</span><span class="na">abs</span><span class="o">(</span><span class="n">lHeight</span> <span class="o">-</span> <span class="n">rHeight</span><span class="o">)</span> <span class="o">&lt;=</span> <span class="n">1</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 5</span>    <span class="k">return</span> <span class="kc">true</span><span class="o">;</span>
-<span class="ln"> 6</span>  <span class="o">}</span>
-<span class="ln"> 7</span>  <span class="k">return</span> <span class="n">checkBalanced</span><span class="o">(</span><span class="n">root</span><span class="o">.</span><span class="na">left</span><span class="o">)</span> <span class="o">&amp;&amp;</span> <span class="n">checkBalanced</span><span class="o">(</span><span class="n">root</span><span class="o">.</span><span class="na">right</span><span class="o">);</span>
-<span class="ln"> 8</span><span class="o">}</span>
-<span class="ln"> 9</span>
-<span class="ln">10</span><span class="kd">private</span> <span class="kt">int</span> <span class="nf">height</span><span class="o">(</span><span class="n">Node</span> <span class="n">node</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">11</span>  <span class="k">if</span> <span class="o">(</span><span class="n">node</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">12</span>    <span class="k">return</span> <span class="n">0</span><span class="o">;</span>
-<span class="ln">13</span>  <span class="o">}</span>
-<span class="ln">14</span>  <span class="kt">int</span> <span class="n">lHeight</span> <span class="o">=</span> <span class="n">height</span><span class="o">(</span><span class="n">node</span><span class="o">.</span><span class="na">left</span><span class="o">);</span>
-<span class="ln">15</span>  <span class="kt">int</span> <span class="n">rHeight</span> <span class="o">=</span> <span class="n">height</span><span class="o">(</span><span class="n">node</span><span class="o">.</span><span class="na">right</span><span class="o">);</span>
-<span class="ln">16</span>  <span class="k">return</span> <span class="n">Math</span><span class="o">.</span><span class="na">max</span><span class="o">(</span><span class="n">lHeight</span><span class="o">,</span> <span class="n">rHeight</span><span class="o">)</span> <span class="o">+</span> <span class="n">1</span><span class="o">;</span>
-<span class="ln">17</span><span class="o">}</span>
-</code></pre></div><h2 id="解法4">解法4<a class="anchor ms-1" href="#解法4"><i class="fas fa-link"></i></a></h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="kd">public</span> <span class="kt">boolean</span> <span class="nf">checkBalanced</span><span class="o">(</span><span class="n">Node</span> <span class="n">root</span><span class="o">)</span> <span class="o">{</span>
+  <span class="kt">int</span> <span class="n">lHeight</span> <span class="o">=</span> <span class="n">height</span><span class="o">(</span><span class="n">root</span><span class="o">.</span><span class="na">left</span><span class="o">);</span>
+  <span class="kt">int</span> <span class="n">rHeight</span> <span class="o">=</span> <span class="n">height</span><span class="o">(</span><span class="n">root</span><span class="o">.</span><span class="na">right</span><span class="o">);</span>
+  <span class="k">if</span> <span class="o">(</span><span class="n">Math</span><span class="o">.</span><span class="na">abs</span><span class="o">(</span><span class="n">lHeight</span> <span class="o">-</span> <span class="n">rHeight</span><span class="o">)</span> <span class="o">&lt;=</span> <span class="n">1</span><span class="o">)</span> <span class="o">{</span>
+    <span class="k">return</span> <span class="kc">true</span><span class="o">;</span>
+  <span class="o">}</span>
+  <span class="k">return</span> <span class="n">checkBalanced</span><span class="o">(</span><span class="n">root</span><span class="o">.</span><span class="na">left</span><span class="o">)</span> <span class="o">&amp;&amp;</span> <span class="n">checkBalanced</span><span class="o">(</span><span class="n">root</span><span class="o">.</span><span class="na">right</span><span class="o">);</span>
+<span class="o">}</span>
+
+<span class="kd">private</span> <span class="kt">int</span> <span class="nf">height</span><span class="o">(</span><span class="n">Node</span> <span class="n">node</span><span class="o">)</span> <span class="o">{</span>
+  <span class="k">if</span> <span class="o">(</span><span class="n">node</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
+    <span class="k">return</span> <span class="n">0</span><span class="o">;</span>
+  <span class="o">}</span>
+  <span class="kt">int</span> <span class="n">lHeight</span> <span class="o">=</span> <span class="n">height</span><span class="o">(</span><span class="n">node</span><span class="o">.</span><span class="na">left</span><span class="o">);</span>
+  <span class="kt">int</span> <span class="n">rHeight</span> <span class="o">=</span> <span class="n">height</span><span class="o">(</span><span class="n">node</span><span class="o">.</span><span class="na">right</span><span class="o">);</span>
+  <span class="k">return</span> <span class="n">Math</span><span class="o">.</span><span class="na">max</span><span class="o">(</span><span class="n">lHeight</span><span class="o">,</span> <span class="n">rHeight</span><span class="o">)</span> <span class="o">+</span> <span class="n">1</span><span class="o">;</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><h2 id="解法4">解法4<a class="anchor ms-1" href="#解法4"><i class="fas fa-link"></i></a></h2>
 <p>但是上面牵涉到很多重复计算，那么可以在计算height的时候就同时判断是否平衡：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln"> 1</span><span class="kd">class</span> <span class="nc">Tmp</span> <span class="o">{</span>
-<span class="ln"> 2</span>  <span class="kt">int</span> <span class="n">height</span><span class="o">;</span>
-<span class="ln"> 3</span>  <span class="kt">boolean</span> <span class="n">balanced</span><span class="o">;</span>
-<span class="ln"> 4</span><span class="o">}</span>
-<span class="ln"> 5</span><span class="kd">public</span> <span class="n">Tmp</span> <span class="nf">height</span><span class="o">(</span><span class="n">Node</span> <span class="n">node</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 6</span>  <span class="k">if</span> <span class="o">(</span><span class="n">node</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 7</span>    <span class="k">return</span> <span class="k">new</span> <span class="n">Tmp</span><span class="o">(</span><span class="n">0</span><span class="o">,</span> <span class="kc">true</span><span class="o">);</span>
-<span class="ln"> 8</span>  <span class="o">}</span>
-<span class="ln"> 9</span>  <span class="n">Tmp</span> <span class="n">l</span> <span class="o">=</span> <span class="n">height</span><span class="o">(</span><span class="n">node</span><span class="o">.</span><span class="na">left</span><span class="o">);</span>
-<span class="ln">10</span>  <span class="k">if</span> <span class="o">(!</span><span class="n">l</span><span class="o">.</span><span class="na">balanced</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">11</span>    <span class="k">return</span> <span class="kc">false</span><span class="o">;</span>
-<span class="ln">12</span>  <span class="o">}</span>
-<span class="ln">13</span>  <span class="n">Tmp</span> <span class="n">r</span> <span class="o">=</span> <span class="n">height</span><span class="o">(</span><span class="n">node</span><span class="o">.</span><span class="na">right</span><span class="o">);</span>
-<span class="ln">14</span>  <span class="k">if</span> <span class="o">(!</span><span class="n">r</span><span class="o">.</span><span class="na">balanced</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">15</span>    <span class="k">return</span> <span class="kc">false</span><span class="o">;</span>
-<span class="ln">16</span>  <span class="o">}</span>
-<span class="ln">17</span>  <span class="kt">int</span> <span class="n">h</span> <span class="o">=</span> <span class="n">Math</span><span class="o">.</span><span class="na">max</span><span class="o">(</span><span class="n">l</span><span class="o">.</span><span class="na">height</span><span class="o">,</span> <span class="n">r</span><span class="o">.</span><span class="na">height</span><span class="o">)</span> <span class="o">+</span> <span class="n">1</span><span class="o">;</span>
-<span class="ln">18</span>  <span class="k">if</span> <span class="o">(</span><span class="n">Math</span><span class="o">.</span><span class="na">abs</span><span class="o">(</span><span class="n">l</span><span class="o">.</span><span class="na">height</span> <span class="o">-</span> <span class="n">r</span><span class="o">.</span><span class="na">height</span><span class="o">)</span> <span class="o">&gt;</span> <span class="n">1</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">19</span>    <span class="k">return</span> <span class="k">new</span> <span class="n">Tmp</span><span class="o">(</span><span class="n">h</span><span class="o">,</span> <span class="kc">false</span><span class="o">);</span>
-<span class="ln">20</span>  <span class="o">}</span>
-<span class="ln">21</span>  <span class="k">return</span> <span class="k">new</span> <span class="n">Tmp</span><span class="o">(</span><span class="n">h</span><span class="o">,</span> <span class="kc">true</span><span class="o">);</span>
-<span class="ln">22</span><span class="o">}</span>
-</code></pre></div><p>其实还可以更简单一点，用异常：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln"> 1</span><span class="kd">public</span> <span class="kt">int</span> <span class="nf">height</span><span class="o">(</span><span class="n">Node</span> <span class="n">node</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 2</span>  <span class="k">if</span> <span class="o">(</span><span class="n">node</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 3</span>    <span class="k">return</span> <span class="n">0</span><span class="o">;</span>
-<span class="ln"> 4</span>  <span class="o">}</span>
-<span class="ln"> 5</span>  <span class="kt">int</span> <span class="n">lHeight</span> <span class="o">=</span> <span class="n">height</span><span class="o">(</span><span class="n">node</span><span class="o">.</span><span class="na">left</span><span class="o">);</span>
-<span class="ln"> 6</span>  <span class="kt">int</span> <span class="n">rHeight</span> <span class="o">=</span> <span class="n">height</span><span class="o">(</span><span class="n">node</span><span class="o">.</span><span class="na">right</span><span class="o">);</span>
-<span class="ln"> 7</span>  <span class="k">if</span> <span class="o">(</span><span class="n">Math</span><span class="o">.</span><span class="na">abs</span><span class="o">(</span><span class="n">lHeight</span> <span class="o">-</span> <span class="n">rHeight</span><span class="o">)</span> <span class="o">&gt;</span> <span class="n">1</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 8</span>    <span class="k">throw</span> <span class="k">new</span> <span class="n">NotBalanced</span><span class="o">();</span>
-<span class="ln"> 9</span>  <span class="o">}</span>
-<span class="ln">10</span>  <span class="k">return</span> <span class="n">Math</span><span class="o">.</span><span class="na">max</span><span class="o">(</span><span class="n">lHeight</span><span class="o">,</span> <span class="n">rHeight</span><span class="o">)</span> <span class="o">+</span> <span class="n">1</span><span class="o">;</span>
-<span class="ln">11</span><span class="o">}</span>
-</code></pre></div><p>或者用<code>Integer.MIN_VALUE</code>作为一异常值：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln"> 1</span><span class="kd">public</span> <span class="kt">int</span> <span class="nf">height</span><span class="o">(</span><span class="n">Node</span> <span class="n">node</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 2</span>  <span class="k">if</span> <span class="o">(</span><span class="n">node</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 3</span>    <span class="k">return</span> <span class="n">0</span><span class="o">;</span>
-<span class="ln"> 4</span>  <span class="o">}</span>
-<span class="ln"> 5</span>  <span class="kt">int</span> <span class="n">lHeight</span> <span class="o">=</span> <span class="n">height</span><span class="o">(</span><span class="n">node</span><span class="o">.</span><span class="na">left</span><span class="o">);</span>
-<span class="ln"> 6</span>  <span class="k">if</span> <span class="o">(</span><span class="n">lHeight</span> <span class="o">==</span> <span class="n">Integer</span><span class="o">.</span><span class="na">MIN_VALUE</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 7</span>    <span class="k">return</span> <span class="n">Integer</span><span class="o">.</span><span class="na">MIN_VALUE</span><span class="o">;</span>
-<span class="ln"> 8</span>  <span class="o">}</span>
-<span class="ln"> 9</span>  <span class="kt">int</span> <span class="n">rHeight</span> <span class="o">=</span> <span class="n">height</span><span class="o">(</span><span class="n">node</span><span class="o">.</span><span class="na">right</span><span class="o">);</span>
-<span class="ln">10</span>  <span class="k">if</span> <span class="o">(</span><span class="n">rHeight</span> <span class="o">==</span> <span class="n">Integer</span><span class="o">.</span><span class="na">MIN_VALUE</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">11</span>    <span class="k">return</span> <span class="n">Integer</span><span class="o">.</span><span class="na">MIN_VALUE</span><span class="o">;</span>
-<span class="ln">12</span>  <span class="o">}</span>
-<span class="ln">13</span>  <span class="k">if</span> <span class="o">(</span><span class="n">Math</span><span class="o">.</span><span class="na">abs</span><span class="o">(</span><span class="n">lHeight</span> <span class="o">-</span> <span class="n">rHeight</span><span class="o">)</span> <span class="o">&gt;</span> <span class="n">1</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">14</span>    <span class="k">throw</span> <span class="n">Integer</span><span class="o">.</span><span class="na">MIN_VALUE</span><span class="o">;</span>
-<span class="ln">15</span>  <span class="o">}</span>
-<span class="ln">16</span>  <span class="k">return</span> <span class="n">Math</span><span class="o">.</span><span class="na">max</span><span class="o">(</span><span class="n">lHeight</span><span class="o">,</span> <span class="n">rHeight</span><span class="o">)</span> <span class="o">+</span> <span class="n">1</span><span class="o">;</span>
-<span class="ln">17</span><span class="o">}</span>
-<span class="ln">18</span>
-<span class="ln">19</span><span class="kd">public</span> <span class="kt">boolean</span> <span class="nf">checkBalanced</span><span class="o">(</span><span class="n">Node</span> <span class="n">root</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">20</span>  <span class="k">return</span> <span class="n">height</span><span class="o">(</span><span class="n">root</span><span class="o">)</span> <span class="o">!=</span> <span class="n">Integer</span><span class="o">.</span><span class="na">MIN_VALUE</span><span class="o">;</span>
-<span class="ln">21</span><span class="o">}</span>
-</code></pre></div></div></div>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="kd">class</span> <span class="nc">Tmp</span> <span class="o">{</span>
+  <span class="kt">int</span> <span class="n">height</span><span class="o">;</span>
+  <span class="kt">boolean</span> <span class="n">balanced</span><span class="o">;</span>
+<span class="o">}</span>
+<span class="kd">public</span> <span class="n">Tmp</span> <span class="nf">height</span><span class="o">(</span><span class="n">Node</span> <span class="n">node</span><span class="o">)</span> <span class="o">{</span>
+  <span class="k">if</span> <span class="o">(</span><span class="n">node</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
+    <span class="k">return</span> <span class="k">new</span> <span class="n">Tmp</span><span class="o">(</span><span class="n">0</span><span class="o">,</span> <span class="kc">true</span><span class="o">);</span>
+  <span class="o">}</span>
+  <span class="n">Tmp</span> <span class="n">l</span> <span class="o">=</span> <span class="n">height</span><span class="o">(</span><span class="n">node</span><span class="o">.</span><span class="na">left</span><span class="o">);</span>
+  <span class="k">if</span> <span class="o">(!</span><span class="n">l</span><span class="o">.</span><span class="na">balanced</span><span class="o">)</span> <span class="o">{</span>
+    <span class="k">return</span> <span class="kc">false</span><span class="o">;</span>
+  <span class="o">}</span>
+  <span class="n">Tmp</span> <span class="n">r</span> <span class="o">=</span> <span class="n">height</span><span class="o">(</span><span class="n">node</span><span class="o">.</span><span class="na">right</span><span class="o">);</span>
+  <span class="k">if</span> <span class="o">(!</span><span class="n">r</span><span class="o">.</span><span class="na">balanced</span><span class="o">)</span> <span class="o">{</span>
+    <span class="k">return</span> <span class="kc">false</span><span class="o">;</span>
+  <span class="o">}</span>
+  <span class="kt">int</span> <span class="n">h</span> <span class="o">=</span> <span class="n">Math</span><span class="o">.</span><span class="na">max</span><span class="o">(</span><span class="n">l</span><span class="o">.</span><span class="na">height</span><span class="o">,</span> <span class="n">r</span><span class="o">.</span><span class="na">height</span><span class="o">)</span> <span class="o">+</span> <span class="n">1</span><span class="o">;</span>
+  <span class="k">if</span> <span class="o">(</span><span class="n">Math</span><span class="o">.</span><span class="na">abs</span><span class="o">(</span><span class="n">l</span><span class="o">.</span><span class="na">height</span> <span class="o">-</span> <span class="n">r</span><span class="o">.</span><span class="na">height</span><span class="o">)</span> <span class="o">&gt;</span> <span class="n">1</span><span class="o">)</span> <span class="o">{</span>
+    <span class="k">return</span> <span class="k">new</span> <span class="n">Tmp</span><span class="o">(</span><span class="n">h</span><span class="o">,</span> <span class="kc">false</span><span class="o">);</span>
+  <span class="o">}</span>
+  <span class="k">return</span> <span class="k">new</span> <span class="n">Tmp</span><span class="o">(</span><span class="n">h</span><span class="o">,</span> <span class="kc">true</span><span class="o">);</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>其实还可以更简单一点，用异常：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="kd">public</span> <span class="kt">int</span> <span class="nf">height</span><span class="o">(</span><span class="n">Node</span> <span class="n">node</span><span class="o">)</span> <span class="o">{</span>
+  <span class="k">if</span> <span class="o">(</span><span class="n">node</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
+    <span class="k">return</span> <span class="n">0</span><span class="o">;</span>
+  <span class="o">}</span>
+  <span class="kt">int</span> <span class="n">lHeight</span> <span class="o">=</span> <span class="n">height</span><span class="o">(</span><span class="n">node</span><span class="o">.</span><span class="na">left</span><span class="o">);</span>
+  <span class="kt">int</span> <span class="n">rHeight</span> <span class="o">=</span> <span class="n">height</span><span class="o">(</span><span class="n">node</span><span class="o">.</span><span class="na">right</span><span class="o">);</span>
+  <span class="k">if</span> <span class="o">(</span><span class="n">Math</span><span class="o">.</span><span class="na">abs</span><span class="o">(</span><span class="n">lHeight</span> <span class="o">-</span> <span class="n">rHeight</span><span class="o">)</span> <span class="o">&gt;</span> <span class="n">1</span><span class="o">)</span> <span class="o">{</span>
+    <span class="k">throw</span> <span class="k">new</span> <span class="n">NotBalanced</span><span class="o">();</span>
+  <span class="o">}</span>
+  <span class="k">return</span> <span class="n">Math</span><span class="o">.</span><span class="na">max</span><span class="o">(</span><span class="n">lHeight</span><span class="o">,</span> <span class="n">rHeight</span><span class="o">)</span> <span class="o">+</span> <span class="n">1</span><span class="o">;</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>或者用<code>Integer.MIN_VALUE</code>作为一异常值：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="kd">public</span> <span class="kt">int</span> <span class="nf">height</span><span class="o">(</span><span class="n">Node</span> <span class="n">node</span><span class="o">)</span> <span class="o">{</span>
+  <span class="k">if</span> <span class="o">(</span><span class="n">node</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
+    <span class="k">return</span> <span class="n">0</span><span class="o">;</span>
+  <span class="o">}</span>
+  <span class="kt">int</span> <span class="n">lHeight</span> <span class="o">=</span> <span class="n">height</span><span class="o">(</span><span class="n">node</span><span class="o">.</span><span class="na">left</span><span class="o">);</span>
+  <span class="k">if</span> <span class="o">(</span><span class="n">lHeight</span> <span class="o">==</span> <span class="n">Integer</span><span class="o">.</span><span class="na">MIN_VALUE</span><span class="o">)</span> <span class="o">{</span>
+    <span class="k">return</span> <span class="n">Integer</span><span class="o">.</span><span class="na">MIN_VALUE</span><span class="o">;</span>
+  <span class="o">}</span>
+  <span class="kt">int</span> <span class="n">rHeight</span> <span class="o">=</span> <span class="n">height</span><span class="o">(</span><span class="n">node</span><span class="o">.</span><span class="na">right</span><span class="o">);</span>
+  <span class="k">if</span> <span class="o">(</span><span class="n">rHeight</span> <span class="o">==</span> <span class="n">Integer</span><span class="o">.</span><span class="na">MIN_VALUE</span><span class="o">)</span> <span class="o">{</span>
+    <span class="k">return</span> <span class="n">Integer</span><span class="o">.</span><span class="na">MIN_VALUE</span><span class="o">;</span>
+  <span class="o">}</span>
+  <span class="k">if</span> <span class="o">(</span><span class="n">Math</span><span class="o">.</span><span class="na">abs</span><span class="o">(</span><span class="n">lHeight</span> <span class="o">-</span> <span class="n">rHeight</span><span class="o">)</span> <span class="o">&gt;</span> <span class="n">1</span><span class="o">)</span> <span class="o">{</span>
+    <span class="k">throw</span> <span class="n">Integer</span><span class="o">.</span><span class="na">MIN_VALUE</span><span class="o">;</span>
+  <span class="o">}</span>
+  <span class="k">return</span> <span class="n">Math</span><span class="o">.</span><span class="na">max</span><span class="o">(</span><span class="n">lHeight</span><span class="o">,</span> <span class="n">rHeight</span><span class="o">)</span> <span class="o">+</span> <span class="n">1</span><span class="o">;</span>
+<span class="o">}</span>
+
+<span class="kd">public</span> <span class="kt">boolean</span> <span class="nf">checkBalanced</span><span class="o">(</span><span class="n">Node</span> <span class="n">root</span><span class="o">)</span> <span class="o">{</span>
+  <span class="k">return</span> <span class="n">height</span><span class="o">(</span><span class="n">root</span><span class="o">)</span> <span class="o">!=</span> <span class="n">Integer</span><span class="o">.</span><span class="na">MIN_VALUE</span><span class="o">;</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div></div></div>
   <div class="card-footer"><div class="post-navs d-flex justify-content-evenly">
   <div class="post-nav post-prev"><i class="fas fa-fw fa-chevron-left"></i>
     <a href="/post/cracking-coding-interview/4.3-list-of-depths/">Cracking Coding Interview - 4.3 List of Depths

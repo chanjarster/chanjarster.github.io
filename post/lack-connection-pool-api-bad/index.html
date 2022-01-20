@@ -12,7 +12,7 @@
 <meta name="description" content="" /><meta itemprop="name" content="缺少数据库连接池导致的API调用失败排查">
 <meta itemprop="description" content=""><meta itemprop="datePublished" content="2021-05-14T12:10:20+08:00" />
 <meta itemprop="dateModified" content="2021-05-14T12:10:20+08:00" />
-<meta itemprop="wordCount" content="1704">
+<meta itemprop="wordCount" content="1710">
 <meta itemprop="keywords" content="k8s,troubleshooting," /><meta property="og:title" content="缺少数据库连接池导致的API调用失败排查" />
 <meta property="og:description" content="" />
 <meta property="og:type" content="article" />
@@ -298,8 +298,15 @@
 <p>一个很典型的spring boot应用的配置。</p>
 <p>但是很诡异的是，在K8S中，没有记录下Pod的readinessProbe探测失败的事件。</p>
 <p>于是直接到Pod所在服务器上查看kubelet的日志：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>docker logs --since <span class="s1">&#39;2021-04-21T23:55:00&#39;</span> --until <span class="s1">&#39;2021-04-22T00:20:00&#39;</span> kubelet 2&gt;<span class="p">&amp;</span><span class="m">1</span> <span class="p">|</span> grep user-data-service
-</code></pre></div><p>得到了相应的日志：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">docker logs --since <span class="s1">&#39;2021-04-21T23:55:00&#39;</span> --until <span class="s1">&#39;2021-04-22T00:20:00&#39;</span> kubelet 2&gt;<span class="p">&amp;</span><span class="m">1</span> <span class="p">|</span> grep user-data-service
+</code></pre></td></tr></table>
+</div>
+</div><p>得到了相应的日志：</p>
 <p><img class="img-fluid" alt="" src="/post/lack-connection-pool-api-bad/10.png" loading="lazy"
   
    />
@@ -328,22 +335,42 @@
 <p>tomcat的http连接池够用，内存也够用，那么为何会产生readinessProbe探测失败呢？从下面起走了弯路。</p>
 <h4 id="观察内核日志">观察内核日志<a class="anchor ms-1" href="#观察内核日志"><i class="fas fa-link"></i></a></h4>
 <p>那么问题是否会出在内核上，跑到Pod所在服务器上查询：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>journalctl --since<span class="o">=</span><span class="s1">&#39;2021-04-21 23:55:00&#39;</span> --until<span class="o">=</span><span class="s1">&#39;2021-04-22 00:20:00&#39;</span>
-</code></pre></div><p>服务器1上没有问题，服务器2（因为总共有2个Pod，分别在不同服务器上）上有些貌似可疑的日志：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">journalctl --since<span class="o">=</span><span class="s1">&#39;2021-04-21 23:55:00&#39;</span> --until<span class="o">=</span><span class="s1">&#39;2021-04-22 00:20:00&#39;</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>服务器1上没有问题，服务器2（因为总共有2个Pod，分别在不同服务器上）上有些貌似可疑的日志：</p>
 <p><img class="img-fluid" alt="" src="/post/lack-connection-pool-api-bad/13.png" loading="lazy"
   
    />
 
 </p>
 <p>关键内容是：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln">1</span>slab_out_of_memory: 4225 callbacks suppressed
-<span class="ln">2</span>
-<span class="ln">3</span>SLUB: Unable to allocate memory on node -1 (gfp=0x2088020)
-<span class="ln">4</span>
-<span class="ln">5</span>cache: kmalloc-64(1701:d3f8dc94598f0a15cfbb6417c5117690af06c0554667b9334bfc20381e280c62), object size: 64, buffer size: 64, default order: 0, min order: 0
-<span class="ln">6</span>
-<span class="ln">7</span>node 0: slabs: 399, objs: 25536, free: 0
-</code></pre></div><p>这个错误的意思是内核内存不足，不足的原因可能是存在内存泄漏的情况。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt">slab_out_of_memory: 4225 callbacks suppressed
+
+SLUB: Unable to allocate memory on node -1 (gfp=0x2088020)
+
+cache: kmalloc-64(1701:d3f8dc94598f0a15cfbb6417c5117690af06c0554667b9334bfc20381e280c62), object size: 64, buffer size: 64, default order: 0, min order: 0
+
+node 0: slabs: 399, objs: 25536, free: 0
+</code></pre></td></tr></table>
+</div>
+</div><p>这个错误的意思是内核内存不足，不足的原因可能是存在内存泄漏的情况。</p>
 <p>但是服务器2有这个异常，服务器1上没有，因此大概率和readinessProbe探测失败不存在因果关系，因为只有两个Pod都探测失败的时候，才会导致本文一开始提到的问题。</p>
 <h4 id="回到-actuatorhealth">回到 /actuator/health<a class="anchor ms-1" href="#回到-actuatorhealth"><i class="fas fa-link"></i></a></h4>
 <p>到这里走到思路，那么看看spring boot actuator的源码，这里面的逻辑到底怎样的。</p>

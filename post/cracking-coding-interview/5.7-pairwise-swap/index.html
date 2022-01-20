@@ -12,7 +12,7 @@
 <meta name="description" content="" /><meta itemprop="name" content="Cracking Coding Interview - 5.7 Pairwise Swap">
 <meta itemprop="description" content=""><meta itemprop="datePublished" content="2019-08-20T09:04:11+08:00" />
 <meta itemprop="dateModified" content="2019-08-20T09:04:11+08:00" />
-<meta itemprop="wordCount" content="526">
+<meta itemprop="wordCount" content="554">
 <meta itemprop="keywords" content="ARTS-A," /><meta property="og:title" content="Cracking Coding Interview - 5.7 Pairwise Swap" />
 <meta property="og:description" content="" />
 <meta property="og:type" content="article" />
@@ -228,70 +228,159 @@
 <h2 id="解法1">解法1<a class="anchor ms-1" href="#解法1"><i class="fas fa-link"></i></a></h2>
 <p>意思是把所有奇数位的和偶数位的交换。</p>
 <p>先举几个例子：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln">1</span>bit:  3 2 1 0 | 3 2 1 0 | 3 2 1 0 | 3 2 1 0
-<span class="ln">2</span>      --------|---------|---------|--------
-<span class="ln">3</span>num:  0 0 0 1 | 0 0 1 1 | 1 0 1 0 | 0 1 1 0
-<span class="ln">4</span>swap: 0 0 1 0 | 0 0 1 1 | 0 1 0 1 | 1 0 0 1
-</code></pre></div><p>如果我们两个bit两个bit看会发现：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln">1</span>before swap | after swap | operation
-<span class="ln">2</span>------------|------------|----------
-<span class="ln">3</span>    0 0     |    0 0     | 什么都不做
-<span class="ln">4</span>    0 1     |    1 0     | 取反
-<span class="ln">5</span>    1 0     |    0 1     | 取反
-<span class="ln">6</span>    1 1     |    1 1     | 什么都不做
-</code></pre></div><p>过程：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln">1</span>n:           10 10 00
-<span class="ln">2</span>mask:        00 11 00
-<span class="ln">3</span>n &amp; mask:    00 10 00  // tmp
-<span class="ln">4</span>~tmp:        11 01 11
-<span class="ln">5</span>tmp &amp; mask:  00 01 00  // a: swapped bits
-<span class="ln">6</span>n &amp; ~mask:   10 00 00  // b
-<span class="ln">7</span>a | b:       10 01 00
-<span class="ln">8</span>
-</code></pre></div><p>代码：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln"> 1</span><span class="kd">public</span> <span class="kt">int</span> <span class="nf">pairSwap</span><span class="o">(</span><span class="kt">int</span> <span class="n">n</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 2</span>  <span class="kt">int</span> <span class="n">c</span> <span class="o">=</span> <span class="n">n</span><span class="o">;</span>
-<span class="ln"> 3</span>  <span class="kt">int</span> <span class="n">mask</span> <span class="o">=</span> <span class="n">3</span><span class="o">;</span> <span class="c1">// bit: 0000 ... 0011
-</span><span class="ln"> 4</span><span class="c1"></span>  <span class="k">while</span> <span class="o">(</span><span class="n">mask</span> <span class="o">!=</span> <span class="n">0</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 5</span>    <span class="kt">int</span> <span class="n">tmp</span> <span class="o">=</span> <span class="n">c</span> <span class="o">&amp;</span> <span class="n">mask</span><span class="o">;</span>
-<span class="ln"> 6</span>    <span class="k">if</span> <span class="o">(</span><span class="n">tmp</span> <span class="o">!=</span> <span class="n">0</span> <span class="o">&amp;&amp;</span> <span class="n">tmp</span> <span class="o">!=</span> <span class="n">mask</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln"> 7</span>      <span class="kt">int</span> <span class="n">sbits</span> <span class="o">=</span> <span class="o">~</span><span class="n">tmp</span> <span class="o">&amp;</span> <span class="n">mask</span><span class="o">;</span>  <span class="c1">// swap bits
-</span><span class="ln"> 8</span><span class="c1"></span>      <span class="n">c</span> <span class="o">&amp;=</span> <span class="o">~</span><span class="n">mask</span><span class="o">;</span>               <span class="c1">// clear bits
-</span><span class="ln"> 9</span><span class="c1"></span>      <span class="n">c</span> <span class="o">|=</span> <span class="n">sbits</span><span class="o">;</span>               <span class="c1">// put swap bits back
-</span><span class="ln">10</span><span class="c1"></span>    <span class="o">}</span>
-<span class="ln">11</span>    <span class="n">mask</span> <span class="o">&lt;&lt;=</span> <span class="n">2</span><span class="o">;</span>
-<span class="ln">12</span>  <span class="o">}</span>
-<span class="ln">13</span>  <span class="k">return</span> <span class="n">c</span><span class="o">;</span>
-<span class="ln">14</span><span class="o">}</span>
-</code></pre></div><h2 id="解法2">解法2<a class="anchor ms-1" href="#解法2"><i class="fas fa-link"></i></a></h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt">bit:  3 2 1 0 | 3 2 1 0 | 3 2 1 0 | 3 2 1 0
+      --------|---------|---------|--------
+num:  0 0 0 1 | 0 0 1 1 | 1 0 1 0 | 0 1 1 0
+swap: 0 0 1 0 | 0 0 1 1 | 0 1 0 1 | 1 0 0 1
+</code></pre></td></tr></table>
+</div>
+</div><p>如果我们两个bit两个bit看会发现：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt">before swap | after swap | operation
+------------|------------|----------
+    0 0     |    0 0     | 什么都不做
+    0 1     |    1 0     | 取反
+    1 0     |    0 1     | 取反
+    1 1     |    1 1     | 什么都不做
+</code></pre></td></tr></table>
+</div>
+</div><p>过程：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt">n:           10 10 00
+mask:        00 11 00
+n &amp; mask:    00 10 00  // tmp
+~tmp:        11 01 11
+tmp &amp; mask:  00 01 00  // a: swapped bits
+n &amp; ~mask:   10 00 00  // b
+a | b:       10 01 00
+
+</code></pre></td></tr></table>
+</div>
+</div><p>代码：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="kd">public</span> <span class="kt">int</span> <span class="nf">pairSwap</span><span class="o">(</span><span class="kt">int</span> <span class="n">n</span><span class="o">)</span> <span class="o">{</span>
+  <span class="kt">int</span> <span class="n">c</span> <span class="o">=</span> <span class="n">n</span><span class="o">;</span>
+  <span class="kt">int</span> <span class="n">mask</span> <span class="o">=</span> <span class="n">3</span><span class="o">;</span> <span class="c1">// bit: 0000 ... 0011
+</span><span class="c1"></span>  <span class="k">while</span> <span class="o">(</span><span class="n">mask</span> <span class="o">!=</span> <span class="n">0</span><span class="o">)</span> <span class="o">{</span>
+    <span class="kt">int</span> <span class="n">tmp</span> <span class="o">=</span> <span class="n">c</span> <span class="o">&amp;</span> <span class="n">mask</span><span class="o">;</span>
+    <span class="k">if</span> <span class="o">(</span><span class="n">tmp</span> <span class="o">!=</span> <span class="n">0</span> <span class="o">&amp;&amp;</span> <span class="n">tmp</span> <span class="o">!=</span> <span class="n">mask</span><span class="o">)</span> <span class="o">{</span>
+      <span class="kt">int</span> <span class="n">sbits</span> <span class="o">=</span> <span class="o">~</span><span class="n">tmp</span> <span class="o">&amp;</span> <span class="n">mask</span><span class="o">;</span>  <span class="c1">// swap bits
+</span><span class="c1"></span>      <span class="n">c</span> <span class="o">&amp;=</span> <span class="o">~</span><span class="n">mask</span><span class="o">;</span>               <span class="c1">// clear bits
+</span><span class="c1"></span>      <span class="n">c</span> <span class="o">|=</span> <span class="n">sbits</span><span class="o">;</span>               <span class="c1">// put swap bits back
+</span><span class="c1"></span>    <span class="o">}</span>
+    <span class="n">mask</span> <span class="o">&lt;&lt;=</span> <span class="n">2</span><span class="o">;</span>
+  <span class="o">}</span>
+  <span class="k">return</span> <span class="n">c</span><span class="o">;</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><h2 id="解法2">解法2<a class="anchor ms-1" href="#解法2"><i class="fas fa-link"></i></a></h2>
 <ol>
 <li>把所有偶数位的bit挑出来，向右位移1</li>
 <li>把所有奇数位的bit挑出来，向左位移1</li>
 <li>让后把两者OR</li>
 </ol>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln"> 1</span>num:         11 10 01 10
-<span class="ln"> 2</span>mask1:       10 10 10 10
-<span class="ln"> 3</span>num &amp; mask1: 10 10 00 10  // a 把偶数bit挑出来
-<span class="ln"> 4</span>a &gt;&gt; 1     : 01 01 00 01  // a
-<span class="ln"> 5</span>
-<span class="ln"> 6</span>num:         11 10 01 10
-<span class="ln"> 7</span>mask2:       01 01 01 01
-<span class="ln"> 8</span>num &amp; mask2: 01 00 01 00  // b 把奇数bit挑出来
-<span class="ln"> 9</span>b &lt;&lt; 1     : 10 00 10 00  // b
-<span class="ln">10</span>
-<span class="ln">11</span>a          : 01 01 00 01
-<span class="ln">12</span>b          : 10 00 10 00
-<span class="ln">13</span>a | b      : 11 01 10 01
-<span class="ln">14</span>num:         11 10 01 10
-</code></pre></div><p>代码：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln">1</span><span class="kd">public</span> <span class="kt">int</span> <span class="nf">pairSwap</span><span class="o">(</span><span class="kt">int</span> <span class="n">n</span><span class="o">)</span> <span class="o">{</span>
-<span class="ln">2</span>  <span class="kt">int</span> <span class="n">maskEven</span> <span class="o">=</span> <span class="n">0xaaaaaaaa</span><span class="o">;</span>
-<span class="ln">3</span>  <span class="kt">int</span> <span class="n">maskOdd</span> <span class="o">=</span> <span class="n">0x55555555</span><span class="o">;</span>
-<span class="ln">4</span>  <span class="kt">int</span> <span class="n">a</span> <span class="o">=</span> <span class="o">(</span><span class="n">n</span> <span class="o">&amp;</span> <span class="n">maskEven</span><span class="o">)</span> <span class="o">&gt;&gt;&gt;</span> <span class="n">1</span><span class="o">;</span>
-<span class="ln">5</span>  <span class="kt">int</span> <span class="n">b</span> <span class="o">=</span> <span class="o">(</span><span class="n">n</span> <span class="o">&amp;</span> <span class="n">maskOdd</span><span class="o">)</span> <span class="o">&lt;&lt;</span> <span class="n">1</span><span class="o">;</span>
-<span class="ln">6</span>  <span class="k">return</span> <span class="n">a</span> <span class="o">|</span> <span class="n">b</span><span class="o">;</span>
-<span class="ln">7</span><span class="o">}</span>
-</code></pre></div></div></div>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt">num:         11 10 01 10
+mask1:       10 10 10 10
+num &amp; mask1: 10 10 00 10  // a 把偶数bit挑出来
+a &gt;&gt; 1     : 01 01 00 01  // a
+
+num:         11 10 01 10
+mask2:       01 01 01 01
+num &amp; mask2: 01 00 01 00  // b 把奇数bit挑出来
+b &lt;&lt; 1     : 10 00 10 00  // b
+
+a          : 01 01 00 01
+b          : 10 00 10 00
+a | b      : 11 01 10 01
+num:         11 10 01 10
+</code></pre></td></tr></table>
+</div>
+</div><p>代码：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="kd">public</span> <span class="kt">int</span> <span class="nf">pairSwap</span><span class="o">(</span><span class="kt">int</span> <span class="n">n</span><span class="o">)</span> <span class="o">{</span>
+  <span class="kt">int</span> <span class="n">maskEven</span> <span class="o">=</span> <span class="n">0xaaaaaaaa</span><span class="o">;</span>
+  <span class="kt">int</span> <span class="n">maskOdd</span> <span class="o">=</span> <span class="n">0x55555555</span><span class="o">;</span>
+  <span class="kt">int</span> <span class="n">a</span> <span class="o">=</span> <span class="o">(</span><span class="n">n</span> <span class="o">&amp;</span> <span class="n">maskEven</span><span class="o">)</span> <span class="o">&gt;&gt;&gt;</span> <span class="n">1</span><span class="o">;</span>
+  <span class="kt">int</span> <span class="n">b</span> <span class="o">=</span> <span class="o">(</span><span class="n">n</span> <span class="o">&amp;</span> <span class="n">maskOdd</span><span class="o">)</span> <span class="o">&lt;&lt;</span> <span class="n">1</span><span class="o">;</span>
+  <span class="k">return</span> <span class="n">a</span> <span class="o">|</span> <span class="n">b</span><span class="o">;</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div></div></div>
   <div class="card-footer"><div class="post-navs d-flex justify-content-evenly">
   <div class="post-nav post-prev"><i class="fas fa-fw fa-chevron-left"></i>
     <a href="/post/cracking-coding-interview/5.6-conversion/">Cracking Coding Interview - 5.6 Conversion

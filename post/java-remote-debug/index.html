@@ -12,7 +12,7 @@
 <meta name="description" content="本文介绍了远程Debug Java进程的方法。" /><meta itemprop="name" content="远程Debug Java进程的方法">
 <meta itemprop="description" content="本文介绍了远程Debug Java进程的方法。"><meta itemprop="datePublished" content="2018-10-09T16:01:20+08:00" />
 <meta itemprop="dateModified" content="2018-10-09T16:01:20+08:00" />
-<meta itemprop="wordCount" content="1736">
+<meta itemprop="wordCount" content="1748">
 <meta itemprop="keywords" content="java,debug,jdpa," /><meta property="og:title" content="远程Debug Java进程的方法" />
 <meta property="og:description" content="本文介绍了远程Debug Java进程的方法。" />
 <meta property="og:type" content="article" />
@@ -301,36 +301,73 @@
 <p><strong>1）同样需要把项目导入到IDEA里</strong></p>
 <p><strong>2）执行tomcat的<code>bin/catalina.sh jpda start</code>，让tomcat可以被debug</strong></p>
 <p><strong>3）执行<code>jps -v | grep Bootstrap</code>找到Tomcat进程：</strong></p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln">1</span>76905 Bootstrap -Djava.util.logging.config.file=... 
-<span class="ln">2</span>-Djava.util.logging.manager=org.apache.juli.ClassLoaderLogManager 
-<span class="ln">3</span>-Djdk.tls.ephemeralDHKeySize=2048 
-<span class="ln">4</span>-Djava.protocol.handler.pkgs=org.apache.catalina.webresources 
-<span class="ln">5</span>-agentlib:jdwp=transport=dt_socket,address=localhost:8000,server=y,suspend=n 
-<span class="ln">6</span>-Dcatalina.base=... 
-<span class="ln">7</span>-Dcatalina.home=... 
-<span class="ln">8</span>-Djava.io.tmpdir=...
-</code></pre></div><p>注意上面的<code>-agentlib...address=localhost:8000</code>参数，记住这个端口</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt">76905 Bootstrap -Djava.util.logging.config.file=... 
+-Djava.util.logging.manager=org.apache.juli.ClassLoaderLogManager 
+-Djdk.tls.ephemeralDHKeySize=2048 
+-Djava.protocol.handler.pkgs=org.apache.catalina.webresources 
+-agentlib:jdwp=transport=dt_socket,address=localhost:8000,server=y,suspend=n 
+-Dcatalina.base=... 
+-Dcatalina.home=... 
+-Djava.io.tmpdir=...
+</code></pre></td></tr></table>
+</div>
+</div><p>注意上面的<code>-agentlib...address=localhost:8000</code>参数，记住这个端口</p>
 <p><strong>4）和前面的例子一样，新建一个Remote Run/Debug Configuration，把端口设定为8000，然后启动</strong></p>
 <p><strong>5）然后打个断点试试</strong></p>
 <p>如果你想改变Tomcat的端口怎么做？看看<code>bin/catalina.sh</code>你会发现这么一段注释</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln"> 1</span>JPDA_TRANSPORT  (Optional) JPDA transport used when the &#34;jpda start&#34;
-<span class="ln"> 2</span>                command is executed. The default is &#34;dt_socket&#34;.
-<span class="ln"> 3</span>
-<span class="ln"> 4</span>JPDA_ADDRESS    (Optional) Java runtime options used when the &#34;jpda start&#34;
-<span class="ln"> 5</span>                command is executed. The default is localhost:8000.
-<span class="ln"> 6</span>
-<span class="ln"> 7</span>JPDA_SUSPEND    (Optional) Java runtime options used when the &#34;jpda start&#34;
-<span class="ln"> 8</span>                command is executed. Specifies whether JVM should suspend
-<span class="ln"> 9</span>                execution immediately after startup. Default is &#34;n&#34;.
-<span class="ln">10</span>
-<span class="ln">11</span>JPDA_OPTS       (Optional) Java runtime options used when the &#34;jpda start&#34;
-<span class="ln">12</span>                command is executed. If used, JPDA_TRANSPORT, JPDA_ADDRESS,
-<span class="ln">13</span>                and JPDA_SUSPEND are ignored. Thus, all required jpda
-<span class="ln">14</span>                options MUST be specified. The default is:
-<span class="ln">15</span>
-<span class="ln">16</span>                -agentlib:jdwp=transport=$JPDA_TRANSPORT,
-<span class="ln">17</span>                    address=$JPDA_ADDRESS,server=y,suspend=$JPDA_SUSPEND
-</code></pre></div><p>所以你只需要提供<code>JPDA_ADDRESS</code>环境变量参数就行了。比如这样：<code>JPDA_ADDRESS=5005 bin/catalina.sh jpda start</code></p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt">JPDA_TRANSPORT  (Optional) JPDA transport used when the &#34;jpda start&#34;
+                command is executed. The default is &#34;dt_socket&#34;.
+
+JPDA_ADDRESS    (Optional) Java runtime options used when the &#34;jpda start&#34;
+                command is executed. The default is localhost:8000.
+
+JPDA_SUSPEND    (Optional) Java runtime options used when the &#34;jpda start&#34;
+                command is executed. Specifies whether JVM should suspend
+                execution immediately after startup. Default is &#34;n&#34;.
+
+JPDA_OPTS       (Optional) Java runtime options used when the &#34;jpda start&#34;
+                command is executed. If used, JPDA_TRANSPORT, JPDA_ADDRESS,
+                and JPDA_SUSPEND are ignored. Thus, all required jpda
+                options MUST be specified. The default is:
+
+                -agentlib:jdwp=transport=$JPDA_TRANSPORT,
+                    address=$JPDA_ADDRESS,server=y,suspend=$JPDA_SUSPEND
+</code></pre></td></tr></table>
+</div>
+</div><p>所以你只需要提供<code>JPDA_ADDRESS</code>环境变量参数就行了。比如这样：<code>JPDA_ADDRESS=5005 bin/catalina.sh jpda start</code></p>
 <h2 id="参考文档">参考文档<a class="anchor ms-1" href="#参考文档"><i class="fas fa-link"></i></a></h2>
 <ul>
 <li><a href="https://www.techrepublic.com/article/debug-your-java-code-with-ease-using-jpda/" target="_blank" rel="noopener noreferrer">Debug your Java code with ease using JPDA</a>

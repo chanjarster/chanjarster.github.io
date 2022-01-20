@@ -12,7 +12,7 @@
 <meta name="description" content="" /><meta itemprop="name" content="网络监控实用脚本">
 <meta itemprop="description" content=""><meta itemprop="datePublished" content="2021-09-07T11:33:22+08:00" />
 <meta itemprop="dateModified" content="2021-09-07T11:33:22+08:00" />
-<meta itemprop="wordCount" content="893">
+<meta itemprop="wordCount" content="946">
 <meta itemprop="keywords" content="linux,cheatsheet,network," /><meta property="og:title" content="网络监控实用脚本" />
 <meta property="og:description" content="" />
 <meta property="og:type" content="article" />
@@ -227,129 +227,307 @@
 <p>查看tcp协议的内核文档，相关内核参数。</p>
 <h2 id="netstat">netstat<a class="anchor ms-1" href="#netstat"><i class="fas fa-link"></i></a></h2>
 <p>根据连接状态分类统计：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>$ netstat -antpl <span class="p">|</span> gawk -F<span class="s1">&#39; &#39;</span> <span class="s1">&#39;{ print $6 }&#39;</span> <span class="p">|</span> sort <span class="p">|</span> uniq -c
-<span class="ln">2</span>      <span class="m">1</span> established<span class="o">)</span>
-<span class="ln">3</span>      <span class="m">5</span> ESTABLISHED
-<span class="ln">4</span>      <span class="m">1</span> Foreign
-<span class="ln">5</span>      <span class="m">4</span> LISTEN
-<span class="ln">6</span>      <span class="m">2</span> TIME_WAIT
-</code></pre></div><p>各协议统计：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln"> 1</span>$ netstat -s
-<span class="ln"> 2</span>
-<span class="ln"> 3</span>Ip:
-<span class="ln"> 4</span>    <span class="m">36011721975</span> total packets received
-<span class="ln"> 5</span>    <span class="m">4</span> with invalid addresses
-<span class="ln"> 6</span>    <span class="m">25054109504</span> forwarded
-<span class="ln"> 7</span>    <span class="m">0</span> incoming packets discarded
-<span class="ln"> 8</span>...
-<span class="ln"> 9</span>Tcp:
-<span class="ln">10</span>    <span class="m">506169163</span> active connections openings
-<span class="ln">11</span>    <span class="m">28177249</span> passive connection openings
-<span class="ln">12</span>    <span class="m">143466</span> failed connection attempts
-<span class="ln">13</span>    <span class="m">48873</span> connection resets received
-<span class="ln">14</span>...
-</code></pre></div><p>关注套接字统计信息：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>$ netstat -s <span class="p">|</span> grep socket
-<span class="ln">2</span>    <span class="m">73</span> resets received <span class="k">for</span> embryonic SYN_RECV sockets
-<span class="ln">3</span>    <span class="m">308582</span> TCP sockets finished <span class="nb">time</span> <span class="nb">wait</span> in fast timer
-<span class="ln">4</span>    <span class="m">8</span> delayed acks further delayed because of locked socket
-<span class="ln">5</span>    <span class="m">290566</span> <span class="nb">times</span> the listen queue of a socket overflowed
-<span class="ln">6</span>    <span class="m">290566</span> SYNs to LISTEN sockets dropped
-</code></pre></div><h2 id="conntrack">conntrack<a class="anchor ms-1" href="#conntrack"><i class="fas fa-link"></i></a></h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">$ netstat -antpl <span class="p">|</span> gawk -F<span class="s1">&#39; &#39;</span> <span class="s1">&#39;{ print $6 }&#39;</span> <span class="p">|</span> sort <span class="p">|</span> uniq -c
+      <span class="m">1</span> established<span class="o">)</span>
+      <span class="m">5</span> ESTABLISHED
+      <span class="m">1</span> Foreign
+      <span class="m">4</span> LISTEN
+      <span class="m">2</span> TIME_WAIT
+</code></pre></td></tr></table>
+</div>
+</div><p>各协议统计：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">$ netstat -s
+
+Ip:
+    <span class="m">36011721975</span> total packets received
+    <span class="m">4</span> with invalid addresses
+    <span class="m">25054109504</span> forwarded
+    <span class="m">0</span> incoming packets discarded
+...
+Tcp:
+    <span class="m">506169163</span> active connections openings
+    <span class="m">28177249</span> passive connection openings
+    <span class="m">143466</span> failed connection attempts
+    <span class="m">48873</span> connection resets received
+...
+</code></pre></td></tr></table>
+</div>
+</div><p>关注套接字统计信息：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">$ netstat -s <span class="p">|</span> grep socket
+    <span class="m">73</span> resets received <span class="k">for</span> embryonic SYN_RECV sockets
+    <span class="m">308582</span> TCP sockets finished <span class="nb">time</span> <span class="nb">wait</span> in fast timer
+    <span class="m">8</span> delayed acks further delayed because of locked socket
+    <span class="m">290566</span> <span class="nb">times</span> the listen queue of a socket overflowed
+    <span class="m">290566</span> SYNs to LISTEN sockets dropped
+</code></pre></td></tr></table>
+</div>
+</div><h2 id="conntrack">conntrack<a class="anchor ms-1" href="#conntrack"><i class="fas fa-link"></i></a></h2>
 <p>统计总的连接跟踪数：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>$ conntrack -L -o extended <span class="p">|</span> wc -l
-<span class="ln">2</span><span class="m">100</span>
-</code></pre></div><p>统计TCP协议各个状态的连接跟踪数：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>$ conntrack -L -o extended <span class="p">|</span> awk <span class="s1">&#39;/^.*tcp.*$/ {sum[$6]++} END {for(i in sum) print i, sum[i]}&#39;</span>
-<span class="ln">2</span>
-<span class="ln">3</span>conntrack v1.4.3 <span class="o">(</span>conntrack-tools<span class="o">)</span>: <span class="m">3349</span> flow entries have been shown.
-<span class="ln">4</span>CLOSE_WAIT <span class="m">17</span>
-<span class="ln">5</span>CLOSE <span class="m">31</span>
-<span class="ln">6</span>ESTABLISHED <span class="m">758</span>
-<span class="ln">7</span>TIME_WAIT <span class="m">387</span>
-<span class="ln">8</span>SYN_SENT <span class="m">72</span>
-</code></pre></div><p>统计各个源IP的连接跟踪数：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln"> 1</span>$ conntrack -L -o extended <span class="p">|</span> awk <span class="s1">&#39;{print $7}&#39;</span> <span class="p">|</span> cut -d <span class="s2">&#34;=&#34;</span> -f <span class="m">2</span> <span class="p">|</span> sort <span class="p">|</span> uniq -c <span class="p">|</span> sort -nr <span class="p">|</span> head -n <span class="m">10</span>
-<span class="ln"> 2</span>conntrack v1.4.3 <span class="o">(</span>conntrack-tools<span class="o">)</span>: <span class="m">2693</span> flow entries have been shown.
-<span class="ln"> 3</span>   <span class="m">1048</span> 192.168.100.21
-<span class="ln"> 4</span>    <span class="m">669</span> 192.168.100.5
-<span class="ln"> 5</span>    <span class="m">504</span> 10.42.3.94
-<span class="ln"> 6</span>     <span class="m">61</span> 10.42.3.171
-<span class="ln"> 7</span>     <span class="m">44</span> 10.42.3.128
-<span class="ln"> 8</span>     <span class="m">41</span> 10.42.3.3
-<span class="ln"> 9</span>     <span class="m">38</span> 10.43.0.10
-<span class="ln">10</span>     <span class="m">26</span> 10.42.3.70
-<span class="ln">11</span>     <span class="m">18</span> 10.42.3.27
-<span class="ln">12</span>     <span class="m">16</span> 10.42.3.41
-</code></pre></div><p>统计各个四元组的连接跟踪数：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln"> 1</span>$ conntrack -L -o extended <span class="p">|</span> awk <span class="s1">&#39;{print $6 &#34; &#34; $7 &#34; &#34; $8}&#39;</span>  <span class="p">|</span> sort <span class="p">|</span> uniq -c <span class="p">|</span> sort -nr <span class="p">|</span> head -n <span class="m">10</span>
-<span class="ln"> 2</span>
-<span class="ln"> 3</span>conntrack v1.4.3 <span class="o">(</span>conntrack-tools<span class="o">)</span>: <span class="m">3357</span> flow entries have been shown.
-<span class="ln"> 4</span>    <span class="m">500</span> ESTABLISHED <span class="nv">src</span><span class="o">=</span>10.42.3.94 <span class="nv">dst</span><span class="o">=</span>10.42.4.129
-<span class="ln"> 5</span>     <span class="m">30</span> TIME_WAIT <span class="nv">src</span><span class="o">=</span>192.168.100.21 <span class="nv">dst</span><span class="o">=</span>10.42.3.167
-<span class="ln"> 6</span>     <span class="m">30</span> TIME_WAIT <span class="nv">src</span><span class="o">=</span>192.168.100.21 <span class="nv">dst</span><span class="o">=</span>10.42.3.156
-<span class="ln"> 7</span>     <span class="m">30</span> TIME_WAIT <span class="nv">src</span><span class="o">=</span>192.168.100.21 <span class="nv">dst</span><span class="o">=</span>10.42.3.133
-<span class="ln"> 8</span>     <span class="m">30</span> TIME_WAIT <span class="nv">src</span><span class="o">=</span>192.168.100.21 <span class="nv">dst</span><span class="o">=</span>10.42.3.132
-<span class="ln"> 9</span>     <span class="m">21</span> ESTABLISHED <span class="nv">src</span><span class="o">=</span>10.42.3.70 <span class="nv">dst</span><span class="o">=</span>10.43.239.23
-<span class="ln">10</span>     <span class="m">19</span> CLOSE <span class="nv">src</span><span class="o">=</span>10.42.3.128 <span class="nv">dst</span><span class="o">=</span>10.43.117.95
-<span class="ln">11</span>     <span class="m">15</span> SYN_SENT <span class="nv">src</span><span class="o">=</span>10.42.3.27 <span class="nv">dst</span><span class="o">=</span>10.43.161.131
-<span class="ln">12</span>     <span class="m">13</span> SYN_SENT <span class="nv">src</span><span class="o">=</span>10.42.3.41 <span class="nv">dst</span><span class="o">=</span>10.43.223.88
-<span class="ln">13</span>     <span class="m">12</span> TIME_WAIT <span class="nv">src</span><span class="o">=</span>192.168.100.21 <span class="nv">dst</span><span class="o">=</span>10.42.3.71
-</code></pre></div><h2 id="ss">ss<a class="anchor ms-1" href="#ss"><i class="fas fa-link"></i></a></h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">$ conntrack -L -o extended <span class="p">|</span> wc -l
+<span class="m">100</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>统计TCP协议各个状态的连接跟踪数：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">$ conntrack -L -o extended <span class="p">|</span> awk <span class="s1">&#39;/^.*tcp.*$/ {sum[$6]++} END {for(i in sum) print i, sum[i]}&#39;</span>
+
+conntrack v1.4.3 <span class="o">(</span>conntrack-tools<span class="o">)</span>: <span class="m">3349</span> flow entries have been shown.
+CLOSE_WAIT <span class="m">17</span>
+CLOSE <span class="m">31</span>
+ESTABLISHED <span class="m">758</span>
+TIME_WAIT <span class="m">387</span>
+SYN_SENT <span class="m">72</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>统计各个源IP的连接跟踪数：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">$ conntrack -L -o extended <span class="p">|</span> awk <span class="s1">&#39;{print $7}&#39;</span> <span class="p">|</span> cut -d <span class="s2">&#34;=&#34;</span> -f <span class="m">2</span> <span class="p">|</span> sort <span class="p">|</span> uniq -c <span class="p">|</span> sort -nr <span class="p">|</span> head -n <span class="m">10</span>
+conntrack v1.4.3 <span class="o">(</span>conntrack-tools<span class="o">)</span>: <span class="m">2693</span> flow entries have been shown.
+   <span class="m">1048</span> 192.168.100.21
+    <span class="m">669</span> 192.168.100.5
+    <span class="m">504</span> 10.42.3.94
+     <span class="m">61</span> 10.42.3.171
+     <span class="m">44</span> 10.42.3.128
+     <span class="m">41</span> 10.42.3.3
+     <span class="m">38</span> 10.43.0.10
+     <span class="m">26</span> 10.42.3.70
+     <span class="m">18</span> 10.42.3.27
+     <span class="m">16</span> 10.42.3.41
+</code></pre></td></tr></table>
+</div>
+</div><p>统计各个四元组的连接跟踪数：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">$ conntrack -L -o extended <span class="p">|</span> awk <span class="s1">&#39;{print $6 &#34; &#34; $7 &#34; &#34; $8}&#39;</span>  <span class="p">|</span> sort <span class="p">|</span> uniq -c <span class="p">|</span> sort -nr <span class="p">|</span> head -n <span class="m">10</span>
+
+conntrack v1.4.3 <span class="o">(</span>conntrack-tools<span class="o">)</span>: <span class="m">3357</span> flow entries have been shown.
+    <span class="m">500</span> ESTABLISHED <span class="nv">src</span><span class="o">=</span>10.42.3.94 <span class="nv">dst</span><span class="o">=</span>10.42.4.129
+     <span class="m">30</span> TIME_WAIT <span class="nv">src</span><span class="o">=</span>192.168.100.21 <span class="nv">dst</span><span class="o">=</span>10.42.3.167
+     <span class="m">30</span> TIME_WAIT <span class="nv">src</span><span class="o">=</span>192.168.100.21 <span class="nv">dst</span><span class="o">=</span>10.42.3.156
+     <span class="m">30</span> TIME_WAIT <span class="nv">src</span><span class="o">=</span>192.168.100.21 <span class="nv">dst</span><span class="o">=</span>10.42.3.133
+     <span class="m">30</span> TIME_WAIT <span class="nv">src</span><span class="o">=</span>192.168.100.21 <span class="nv">dst</span><span class="o">=</span>10.42.3.132
+     <span class="m">21</span> ESTABLISHED <span class="nv">src</span><span class="o">=</span>10.42.3.70 <span class="nv">dst</span><span class="o">=</span>10.43.239.23
+     <span class="m">19</span> CLOSE <span class="nv">src</span><span class="o">=</span>10.42.3.128 <span class="nv">dst</span><span class="o">=</span>10.43.117.95
+     <span class="m">15</span> SYN_SENT <span class="nv">src</span><span class="o">=</span>10.42.3.27 <span class="nv">dst</span><span class="o">=</span>10.43.161.131
+     <span class="m">13</span> SYN_SENT <span class="nv">src</span><span class="o">=</span>10.42.3.41 <span class="nv">dst</span><span class="o">=</span>10.43.223.88
+     <span class="m">12</span> TIME_WAIT <span class="nv">src</span><span class="o">=</span>192.168.100.21 <span class="nv">dst</span><span class="o">=</span>10.42.3.71
+</code></pre></td></tr></table>
+</div>
+</div><h2 id="ss">ss<a class="anchor ms-1" href="#ss"><i class="fas fa-link"></i></a></h2>
 <p>查看连接状态统计：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln"> 1</span>$ ss -s
-<span class="ln"> 2</span>Total: <span class="m">9190</span> <span class="o">(</span>kernel 0<span class="o">)</span>
-<span class="ln"> 3</span>TCP:   <span class="m">2450</span> <span class="o">(</span>estab 30, closed 2309, orphaned 0, synrecv 0, timewait 1135/0<span class="o">)</span>, ports <span class="m">0</span>
-<span class="ln"> 4</span>
-<span class="ln"> 5</span>Transport Total     IP        IPv6
-<span class="ln"> 6</span>*	        <span class="m">0</span>         -         -
-<span class="ln"> 7</span>RAW	      <span class="m">0</span>         <span class="m">0</span>         <span class="m">0</span>
-<span class="ln"> 8</span>UDP	      <span class="m">2</span>         <span class="m">2</span>         <span class="m">0</span>
-<span class="ln"> 9</span>TCP	      <span class="m">141</span>       <span class="m">75</span>        <span class="m">66</span>
-<span class="ln">10</span>INET	    <span class="m">143</span>       <span class="m">77</span>        <span class="m">66</span>
-<span class="ln">11</span>FRAG	    <span class="m">0</span>         <span class="m">0</span>         <span class="m">0</span>
-</code></pre></div><h2 id="hping3">hping3<a class="anchor ms-1" href="#hping3"><i class="fas fa-link"></i></a></h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">$ ss -s
+Total: <span class="m">9190</span> <span class="o">(</span>kernel 0<span class="o">)</span>
+TCP:   <span class="m">2450</span> <span class="o">(</span>estab 30, closed 2309, orphaned 0, synrecv 0, timewait 1135/0<span class="o">)</span>, ports <span class="m">0</span>
+
+Transport Total     IP        IPv6
+*	        <span class="m">0</span>         -         -
+RAW	      <span class="m">0</span>         <span class="m">0</span>         <span class="m">0</span>
+UDP	      <span class="m">2</span>         <span class="m">2</span>         <span class="m">0</span>
+TCP	      <span class="m">141</span>       <span class="m">75</span>        <span class="m">66</span>
+INET	    <span class="m">143</span>       <span class="m">77</span>        <span class="m">66</span>
+FRAG	    <span class="m">0</span>         <span class="m">0</span>         <span class="m">0</span>
+</code></pre></td></tr></table>
+</div>
+</div><h2 id="hping3">hping3<a class="anchor ms-1" href="#hping3"><i class="fas fa-link"></i></a></h2>
 <p>测试网络延迟Round-Trip Time：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln"> 1</span>
-<span class="ln"> 2</span><span class="c1"># -c表示发送3次请求，-S表示设置TCP SYN，-p表示端口号为80</span>
-<span class="ln"> 3</span>$ hping3 -c <span class="m">3</span> -S -p <span class="m">80</span> baidu.com
-<span class="ln"> 4</span>HPING baidu.com <span class="o">(</span>eth0 123.125.115.110<span class="o">)</span>: S set, <span class="m">40</span> headers + <span class="m">0</span> data bytes
-<span class="ln"> 5</span><span class="nv">len</span><span class="o">=</span><span class="m">46</span> <span class="nv">ip</span><span class="o">=</span>123.125.115.110 <span class="nv">ttl</span><span class="o">=</span><span class="m">51</span> <span class="nv">id</span><span class="o">=</span><span class="m">47908</span> <span class="nv">sport</span><span class="o">=</span><span class="m">80</span> <span class="nv">flags</span><span class="o">=</span>SA <span class="nv">seq</span><span class="o">=</span><span class="m">0</span> <span class="nv">win</span><span class="o">=</span><span class="m">8192</span> <span class="nv">rtt</span><span class="o">=</span>20.9 ms
-<span class="ln"> 6</span><span class="nv">len</span><span class="o">=</span><span class="m">46</span> <span class="nv">ip</span><span class="o">=</span>123.125.115.110 <span class="nv">ttl</span><span class="o">=</span><span class="m">51</span> <span class="nv">id</span><span class="o">=</span><span class="m">6788</span>  <span class="nv">sport</span><span class="o">=</span><span class="m">80</span> <span class="nv">flags</span><span class="o">=</span>SA <span class="nv">seq</span><span class="o">=</span><span class="m">1</span> <span class="nv">win</span><span class="o">=</span><span class="m">8192</span> <span class="nv">rtt</span><span class="o">=</span>20.9 ms
-<span class="ln"> 7</span><span class="nv">len</span><span class="o">=</span><span class="m">46</span> <span class="nv">ip</span><span class="o">=</span>123.125.115.110 <span class="nv">ttl</span><span class="o">=</span><span class="m">51</span> <span class="nv">id</span><span class="o">=</span><span class="m">37699</span> <span class="nv">sport</span><span class="o">=</span><span class="m">80</span> <span class="nv">flags</span><span class="o">=</span>SA <span class="nv">seq</span><span class="o">=</span><span class="m">2</span> <span class="nv">win</span><span class="o">=</span><span class="m">8192</span> <span class="nv">rtt</span><span class="o">=</span>20.9 ms
-<span class="ln"> 8</span>
-<span class="ln"> 9</span>--- baidu.com hping statistic ---
-<span class="ln">10</span><span class="m">3</span> packets transmitted, <span class="m">3</span> packets received, 0% packet loss
-<span class="ln">11</span>round-trip min/avg/max <span class="o">=</span> 20.9/20.9/20.9 ms
-</code></pre></div><h2 id="traceroute">traceroute<a class="anchor ms-1" href="#traceroute"><i class="fas fa-link"></i></a></h2>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln"> 1</span><span class="c1"># --tcp表示使用TCP协议，-p表示端口号，-n表示不对结果中的IP地址执行反向域名解析</span>
-<span class="ln"> 2</span>$ traceroute --tcp -p <span class="m">80</span> -n baidu.com
-<span class="ln"> 3</span>traceroute to baidu.com <span class="o">(</span>123.125.115.110<span class="o">)</span>, <span class="m">30</span> hops max, <span class="m">60</span> byte packets
-<span class="ln"> 4</span> <span class="m">1</span>  * * *
-<span class="ln"> 5</span> <span class="m">2</span>  * * *
-<span class="ln"> 6</span> <span class="m">3</span>  * * *
-<span class="ln"> 7</span> <span class="m">4</span>  * * *
-<span class="ln"> 8</span> <span class="m">5</span>  * * *
-<span class="ln"> 9</span> <span class="m">6</span>  * * *
-<span class="ln">10</span> <span class="m">7</span>  * * *
-<span class="ln">11</span> <span class="m">8</span>  * * *
-<span class="ln">12</span> <span class="m">9</span>  * * *
-<span class="ln">13</span><span class="m">10</span>  * * *
-<span class="ln">14</span><span class="m">11</span>  * * *
-<span class="ln">15</span><span class="m">12</span>  * * *
-<span class="ln">16</span><span class="m">13</span>  * * *
-<span class="ln">17</span><span class="m">14</span>  123.125.115.110  20.684 ms *  20.798 ms
-</code></pre></div><p>traceroute 会在路由的每一跳发送三个包，并在收到响应后，输出往返延时。如果无响应或者响应超时（默认 5s），就会输出一个星号。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">
+<span class="c1"># -c表示发送3次请求，-S表示设置TCP SYN，-p表示端口号为80</span>
+$ hping3 -c <span class="m">3</span> -S -p <span class="m">80</span> baidu.com
+HPING baidu.com <span class="o">(</span>eth0 123.125.115.110<span class="o">)</span>: S set, <span class="m">40</span> headers + <span class="m">0</span> data bytes
+<span class="nv">len</span><span class="o">=</span><span class="m">46</span> <span class="nv">ip</span><span class="o">=</span>123.125.115.110 <span class="nv">ttl</span><span class="o">=</span><span class="m">51</span> <span class="nv">id</span><span class="o">=</span><span class="m">47908</span> <span class="nv">sport</span><span class="o">=</span><span class="m">80</span> <span class="nv">flags</span><span class="o">=</span>SA <span class="nv">seq</span><span class="o">=</span><span class="m">0</span> <span class="nv">win</span><span class="o">=</span><span class="m">8192</span> <span class="nv">rtt</span><span class="o">=</span>20.9 ms
+<span class="nv">len</span><span class="o">=</span><span class="m">46</span> <span class="nv">ip</span><span class="o">=</span>123.125.115.110 <span class="nv">ttl</span><span class="o">=</span><span class="m">51</span> <span class="nv">id</span><span class="o">=</span><span class="m">6788</span>  <span class="nv">sport</span><span class="o">=</span><span class="m">80</span> <span class="nv">flags</span><span class="o">=</span>SA <span class="nv">seq</span><span class="o">=</span><span class="m">1</span> <span class="nv">win</span><span class="o">=</span><span class="m">8192</span> <span class="nv">rtt</span><span class="o">=</span>20.9 ms
+<span class="nv">len</span><span class="o">=</span><span class="m">46</span> <span class="nv">ip</span><span class="o">=</span>123.125.115.110 <span class="nv">ttl</span><span class="o">=</span><span class="m">51</span> <span class="nv">id</span><span class="o">=</span><span class="m">37699</span> <span class="nv">sport</span><span class="o">=</span><span class="m">80</span> <span class="nv">flags</span><span class="o">=</span>SA <span class="nv">seq</span><span class="o">=</span><span class="m">2</span> <span class="nv">win</span><span class="o">=</span><span class="m">8192</span> <span class="nv">rtt</span><span class="o">=</span>20.9 ms
+
+--- baidu.com hping statistic ---
+<span class="m">3</span> packets transmitted, <span class="m">3</span> packets received, 0% packet loss
+round-trip min/avg/max <span class="o">=</span> 20.9/20.9/20.9 ms
+</code></pre></td></tr></table>
+</div>
+</div><h2 id="traceroute">traceroute<a class="anchor ms-1" href="#traceroute"><i class="fas fa-link"></i></a></h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="c1"># --tcp表示使用TCP协议，-p表示端口号，-n表示不对结果中的IP地址执行反向域名解析</span>
+$ traceroute --tcp -p <span class="m">80</span> -n baidu.com
+traceroute to baidu.com <span class="o">(</span>123.125.115.110<span class="o">)</span>, <span class="m">30</span> hops max, <span class="m">60</span> byte packets
+ <span class="m">1</span>  * * *
+ <span class="m">2</span>  * * *
+ <span class="m">3</span>  * * *
+ <span class="m">4</span>  * * *
+ <span class="m">5</span>  * * *
+ <span class="m">6</span>  * * *
+ <span class="m">7</span>  * * *
+ <span class="m">8</span>  * * *
+ <span class="m">9</span>  * * *
+<span class="m">10</span>  * * *
+<span class="m">11</span>  * * *
+<span class="m">12</span>  * * *
+<span class="m">13</span>  * * *
+<span class="m">14</span>  123.125.115.110  20.684 ms *  20.798 ms
+</code></pre></td></tr></table>
+</div>
+</div><p>traceroute 会在路由的每一跳发送三个包，并在收到响应后，输出往返延时。如果无响应或者响应超时（默认 5s），就会输出一个星号。</p>
 <h2 id="sar">sar<a class="anchor ms-1" href="#sar"><i class="fas fa-link"></i></a></h2>
 <p>安装：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>yum install -y sysstat
-</code></pre></div><p>观察 PPS（每秒收发的报文数）和BPS（每秒收发的字节数）：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>$ sar -n DEV <span class="m">1</span>
-<span class="ln">2</span>08:55:49        IFACE   rxpck/s   txpck/s    rxkB/s    txkB/s   rxcmp/s   txcmp/s  rxmcst/s   %ifutil
-<span class="ln">3</span>08:55:50      docker0      0.00      0.00      0.00      0.00      0.00      0.00      0.00      0.00
-<span class="ln">4</span>08:55:50         eth0  22274.00    629.00   1174.64     37.78      0.00      0.00      0.00      0.02
-<span class="ln">5</span>08:55:50           lo      0.00      0.00      0.00      0.00      0.00      0.00      0.00      0.00
-</code></pre></div></div></div>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">yum install -y sysstat
+</code></pre></td></tr></table>
+</div>
+</div><p>观察 PPS（每秒收发的报文数）和BPS（每秒收发的字节数）：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">$ sar -n DEV <span class="m">1</span>
+08:55:49        IFACE   rxpck/s   txpck/s    rxkB/s    txkB/s   rxcmp/s   txcmp/s  rxmcst/s   %ifutil
+08:55:50      docker0      0.00      0.00      0.00      0.00      0.00      0.00      0.00      0.00
+08:55:50         eth0  22274.00    629.00   1174.64     37.78      0.00      0.00      0.00      0.02
+08:55:50           lo      0.00      0.00      0.00      0.00      0.00      0.00      0.00      0.00
+</code></pre></td></tr></table>
+</div>
+</div></div></div>
   <div class="card-footer"><div class="post-navs d-flex justify-content-evenly">
   <div class="post-nav post-prev"><i class="fas fa-fw fa-chevron-left"></i>
     <a href="/post/redis/redis-bad-aof/">K8S中Redis损坏的AOF文件排查

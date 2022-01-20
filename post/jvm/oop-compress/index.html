@@ -12,7 +12,7 @@
 <meta name="description" content="" /><meta itemprop="name" content="JVM - 指针压缩">
 <meta itemprop="description" content=""><meta itemprop="datePublished" content="2020-05-11T22:18:08+08:00" />
 <meta itemprop="dateModified" content="2020-05-11T22:18:08+08:00" />
-<meta itemprop="wordCount" content="513">
+<meta itemprop="wordCount" content="516">
 <meta itemprop="keywords" content="jvm," /><meta property="og:title" content="JVM - 指针压缩" />
 <meta property="og:description" content="" />
 <meta property="og:type" content="article" />
@@ -231,15 +231,34 @@
 </ol>
 <p>在<a href="../object-layout">JVM - 对象的内存布局</a>
 里提到，对象都是按照8字节对齐填充的，那么也就意味着指针的偏移量只会是8的倍数，而不会是下面中的1-7，只会是0或者8：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln">1</span>mem:  | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
-<span class="ln">2</span>        ^                               ^
-</code></pre></div><p>那么我们是否可以在堆中记录0x0、0x1偏移量来代表实际上的0x0、0x8呢？比如这样：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln">1</span>mem:  | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
-<span class="ln">2</span>        ^                               ^
-<span class="ln">3</span>        |    ___________________________|
-<span class="ln">4</span>        |   |
-<span class="ln">5</span>heap: | 0 | 1 |
-</code></pre></div><p>答案是可以的。你只需在从heap里拿出来的时候做一下翻译，像左位移3位，就得到了在内存中实际位置。放到heap中的时候只需右移3位，就得到了在heap中记录的位置。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt">mem:  | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
+        ^                               ^
+</code></pre></td></tr></table>
+</div>
+</div><p>那么我们是否可以在堆中记录0x0、0x1偏移量来代表实际上的0x0、0x8呢？比如这样：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt">mem:  | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
+        ^                               ^
+        |    ___________________________|
+        |   |
+heap: | 0 | 1 |
+</code></pre></td></tr></table>
+</div>
+</div><p>答案是可以的。你只需在从heap里拿出来的时候做一下翻译，像左位移3位，就得到了在内存中实际位置。放到heap中的时候只需右移3位，就得到了在heap中记录的位置。</p>
 <p>JVM启用指针压缩后（默认开启），指针大小从8字节变成了4字节，也就是32位，而这个32位实际上能表达的地址范围是2<sup>35</sup>=32G。</p>
 <h2 id="jvm参数">JVM参数<a class="anchor ms-1" href="#jvm参数"><i class="fas fa-link"></i></a></h2>
 <p>开启压缩（默认开启的）：<code>-XX:+UseCompressedOops</code></p>

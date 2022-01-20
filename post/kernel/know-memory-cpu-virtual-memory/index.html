@@ -12,7 +12,7 @@
 <meta name="description" content="" /><meta itemprop="name" content="What every programmer should know about memory, Part 3: Virtual Memory">
 <meta itemprop="description" content=""><meta itemprop="datePublished" content="2019-03-10T22:20:48+08:00" />
 <meta itemprop="dateModified" content="2019-03-10T22:20:48+08:00" />
-<meta itemprop="wordCount" content="4269">
+<meta itemprop="wordCount" content="4273">
 <meta itemprop="keywords" content="kernel," /><meta property="og:title" content="What every programmer should know about memory, Part 3: Virtual Memory" />
 <meta property="og:description" content="" />
 <meta property="og:type" content="article" />
@@ -393,14 +393,27 @@
 <li>一个可执行程序的各个部分，在大多数架构中，的关系是固定的。</li>
 <li>如果页尺寸变得太大，以至于超出了可执行程序所适配的大小，那么就无法加载了。看下图：</li>
 </ul>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln">1</span>$ eu-readelf -l /bin/ls
-<span class="ln">2</span>Program Headers:
-<span class="ln">3</span>  Type   Offset   VirtAddr           PhysAddr           FileSiz  MemSiz   Flg Align
-<span class="ln">4</span>...
-<span class="ln">5</span>  LOAD   0x000000 0x0000000000400000 0x0000000000400000 0x0132ac 0x0132ac R E 0x200000
-<span class="ln">6</span>  LOAD   0x0132b0 0x00000000006132b0 0x00000000006132b0 0x001a71 0x001a71 RW  0x200000
-<span class="ln">7</span>...
-</code></pre></div><p><strong>Figure 4.3: ELF Program Header Indicating Alignment Requirements</strong></p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt">$ eu-readelf -l /bin/ls
+Program Headers:
+  Type   Offset   VirtAddr           PhysAddr           FileSiz  MemSiz   Flg Align
+...
+  LOAD   0x000000 0x0000000000400000 0x0000000000400000 0x0132ac 0x0132ac R E 0x200000
+  LOAD   0x0132b0 0x00000000006132b0 0x00000000006132b0 0x001a71 0x001a71 RW  0x200000
+...
+</code></pre></td></tr></table>
+</div>
+</div><p><strong>Figure 4.3: ELF Program Header Indicating Alignment Requirements</strong></p>
 <p>这是一个x86-64可执行二进制的头，里面规定了内存对齐单位是0x200000 = 2,097,152 = 2MB，如果页尺寸比这个大就不行了。</p>
 <p>另一个使用大页的影响是减少page table tree的层级，因为offset变大了，那么剩下的留给页表的部分就变少了，那么page tree walking就更快了，那么TLB missing所要产生的工作就变少了。</p>
 <p>下面这段没有看懂：</p>

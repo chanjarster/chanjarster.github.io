@@ -12,7 +12,7 @@
 <meta name="description" content="回顾Java语言中的重载与重写，并且看看JVM是怎么处理它们的。" /><meta itemprop="name" content="JVM执行方法调用（一）- 重载与重写">
 <meta itemprop="description" content="回顾Java语言中的重载与重写，并且看看JVM是怎么处理它们的。"><meta itemprop="datePublished" content="2019-02-08T10:28:52+08:00" />
 <meta itemprop="dateModified" content="2019-02-08T10:28:52+08:00" />
-<meta itemprop="wordCount" content="1659">
+<meta itemprop="wordCount" content="1676">
 <meta itemprop="keywords" content="JVM," /><meta property="og:title" content="JVM执行方法调用（一）- 重载与重写" />
 <meta property="og:description" content="回顾Java语言中的重载与重写，并且看看JVM是怎么处理它们的。" />
 <meta property="og:type" content="article" />
@@ -231,59 +231,127 @@
 <li>或者，父子类中，子类有一个方法与父类非私有方法名字相同，但是参数类型不同。那么子类的这个方法对父类方法构成重载。</li>
 </ul>
 <p>JVM是怎么处理重载的？其实是编译阶段编译器就已经决定好调用哪一个重载方法。看下面代码：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln"> 1</span><span class="kd">class</span> <span class="nc">Overload</span> <span class="o">{</span>
-<span class="ln"> 2</span>  <span class="kt">void</span> <span class="nf">invoke</span><span class="o">(</span><span class="n">Object</span> <span class="n">obj</span><span class="o">,</span> <span class="n">Object</span><span class="o">...</span> <span class="n">args</span><span class="o">)</span> <span class="o">{</span> <span class="o">}</span>
-<span class="ln"> 3</span>  <span class="kt">void</span> <span class="nf">invoke</span><span class="o">(</span><span class="n">String</span> <span class="n">s</span><span class="o">,</span> <span class="n">Object</span> <span class="n">obj</span><span class="o">,</span> <span class="n">Object</span><span class="o">...</span> <span class="n">args</span><span class="o">)</span> <span class="o">{</span> <span class="o">}</span>
-<span class="ln"> 4</span>
-<span class="ln"> 5</span>  <span class="kt">void</span> <span class="nf">test1</span><span class="o">()</span> <span class="o">{</span>
-<span class="ln"> 6</span>    <span class="c1">// 调用第二个 invoke 方法
-</span><span class="ln"> 7</span><span class="c1"></span>    <span class="n">invoke</span><span class="o">(</span><span class="kc">null</span><span class="o">,</span> <span class="n">1</span><span class="o">);</span>    
-<span class="ln"> 8</span>  <span class="o">}</span>
-<span class="ln"> 9</span>  <span class="kt">void</span> <span class="nf">test2</span><span class="o">()</span> <span class="o">{</span>
-<span class="ln">10</span>    <span class="c1">// 调用第二个 invoke 方法
-</span><span class="ln">11</span><span class="c1"></span>    <span class="n">invoke</span><span class="o">(</span><span class="kc">null</span><span class="o">,</span> <span class="n">1</span><span class="o">,</span> <span class="n">2</span><span class="o">);</span> 
-<span class="ln">12</span>  <span class="o">}</span>
-<span class="ln">13</span>  <span class="kt">void</span> <span class="nf">test3</span><span class="o">()</span> <span class="o">{</span>
-<span class="ln">14</span>    <span class="c1">// 只有手动绕开可变长参数的语法糖，才能调用第一个invoke方法
-</span><span class="ln">15</span><span class="c1"></span>    <span class="n">invoke</span><span class="o">(</span><span class="kc">null</span><span class="o">,</span> <span class="k">new</span> <span class="n">Object</span><span class="o">[]{</span><span class="n">1</span><span class="o">});</span> 
-<span class="ln">16</span>  <span class="o">}</span>
-<span class="ln">17</span><span class="o">}</span>
-</code></pre></div><p>上面的注释告诉了我们结果，那么怎么才能证明上面的注释呢？我们利用<code>javap</code>观察字节码可以知道。</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln"> 1</span>$ javac Overload.java
-<span class="ln"> 2</span>$ javap -c Overload.java
-<span class="ln"> 3</span>
-<span class="ln"> 4</span>Compiled from <span class="s2">&#34;Overload.java&#34;</span>
-<span class="ln"> 5</span>class Overload <span class="o">{</span>
-<span class="ln"> 6</span>  ...
-<span class="ln"> 7</span>  void invoke<span class="o">(</span>java.lang.Object, java.lang.Object...<span class="o">)</span><span class="p">;</span>
-<span class="ln"> 8</span>    Code:
-<span class="ln"> 9</span>       0: <span class="k">return</span>
-<span class="ln">10</span>  void invoke<span class="o">(</span>java.lang.String, java.lang.Object, java.lang.Object...<span class="o">)</span><span class="p">;</span>
-<span class="ln">11</span>    Code:
-<span class="ln">12</span>       0: <span class="k">return</span>
-<span class="ln">13</span>  void test1<span class="o">()</span><span class="p">;</span>
-<span class="ln">14</span>    Code:
-<span class="ln">15</span>      ...
-<span class="ln">16</span>      10: invokevirtual <span class="c1">#4  // Method invoke:(Ljava/lang/String;Ljava/lang/Object;[Ljava/lang/Object;)V</span>
-<span class="ln">17</span>      13: <span class="k">return</span>
-<span class="ln">18</span>  void test2<span class="o">()</span><span class="p">;</span>
-<span class="ln">19</span>    Code:
-<span class="ln">20</span>      ...
-<span class="ln">21</span>      17: invokevirtual <span class="c1">#4  // Method invoke:(Ljava/lang/String;Ljava/lang/Object;[Ljava/lang/Object;)V</span>
-<span class="ln">22</span>      20: <span class="k">return</span>
-<span class="ln">23</span>  void test3<span class="o">()</span><span class="p">;</span>
-<span class="ln">24</span>    Code:
-<span class="ln">25</span>      ...
-<span class="ln">26</span>      13: invokevirtual <span class="c1">#5  // Method invoke:(Ljava/lang/Object;[Ljava/lang/Object;)V</span>
-<span class="ln">27</span>      16: <span class="k">return</span>
-<span class="ln">28</span><span class="o">}</span>
-</code></pre></div><p>这里面有很多JVM指令，你暂且不用关心，我们看<code>test1</code>、<code>test2</code>、<code>test3</code>方法调用的是哪个方法：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="ln">1</span>  void test1();
-<span class="ln">2</span>    Code:
-<span class="ln">3</span>      ...
-<span class="ln">4</span>      10: invokevirtual #4  // Method invoke:(Ljava/lang/String;Ljava/lang/Object;[Ljava/lang/Object;)V
-<span class="ln">5</span>      13: return
-</code></pre></div><p><code>invoke</code>是方法名，<code>(Ljava/lang/String;Ljava/lang/Object;[Ljava/lang/Object;)V</code>则是方法描述符。这里翻译过来就是<code>void invoke(String, Object, Object[])</code>，Java的可变长参数实际上就是数组，所以等同于<code>void invoke(String, Object, Object...)</code>。同理，<code>test2</code>调用的是<code>void invoke(String, Object, Object...)</code>，<code>test3</code>调用的是<code>void invoke(Object, Object...)</code>。关于方法描述符的详参<a href="https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-4.html#jvms-4.3.2" target="_blank" rel="noopener noreferrer">JVM Spec - 4.3.2. Field Descriptors</a>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="kd">class</span> <span class="nc">Overload</span> <span class="o">{</span>
+  <span class="kt">void</span> <span class="nf">invoke</span><span class="o">(</span><span class="n">Object</span> <span class="n">obj</span><span class="o">,</span> <span class="n">Object</span><span class="o">...</span> <span class="n">args</span><span class="o">)</span> <span class="o">{</span> <span class="o">}</span>
+  <span class="kt">void</span> <span class="nf">invoke</span><span class="o">(</span><span class="n">String</span> <span class="n">s</span><span class="o">,</span> <span class="n">Object</span> <span class="n">obj</span><span class="o">,</span> <span class="n">Object</span><span class="o">...</span> <span class="n">args</span><span class="o">)</span> <span class="o">{</span> <span class="o">}</span>
+
+  <span class="kt">void</span> <span class="nf">test1</span><span class="o">()</span> <span class="o">{</span>
+    <span class="c1">// 调用第二个 invoke 方法
+</span><span class="c1"></span>    <span class="n">invoke</span><span class="o">(</span><span class="kc">null</span><span class="o">,</span> <span class="n">1</span><span class="o">);</span>    
+  <span class="o">}</span>
+  <span class="kt">void</span> <span class="nf">test2</span><span class="o">()</span> <span class="o">{</span>
+    <span class="c1">// 调用第二个 invoke 方法
+</span><span class="c1"></span>    <span class="n">invoke</span><span class="o">(</span><span class="kc">null</span><span class="o">,</span> <span class="n">1</span><span class="o">,</span> <span class="n">2</span><span class="o">);</span> 
+  <span class="o">}</span>
+  <span class="kt">void</span> <span class="nf">test3</span><span class="o">()</span> <span class="o">{</span>
+    <span class="c1">// 只有手动绕开可变长参数的语法糖，才能调用第一个invoke方法
+</span><span class="c1"></span>    <span class="n">invoke</span><span class="o">(</span><span class="kc">null</span><span class="o">,</span> <span class="k">new</span> <span class="n">Object</span><span class="o">[]{</span><span class="n">1</span><span class="o">});</span> 
+  <span class="o">}</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>上面的注释告诉了我们结果，那么怎么才能证明上面的注释呢？我们利用<code>javap</code>观察字节码可以知道。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">$ javac Overload.java
+$ javap -c Overload.java
+
+Compiled from <span class="s2">&#34;Overload.java&#34;</span>
+class Overload <span class="o">{</span>
+  ...
+  void invoke<span class="o">(</span>java.lang.Object, java.lang.Object...<span class="o">)</span><span class="p">;</span>
+    Code:
+       0: <span class="k">return</span>
+  void invoke<span class="o">(</span>java.lang.String, java.lang.Object, java.lang.Object...<span class="o">)</span><span class="p">;</span>
+    Code:
+       0: <span class="k">return</span>
+  void test1<span class="o">()</span><span class="p">;</span>
+    Code:
+      ...
+      10: invokevirtual <span class="c1">#4  // Method invoke:(Ljava/lang/String;Ljava/lang/Object;[Ljava/lang/Object;)V</span>
+      13: <span class="k">return</span>
+  void test2<span class="o">()</span><span class="p">;</span>
+    Code:
+      ...
+      17: invokevirtual <span class="c1">#4  // Method invoke:(Ljava/lang/String;Ljava/lang/Object;[Ljava/lang/Object;)V</span>
+      20: <span class="k">return</span>
+  void test3<span class="o">()</span><span class="p">;</span>
+    Code:
+      ...
+      13: invokevirtual <span class="c1">#5  // Method invoke:(Ljava/lang/Object;[Ljava/lang/Object;)V</span>
+      16: <span class="k">return</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>这里面有很多JVM指令，你暂且不用关心，我们看<code>test1</code>、<code>test2</code>、<code>test3</code>方法调用的是哪个方法：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt">  void test1();
+    Code:
+      ...
+      10: invokevirtual #4  // Method invoke:(Ljava/lang/String;Ljava/lang/Object;[Ljava/lang/Object;)V
+      13: return
+</code></pre></td></tr></table>
+</div>
+</div><p><code>invoke</code>是方法名，<code>(Ljava/lang/String;Ljava/lang/Object;[Ljava/lang/Object;)V</code>则是方法描述符。这里翻译过来就是<code>void invoke(String, Object, Object[])</code>，Java的可变长参数实际上就是数组，所以等同于<code>void invoke(String, Object, Object...)</code>。同理，<code>test2</code>调用的是<code>void invoke(String, Object, Object...)</code>，<code>test3</code>调用的是<code>void invoke(Object, Object...)</code>。关于方法描述符的详参<a href="https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-4.html#jvms-4.3.2" target="_blank" rel="noopener noreferrer">JVM Spec - 4.3.2. Field Descriptors</a>
 和<a href="https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-4.html#jvms-4.3.3" target="_blank" rel="noopener noreferrer">JVM Spec - 4.3.3. Method Descriptors</a>
 。</p>
 <p>所以重载方法的选择是在编译过程中就已经决定的，下面是编译器的匹配步骤：</p>
@@ -316,42 +384,88 @@
 <p>（更多详细信息可参考<a href="https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-5.html#jvms-5.4.5" target="_blank" rel="noopener noreferrer">JVM Spec - 5.4.5. Overriding</a>
 ）</p>
 <p>注意上面提到的方法描述符，前面讲过方法描述符包含了参数类型及返回值，JVM要求这两个必须完全相同才可以，但是Java语言说的是参数类型相同但是返回值类型可以不同。Java编译器通过创建Bridge Method来解决这个问题，看下面代码：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="ln"> 1</span><span class="kd">class</span> <span class="nc">A</span> <span class="o">{</span>
-<span class="ln"> 2</span>  <span class="n">Object</span> <span class="nf">f</span><span class="o">()</span> <span class="o">{</span>
-<span class="ln"> 3</span>    <span class="k">return</span> <span class="kc">null</span><span class="o">;</span>
-<span class="ln"> 4</span>  <span class="o">}</span>
-<span class="ln"> 5</span><span class="o">}</span>
-<span class="ln"> 6</span><span class="kd">class</span> <span class="nc">C</span> <span class="kd">extends</span> <span class="n">A</span> <span class="o">{</span>
-<span class="ln"> 7</span>  <span class="n">Integer</span> <span class="nf">f</span><span class="o">()</span> <span class="o">{</span>
-<span class="ln"> 8</span>    <span class="k">return</span> <span class="kc">null</span><span class="o">;</span>
-<span class="ln"> 9</span>  <span class="o">}</span>
-<span class="ln">10</span><span class="o">}</span>
-</code></pre></div><p>然后用<code>javap</code>查看编译结果：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln"> 1</span>$ javac Override.java
-<span class="ln"> 2</span>$ javap -v C.class
-<span class="ln"> 3</span>class C extends A
-<span class="ln"> 4</span>...
-<span class="ln"> 5</span><span class="o">{</span>
-<span class="ln"> 6</span>  java.lang.Integer f<span class="o">()</span><span class="p">;</span>
-<span class="ln"> 7</span>    descriptor: <span class="o">()</span>Ljava/lang/Integer<span class="p">;</span>
-<span class="ln"> 8</span>    flags:
-<span class="ln"> 9</span>    Code:
-<span class="ln">10</span>      <span class="nv">stack</span><span class="o">=</span>1, <span class="nv">locals</span><span class="o">=</span>1, <span class="nv">args_size</span><span class="o">=</span><span class="m">1</span>
-<span class="ln">11</span>         0: aconst_null
-<span class="ln">12</span>         1: areturn
-<span class="ln">13</span>  ...
-<span class="ln">14</span>  java.lang.Object f<span class="o">()</span><span class="p">;</span>
-<span class="ln">15</span>    descriptor: <span class="o">()</span>Ljava/lang/Object<span class="p">;</span>
-<span class="ln">16</span>    flags: ACC_BRIDGE, ACC_SYNTHETIC
-<span class="ln">17</span>    Code:
-<span class="ln">18</span>      <span class="nv">stack</span><span class="o">=</span>1, <span class="nv">locals</span><span class="o">=</span>1, <span class="nv">args_size</span><span class="o">=</span><span class="m">1</span>
-<span class="ln">19</span>         0: aload_0
-<span class="ln">20</span>         1: invokevirtual <span class="c1">#2                  // Method f:()Ljava/lang/Integer;</span>
-<span class="ln">21</span>         4: areturn
-<span class="ln">22</span>      LineNumberTable:
-<span class="ln">23</span>        line 7: <span class="m">0</span>
-<span class="ln">24</span><span class="o">}</span>
-</code></pre></div><p>可以看到编译器替我们创建了一个<code>Object f()</code>的Bridge Method，它调用的是<code>Integer f()</code>，这样就构成了JVM所定义的重写。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="kd">class</span> <span class="nc">A</span> <span class="o">{</span>
+  <span class="n">Object</span> <span class="nf">f</span><span class="o">()</span> <span class="o">{</span>
+    <span class="k">return</span> <span class="kc">null</span><span class="o">;</span>
+  <span class="o">}</span>
+<span class="o">}</span>
+<span class="kd">class</span> <span class="nc">C</span> <span class="kd">extends</span> <span class="n">A</span> <span class="o">{</span>
+  <span class="n">Integer</span> <span class="nf">f</span><span class="o">()</span> <span class="o">{</span>
+    <span class="k">return</span> <span class="kc">null</span><span class="o">;</span>
+  <span class="o">}</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>然后用<code>javap</code>查看编译结果：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">$ javac Override.java
+$ javap -v C.class
+class C extends A
+...
+<span class="o">{</span>
+  java.lang.Integer f<span class="o">()</span><span class="p">;</span>
+    descriptor: <span class="o">()</span>Ljava/lang/Integer<span class="p">;</span>
+    flags:
+    Code:
+      <span class="nv">stack</span><span class="o">=</span>1, <span class="nv">locals</span><span class="o">=</span>1, <span class="nv">args_size</span><span class="o">=</span><span class="m">1</span>
+         0: aconst_null
+         1: areturn
+  ...
+  java.lang.Object f<span class="o">()</span><span class="p">;</span>
+    descriptor: <span class="o">()</span>Ljava/lang/Object<span class="p">;</span>
+    flags: ACC_BRIDGE, ACC_SYNTHETIC
+    Code:
+      <span class="nv">stack</span><span class="o">=</span>1, <span class="nv">locals</span><span class="o">=</span>1, <span class="nv">args_size</span><span class="o">=</span><span class="m">1</span>
+         0: aload_0
+         1: invokevirtual <span class="c1">#2                  // Method f:()Ljava/lang/Integer;</span>
+         4: areturn
+      LineNumberTable:
+        line 7: <span class="m">0</span>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>可以看到编译器替我们创建了一个<code>Object f()</code>的Bridge Method，它调用的是<code>Integer f()</code>，这样就构成了JVM所定义的重写。</p>
 <h2 id="思维导图">思维导图<a class="anchor ms-1" href="#思维导图"><i class="fas fa-link"></i></a></h2>
 <img src="../overload-override.png" style="zoom:50%" />
 <h2 id="参考文档">参考文档<a class="anchor ms-1" href="#参考文档"><i class="fas fa-link"></i></a></h2>

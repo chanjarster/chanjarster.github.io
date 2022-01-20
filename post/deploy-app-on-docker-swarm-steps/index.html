@@ -12,7 +12,7 @@
 <meta name="description" content="" /><meta itemprop="name" content="Docker Swarm部署应用的总结">
 <meta itemprop="description" content=""><meta itemprop="datePublished" content="2019-02-01T09:02:45+08:00" />
 <meta itemprop="dateModified" content="2019-02-01T09:02:45+08:00" />
-<meta itemprop="wordCount" content="2409">
+<meta itemprop="wordCount" content="2375">
 <meta itemprop="keywords" content="docker,运维," /><meta property="og:title" content="Docker Swarm部署应用的总结" />
 <meta property="og:description" content="" />
 <meta property="og:type" content="article" />
@@ -280,25 +280,53 @@
 <h2 id="2-部署docker-swarm集群">2 部署Docker swarm集群<a class="anchor ms-1" href="#2-部署docker-swarm集群"><i class="fas fa-link"></i></a></h2>
 <p>到一台机器上执行<code>docker swarm init</code>，这个机器将作为manager node。</p>
 <p>执行<code>docker node ls</code>会看到类似下面的结果：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>$ docker node ls
-<span class="ln">2</span>
-<span class="ln">3</span>ID                           HOSTNAME  STATUS  AVAILABILITY  MANAGER STATUS
-<span class="ln">4</span>dxn1zf6l61qsb1josjja83ngz *  manager1  Ready   Active        Leader
-</code></pre></div><p>如果你计划不会把工作负载跑在manager node上，那么使用<code>docker drain</code>：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>docker node update --availability drain &lt;node-id&gt;
-</code></pre></div><p>可参考<a href="../swarm-command-list/">Docker Swarm基本命令清单</a>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">$ docker node ls
+
+ID                           HOSTNAME  STATUS  AVAILABILITY  MANAGER STATUS
+dxn1zf6l61qsb1josjja83ngz *  manager1  Ready   Active        Leader
+</code></pre></td></tr></table>
+</div>
+</div><p>如果你计划不会把工作负载跑在manager node上，那么使用<code>docker drain</code>：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">docker node update --availability drain &lt;node-id&gt;
+</code></pre></td></tr></table>
+</div>
+</div><p>可参考<a href="../swarm-command-list/">Docker Swarm基本命令清单</a>
 。</p>
 <h3 id="21-配置网络mtu和子网">2.1 配置网络MTU和子网<a class="anchor ms-1" href="#21-配置网络mtu和子网"><i class="fas fa-link"></i></a></h3>
 <p>参考<a href="../docker-overlay-network-mtu">Docker Overlay网络的MTU</a>
 。</p>
 <p><strong>特别注意</strong></p>
 <p>观察<code>docker_gwbridge</code>和<code>ingress</code>的子网是否与已有网络冲突：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>$ docker network inspect -f <span class="s1">&#39;{{json .IPAM}}&#39;</span> docker_gwbridge
-<span class="ln">2</span><span class="o">{</span><span class="s2">&#34;Driver&#34;</span>:<span class="s2">&#34;default&#34;</span>,<span class="s2">&#34;Options&#34;</span>:null,<span class="s2">&#34;Config&#34;</span>:<span class="o">[{</span><span class="s2">&#34;Subnet&#34;</span>:<span class="s2">&#34;172.18.0.0/16&#34;</span>,<span class="s2">&#34;Gateway&#34;</span>:<span class="s2">&#34;172.18.0.1&#34;</span><span class="o">}]}</span>
-<span class="ln">3</span>
-<span class="ln">4</span>$ docker network inspect -f <span class="s1">&#39;{{json .IPAM}}&#39;</span> ingress
-<span class="ln">5</span><span class="o">{</span><span class="s2">&#34;Driver&#34;</span>:<span class="s2">&#34;default&#34;</span>,<span class="s2">&#34;Options&#34;</span>:null,<span class="s2">&#34;Config&#34;</span>:<span class="o">[{</span><span class="s2">&#34;Subnet&#34;</span>:<span class="s2">&#34;10.255.0.0/16&#34;</span>,<span class="s2">&#34;Gateway&#34;</span>:<span class="s2">&#34;10.255.0.1&#34;</span><span class="o">}]}</span>
-</code></pre></div><p>如果有冲突则参考<a href="../docker-overlay-network-mtu">Docker Overlay网络的MTU</a>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">$ docker network inspect -f <span class="s1">&#39;{{json .IPAM}}&#39;</span> docker_gwbridge
+<span class="o">{</span><span class="s2">&#34;Driver&#34;</span>:<span class="s2">&#34;default&#34;</span>,<span class="s2">&#34;Options&#34;</span>:null,<span class="s2">&#34;Config&#34;</span>:<span class="o">[{</span><span class="s2">&#34;Subnet&#34;</span>:<span class="s2">&#34;172.18.0.0/16&#34;</span>,<span class="s2">&#34;Gateway&#34;</span>:<span class="s2">&#34;172.18.0.1&#34;</span><span class="o">}]}</span>
+
+$ docker network inspect -f <span class="s1">&#39;{{json .IPAM}}&#39;</span> ingress
+<span class="o">{</span><span class="s2">&#34;Driver&#34;</span>:<span class="s2">&#34;default&#34;</span>,<span class="s2">&#34;Options&#34;</span>:null,<span class="s2">&#34;Config&#34;</span>:<span class="o">[{</span><span class="s2">&#34;Subnet&#34;</span>:<span class="s2">&#34;10.255.0.0/16&#34;</span>,<span class="s2">&#34;Gateway&#34;</span>:<span class="s2">&#34;10.255.0.1&#34;</span><span class="o">}]}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>如果有冲突则参考<a href="../docker-overlay-network-mtu">Docker Overlay网络的MTU</a>
 中的方法修改子网。</p>
 <h3 id="22-添加node">2.2 添加Node<a class="anchor ms-1" href="#22-添加node"><i class="fas fa-link"></i></a></h3>
 <p>参考<a href="../swarm-command-list/">Docker Swarm基本命令清单</a>
@@ -316,10 +344,24 @@
 </ol>
 <h3 id="31-给node打label">3.1 给Node打Label<a class="anchor ms-1" href="#31-给node打label"><i class="fas fa-link"></i></a></h3>
 <p>挑选一台Node作为运行监控服务的机器。给这个node打上label：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>$ docker node update --label-add <span class="k">for</span>-monitor-stack<span class="o">=</span><span class="m">1</span> &lt;node-id&gt;
-</code></pre></div><h3 id="32-创建监控网络">3.2 创建监控网络<a class="anchor ms-1" href="#32-创建监控网络"><i class="fas fa-link"></i></a></h3>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>$ docker network create -d overlay --attachable monitor-net
-</code></pre></div><p>参考参考<a href="../docker-overlay-network-mtu">Docker Overlay网络的MTU</a>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">$ docker node update --label-add <span class="k">for</span>-monitor-stack<span class="o">=</span><span class="m">1</span> &lt;node-id&gt;
+</code></pre></td></tr></table>
+</div>
+</div><h3 id="32-创建监控网络">3.2 创建监控网络<a class="anchor ms-1" href="#32-创建监控网络"><i class="fas fa-link"></i></a></h3>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">$ docker network create -d overlay --attachable monitor-net
+</code></pre></td></tr></table>
+</div>
+</div><p>参考参考<a href="../docker-overlay-network-mtu">Docker Overlay网络的MTU</a>
 检查子网与MTU是否配置正确。</p>
 <h3 id="33-启动service">3.3 启动service<a class="anchor ms-1" href="#33-启动service"><i class="fas fa-link"></i></a></h3>
 <p>clone <a href="https://github.com/vegasbrianc/prometheus/" target="_blank" rel="noopener noreferrer">vegasbrianc的Prometheus监控方案</a>
@@ -327,12 +369,23 @@
 <p>使用我修改过的<a href="https://gist.github.com/chanjarster/21fb7707246a7970eb89a116ea61f205" target="_blank" rel="noopener noreferrer">docker-stack.yml</a>
 </p>
 <p>启动service：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>$ docker stack deploy <span class="se">\
-</span><span class="ln">2</span><span class="se"></span>  --with-registry-auth <span class="se">\
-</span><span class="ln">3</span><span class="se"></span>  --prune <span class="se">\
-</span><span class="ln">4</span><span class="se"></span>  -c docker-stack.yml <span class="se">\
-</span><span class="ln">5</span><span class="se"></span>  p8s-monitor-stack
-</code></pre></div><p>访问地址：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">$ docker stack deploy <span class="se">\
+</span><span class="se"></span>  --with-registry-auth <span class="se">\
+</span><span class="se"></span>  --prune <span class="se">\
+</span><span class="se"></span>  -c docker-stack.yml <span class="se">\
+</span><span class="se"></span>  p8s-monitor-stack
+</code></pre></td></tr></table>
+</div>
+</div><p>访问地址：</p>
 <ul>
 <li>Prometheus：<code>http://&lt;任意swarm node ip&gt;:9000</code></li>
 <li>Node-exporter：<code>http://&lt;任意swarm node ip&gt;:9010</code></li>
@@ -364,63 +417,149 @@
 <p>有时候你的应用既有stateless service又有stateful service，这时需要把他们挂载到同一个overlay网络里，这样它们之间就能够互相通信了。</p>
 <h3 id="42-创建应用网络">4.2 创建应用网络<a class="anchor ms-1" href="#42-创建应用网络"><i class="fas fa-link"></i></a></h3>
 <p>创建<code>app-net</code>（你也可以改成自己的名字）</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>$ docker network create -d overlay --attachable app-net
-</code></pre></div><p>参考<a href="../docker-overlay-network-mtu">Docker Overlay网络的MTU</a>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">$ docker network create -d overlay --attachable app-net
+</code></pre></td></tr></table>
+</div>
+</div><p>参考<a href="../docker-overlay-network-mtu">Docker Overlay网络的MTU</a>
 检查子网与MTU是否配置正确。</p>
 <h3 id="43-给node打label">4.3 给Node打Label<a class="anchor ms-1" href="#43-给node打label"><i class="fas fa-link"></i></a></h3>
 <p>如果你对于Service部署在哪个Node上有要求，那么你得给Node打上Label：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>$ docker node update --label-add &lt;your-label&gt;<span class="o">=</span><span class="m">1</span> &lt;node-id&gt;
-</code></pre></div><p>然后在<code>docker-compose.yaml</code>里添加约束条件：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-yaml" data-lang="yaml"><span class="ln">1</span><span class="nt">version</span><span class="p">:</span><span class="w"> </span><span class="s2">&#34;3.7&#34;</span><span class="w">
-</span><span class="ln">2</span><span class="w"></span><span class="nt">services</span><span class="p">:</span><span class="w">
-</span><span class="ln">3</span><span class="w">  </span><span class="nt">busybox</span><span class="p">:</span><span class="w">
-</span><span class="ln">4</span><span class="w">    </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l">busybox</span><span class="w">
-</span><span class="ln">5</span><span class="w">    </span><span class="nt">deploy</span><span class="p">:</span><span class="w">
-</span><span class="ln">6</span><span class="w">      </span><span class="nt">placement</span><span class="p">:</span><span class="w">
-</span><span class="ln">7</span><span class="w">        </span><span class="nt">constraints</span><span class="p">:</span><span class="w">
-</span><span class="ln">8</span><span class="w">          </span>- <span class="l">node.labels.&lt;your-label&gt; == 1</span><span class="w">
-</span></code></pre></div><h3 id="44-启动service">4.4 启动service<a class="anchor ms-1" href="#44-启动service"><i class="fas fa-link"></i></a></h3>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">$ docker node update --label-add &lt;your-label&gt;<span class="o">=</span><span class="m">1</span> &lt;node-id&gt;
+</code></pre></td></tr></table>
+</div>
+</div><p>然后在<code>docker-compose.yaml</code>里添加约束条件：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-yaml" data-lang="yaml"><span class="nt">version</span><span class="p">:</span><span class="w"> </span><span class="s2">&#34;3.7&#34;</span><span class="w">
+</span><span class="w"></span><span class="nt">services</span><span class="p">:</span><span class="w">
+</span><span class="w">  </span><span class="nt">busybox</span><span class="p">:</span><span class="w">
+</span><span class="w">    </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l">busybox</span><span class="w">
+</span><span class="w">    </span><span class="nt">deploy</span><span class="p">:</span><span class="w">
+</span><span class="w">      </span><span class="nt">placement</span><span class="p">:</span><span class="w">
+</span><span class="w">        </span><span class="nt">constraints</span><span class="p">:</span><span class="w">
+</span><span class="w">          </span>- <span class="l">node.labels.&lt;your-label&gt; == 1</span><span class="w">
+</span></code></pre></td></tr></table>
+</div>
+</div><h3 id="44-启动service">4.4 启动service<a class="anchor ms-1" href="#44-启动service"><i class="fas fa-link"></i></a></h3>
 <p>对于stateless service，编写<code>docker-compose.yaml</code>，里面写了同时挂载<code>app-net</code>和<code>monitor-net</code>，比如：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-yaml" data-lang="yaml"><span class="ln"> 1</span><span class="nt">version</span><span class="p">:</span><span class="w"> </span><span class="s2">&#34;3.7&#34;</span><span class="w">
-</span><span class="ln"> 2</span><span class="w"></span><span class="nt">services</span><span class="p">:</span><span class="w">
-</span><span class="ln"> 3</span><span class="w">  </span><span class="nt">busybox</span><span class="p">:</span><span class="w">
-</span><span class="ln"> 4</span><span class="w">    </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l">busybox</span><span class="w">
-</span><span class="ln"> 5</span><span class="w">    </span><span class="nt">networks</span><span class="p">:</span><span class="w">
-</span><span class="ln"> 6</span><span class="w">      </span><span class="nt">app-net</span><span class="p">:</span><span class="w">
-</span><span class="ln"> 7</span><span class="w">      </span><span class="nt">monitor-net</span><span class="p">:</span><span class="w">
-</span><span class="ln"> 8</span><span class="w">        </span><span class="nt">aliases</span><span class="p">:</span><span class="w">
-</span><span class="ln"> 9</span><span class="w">          </span>- <span class="l">busybox</span><span class="w">
-</span><span class="ln">10</span><span class="w"></span><span class="nn">...</span><span class="w">
-</span><span class="ln">11</span><span class="w"></span><span class="nt">networks</span><span class="p">:</span><span class="w">
-</span><span class="ln">12</span><span class="w">  </span><span class="nt">app-net</span><span class="p">:</span><span class="w">
-</span><span class="ln">13</span><span class="w">    </span><span class="nt">external</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w">
-</span><span class="ln">14</span><span class="w">  </span><span class="nt">monitor-net</span><span class="p">:</span><span class="w">
-</span><span class="ln">15</span><span class="w">    </span><span class="nt">external</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w">
-</span></code></pre></div><p>注意上面设置了busybox service在monitor-net中的别名，这是因为如果你用<code>docker stack deploy</code>部署，那么busybox的名字默认是<code>&lt;stack-name&gt;_busybox</code>，这样对于prometheus而言此名字不稳定，不便于配置详见<a href="../p8s-scrape-container-in-docker-swarm-overlay-network/">Prometehus监控Docker Swarm Overlay网络中的容器</a>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-yaml" data-lang="yaml"><span class="nt">version</span><span class="p">:</span><span class="w"> </span><span class="s2">&#34;3.7&#34;</span><span class="w">
+</span><span class="w"></span><span class="nt">services</span><span class="p">:</span><span class="w">
+</span><span class="w">  </span><span class="nt">busybox</span><span class="p">:</span><span class="w">
+</span><span class="w">    </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l">busybox</span><span class="w">
+</span><span class="w">    </span><span class="nt">networks</span><span class="p">:</span><span class="w">
+</span><span class="w">      </span><span class="nt">app-net</span><span class="p">:</span><span class="w">
+</span><span class="w">      </span><span class="nt">monitor-net</span><span class="p">:</span><span class="w">
+</span><span class="w">        </span><span class="nt">aliases</span><span class="p">:</span><span class="w">
+</span><span class="w">          </span>- <span class="l">busybox</span><span class="w">
+</span><span class="w"></span><span class="nn">...</span><span class="w">
+</span><span class="w"></span><span class="nt">networks</span><span class="p">:</span><span class="w">
+</span><span class="w">  </span><span class="nt">app-net</span><span class="p">:</span><span class="w">
+</span><span class="w">    </span><span class="nt">external</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w">
+</span><span class="w">  </span><span class="nt">monitor-net</span><span class="p">:</span><span class="w">
+</span><span class="w">    </span><span class="nt">external</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w">
+</span></code></pre></td></tr></table>
+</div>
+</div><p>注意上面设置了busybox service在monitor-net中的别名，这是因为如果你用<code>docker stack deploy</code>部署，那么busybox的名字默认是<code>&lt;stack-name&gt;_busybox</code>，这样对于prometheus而言此名字不稳定，不便于配置详见<a href="../p8s-scrape-container-in-docker-swarm-overlay-network/">Prometehus监控Docker Swarm Overlay网络中的容器</a>
 。</p>
 <p>然后用<code>docker stack deploy</code>部署：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>$ docker stack deploy <span class="se">\
-</span><span class="ln">2</span><span class="se"></span>  --with-registry-auth <span class="se">\
-</span><span class="ln">3</span><span class="se"></span>  --prune <span class="se">\
-</span><span class="ln">4</span><span class="se"></span>  -c docker-compose.yaml
-<span class="ln">5</span>  &lt;stack-name&gt;
-</code></pre></div><p>如果用<code>docker service create</code>则：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>$ docker service create <span class="se">\
-</span><span class="ln">2</span><span class="se"></span> --network app-net <span class="se">\
-</span><span class="ln">3</span><span class="se"></span> --network monitor-net <span class="se">\
-</span><span class="ln">4</span><span class="se"></span> --name &lt;name&gt; <span class="se">\
-</span><span class="ln">5</span><span class="se"></span> ... 其他参数
-<span class="ln">6</span> &lt;image&gt;
-</code></pre></div><p>下面举例<code>docker run</code>启动stateful service的方法：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>$ docker run -d <span class="se">\
-</span><span class="ln">2</span><span class="se"></span>  --name &lt;name&gt; <span class="se">\
-</span><span class="ln">3</span><span class="se"></span>  --network app-net <span class="se">\
-</span><span class="ln">4</span><span class="se"></span>  ... 其他参数 <span class="se">\
-</span><span class="ln">5</span><span class="se"></span>  &lt;image&gt;
-<span class="ln">6</span>  
-<span class="ln">7</span><span class="c1"># 然后再挂载到monitor-net上</span>
-<span class="ln">8</span>$ docker network connect monitor-net &lt;name&gt;
-</code></pre></div></div></div>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">$ docker stack deploy <span class="se">\
+</span><span class="se"></span>  --with-registry-auth <span class="se">\
+</span><span class="se"></span>  --prune <span class="se">\
+</span><span class="se"></span>  -c docker-compose.yaml
+  &lt;stack-name&gt;
+</code></pre></td></tr></table>
+</div>
+</div><p>如果用<code>docker service create</code>则：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">$ docker service create <span class="se">\
+</span><span class="se"></span> --network app-net <span class="se">\
+</span><span class="se"></span> --network monitor-net <span class="se">\
+</span><span class="se"></span> --name &lt;name&gt; <span class="se">\
+</span><span class="se"></span> ... 其他参数
+ &lt;image&gt;
+</code></pre></td></tr></table>
+</div>
+</div><p>下面举例<code>docker run</code>启动stateful service的方法：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">$ docker run -d <span class="se">\
+</span><span class="se"></span>  --name &lt;name&gt; <span class="se">\
+</span><span class="se"></span>  --network app-net <span class="se">\
+</span><span class="se"></span>  ... 其他参数 <span class="se">\
+</span><span class="se"></span>  &lt;image&gt;
+  
+<span class="c1"># 然后再挂载到monitor-net上</span>
+$ docker network connect monitor-net &lt;name&gt;
+</code></pre></td></tr></table>
+</div>
+</div></div></div>
   <div class="card-footer"><div class="post-navs d-flex justify-content-evenly">
   <div class="post-nav post-prev"><i class="fas fa-fw fa-chevron-left"></i>
     <a href="/post/article-review/stateful-service-design-consideration-for-the-k8s-stack/">Stateful Service Design Consideration for the Kubernetes Stack

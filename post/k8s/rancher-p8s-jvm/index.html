@@ -12,7 +12,7 @@
 <meta name="description" content="" /><meta itemprop="name" content="利用Rancher中的Prometheus采集JVM数据">
 <meta itemprop="description" content=""><meta itemprop="datePublished" content="2020-01-17T10:59:27+08:00" />
 <meta itemprop="dateModified" content="2020-01-17T10:59:27+08:00" />
-<meta itemprop="wordCount" content="985">
+<meta itemprop="wordCount" content="958">
 <meta itemprop="keywords" content="k8s,prometheus,rancher," /><meta property="og:title" content="利用Rancher中的Prometheus采集JVM数据" />
 <meta property="og:description" content="" />
 <meta property="og:type" content="article" />
@@ -235,125 +235,260 @@
 
 <h3 id="rbac">RBAC<a class="anchor ms-1" href="#rbac"><i class="fas fa-link"></i></a></h3>
 <p>给prometheus-operator的service account配置RBAC：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-yaml" data-lang="yaml"><span class="ln"> 1</span><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l">rbac.authorization.k8s.io/v1beta1</span><span class="w">
-</span><span class="ln"> 2</span><span class="w"></span><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l">ClusterRole</span><span class="w">
-</span><span class="ln"> 3</span><span class="w"></span><span class="nt">metadata</span><span class="p">:</span><span class="w">
-</span><span class="ln"> 4</span><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">prometheus-all-ns</span><span class="w">
-</span><span class="ln"> 5</span><span class="w"></span><span class="nt">rules</span><span class="p">:</span><span class="w">
-</span><span class="ln"> 6</span><span class="w"></span>- <span class="nt">apiGroups</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&#34;&#34;</span><span class="p">]</span><span class="w">
-</span><span class="ln"> 7</span><span class="w">  </span><span class="nt">resources</span><span class="p">:</span><span class="w">
-</span><span class="ln"> 8</span><span class="w">  </span>- <span class="l">nodes</span><span class="w">
-</span><span class="ln"> 9</span><span class="w">  </span>- <span class="l">services</span><span class="w">
-</span><span class="ln">10</span><span class="w">  </span>- <span class="l">endpoints</span><span class="w">
-</span><span class="ln">11</span><span class="w">  </span>- <span class="l">pods</span><span class="w">
-</span><span class="ln">12</span><span class="w">  </span><span class="nt">verbs</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&#34;get&#34;</span><span class="p">,</span><span class="w"> </span><span class="s2">&#34;list&#34;</span><span class="p">,</span><span class="w"> </span><span class="s2">&#34;watch&#34;</span><span class="p">]</span><span class="w">
-</span><span class="ln">13</span><span class="w"></span>- <span class="nt">apiGroups</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&#34;&#34;</span><span class="p">]</span><span class="w">
-</span><span class="ln">14</span><span class="w">  </span><span class="nt">resources</span><span class="p">:</span><span class="w">
-</span><span class="ln">15</span><span class="w">  </span>- <span class="l">configmaps</span><span class="w">
-</span><span class="ln">16</span><span class="w">  </span><span class="nt">verbs</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&#34;get&#34;</span><span class="p">]</span><span class="w">
-</span><span class="ln">17</span><span class="w"></span>- <span class="nt">nonResourceURLs</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&#34;/metrics&#34;</span><span class="p">]</span><span class="w">
-</span><span class="ln">18</span><span class="w">  </span><span class="nt">verbs</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&#34;get&#34;</span><span class="p">]</span><span class="w">
-</span><span class="ln">19</span><span class="w"></span><span class="nn">---</span><span class="w">
-</span><span class="ln">20</span><span class="w"></span><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l">rbac.authorization.k8s.io/v1beta1</span><span class="w">
-</span><span class="ln">21</span><span class="w"></span><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l">ClusterRoleBinding</span><span class="w">
-</span><span class="ln">22</span><span class="w"></span><span class="nt">metadata</span><span class="p">:</span><span class="w">
-</span><span class="ln">23</span><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">prometheus-all-ns</span><span class="w">
-</span><span class="ln">24</span><span class="w"></span><span class="nt">roleRef</span><span class="p">:</span><span class="w">
-</span><span class="ln">25</span><span class="w">  </span><span class="nt">apiGroup</span><span class="p">:</span><span class="w"> </span><span class="l">rbac.authorization.k8s.io</span><span class="w">
-</span><span class="ln">26</span><span class="w">  </span><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l">ClusterRole</span><span class="w">
-</span><span class="ln">27</span><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">prometheus-all-ns</span><span class="w">
-</span><span class="ln">28</span><span class="w"></span><span class="nt">subjects</span><span class="p">:</span><span class="w">
-</span><span class="ln">29</span><span class="w"></span>- <span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l">ServiceAccount</span><span class="w">
-</span><span class="ln">30</span><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">prometheus-k8s</span><span class="w">
-</span><span class="ln">31</span><span class="w">  </span><span class="nt">namespace</span><span class="p">:</span><span class="w"> </span><span class="l">monitoring</span><span class="w">
-</span></code></pre></div><h2 id="应用配置jmx-exporter">应用配置JMX Exporter<a class="anchor ms-1" href="#应用配置jmx-exporter"><i class="fas fa-link"></i></a></h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-yaml" data-lang="yaml"><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l">rbac.authorization.k8s.io/v1beta1</span><span class="w">
+</span><span class="w"></span><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l">ClusterRole</span><span class="w">
+</span><span class="w"></span><span class="nt">metadata</span><span class="p">:</span><span class="w">
+</span><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">prometheus-all-ns</span><span class="w">
+</span><span class="w"></span><span class="nt">rules</span><span class="p">:</span><span class="w">
+</span><span class="w"></span>- <span class="nt">apiGroups</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&#34;&#34;</span><span class="p">]</span><span class="w">
+</span><span class="w">  </span><span class="nt">resources</span><span class="p">:</span><span class="w">
+</span><span class="w">  </span>- <span class="l">nodes</span><span class="w">
+</span><span class="w">  </span>- <span class="l">services</span><span class="w">
+</span><span class="w">  </span>- <span class="l">endpoints</span><span class="w">
+</span><span class="w">  </span>- <span class="l">pods</span><span class="w">
+</span><span class="w">  </span><span class="nt">verbs</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&#34;get&#34;</span><span class="p">,</span><span class="w"> </span><span class="s2">&#34;list&#34;</span><span class="p">,</span><span class="w"> </span><span class="s2">&#34;watch&#34;</span><span class="p">]</span><span class="w">
+</span><span class="w"></span>- <span class="nt">apiGroups</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&#34;&#34;</span><span class="p">]</span><span class="w">
+</span><span class="w">  </span><span class="nt">resources</span><span class="p">:</span><span class="w">
+</span><span class="w">  </span>- <span class="l">configmaps</span><span class="w">
+</span><span class="w">  </span><span class="nt">verbs</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&#34;get&#34;</span><span class="p">]</span><span class="w">
+</span><span class="w"></span>- <span class="nt">nonResourceURLs</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&#34;/metrics&#34;</span><span class="p">]</span><span class="w">
+</span><span class="w">  </span><span class="nt">verbs</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&#34;get&#34;</span><span class="p">]</span><span class="w">
+</span><span class="w"></span><span class="nn">---</span><span class="w">
+</span><span class="w"></span><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l">rbac.authorization.k8s.io/v1beta1</span><span class="w">
+</span><span class="w"></span><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l">ClusterRoleBinding</span><span class="w">
+</span><span class="w"></span><span class="nt">metadata</span><span class="p">:</span><span class="w">
+</span><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">prometheus-all-ns</span><span class="w">
+</span><span class="w"></span><span class="nt">roleRef</span><span class="p">:</span><span class="w">
+</span><span class="w">  </span><span class="nt">apiGroup</span><span class="p">:</span><span class="w"> </span><span class="l">rbac.authorization.k8s.io</span><span class="w">
+</span><span class="w">  </span><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l">ClusterRole</span><span class="w">
+</span><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">prometheus-all-ns</span><span class="w">
+</span><span class="w"></span><span class="nt">subjects</span><span class="p">:</span><span class="w">
+</span><span class="w"></span>- <span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l">ServiceAccount</span><span class="w">
+</span><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">prometheus-k8s</span><span class="w">
+</span><span class="w">  </span><span class="nt">namespace</span><span class="p">:</span><span class="w"> </span><span class="l">monitoring</span><span class="w">
+</span></code></pre></td></tr></table>
+</div>
+</div><h2 id="应用配置jmx-exporter">应用配置JMX Exporter<a class="anchor ms-1" href="#应用配置jmx-exporter"><i class="fas fa-link"></i></a></h2>
 <p>你的Java应用的镜像得配置JMX Exporter，配置方法见<a href="../../prom-grafana-jvm">使用Prometheus+Grafana监控JVM</a>
 ，我在这里选择将JMX Exporter端口设置为6060。</p>
 <p>然后在你的Deployment/StatefulSets 中配置这个端口：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-yaml" data-lang="yaml"><span class="ln"> 1</span><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l">apps/v1</span><span class="w">
-</span><span class="ln"> 2</span><span class="w"></span><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l">Deployment</span><span class="w">
-</span><span class="ln"> 3</span><span class="w"></span><span class="nt">metadata</span><span class="p">:</span><span class="w">
-</span><span class="ln"> 4</span><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">...</span><span class="w">
-</span><span class="ln"> 5</span><span class="w">  </span><span class="nt">namespace</span><span class="p">:</span><span class="w"> </span><span class="l">...</span><span class="w">
-</span><span class="ln"> 6</span><span class="w"></span><span class="nt">spec</span><span class="p">:</span><span class="w">
-</span><span class="ln"> 7</span><span class="w">  </span><span class="nt">selector</span><span class="p">:</span><span class="w">
-</span><span class="ln"> 8</span><span class="w">    </span><span class="nt">matchLabels</span><span class="p">:</span><span class="w">
-</span><span class="ln"> 9</span><span class="w">      </span><span class="nt">app</span><span class="p">:</span><span class="w"> </span><span class="l">...</span><span class="w">
-</span><span class="ln">10</span><span class="w">  </span><span class="nt">replicas</span><span class="p">:</span><span class="w"> </span><span class="m">1</span><span class="w">
-</span><span class="ln">11</span><span class="w">  </span><span class="nt">template</span><span class="p">:</span><span class="w">
-</span><span class="ln">12</span><span class="w">    </span><span class="nt">metadata</span><span class="p">:</span><span class="w">
-</span><span class="ln">13</span><span class="w">      </span><span class="nt">labels</span><span class="p">:</span><span class="w">
-</span><span class="ln">14</span><span class="w">        </span><span class="nt">app</span><span class="p">:</span><span class="w"> </span><span class="l">...</span><span class="w">
-</span><span class="ln">15</span><span class="w">    </span><span class="nt">spec</span><span class="p">:</span><span class="w">
-</span><span class="ln">16</span><span class="w">      </span><span class="nt">containers</span><span class="p">:</span><span class="w">
-</span><span class="ln">17</span><span class="w">      </span>- <span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">...</span><span class="w">
-</span><span class="ln">18</span><span class="w">        </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l">...</span><span class="w">
-</span><span class="ln">19</span><span class="w">        </span><span class="nt">ports</span><span class="p">:</span><span class="w">
-</span><span class="ln">20</span><span class="w">        </span>- <span class="nt">containerPort</span><span class="p">:</span><span class="w"> </span><span class="m">6060</span><span class="w">
-</span><span class="ln">21</span><span class="w">          </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">http-metrics</span><span class="w">
-</span><span class="ln">22</span><span class="w">        </span>- <span class="l">...</span><span class="w">
-</span></code></pre></div><p>和 Service 也一样：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-yaml" data-lang="yaml"><span class="ln"> 1</span><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l">v1</span><span class="w">
-</span><span class="ln"> 2</span><span class="w"></span><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l">Service</span><span class="w">
-</span><span class="ln"> 3</span><span class="w"></span><span class="nt">metadata</span><span class="p">:</span><span class="w">
-</span><span class="ln"> 4</span><span class="w">  </span><span class="nt">namespace</span><span class="p">:</span><span class="w"> </span><span class="l">...</span><span class="w">
-</span><span class="ln"> 5</span><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">...</span><span class="w">
-</span><span class="ln"> 6</span><span class="w">  </span><span class="nt">labels</span><span class="p">:</span><span class="w">
-</span><span class="ln"> 7</span><span class="w">    </span><span class="nt">app</span><span class="p">:</span><span class="w"> </span><span class="l">...</span><span class="w">
-</span><span class="ln"> 8</span><span class="w">    </span><span class="nt">needMonitor</span><span class="p">:</span><span class="w"> </span><span class="s1">&#39;true&#39;</span><span class="w">
-</span><span class="ln"> 9</span><span class="w"></span><span class="nt">spec</span><span class="p">:</span><span class="w">
-</span><span class="ln">10</span><span class="w">  </span><span class="nt">ports</span><span class="p">:</span><span class="w">
-</span><span class="ln">11</span><span class="w">  </span>- <span class="nt">port</span><span class="p">:</span><span class="w"> </span><span class="m">6060</span><span class="w">
-</span><span class="ln">12</span><span class="w">    </span><span class="nt">targetPort</span><span class="p">:</span><span class="w"> </span><span class="l">http-metrics</span><span class="w">
-</span><span class="ln">13</span><span class="w">    </span><span class="nt">protocol</span><span class="p">:</span><span class="w"> </span><span class="l">TCP</span><span class="w">
-</span><span class="ln">14</span><span class="w">    </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">http-metrics</span><span class="w">
-</span><span class="ln">15</span><span class="w">  </span>- <span class="l">...</span><span class="w">
-</span><span class="ln">16</span><span class="w">  </span><span class="nt">selector</span><span class="p">:</span><span class="w">
-</span><span class="ln">17</span><span class="w">    </span><span class="nt">app</span><span class="p">:</span><span class="w"> </span><span class="l">...</span><span class="w">
-</span></code></pre></div><p>可以看到，我把端口取了个名字叫做http-metrics，同时Service添加了Label <code>needMonitor: 'true'</code></p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-yaml" data-lang="yaml"><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l">apps/v1</span><span class="w">
+</span><span class="w"></span><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l">Deployment</span><span class="w">
+</span><span class="w"></span><span class="nt">metadata</span><span class="p">:</span><span class="w">
+</span><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">...</span><span class="w">
+</span><span class="w">  </span><span class="nt">namespace</span><span class="p">:</span><span class="w"> </span><span class="l">...</span><span class="w">
+</span><span class="w"></span><span class="nt">spec</span><span class="p">:</span><span class="w">
+</span><span class="w">  </span><span class="nt">selector</span><span class="p">:</span><span class="w">
+</span><span class="w">    </span><span class="nt">matchLabels</span><span class="p">:</span><span class="w">
+</span><span class="w">      </span><span class="nt">app</span><span class="p">:</span><span class="w"> </span><span class="l">...</span><span class="w">
+</span><span class="w">  </span><span class="nt">replicas</span><span class="p">:</span><span class="w"> </span><span class="m">1</span><span class="w">
+</span><span class="w">  </span><span class="nt">template</span><span class="p">:</span><span class="w">
+</span><span class="w">    </span><span class="nt">metadata</span><span class="p">:</span><span class="w">
+</span><span class="w">      </span><span class="nt">labels</span><span class="p">:</span><span class="w">
+</span><span class="w">        </span><span class="nt">app</span><span class="p">:</span><span class="w"> </span><span class="l">...</span><span class="w">
+</span><span class="w">    </span><span class="nt">spec</span><span class="p">:</span><span class="w">
+</span><span class="w">      </span><span class="nt">containers</span><span class="p">:</span><span class="w">
+</span><span class="w">      </span>- <span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">...</span><span class="w">
+</span><span class="w">        </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l">...</span><span class="w">
+</span><span class="w">        </span><span class="nt">ports</span><span class="p">:</span><span class="w">
+</span><span class="w">        </span>- <span class="nt">containerPort</span><span class="p">:</span><span class="w"> </span><span class="m">6060</span><span class="w">
+</span><span class="w">          </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">http-metrics</span><span class="w">
+</span><span class="w">        </span>- <span class="l">...</span><span class="w">
+</span></code></pre></td></tr></table>
+</div>
+</div><p>和 Service 也一样：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-yaml" data-lang="yaml"><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l">v1</span><span class="w">
+</span><span class="w"></span><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l">Service</span><span class="w">
+</span><span class="w"></span><span class="nt">metadata</span><span class="p">:</span><span class="w">
+</span><span class="w">  </span><span class="nt">namespace</span><span class="p">:</span><span class="w"> </span><span class="l">...</span><span class="w">
+</span><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">...</span><span class="w">
+</span><span class="w">  </span><span class="nt">labels</span><span class="p">:</span><span class="w">
+</span><span class="w">    </span><span class="nt">app</span><span class="p">:</span><span class="w"> </span><span class="l">...</span><span class="w">
+</span><span class="w">    </span><span class="nt">needMonitor</span><span class="p">:</span><span class="w"> </span><span class="s1">&#39;true&#39;</span><span class="w">
+</span><span class="w"></span><span class="nt">spec</span><span class="p">:</span><span class="w">
+</span><span class="w">  </span><span class="nt">ports</span><span class="p">:</span><span class="w">
+</span><span class="w">  </span>- <span class="nt">port</span><span class="p">:</span><span class="w"> </span><span class="m">6060</span><span class="w">
+</span><span class="w">    </span><span class="nt">targetPort</span><span class="p">:</span><span class="w"> </span><span class="l">http-metrics</span><span class="w">
+</span><span class="w">    </span><span class="nt">protocol</span><span class="p">:</span><span class="w"> </span><span class="l">TCP</span><span class="w">
+</span><span class="w">    </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">http-metrics</span><span class="w">
+</span><span class="w">  </span>- <span class="l">...</span><span class="w">
+</span><span class="w">  </span><span class="nt">selector</span><span class="p">:</span><span class="w">
+</span><span class="w">    </span><span class="nt">app</span><span class="p">:</span><span class="w"> </span><span class="l">...</span><span class="w">
+</span></code></pre></td></tr></table>
+</div>
+</div><p>可以看到，我把端口取了个名字叫做http-metrics，同时Service添加了Label <code>needMonitor: 'true'</code></p>
 <h2 id="添加servicemonitor">添加ServiceMonitor<a class="anchor ms-1" href="#添加servicemonitor"><i class="fas fa-link"></i></a></h2>
 <h3 id="利用项目prometheus采集">利用项目Prometheus采集<a class="anchor ms-1" href="#利用项目prometheus采集"><i class="fas fa-link"></i></a></h3>
 <p>如果你前面开启了项目监控，并且想用项目Prometheus来收集数据，那么这么做：</p>
 <p>ServiceMonitor是Prometheus Operator定义的CRD：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-yaml" data-lang="yaml"><span class="ln"> 1</span><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l">monitoring.coreos.com/v1</span><span class="w">
-</span><span class="ln"> 2</span><span class="w"></span><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l">ServiceMonitor</span><span class="w">
-</span><span class="ln"> 3</span><span class="w"></span><span class="nt">metadata</span><span class="p">:</span><span class="w">
-</span><span class="ln"> 4</span><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">...</span><span class="w">
-</span><span class="ln"> 5</span><span class="w">  </span><span class="nt">namespace</span><span class="p">:</span><span class="w"> </span><span class="l">...</span><span class="w">
-</span><span class="ln"> 6</span><span class="w"></span><span class="nt">spec</span><span class="p">:</span><span class="w">
-</span><span class="ln"> 7</span><span class="w">  </span><span class="nt">selector</span><span class="p">:</span><span class="w">
-</span><span class="ln"> 8</span><span class="w">    </span><span class="nt">matchLabels</span><span class="p">:</span><span class="w">
-</span><span class="ln"> 9</span><span class="w">      </span><span class="nt">needMonitor</span><span class="p">:</span><span class="w"> </span><span class="s1">&#39;true&#39;</span><span class="w">
-</span><span class="ln">10</span><span class="w">  </span><span class="nt">endpoints</span><span class="p">:</span><span class="w">
-</span><span class="ln">11</span><span class="w">  </span>- <span class="nt">port</span><span class="p">:</span><span class="w"> </span><span class="l">http-metrics</span><span class="w">
-</span><span class="ln">12</span><span class="w">    </span><span class="nt">path</span><span class="p">:</span><span class="w"> </span><span class="l">/metrics</span><span class="w">
-</span></code></pre></div><p>这样Prometheus就能把同namespace下的所有<code>needMonitor: 'true'</code>的Service的JMX Exporter都采集到。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-yaml" data-lang="yaml"><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l">monitoring.coreos.com/v1</span><span class="w">
+</span><span class="w"></span><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l">ServiceMonitor</span><span class="w">
+</span><span class="w"></span><span class="nt">metadata</span><span class="p">:</span><span class="w">
+</span><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">...</span><span class="w">
+</span><span class="w">  </span><span class="nt">namespace</span><span class="p">:</span><span class="w"> </span><span class="l">...</span><span class="w">
+</span><span class="w"></span><span class="nt">spec</span><span class="p">:</span><span class="w">
+</span><span class="w">  </span><span class="nt">selector</span><span class="p">:</span><span class="w">
+</span><span class="w">    </span><span class="nt">matchLabels</span><span class="p">:</span><span class="w">
+</span><span class="w">      </span><span class="nt">needMonitor</span><span class="p">:</span><span class="w"> </span><span class="s1">&#39;true&#39;</span><span class="w">
+</span><span class="w">  </span><span class="nt">endpoints</span><span class="p">:</span><span class="w">
+</span><span class="w">  </span>- <span class="nt">port</span><span class="p">:</span><span class="w"> </span><span class="l">http-metrics</span><span class="w">
+</span><span class="w">    </span><span class="nt">path</span><span class="p">:</span><span class="w"> </span><span class="l">/metrics</span><span class="w">
+</span></code></pre></td></tr></table>
+</div>
+</div><p>这样Prometheus就能把同namespace下的所有<code>needMonitor: 'true'</code>的Service的JMX Exporter都采集到。</p>
 <h3 id="利用集群prometheus采集">利用集群Prometheus采集<a class="anchor ms-1" href="#利用集群prometheus采集"><i class="fas fa-link"></i></a></h3>
 <p>如果你想直接利用集群的Prometheus，那么你得把ServiceMonitor建在<code>cattle-prometheus</code>下，并且设置<code>namespaceSelector</code>属性：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-yaml" data-lang="yaml"><span class="ln"> 1</span><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l">monitoring.coreos.com/v1</span><span class="w">
-</span><span class="ln"> 2</span><span class="w"></span><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l">ServiceMonitor</span><span class="w">
-</span><span class="ln"> 3</span><span class="w"></span><span class="nt">metadata</span><span class="p">:</span><span class="w">
-</span><span class="ln"> 4</span><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">...</span><span class="w">
-</span><span class="ln"> 5</span><span class="w">  </span><span class="nt">namespace</span><span class="p">:</span><span class="w"> </span><span class="l">cattle-prometheus</span><span class="w">
-</span><span class="ln"> 6</span><span class="w"></span><span class="nt">spec</span><span class="p">:</span><span class="w">
-</span><span class="ln"> 7</span><span class="w">  </span><span class="nt">selector</span><span class="p">:</span><span class="w">
-</span><span class="ln"> 8</span><span class="w">    </span><span class="nt">matchLabels</span><span class="p">:</span><span class="w">
-</span><span class="ln"> 9</span><span class="w">      </span><span class="nt">needMonitor</span><span class="p">:</span><span class="w"> </span><span class="s1">&#39;true&#39;</span><span class="w">
-</span><span class="ln">10</span><span class="w">  </span><span class="nt">endpoints</span><span class="p">:</span><span class="w">
-</span><span class="ln">11</span><span class="w">  </span>- <span class="nt">port</span><span class="p">:</span><span class="w"> </span><span class="l">http-metrics</span><span class="w">
-</span><span class="ln">12</span><span class="w">    </span><span class="nt">path</span><span class="p">:</span><span class="w"> </span><span class="l">/metrics</span><span class="w">
-</span><span class="ln">13</span><span class="w">  </span><span class="nt">namespaceSelector</span><span class="p">:</span><span class="w">
-</span><span class="ln">14</span><span class="w">    </span><span class="nt">matchNames</span><span class="p">:</span><span class="w">
-</span><span class="ln">15</span><span class="w">    </span>- <span class="l">namespace-1</span><span class="w">
-</span><span class="ln">16</span><span class="w">    </span>- <span class="l">namespace-2</span><span class="w">
-</span></code></pre></div><h2 id="给grafana添加jvm-dashboard">给Grafana添加JVM Dashboard<a class="anchor ms-1" href="#给grafana添加jvm-dashboard"><i class="fas fa-link"></i></a></h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-yaml" data-lang="yaml"><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l">monitoring.coreos.com/v1</span><span class="w">
+</span><span class="w"></span><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l">ServiceMonitor</span><span class="w">
+</span><span class="w"></span><span class="nt">metadata</span><span class="p">:</span><span class="w">
+</span><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">...</span><span class="w">
+</span><span class="w">  </span><span class="nt">namespace</span><span class="p">:</span><span class="w"> </span><span class="l">cattle-prometheus</span><span class="w">
+</span><span class="w"></span><span class="nt">spec</span><span class="p">:</span><span class="w">
+</span><span class="w">  </span><span class="nt">selector</span><span class="p">:</span><span class="w">
+</span><span class="w">    </span><span class="nt">matchLabels</span><span class="p">:</span><span class="w">
+</span><span class="w">      </span><span class="nt">needMonitor</span><span class="p">:</span><span class="w"> </span><span class="s1">&#39;true&#39;</span><span class="w">
+</span><span class="w">  </span><span class="nt">endpoints</span><span class="p">:</span><span class="w">
+</span><span class="w">  </span>- <span class="nt">port</span><span class="p">:</span><span class="w"> </span><span class="l">http-metrics</span><span class="w">
+</span><span class="w">    </span><span class="nt">path</span><span class="p">:</span><span class="w"> </span><span class="l">/metrics</span><span class="w">
+</span><span class="w">  </span><span class="nt">namespaceSelector</span><span class="p">:</span><span class="w">
+</span><span class="w">    </span><span class="nt">matchNames</span><span class="p">:</span><span class="w">
+</span><span class="w">    </span>- <span class="l">namespace-1</span><span class="w">
+</span><span class="w">    </span>- <span class="l">namespace-2</span><span class="w">
+</span></code></pre></td></tr></table>
+</div>
+</div><h2 id="给grafana添加jvm-dashboard">给Grafana添加JVM Dashboard<a class="anchor ms-1" href="#给grafana添加jvm-dashboard"><i class="fas fa-link"></i></a></h2>
 <p>你需要给Grafana添加JVM Dashboard，在这之前你需要设置Grafana的admin密码，进入项目找到Grafana，进入其Shell：</p>
 <figure><img src="step-4.png" width="100%"/>
 </figure>
 
 <p>执行：</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="ln">1</span>grafana-cli admin reset-admin-password &lt;新密码&gt;
-</code></pre></div><p>然后随便进入一个Deployment/StatefulSets，进入Grafana：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">grafana-cli admin reset-admin-password &lt;新密码&gt;
+</code></pre></td></tr></table>
+</div>
+</div><p>然后随便进入一个Deployment/StatefulSets，进入Grafana：</p>
 <figure><img src="step-5.png" width="100%"/>
 </figure>
 
