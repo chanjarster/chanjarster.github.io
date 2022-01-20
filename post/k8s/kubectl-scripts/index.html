@@ -12,7 +12,7 @@
 <meta name="description" content="" /><meta itemprop="name" content="Kubectl 实用小脚本">
 <meta itemprop="description" content=""><meta itemprop="datePublished" content="2020-09-10T10:24:45+08:00" />
 <meta itemprop="dateModified" content="2020-09-10T10:24:45+08:00" />
-<meta itemprop="wordCount" content="287">
+<meta itemprop="wordCount" content="736">
 <meta itemprop="keywords" content="k8s,cheatsheet," /><meta property="og:title" content="Kubectl 实用小脚本" />
 <meta property="og:description" content="" />
 <meta property="og:type" content="article" />
@@ -220,10 +220,10 @@
   <span class="post-date" title="创建于 2020-09-10 10:24:45 &#43;0800 CST。">
     2020-09-10
   </span><span class="post-reading-time">
-    1 分钟阅读
+    2 分钟阅读
   </span><span class="post-taxonomies"><a href="/tags/k8s/" class="badge post-taxonomy">k8s</a><a href="/tags/cheatsheet/" class="badge post-taxonomy">cheatsheet</a></span>
 </div>
-<div class="post-content mb-3"><h2 id="查找没有设置resources-quotalimits的pod">查找没有设置Resources Quota(Limits)的Pod<a class="anchor ms-1" href="#查找没有设置resources-quotalimits的pod"><i class="fas fa-link"></i></a></h2>
+<div class="post-content mb-3"><h2 id="查找没有设置resources-limits的pod">查找没有设置Resources Limits的Pod<a class="anchor ms-1" href="#查找没有设置resources-limits的pod"><i class="fas fa-link"></i></a></h2>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre tabindex="0" class="chroma"><code><span class="lnt"> 1
@@ -238,10 +238,13 @@
 </span><span class="lnt">10
 </span><span class="lnt">11
 </span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
 </span></code></pre></td>
 <td class="lntd">
 <pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">kubectl get --all-namespaces pods -o go-template<span class="o">=</span><span class="s1">&#39;
 </span><span class="s1">{{ range .items -}}
+</span><span class="s1">{{- if eq .status.phase &#34;Running&#34; -}}
 </span><span class="s1">{{ $pod := .metadata.name -}}
 </span><span class="s1">{{ $ns := .metadata.namespace -}}
 </span><span class="s1">{{- range .spec.containers }}
@@ -249,9 +252,80 @@
 </span><span class="s1">NAMESPACE: {{ $ns }} POD: {{ $pod }}
 </span><span class="s1">  Container: {{ .name }}
 </span><span class="s1">  Resources: {{ .resources }}
-</span><span class="s1">{{ end }}
-</span><span class="s1">{{- end }}
-</span><span class="s1">{{- end }}&#39;</span>
+</span><span class="s1">{{ end -}}
+</span><span class="s1">{{- end -}}
+</span><span class="s1">{{- end -}}
+</span><span class="s1">{{ end }}&#39;</span>
+</code></pre></td></tr></table>
+</div>
+</div><h2 id="查找没有设置cpu-limits的pod">查找没有设置CPU Limits的Pod<a class="anchor ms-1" href="#查找没有设置cpu-limits的pod"><i class="fas fa-link"></i></a></h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">kubectl get --all-namespaces pods -o go-template<span class="o">=</span><span class="s1">&#39;
+</span><span class="s1">{{ range .items -}}
+</span><span class="s1">{{- if eq .status.phase &#34;Running&#34; -}}
+</span><span class="s1">{{ $pod := .metadata.name -}}
+</span><span class="s1">{{ $ns := .metadata.namespace -}}
+</span><span class="s1">{{- range .spec.containers }}
+</span><span class="s1">{{- if or (not .resources) (not .resources.limits) (not .resources.limits.cpu) }}
+</span><span class="s1">NAMESPACE: {{ $ns }} POD: {{ $pod }}
+</span><span class="s1">  Container: {{ .name }}
+</span><span class="s1">  Resources: {{ .resources }}
+</span><span class="s1">{{ end -}}
+</span><span class="s1">{{- end -}}
+</span><span class="s1">{{- end -}}
+</span><span class="s1">{{ end }}&#39;</span>
+</code></pre></td></tr></table>
+</div>
+</div><h2 id="查找没有设置memory-limits的pod">查找没有设置Memory Limits的Pod<a class="anchor ms-1" href="#查找没有设置memory-limits的pod"><i class="fas fa-link"></i></a></h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">kubectl get --all-namespaces pods -o go-template<span class="o">=</span><span class="s1">&#39;
+</span><span class="s1">{{ range .items -}}
+</span><span class="s1">{{- if eq .status.phase &#34;Running&#34; -}}
+</span><span class="s1">{{ $pod := .metadata.name -}}
+</span><span class="s1">{{ $ns := .metadata.namespace -}}
+</span><span class="s1">{{- range .spec.containers }}
+</span><span class="s1">{{- if or (not .resources) (not .resources.limits) (not .resources.limits.memory) }}
+</span><span class="s1">NAMESPACE: {{ $ns }} POD: {{ $pod }}
+</span><span class="s1">  Container: {{ .name }}
+</span><span class="s1">  Resources: {{ .resources }}
+</span><span class="s1">{{ end -}}
+</span><span class="s1">{{- end -}}
+</span><span class="s1">{{- end -}}
+</span><span class="s1">{{ end }}&#39;</span>
 </code></pre></td></tr></table>
 </div>
 </div><h2 id="查找设置了requests-cpu的pod">查找设置了Requests CPU的Pod<a class="anchor ms-1" href="#查找设置了requests-cpu的pod"><i class="fas fa-link"></i></a></h2>
@@ -269,20 +343,95 @@
 </span><span class="lnt">10
 </span><span class="lnt">11
 </span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
 </span></code></pre></td>
 <td class="lntd">
 <pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">kubectl get --all-namespaces pods -o go-template<span class="o">=</span><span class="s1">&#39;
 </span><span class="s1">{{ range .items -}}
+</span><span class="s1">{{- if eq .status.phase &#34;Running&#34; -}}
 </span><span class="s1">{{ $pod := .metadata.name -}}
 </span><span class="s1">{{ $ns := .metadata.namespace -}}
 </span><span class="s1">{{- range .spec.containers }}
 </span><span class="s1">{{- if and (.resources) (.resources.requests) (.resources.requests.cpu) }}
 </span><span class="s1">NAMESPACE: {{ $ns }} POD: {{ $pod }}
 </span><span class="s1">  Container: {{ .name }}
-</span><span class="s1">  Requests CPU: {{ .resources.requests.cpu }}
-</span><span class="s1">{{ end }}
-</span><span class="s1">{{- end }}
-</span><span class="s1">{{- end }}&#39;</span>
+</span><span class="s1">  Resources: {{ .resources }}
+</span><span class="s1">{{ end -}}
+</span><span class="s1">{{- end -}}
+</span><span class="s1">{{- end -}}
+</span><span class="s1">{{ end }}&#39;</span>
+</code></pre></td></tr></table>
+</div>
+</div><h2 id="查找没有设置cpu-limitsmemory-limitsmemory-requests的pod">查找没有设置CPU Limits、Memory Limits、Memory Requests的Pod<a class="anchor ms-1" href="#查找没有设置cpu-limitsmemory-limitsmemory-requests的pod"><i class="fas fa-link"></i></a></h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">kubectl get --all-namespaces pods -o go-template<span class="o">=</span><span class="s1">&#39;
+</span><span class="s1">{{ range .items -}}
+</span><span class="s1">  {{- if eq .status.phase &#34;Running&#34; -}}
+</span><span class="s1">    {{- $pod := .metadata.name -}}
+</span><span class="s1">    {{- $ns := .metadata.namespace -}}
+</span><span class="s1">    {{- range .spec.containers }}
+</span><span class="s1">      {{- if or (not .resources) (not .resources.limits) (not .resources.limits.cpu) (not .resources.limits.memory) (not .resources.requests) (not .resources.requests.cpu) (not .resources.requests.memory) }}
+</span><span class="s1">NAMESPACE: {{ $ns }}
+</span><span class="s1">  POD: {{ $pod }}
+</span><span class="s1">  Container: {{ .name }}
+</span><span class="s1">        {{- if not .resources }}
+</span><span class="s1">  Problem: resources not set
+</span><span class="s1">        {{- else -}}
+</span><span class="s1">          {{- if not .resources.limits }}
+</span><span class="s1">  Problem: resources.limits not set
+</span><span class="s1">          {{- else if not .resources.limits.cpu }}
+</span><span class="s1">  Problem: resources.limits.cpu not set
+</span><span class="s1">          {{- else if not .resources.limits.memory }}
+</span><span class="s1">  Problem: resources.limits.memory not set
+</span><span class="s1">          {{- end -}}
+</span><span class="s1">          {{- if not .resources.requests }}
+</span><span class="s1">  Problem: resources.requests not set
+</span><span class="s1">          {{- else if not .resources.requests.cpu }}
+</span><span class="s1">  Problem: resources.requests.cpu not set
+</span><span class="s1">          {{- else if not .resources.requests.memory }}
+</span><span class="s1">  Problem: resources.requests.memory not set
+</span><span class="s1">          {{- end -}}
+</span><span class="s1">        {{- end }}
+</span><span class="s1">      {{ end -}}
+</span><span class="s1">    {{ end }}
+</span><span class="s1">  {{- end -}}
+</span><span class="s1">{{ end }}&#39;</span>
 </code></pre></td></tr></table>
 </div>
 </div><h2 id="查找运行在某个host上的pod">查找运行在某个Host上的Pod<a class="anchor ms-1" href="#查找运行在某个host上的pod"><i class="fas fa-link"></i></a></h2>
@@ -399,8 +548,11 @@
   <div class="card-body">
     <nav id="TableOfContents">
   <ul>
-    <li><a href="#查找没有设置resources-quotalimits的pod">查找没有设置Resources Quota(Limits)的Pod</a></li>
+    <li><a href="#查找没有设置resources-limits的pod">查找没有设置Resources Limits的Pod</a></li>
+    <li><a href="#查找没有设置cpu-limits的pod">查找没有设置CPU Limits的Pod</a></li>
+    <li><a href="#查找没有设置memory-limits的pod">查找没有设置Memory Limits的Pod</a></li>
     <li><a href="#查找设置了requests-cpu的pod">查找设置了Requests CPU的Pod</a></li>
+    <li><a href="#查找没有设置cpu-limitsmemory-limitsmemory-requests的pod">查找没有设置CPU Limits、Memory Limits、Memory Requests的Pod</a></li>
     <li><a href="#查找运行在某个host上的pod">查找运行在某个Host上的Pod</a></li>
     <li><a href="#查找运行在某个node上的pod">查找运行在某个Node上的pod</a></li>
   </ul>
