@@ -1,0 +1,972 @@
+<!doctype html><html lang="zh-cn" data-palette="blue"
+  >
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bash 长变量值损坏问题排查 - 颇忒脱的技术博客</title><link rel="apple-touch-icon" href="/images/icons/icon-180x180.png" sizes="180x180">
+<link rel="icon" href="/images/icons/icon-32x32.png" sizes="32x32" type="image/png">
+<link rel="icon" href="/images/icons/icon-16x16.png" sizes="16x16" type="image/png">
+<link rel="icon" href="/images/icons/favicon.ico">
+<link rel="manifest" href="/manifest.json">
+<meta name="keywords" content="" />
+<meta name="description" content="" /><meta itemprop="name" content="Bash 长变量值损坏问题排查">
+<meta itemprop="description" content=""><meta itemprop="datePublished" content="2022-02-16T18:06:46+08:00" />
+<meta itemprop="dateModified" content="2022-02-16T18:06:46+08:00" />
+<meta itemprop="wordCount" content="2706">
+<meta itemprop="keywords" content="bash,linux,troubleshooting," /><meta property="og:title" content="Bash 长变量值损坏问题排查" />
+<meta property="og:description" content="" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="/post/bash-long-var-corrupt/" /><meta property="article:section" content="post" />
+<meta property="article:published_time" content="2022-02-16T18:06:46+08:00" />
+<meta property="article:modified_time" content="2022-02-16T18:06:46+08:00" /><meta property="og:site_name" content="颇忒脱的技术博客" />
+
+<meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="Bash 长变量值损坏问题排查"/>
+<meta name="twitter:description" content=""/>
+<meta name="robots" content="index, follow" /><link rel="stylesheet" href="/css/main.min.b7a6eda8d46e39a549f182cf72a9ff4f4c1d4d82c31ecc3ede0b7f4d5b26f32b.css" integrity="sha256-t6btqNRuOaVJ8YLPcqn/T0wdTYLDHsw&#43;3gt/TVsm8ys=" crossorigin="anonymous"><link rel="stylesheet" href="/css/viewer.min.3d228794bcedbbfa0412beb8fbc1ec6973202945e42af7004f742a4d7bd620ab.css" integrity="sha256-PSKHlLztu/oEEr64&#43;8HsaXMgKUXkKvcAT3QqTXvWIKs=" crossorigin="anonymous"></head>
+  <body><script>const items=['mode','palette'];items.forEach(function(a){const b=localStorage.getItem('hbs-'+a);b&&document.body.parentElement.setAttribute('data-'+a,b)})</script><header><nav class="navbar top-app-bar top-app-bar-expand-lg fixed-top">
+  <div class="container">
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent"
+      aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <i class="fas fa-bars"></i>
+    </button><a class="navbar-brand flex-grow-1 flex-lg-grow-0 text-center text-lg-start mx-auto me-lg-3" href="/"><img class="logo" alt="Logo" src="/images/avatar.jpg" loading="lazy"
+   width="455" height="455"
+   />
+颇忒脱的技术博客
+    </a>
+    
+    <button class="navbar-settings" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvasSettings"
+  aria-controls="offcanvasSettings" aria-label="Toggle settings">
+  <i class="fas fa-ellipsis-v"></i>
+</button>
+
+<div class="offcanvas offcanvas-end surface h-100" tabindex="-1" id="offcanvasSettings" aria-labelledby="offcanvasSettings">
+  <div class="offcanvas-header">
+    <h3 class="offcanvas-title">设置</h3>
+    <button type="button" class="btn btn-sm btn-outline-primary" data-bs-dismiss="offcanvas" aria-label="Close">
+      <i class="fas fa-times"></i>
+    </button>
+  </div>
+  <div class="offcanvas-body d-flex flex-column">
+
+<section class="setting">
+  <form class="row">
+    <div class="col-auto">
+      <label><i class="fas fa-fw fa-adjust"></i> 模式</label>
+    </div>
+    <div class="col-auto ms-auto">
+      <div class="form-check form-switch">
+        <input class="form-check-input" type="checkbox" id="modeSwitcher">
+      </div>
+    </div>
+  </form>
+</section>
+
+<section class="setting">
+  <form class="font-size-switcher-form row">
+    <div class="col-auto">
+      <label for="fontSize" class="form-label"><i class="fas fa-fw fa-font"></i> 字体大小</label>
+    </div>
+    <div class="col-auto ms-auto">
+      <input type="range" class="form-range" min="-2" max="2" id="fontSize">
+    </div>
+  </form>
+</section>
+
+
+<section class="setting palettes">
+  <form class="row">
+    <div class="col-auto">
+      <label><i class="fas fa-fw fa-palette"></i> 配色</label>
+    </div>
+    <div class="col-auto ms-auto">
+      <a id="btnPalette" class="btn btn-sm btn-outline-primary" role="button" aria-label="palettePicker">
+        <i class="fas fa-eye-dropper"></i>
+      </a>
+    </div>
+  </form>
+  <div class="mt-2 d-flex justify-content-between visually-hidden" id="palettePicker"><button type="button" id="palette-blue" aria-label="蓝色"
+        class="btn btn-sm w-100 palette" data-palette="blue">
+      </button><button type="button" id="palette-blue-gray" aria-label="蓝灰色"
+        class="btn btn-sm w-100 palette" data-palette="blue-gray">
+      </button><button type="button" id="palette-brown" aria-label="棕色"
+        class="btn btn-sm w-100 palette" data-palette="brown">
+      </button><button type="button" id="palette-cyan" aria-label="青色"
+        class="btn btn-sm w-100 palette" data-palette="cyan">
+      </button><button type="button" id="palette-green" aria-label="绿色"
+        class="btn btn-sm w-100 palette" data-palette="green">
+      </button><button type="button" id="palette-indigo" aria-label="靛青色"
+        class="btn btn-sm w-100 palette" data-palette="indigo">
+      </button><button type="button" id="palette-orange" aria-label="橙色"
+        class="btn btn-sm w-100 palette" data-palette="orange">
+      </button><button type="button" id="palette-pink" aria-label="粉色"
+        class="btn btn-sm w-100 palette" data-palette="pink">
+      </button><button type="button" id="palette-purple" aria-label="紫色"
+        class="btn btn-sm w-100 palette" data-palette="purple">
+      </button><button type="button" id="palette-red" aria-label="红色"
+        class="btn btn-sm w-100 palette" data-palette="red">
+      </button><button type="button" id="palette-teal" aria-label="蓝绿色"
+        class="btn btn-sm w-100 palette" data-palette="teal">
+      </button><button type="button" id="palette-yellow" aria-label="黄色"
+        class="btn btn-sm w-100 palette" data-palette="yellow">
+      </button></div>
+</section>
+<section class="setting actions d-flex justify-content-around mt-auto overflow-auto">
+  <a role="button" class="action action-go-back" href="javascript: window.history.back();">
+    <span class="action-icon"><i class="fas fa-2x fa-arrow-left"></i></span> 返回
+  </a>
+  <a role="button" class="action action-reload-page">
+    <span class="action-icon"><i class="fas fa-2x fa-redo-alt"></i></span> 刷新
+  </a>
+  <a role="button" class="action action-copy-url">
+    <span class="action-icon"><i class="fas fa-2x fa-link"></i></span> 复制链接
+  </a></section>
+
+</div>
+</div>
+
+    <div class="collapse navbar-collapse" tabindex="-1" id="navbarSupportedContent" aria-labelledby="navbarSupportedContent">
+      <form class="search-bar my-1" action="/search">
+  <div class="input-group input-group-sm">
+    <span class="btn btn-search disabled position-absolute left-0"><i class="fas fa-fw fa-search"></i></span>
+    <input class="form-control rounded-pill" name="q" type="search" aria-label="Search">
+  </div>
+</form>
+      <ul class="navbar-nav ms-auto"><li class="nav-item">
+          <a class="nav-link" href="/series/">
+            <i class="fas fa-fw fa-columns"></i>专栏
+          </a>
+        </li><li class="nav-item dropdown">
+          <a class="nav-link" id="navbarDropdownIndex" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+            <i class="fas fa-fw fa-chevron-circle-down"></i>快速索引
+          </a>
+          <ul class="dropdown-menu" aria-labelledby="navbarDropdownIndex"><li>
+              <a class="dropdown-item"
+                href="/tags/go">
+                Go
+              </a>
+            </li><li>
+              <a class="dropdown-item"
+                href="/tags/gc">
+                GC
+              </a>
+            </li><li>
+              <a class="dropdown-item"
+                href="/tags/kernel">
+                Kernel
+              </a>
+            </li><li>
+              <a class="dropdown-item"
+                href="/tags/cheatsheet">
+                Cheatsheet
+              </a>
+            </li><li>
+              <a class="dropdown-item"
+                href="/tags/troubleshooting">
+                排障实战记录
+              </a>
+            </li></ul>
+        </li><li class="nav-item">
+          <a class="nav-link" href="/tags/">
+            <i class="fas fa-fw fa-tags"></i>标签
+          </a>
+        </li><li class="nav-item">
+          <a class="nav-link" href="/archives/">
+            <i class="fas fa-fw fa-file-archive"></i>归档
+          </a>
+        </li></ul>
+    </div>
+  </div>
+</nav>
+</header>
+<main role="main" class="container">
+      <div class="row content">
+<div class="col-lg-8">
+  <div class="container"><nav class="row card component" aria-label="breadcrumb">
+  <div class="card-body">
+    <ol class="breadcrumb "><li class="breadcrumb-item"><a href="/">主页</a></li><li class="breadcrumb-item"><a href="/post/">文章</a></li><li class="breadcrumb-item active">Bash 长变量值损坏问题排查</li></ol>
+  </div>
+</nav><div class="post-panel-wrapper">
+  <div class="d-flex flex-column component rounded post-panel">
+    
+    <a class="action action-panel-toggler" role="button" title="Panel toggler">
+      <i class="fas fa-fw fa-chevron-circle-down"></i>
+    </a>
+    <a id="sidebarToggler" class="action d-none d-lg-block" role="button" title="Sidebar toggler">
+  <i class="fas fa-fw fa-expand-alt" data-fa-transform="rotate-45"></i>
+</a>
+
+    
+
+    
+    <a class="action" href="#post-copyright" role="button" aria-label="Copyright" title="Copyright">
+  <i class="fas fa-fw fa-copyright"></i>
+</a>
+    <a class="action" href="#post-comments" role="button" aria-label="Comments" title="Comments">
+  <i class="fas fa-fw fa-comments"></i>
+</a>
+    <a class="action" href="#postTOC" aria-controls="Table of contents" role="button" title="Table of contents">
+  <i class="fas fa-fw fa-list-alt"></i>
+</a>
+    
+  </div>
+</div>
+<article class="row card component mb-4 post">
+  <div class="card-header ">
+    <h1 class="card-title post-title">Bash 长变量值损坏问题排查
+</h1>
+  </div>
+  <div class="card-body"><div class="post-meta">
+  <span class="post-date" title="创建于 2022-02-16 18:06:46 &#43;0800 CST。">
+    2022-02-16
+  </span><span class="post-reading-time">
+    6 分钟阅读
+  </span><span class="post-taxonomies"><a href="/tags/bash/" class="badge post-taxonomy">bash</a><a href="/tags/linux/" class="badge post-taxonomy">linux</a><a href="/tags/troubleshooting/" class="badge post-taxonomy">troubleshooting</a></span>
+</div>
+<div class="post-content mb-3"><h2 id="现象">现象<a class="anchor ms-1" href="#现象"><i class="fas fa-link"></i></a></h2>
+<p>容器中有一个文件 <code>agreement.js</code> 发现其内容<strong>有时候</strong>存在对于 UTF8 来说非法的字符，导致App启动闪退。</p>
+<p>打开这个文件可以看到以下位置存在乱码：</p>
+<p><img class="img-fluid" alt="" src="/post/bash-long-var-corrupt/1-%E4%B9%B1%E7%A0%81.jpg" loading="lazy"
+  
+   />
+
+</p>
+<h2 id="分析乱码来源">分析乱码来源<a class="anchor ms-1" href="#分析乱码来源"><i class="fas fa-link"></i></a></h2>
+<p>可以看到乱码位置前一个字符虽然能够显示，但是也不正常，选乱码位置及其前一个字符，中使用Notepad++的ASCII转换HEX功能：</p>
+<p><img class="img-fluid" alt="" src="/post/bash-long-var-corrupt/2-notepad-%E8%BD%AC%E6%8D%A2hex.jpg" loading="lazy"
+  
+   />
+
+</p>
+<p>把这些乱码位置全部都转换后得到这样一个结果：</p>
+<p><img class="img-fluid" alt="" src="/post/bash-long-var-corrupt/3-notepad-%E8%BD%AC%E6%8D%A2%E5%90%8E.jpg" loading="lazy"
+  
+   />
+
+</p>
+<p>可以看到共同点都是多了一个hex <code>93</code>，把所有<code>93</code>去掉，</p>
+<p><img class="img-fluid" alt="" src="/post/bash-long-var-corrupt/4-%E5%8E%BB%E6%8E%8993.jpg" loading="lazy"
+  
+   />
+
+</p>
+<p>然后使用Notepad++ HEX转换ASCII功能：</p>
+<p><img class="img-fluid" alt="" src="/post/bash-long-var-corrupt/5-hex-ascii.jpg" loading="lazy"
+  
+   />
+
+</p>
+<p>发现结果正常：</p>
+<p><img class="img-fluid" alt="" src="/post/bash-long-var-corrupt/6-%E6%B8%85%E7%90%86%E5%90%8E.jpg" loading="lazy"
+  
+   />
+
+</p>
+<p>可以得到结论，就是文件在某些位置被插入了Hex <code>93</code>（对应ASCII <code>147</code>）字节，导致文件渲染异常。</p>
+<h2 id="分析乱码位置是否有规律">分析乱码位置是否有规律<a class="anchor ms-1" href="#分析乱码位置是否有规律"><i class="fas fa-link"></i></a></h2>
+<p>因为这个文件实际上是通过环境变量 + <code>envsubst</code> 渲染模板文件形成的，而这段文本就是来源于一个环境变量。</p>
+<p>把 <code>agreement.js</code> 中的这段文本截取出来，然后用16进制编辑器看看出现 <code>93</code> 的位置上是否存在共同点。</p>
+<table>
+<thead>
+<tr>
+<th>Hex</th>
+<th>offset</th>
+<th>delta</th>
+<th>delta - 1</th>
+<th>512 x</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>E8 AE 93 AE</code></td>
+<td>1535</td>
+<td>0</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>E7 B3 93 BB</code></td>
+<td>3072</td>
+<td>1537</td>
+<td>1536</td>
+<td>3</td>
+</tr>
+<tr>
+<td><code>E7 94 93 A8</code></td>
+<td>3585</td>
+<td>513</td>
+<td>512</td>
+<td>1</td>
+</tr>
+<tr>
+<td><code>E5 9D 93 8F</code></td>
+<td>4098</td>
+<td>513</td>
+<td>512</td>
+<td>1</td>
+</tr>
+<tr>
+<td><code>E5 BE 93 97</code></td>
+<td>4611</td>
+<td>513</td>
+<td>512</td>
+<td>1</td>
+</tr>
+<tr>
+<td><code>E6 9C 93 AF</code></td>
+<td>5636</td>
+<td>1025</td>
+<td>1024</td>
+<td>2</td>
+</tr>
+<tr>
+<td><code>E6 8A 93 A5</code></td>
+<td>6149</td>
+<td>513</td>
+<td>512</td>
+<td>1</td>
+</tr>
+</tbody>
+</table>
+<p>可以看见首次出现 Hex <code>93</code> 的位置，以及两个 Hex <code>93</code> offset 相差的是 512 字节的倍数，</p>
+<h2 id="更新的脚本">更新的脚本<a class="anchor ms-1" href="#更新的脚本"><i class="fas fa-link"></i></a></h2>
+<p>开发人员后来调整了脚本，得到的文件不一样了，但是依然存在相同问题：</p>
+<p><img class="img-fluid" alt="" src="/post/bash-long-var-corrupt/20-%E4%B9%B1%E7%A0%81.jpg" loading="lazy"
+  
+   />
+
+</p>
+<p>通过同样的方法，发现被插入的字节是 Hex <code>B5</code>（对应ASCII <code>181</code>），而且插入位置同样是 512 的倍数：</p>
+<table>
+<thead>
+<tr>
+<th>Hex</th>
+<th>offset</th>
+<th>delta</th>
+<th>delta - 1</th>
+<th>512 x</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>EF BC B5 9A</code></td>
+<td>2560</td>
+<td>0</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>E6 9D B5 83</code></td>
+<td>3585</td>
+<td>1025</td>
+<td>1024</td>
+<td>2</td>
+</tr>
+<tr>
+<td><code>E5 9E B5 8B</code></td>
+<td>7170</td>
+<td>3585</td>
+<td>3584</td>
+<td>7</td>
+</tr>
+<tr>
+<td><code>E4 BE B5 9B</code></td>
+<td>7683</td>
+<td>513</td>
+<td>512</td>
+<td>1</td>
+</tr>
+<tr>
+<td><code>E6 AD B5 A4</code></td>
+<td>8196</td>
+<td>513</td>
+<td>512</td>
+<td>1</td>
+</tr>
+<tr>
+<td><code>E4 BD B5 93</code></td>
+<td>11269</td>
+<td>3073</td>
+<td>3072</td>
+<td>6</td>
+</tr>
+<tr>
+<td><code>E6 BF B5 80</code></td>
+<td>15878</td>
+<td>4609</td>
+<td>4608</td>
+<td>9</td>
+</tr>
+<tr>
+<td><code>E5 B0 B5 86</code></td>
+<td>16391</td>
+<td>513</td>
+<td>512</td>
+<td>1</td>
+</tr>
+</tbody>
+</table>
+<p>而更新后的脚本（简化后）是：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="nb">echo</span> <span class="nv">$FOO</span> &gt; foo-1.txt
+<span class="nb">export</span> <span class="nv">FOO</span><span class="o">=</span><span class="sb">`</span><span class="nb">echo</span> <span class="si">${</span><span class="nv">FOO</span><span class="si">}</span> <span class="p">|</span> gojq tostring<span class="sb">`</span>
+<span class="nb">echo</span> <span class="nv">$FOO</span> &gt; foo-2.txt
+</code></pre></td></tr></table>
+</div>
+</div><p>环境变量 <code>FOO</code> 是容器运行时外部给的，脚本先把值写到 <code>foo-1.txt</code> ，然后执行一些脚本，更新了这个环境变量，然后把结果写到 <code>foo-2.txt</code> ，而问题就出在 <code>foo-2.txt</code> 上，说明问题出在第二行。</p>
+<h2 id="插入字节的位置">插入字节的位置<a class="anchor ms-1" href="#插入字节的位置"><i class="fas fa-link"></i></a></h2>
+<p>回顾本问题，本问题是有一定概率会出现，而不是每次都会出现，因此使用Hex Friend（Mac上的软件）打开“好的文件”和几个“坏的文件”，对比插入的字节的位置有何不同。</p>
+<p>和第一个坏的文件对比，可以看到字节插入位置，以及插入的值是<code>0x82</code>：</p>
+<p><img class="img-fluid" alt="" src="/post/bash-long-var-corrupt/30-%E5%AF%B9%E6%AF%94-1.jpg" loading="lazy"
+  
+   />
+
+</p>
+<p>和第二个坏的文件对比，可以看到字节插入位置，以及插入的值是<code>0xB9</code>：</p>
+<p><img class="img-fluid" alt="" src="/post/bash-long-var-corrupt/30-%E5%AF%B9%E6%AF%94-2.jpg" loading="lazy"
+  
+   />
+
+</p>
+<p>可以发现：</p>
+<ul>
+<li>只要出现问题，那么插入的字节位置是固定的</li>
+<li>每次出现问题所插入的字节是随机的，但是对同一个文件来说这个值是相同的。</li>
+</ul>
+<h2 id="推理">推理<a class="anchor ms-1" href="#推理"><i class="fas fa-link"></i></a></h2>
+<p>先总结一下：</p>
+<ul>
+<li>环境变量值存在汉字，而且长度超出了 512 字节，</li>
+<li>有一定概率会出现脚本执行结果文件里，插入了随机字节</li>
+<li>随机字节插入的位置是固定的</li>
+<li>出现问题的文件里，随机字节的值是相同的</li>
+<li>不同的问题文件，随机字节的值不相同</li>
+</ul>
+<p>那么推理：</p>
+<ul>
+<li>汉字 UTF-8 编码占用 3 个字节，在脚本执行过程是 512 字节 一块一块读取的，那么就会有概率正好截断在汉字 UTF-8 3 字节的中间，导致了这个问题。</li>
+</ul>
+<p>到这里可以先排除<code>gojq</code>的问题，理由有二：</p>
+<ul>
+<li>和开发人员沟通，脚本之前使用的是 <code>jq</code>，而现在使用的是 <code>gojq</code>，不同工具，遇到相同问题，两个工具都有BUG的概率不大。</li>
+<li>另外，经测试<code>nginx:1.21.5-alpine</code>会发生问题，而<code>nginx:1.21.5</code>不会发生问题，而且<code>gojq</code>这个工具都是同一个二进制，因此<code>gojq</code>有BUG可能性排除。</li>
+</ul>
+<h2 id="测试脚本">测试脚本<a class="anchor ms-1" href="#测试脚本"><i class="fas fa-link"></i></a></h2>
+<p>测试脚本在：https://github.com/chanjarster/bash-5_1_8_long_var_corrupt/tree/pre-digging</p>
+<p>因为这个问题出现存在一定概率，因此写一个测试脚本循环跑以下几个测试：</p>
+<p>1）测试变量 output 到文件，是否会损坏（md5sum检查）：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="nb">echo</span> <span class="nv">$FOO</span> &gt; /tmp/foo.txt
+<span class="k">if</span> ! md5sum -c /foo.txt.md5 &gt; /dev/null<span class="p">;</span> <span class="k">then</span>
+    <span class="nb">echo</span> <span class="s2">&#34;</span><span class="nv">$msg_prefix</span><span class="s2"> failed: case 1&#34;</span>
+    <span class="nv">fail</span><span class="o">=</span><span class="nb">true</span>
+<span class="k">fi</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>2）测试 <code>|</code> 管道符读取变量时，是否会损坏（md5sum 字符模式）：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="nv">got_md5</span><span class="o">=</span><span class="k">$(</span><span class="nb">echo</span> <span class="nv">$FOO</span> <span class="p">|</span> md5sum -b <span class="p">|</span> cut -d <span class="s1">&#39; &#39;</span> -f 1<span class="k">)</span>
+<span class="k">if</span> <span class="o">[[</span> <span class="s2">&#34;</span><span class="nv">$got_md5</span><span class="s2">&#34;</span> !<span class="o">=</span> <span class="s2">&#34;</span><span class="nv">$want_md5</span><span class="s2">&#34;</span> <span class="o">]]</span><span class="p">;</span> <span class="k">then</span>
+  <span class="nb">echo</span> <span class="s2">&#34;</span><span class="nv">$msg_prefix</span><span class="s2"> failed: case 2&#34;</span>
+  <span class="nv">fail</span><span class="o">=</span><span class="nb">true</span>
+<span class="k">fi</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>3）测试 <code>|</code> 管道符读取变量时，是否会损坏（md5sum 二进制模式）：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">  <span class="nv">got_md5</span><span class="o">=</span><span class="k">$(</span><span class="nb">echo</span> <span class="nv">$FOO</span> <span class="p">|</span> md5sum <span class="p">|</span> cut -d <span class="s1">&#39; &#39;</span> -f 1<span class="k">)</span>
+  <span class="k">if</span> <span class="o">[[</span> <span class="s2">&#34;</span><span class="nv">$got_md5</span><span class="s2">&#34;</span> !<span class="o">=</span> <span class="s2">&#34;</span><span class="nv">$want_md5</span><span class="s2">&#34;</span> <span class="o">]]</span><span class="p">;</span> <span class="k">then</span>
+    <span class="nb">echo</span> <span class="s2">&#34;</span><span class="nv">$msg_prefix</span><span class="s2"> failed: case 3&#34;</span>
+    <span class="nv">fail</span><span class="o">=</span><span class="nb">true</span>
+  <span class="k">fi</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>4）测试 <code>gojq</code> 结果赋予新变量，新变量输出到文件，是否损坏（md5检查）：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">  <span class="nv">FOO_MOD</span><span class="o">=</span><span class="k">$(</span><span class="nb">echo</span> <span class="nv">$FOO</span> <span class="p">|</span> gojq tostring<span class="k">)</span>
+  <span class="nb">echo</span> <span class="nv">$FOO_MOD</span> &gt; /tmp/foo-mod.txt
+  <span class="k">if</span> ! md5sum -c /foo-mod.txt.md5 &gt; /dev/null <span class="p">;</span> <span class="k">then</span>
+    <span class="nb">echo</span> <span class="s2">&#34;</span><span class="nv">$msg_prefix</span><span class="s2"> failed: case 4&#34;</span>
+    <span class="nv">fail</span><span class="o">=</span><span class="nb">true</span>
+  <span class="k">fi</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>5）测试 <code>gojq</code> 结果赋予新变量，直接检查新变量值，是否损坏（md5检查）：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">  <span class="nv">FOO_MOD</span><span class="o">=</span><span class="k">$(</span><span class="nb">echo</span> <span class="nv">$FOO</span> <span class="p">|</span> gojq tostring<span class="k">)</span>
+  <span class="nv">got_md5</span><span class="o">=</span><span class="k">$(</span><span class="nb">echo</span> <span class="nv">$FOO_MOD</span> <span class="p">|</span> md5sum -b <span class="p">|</span> cut -d <span class="s1">&#39; &#39;</span> -f 1<span class="k">)</span>
+  <span class="k">if</span> <span class="o">[[</span> <span class="s2">&#34;</span><span class="nv">$got_md5</span><span class="s2">&#34;</span> !<span class="o">=</span> <span class="s2">&#34;</span><span class="nv">$want_mod_md5</span><span class="s2">&#34;</span> <span class="o">]]</span><span class="p">;</span> <span class="k">then</span>
+    <span class="nb">echo</span> <span class="s2">&#34;</span><span class="nv">$msg_prefix</span><span class="s2"> failed: case 5&#34;</span>
+    <span class="nv">fail</span><span class="o">=</span><span class="nb">true</span>
+  <span class="k">fi</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>6）测试 <code>gojq</code> 结果赋予新变量，新变量输出到文件，是否损坏（md5检查），使用<a href="https://github.com/koalaman/shellcheck/wiki/SC2086" target="_blank" rel="noopener noreferrer">double quote 变量的方式</a>
+：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">  <span class="nv">FOO_MOD</span><span class="o">=</span><span class="k">$(</span><span class="nb">echo</span> <span class="s2">&#34;</span><span class="nv">$FOO</span><span class="s2">&#34;</span> <span class="p">|</span> gojq tostring<span class="k">)</span>
+  <span class="nb">echo</span> <span class="s2">&#34;</span><span class="nv">$FOO_MOD</span><span class="s2">&#34;</span> &gt; /tmp/foo-mod-q.txt
+  <span class="k">if</span> ! md5sum -c /foo-mod-q.txt.md5 &gt; /dev/null <span class="p">;</span> <span class="k">then</span>
+    <span class="nb">echo</span> <span class="s2">&#34;</span><span class="nv">$msg_prefix</span><span class="s2"> failed: case 6&#34;</span>
+    <span class="nv">fail</span><span class="o">=</span><span class="nb">true</span>
+  <span class="k">fi</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>7）测试 <code>gojq</code> 结果赋予新变量，直接检查新变量值，是否损坏（md5检查），使用<a href="https://github.com/koalaman/shellcheck/wiki/SC2086" target="_blank" rel="noopener noreferrer">double quote 变量的方式</a>
+：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">  <span class="nv">FOO_MOD</span><span class="o">=</span><span class="k">$(</span><span class="nb">echo</span> <span class="s2">&#34;</span><span class="nv">$FOO</span><span class="s2">&#34;</span> <span class="p">|</span> gojq tostring<span class="k">)</span>
+  <span class="nv">got_md5</span><span class="o">=</span><span class="k">$(</span><span class="nb">echo</span> <span class="s2">&#34;</span><span class="nv">$FOO_MOD</span><span class="s2">&#34;</span> <span class="p">|</span> md5sum -b <span class="p">|</span> cut -d <span class="s1">&#39; &#39;</span> -f 1<span class="k">)</span>
+  <span class="k">if</span> <span class="o">[[</span> <span class="s2">&#34;</span><span class="nv">$got_md5</span><span class="s2">&#34;</span> !<span class="o">=</span> <span class="s2">&#34;</span><span class="nv">$want_mod_q_md5</span><span class="s2">&#34;</span> <span class="o">]]</span><span class="p">;</span> <span class="k">then</span>
+    <span class="nb">echo</span> <span class="s2">&#34;</span><span class="nv">$msg_prefix</span><span class="s2"> failed: case 7&#34;</span>
+    <span class="nv">fail</span><span class="o">=</span><span class="nb">true</span>
+  <span class="k">fi</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>8）测试 <code>gojq</code> ，跳过变量赋值，直接检查结果是否损坏（md5检查）：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">  <span class="nv">got_md5</span><span class="o">=</span><span class="k">$(</span><span class="nb">echo</span> <span class="s2">&#34;</span><span class="nv">$FOO</span><span class="s2">&#34;</span> <span class="p">|</span> gojq tostring <span class="p">|</span> md5sum <span class="p">|</span> cut -d <span class="s1">&#39; &#39;</span> -f 1<span class="k">)</span>
+  <span class="k">if</span> <span class="o">[[</span> <span class="s2">&#34;</span><span class="nv">$got_md5</span><span class="s2">&#34;</span> !<span class="o">=</span> <span class="s2">&#34;</span><span class="nv">$want_mod_q_md5</span><span class="s2">&#34;</span> <span class="o">]]</span><span class="p">;</span> <span class="k">then</span>
+    <span class="nb">echo</span> <span class="s2">&#34;</span><span class="nv">$msg_prefix</span><span class="s2"> failed: case 8&#34;</span>
+    <span class="nv">fail</span><span class="o">=</span><span class="nb">true</span>
+  <span class="k">fi</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>脚本执行结果（例子）：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span><span class="lnt">9
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">...
+Docker run round xxx
+md5sum: WARNING: <span class="m">1</span> of <span class="m">1</span> computed checksums did NOT match
+ failed: <span class="k">case</span> <span class="m">4</span>
+ failed: <span class="k">case</span> <span class="m">5</span>
+md5sum: WARNING: <span class="m">1</span> of <span class="m">1</span> computed checksums did NOT match
+ failed: <span class="k">case</span> <span class="m">6</span>
+ failed: <span class="k">case</span> <span class="m">7</span>
+...
+</code></pre></td></tr></table>
+</div>
+</div><p>运行一段时间后，发现只要出错，case 4, 5, 6, 7 是一起出错的。</p>
+<ul>
+<li>4、5 和 6、7 的差别在于是否使用了 <a href="https://github.com/koalaman/shellcheck/wiki/SC2086" target="_blank" rel="noopener noreferrer">double quote 变量的方式</a>
+ ，都有错说明 double quote 变量不能解决这个问题</li>
+<li>4、6 和 5、7 的差别在于是输出到文件检查，还是直接检查变量，都有错说明 输出文件不是关键，而是变量的值本身就损坏了</li>
+</ul>
+<p>同时注意到，case 8 虽然在逻辑上和 case 4、5、6、7 一样，但是却不出错。两者的区别在于是否使用新变量来接收<code>gojq</code>的返回值。
+这就说明，问题出在新变量赋值上。</p>
+<p>所以问题出在，在bash脚本中给一个变量赋值一个很长的包含中文的值，就会有概率出错。</p>
+<p>而且测试脚本的执行方式有两种：</p>
+<ul>
+<li>循环创建容器执行测试脚本</li>
+<li>创建单个容器，脚本内循环执行</li>
+</ul>
+<p>发现，前一种方式，概率出现问题。而后一种方式如果一开始没有问题，就一直没有问题，如果一开始有问题，就一直有问题。</p>
+<h2 id="测试脚本2">测试脚本2<a class="anchor ms-1" href="#测试脚本2"><i class="fas fa-link"></i></a></h2>
+<p>现在有了一个强有力的推测：在bash脚本中给一个变量赋值一个很长的包含中文的值，就会有概率出错。</p>
+<p>那么就新写一个测试脚本：https://github.com/chanjarster/bash-5_1_8_long_var_corrupt</p>
+<p>也不需要<code>gojq</code>了，直接把一个文件的内容赋值给一个变量：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="nv">FOO</span><span class="o">=</span><span class="k">$(</span>cat /tmp/foo.txt<span class="k">)</span>
+<span class="nv">want_q_md5</span><span class="o">=</span><span class="k">$(</span>cat /tmp/foo.txt.md5 <span class="p">|</span> cut -d <span class="s1">&#39; &#39;</span> -f 1<span class="k">)</span>
+<span class="nv">got_md5</span><span class="o">=</span><span class="k">$(</span><span class="nb">echo</span> <span class="s2">&#34;</span><span class="nv">$FOO</span><span class="s2">&#34;</span> <span class="p">|</span> md5sum -b <span class="p">|</span> cut -d <span class="s1">&#39; &#39;</span> -f 1<span class="k">)</span>
+<span class="k">if</span> <span class="o">[[</span> <span class="s2">&#34;</span><span class="nv">$got_md5</span><span class="s2">&#34;</span> !<span class="o">=</span> <span class="s2">&#34;</span><span class="nv">$want_q_md5</span><span class="s2">&#34;</span> <span class="o">]]</span><span class="p">;</span> <span class="k">then</span>
+  <span class="nb">echo</span> <span class="s2">&#34;failed&#34;</span>
+  <span class="nb">echo</span> <span class="s2">&#34;</span><span class="nv">$FOO</span><span class="s2">&#34;</span> &gt; /tmp/foo-corrupt.txt
+  <span class="nv">fail</span><span class="o">=</span><span class="nb">true</span>
+<span class="k">else</span>
+  <span class="nb">echo</span> <span class="s2">&#34;succeed&#34;</span>
+<span class="k">fi</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>测试结果：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">Docker run round <span class="m">1</span>
+succeed
+
+Docker run round <span class="m">2</span>
+failed
+
+Docker run round <span class="m">3</span>
+succeed
+
+Docker run round <span class="m">4</span>
+succeed
+
+Docker run round <span class="m">5</span>
+failed
+
+...
+</code></pre></td></tr></table>
+</div>
+</div><p>到这里就可以证实这个猜测了。</p>
+<h2 id="后续跟踪">后续跟踪<a class="anchor ms-1" href="#后续跟踪"><i class="fas fa-link"></i></a></h2>
+<p>到GNU Bash的邮件列表中搜索到这个BUG：</p>
+<ul>
+<li><a href="https://lists.gnu.org/archive/html/bug-bash/2022-01/msg00000.html" target="_blank" rel="noopener noreferrer">Corrupted multibyte characters in command substitutions</a>
+，符合我们遇到的问题，<a href="https://lists.gnu.org/archive/html/bug-bash/2022-01/msg00020.html" target="_blank" rel="noopener noreferrer">提到</a>
+在 5.1.16 版本里修复了这个问题</li>
+<li><a href="https://lists.gnu.org/archive/html/bug-bash/2022-02/msg00145.html" target="_blank" rel="noopener noreferrer">Long variable value get corrupted sometimes</a>
+，我这里也提了一个issue（提之前没有好好搜索）</li>
+<li>我在 Alpine Linux 提议更新 Bash 版本，见 <a href="https://gitlab.alpinelinux.org/alpine/aports/-/issues/13526" target="_blank" rel="noopener noreferrer">issue</a>
+</li>
+<li>我在 Debian 邮件列表 提议更新 Bash 版本，见<a href="https://lists.debian.org/debian-user/2022/02/msg00573.html" target="_blank" rel="noopener noreferrer">这里</a>
+</li>
+</ul></div></div>
+  <div class="card-footer"><div class="post-navs d-flex justify-content-evenly">
+  <div class="post-nav post-prev"><i class="fas fa-fw fa-chevron-left"></i>
+    <a href="/post/java-create-zombie-in-docker/">容器中Java进程产生大量僵尸进程的问题
+</a>
+  </div></div></div>
+</article><div class="post-copyright mb-3 row card component" id="post-copyright">
+    <div class="card-header">
+        <h2 class="card-title">版权</h2>
+    </div>
+    <div class="card-body"><a class="d-flex align-items-center flex-column" target="_blank" rel="license noopener noreferrer" href="https://creativecommons.org/licenses/by-nc-nd/4.0/deed.zh">
+  <span><i class="fab fa-fw fa-2x fa-creative-commons"></i><i class="fab fa-fw fa-2x fa-creative-commons-by"></i><i class="fab fa-fw fa-2x fa-creative-commons-nc"></i><i class="fab fa-fw fa-2x fa-creative-commons-nd"></i></span>
+  CC BY-NC-ND 4.0 
+</a>
+
+
+    </div>
+</div><section class="related-posts row card component">
+    <div class="card-header">
+      <h2 class="card-title">相关文章</h2>
+    </div>
+    <div class="card-body">
+      <ul class="post-list"><li>
+          <a href="/post/article-review/container-isolation-gone-wrong/">Container Isolation Gone Wrong
+</a>
+          <span class="float-end post-date">2019-02-23
+</span>
+        </li><li>
+          <a href="/post/java-create-zombie-in-docker/">容器中Java进程产生大量僵尸进程的问题
+</a>
+          <span class="float-end post-date">2022-01-26
+</span>
+        </li><li>
+          <a href="/post/linux/namespace/">Linux命名空间一些笔记
+</a>
+          <span class="float-end post-date">2021-12-07
+</span>
+        </li><li>
+          <a href="/post/linux/net-params/">常用网络内核参数优化
+</a>
+          <span class="float-end post-date">2021-09-08
+</span>
+        </li><li>
+          <a href="/post/linux/too-many-time-wait-troubleshooting/">压测时大量TIME_WAIT问题排查
+</a>
+          <span class="float-end post-date">2021-09-07
+</span>
+        </li></ul>
+    </div>
+  </section><div class="card component row post-comments" id="post-comments">
+  <div class="card-header">
+    <h2 class="card-title">评论</h2>
+  </div>
+  <div class="card-body"></div>
+</div></div>
+</div><aside class="col-lg-4 sidebar d-flex">
+  <div class="container d-flex flex-column">
+    
+    <section class="card row text-center profile component">
+  <div class="card-body">
+    <div class="col-12 d-flex align-items-center justify-content-center"><img class="profile-avatar rounded-circle" alt="颇忒脱" src="/images/avatar.jpg" loading="lazy"
+   width="455" height="455"
+   />
+</div>
+    <div class="col-12 profile-meta"><div class="profile-name">颇忒脱</div><nav class="social-links nav justify-content-center"><a class="nav-link social-link" target="_blank" href="https://github.com/chanjarster" title="GitHub" rel="noopener noreferrer">
+        <i class="fa-fw fa-2x fab fa-github"></i>
+      </a></nav>
+</div>
+  </div>
+</section>
+  <div class="post-toc row mb-4 card component" id="postTOC">
+  <div class="card-header">
+    <h2 class="card-title">目录</h2>
+  </div>
+  <div class="card-body">
+    <nav id="TableOfContents">
+  <ul>
+    <li><a href="#现象">现象</a></li>
+    <li><a href="#分析乱码来源">分析乱码来源</a></li>
+    <li><a href="#分析乱码位置是否有规律">分析乱码位置是否有规律</a></li>
+    <li><a href="#更新的脚本">更新的脚本</a></li>
+    <li><a href="#插入字节的位置">插入字节的位置</a></li>
+    <li><a href="#推理">推理</a></li>
+    <li><a href="#测试脚本">测试脚本</a></li>
+    <li><a href="#测试脚本2">测试脚本2</a></li>
+    <li><a href="#后续跟踪">后续跟踪</a></li>
+  </ul>
+</nav>
+  </div>
+</div><section class="featured-posts row card component">
+    <div class="card-header">
+      <h2 class="card-title">精选文章</h2>
+    </div>
+    <div class="card-body">
+      <ul class="post-list"><li>
+          <a href="/post/mysql/index-page/">MySQL系列
+</a>
+        </li><li>
+          <a href="/post/concurrent-programming/index-page/">并发编程系列
+</a>
+        </li><li>
+          <a href="/post/jvm/index-page/">JVM系列
+</a>
+        </li></ul>
+    </div>
+  </section><section class="recent-posts row card component">
+  <div class="card-header">
+    <h2 class="card-title">最近文章</h2>
+  </div>
+  <div class="card-body">
+    <ul class="post-list"><li>
+        <a href="/post/bash-long-var-corrupt/">Bash 长变量值损坏问题排查
+</a>
+      </li><li>
+        <a href="/post/java-create-zombie-in-docker/">容器中Java进程产生大量僵尸进程的问题
+</a>
+      </li><li>
+        <a href="/post/jvm/gc-log-options/">JVM - GC日志参数
+</a>
+      </li><li>
+        <a href="/post/redis/redis-cluster-solutions-compare/">Redis集群方案对比
+</a>
+      </li><li>
+        <a href="/post/linux/namespace/">Linux命名空间一些笔记
+</a>
+      </li></ul>
+  </div>
+</section><section class="tags-taxonomies row card component">
+      <div class="card-header">
+        <h2 class="card-title">
+          <a href="/tags">标签</a>
+        </h2>
+      </div>
+      <div class="card-body">
+        <div class="py-2"><a href="/tags/arts-a/" class="badge rounded post-taxonomy" title="ARTS-A">
+            ARTS-A<span class="badge badge-sm text-white bg-accent ms-1">125</span></a><a href="/tags/jvm/" class="badge rounded post-taxonomy" title="jvm">
+            jvm<span class="badge badge-sm text-white bg-accent ms-1">36</span></a><a href="/tags/k8s/" class="badge rounded post-taxonomy" title="k8s">
+            k8s<span class="badge badge-sm text-white bg-accent ms-1">34</span></a><a href="/tags/troubleshooting/" class="badge rounded post-taxonomy" title="troubleshooting">
+            troubleshooting<span class="badge badge-sm text-white bg-accent ms-1">23</span></a><a href="/tags/mysql/" class="badge rounded post-taxonomy" title="mysql">
+            mysql<span class="badge badge-sm text-white bg-accent ms-1">22</span></a><a href="/tags/docker/" class="badge rounded post-taxonomy" title="docker">
+            docker<span class="badge badge-sm text-white bg-accent ms-1">21</span></a><a href="/tags/%E5%B9%B6%E5%8F%91%E7%BC%96%E7%A8%8B/" class="badge rounded post-taxonomy" title="并发编程">
+            并发编程<span class="badge badge-sm text-white bg-accent ms-1">20</span></a><a href="/tags/cheatsheet/" class="badge rounded post-taxonomy" title="cheatsheet">
+            cheatsheet<span class="badge badge-sm text-white bg-accent ms-1">16</span></a><a href="/tags/java/" class="badge rounded post-taxonomy" title="java">
+            java<span class="badge badge-sm text-white bg-accent ms-1">15</span></a><a href="/tags/kernel/" class="badge rounded post-taxonomy" title="kernel">
+            kernel<span class="badge badge-sm text-white bg-accent ms-1">15</span></a><a href="/tags/%E6%80%A7%E8%83%BD%E8%B0%83%E4%BC%98/" class="badge rounded post-taxonomy" title="性能调优">
+            性能调优<span class="badge badge-sm text-white bg-accent ms-1">11</span></a><a href="/tags/%E5%BE%AE%E6%9C%8D%E5%8A%A1/" class="badge rounded post-taxonomy" title="微服务">
+            微服务<span class="badge badge-sm text-white bg-accent ms-1">10</span></a><a href="/tags/prometheus/" class="badge rounded post-taxonomy" title="prometheus">
+            prometheus<span class="badge badge-sm text-white bg-accent ms-1">9</span></a><a href="/tags/go/" class="badge rounded post-taxonomy" title="go">
+            go<span class="badge badge-sm text-white bg-accent ms-1">8</span></a><a href="/tags/linux/" class="badge rounded post-taxonomy" title="linux">
+            linux<span class="badge badge-sm text-white bg-accent ms-1">8</span></a><a href="/tags/redis/" class="badge rounded post-taxonomy" title="redis">
+            redis<span class="badge badge-sm text-white bg-accent ms-1">7</span></a><a href="/tags/gc/" class="badge rounded post-taxonomy" title="gc">
+            gc<span class="badge badge-sm text-white bg-accent ms-1">6</span></a><a href="/tags/%E8%BF%90%E7%BB%B4/" class="badge rounded post-taxonomy" title="运维">
+            运维<span class="badge badge-sm text-white bg-accent ms-1">6</span></a><a href="/tags/ci_cd/" class="badge rounded post-taxonomy" title="CI_CD">
+            CI_CD<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/debug/" class="badge rounded post-taxonomy" title="debug">
+            debug<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/interview/" class="badge rounded post-taxonomy" title="interview">
+            interview<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/jmx/" class="badge rounded post-taxonomy" title="jmx">
+            jmx<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/%E5%88%86%E5%B8%83%E5%BC%8F%E4%BA%8B%E5%8A%A1/" class="badge rounded post-taxonomy" title="分布式事务">
+            分布式事务<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/%E5%88%86%E5%B8%83%E5%BC%8F%E7%AE%97%E6%B3%95/" class="badge rounded post-taxonomy" title="分布式算法">
+            分布式算法<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/%E6%94%B6%E8%97%8F%E5%A4%B9/" class="badge rounded post-taxonomy" title="收藏夹">
+            收藏夹<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/openssl/" class="badge rounded post-taxonomy" title="openssl">
+            openssl<span class="badge badge-sm text-white bg-accent ms-1">4</span></a><a href="/tags/rancher/" class="badge rounded post-taxonomy" title="rancher">
+            rancher<span class="badge badge-sm text-white bg-accent ms-1">4</span></a><a href="/tags/tls/" class="badge rounded post-taxonomy" title="tls">
+            tls<span class="badge badge-sm text-white bg-accent ms-1">4</span></a><a href="/tags/visualvm/" class="badge rounded post-taxonomy" title="visualvm">
+            visualvm<span class="badge badge-sm text-white bg-accent ms-1">4</span></a><a href="/tags/%E6%97%A5%E5%BF%97/" class="badge rounded post-taxonomy" title="日志">
+            日志<span class="badge badge-sm text-white bg-accent ms-1">4</span></a><a href="/tags/arts/" class="badge rounded post-taxonomy" title="arts">
+            arts<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/arts-r/" class="badge rounded post-taxonomy" title="arts-r">
+            arts-r<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/classloader/" class="badge rounded post-taxonomy" title="ClassLoader">
+            ClassLoader<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/ingress/" class="badge rounded post-taxonomy" title="ingress">
+            ingress<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/jenkins/" class="badge rounded post-taxonomy" title="Jenkins">
+            Jenkins<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/network/" class="badge rounded post-taxonomy" title="network">
+            network<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/scheduling/" class="badge rounded post-taxonomy" title="scheduling">
+            scheduling<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/thread/" class="badge rounded post-taxonomy" title="thread">
+            thread<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/%E5%88%86%E5%B8%83%E5%BC%8F%E6%9E%B6%E6%9E%84/" class="badge rounded post-taxonomy" title="分布式架构">
+            分布式架构<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/%E9%AB%98%E5%B9%B6%E5%8F%91/" class="badge rounded post-taxonomy" title="高并发">
+            高并发<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/grafana/" class="badge rounded post-taxonomy" title="grafana">
+            grafana<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/jdbc/" class="badge rounded post-taxonomy" title="JDBC">
+            JDBC<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/nginx/" class="badge rounded post-taxonomy" title="nginx">
+            nginx<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/%E6%95%B0%E6%8D%AE%E5%BA%93%E6%97%B6%E5%8C%BA%E9%82%A3%E4%BA%9B%E4%BA%8B%E5%84%BF/" class="badge rounded post-taxonomy" title="数据库时区那些事儿">
+            数据库时区那些事儿<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/%E7%9B%91%E6%8E%A7/" class="badge rounded post-taxonomy" title="监控">
+            监控<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/%E9%99%90%E6%B5%81/" class="badge rounded post-taxonomy" title="限流">
+            限流<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/akka/" class="badge rounded post-taxonomy" title="Akka">
+            Akka<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/alertmanager/" class="badge rounded post-taxonomy" title="alertmanager">
+            alertmanager<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/bash/" class="badge rounded post-taxonomy" title="bash">
+            bash<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/chrome/" class="badge rounded post-taxonomy" title="chrome">
+            chrome<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/elasticsearch/" class="badge rounded post-taxonomy" title="elasticsearch">
+            elasticsearch<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/etcd/" class="badge rounded post-taxonomy" title="etcd">
+            etcd<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/fluentd/" class="badge rounded post-taxonomy" title="fluentd">
+            fluentd<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/harbor/" class="badge rounded post-taxonomy" title="harbor">
+            harbor<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/helm/" class="badge rounded post-taxonomy" title="helm">
+            helm<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/hystrix/" class="badge rounded post-taxonomy" title="hystrix">
+            hystrix<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/io/" class="badge rounded post-taxonomy" title="io">
+            io<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/jdpa/" class="badge rounded post-taxonomy" title="jdpa">
+            jdpa<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/jwt/" class="badge rounded post-taxonomy" title="jwt">
+            jwt<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/kafka/" class="badge rounded post-taxonomy" title="kafka">
+            kafka<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/kibana/" class="badge rounded post-taxonomy" title="kibana">
+            kibana<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/mq/" class="badge rounded post-taxonomy" title="MQ">
+            MQ<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/oauth/" class="badge rounded post-taxonomy" title="oauth">
+            oauth<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/oracle/" class="badge rounded post-taxonomy" title="Oracle">
+            Oracle<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/reactor/" class="badge rounded post-taxonomy" title="reactor">
+            reactor<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/spring-boot/" class="badge rounded post-taxonomy" title="spring-boot">
+            spring-boot<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/spring-cloud/" class="badge rounded post-taxonomy" title="Spring Cloud">
+            Spring Cloud<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/ssl/" class="badge rounded post-taxonomy" title="ssl">
+            ssl<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/tiller/" class="badge rounded post-taxonomy" title="tiller">
+            tiller<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/vtable/" class="badge rounded post-taxonomy" title="vtable">
+            vtable<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/%E6%95%B0%E7%A0%81/" class="badge rounded post-taxonomy" title="数码">
+            数码<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/%E6%B6%88%E6%81%AF%E9%98%9F%E5%88%97/" class="badge rounded post-taxonomy" title="消息队列">
+            消息队列<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/%E7%BC%93%E5%AD%98/" class="badge rounded post-taxonomy" title="缓存">
+            缓存<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/%E8%B0%83%E7%94%A8%E9%93%BE%E8%BF%BD%E8%B8%AA/" class="badge rounded post-taxonomy" title="调用链追踪">
+            调用链追踪<span class="badge badge-sm text-white bg-accent ms-1">1</span></a></div>
+      </div>
+    </section>
+    
+  </div>
+</aside>
+</div>
+    </main><footer class="footer mt-auto py-3 text-center container"><nav class="social-links nav justify-content-center mb-2"><a class="nav-link social-link" target="_blank" href="https://github.com/chanjarster" title="GitHub" rel="noopener noreferrer">
+        <i class="fa-fw fa-2x fab fa-github"></i>
+      </a></nav>
+<div class="copyright mb-2">
+  Copyright © 2016-2022 Razon Yang. All Rights Reserved.
+</div>
+<div class="powered-by mb-2">
+  Powered by <a href="https://gohugo.io" target="_blank" rel="noopener noreferrer">Hugo</a> and the <a href="https://github.com/razonyang/hugo-theme-bootstrap" target="_blank" rel="noopener noreferrer">Bootstrap</a> theme.
+</div>
+<a href="https://www.netlify.com" target="_blank" rel="noopener noreferrer">
+    <img src="https://www.netlify.com/img/global/badges/netlify-color-accent.svg" alt="Deploys by Netlify" width="114" height="51" />
+</a>
+</footer>
+<script src="/js/main.cbf2ace5d5fcb68b11b93647393ec41735869f18f31091c0941a01dfdf417dfc.js" integrity="sha256-y/Ks5dX8tosRuTZHOT7EFzWGnxjzEJHAlBoB399Bffw=" crossorigin="anonymous" defer></script><script src="/js/icons.min.a35670f2f90c398e5ee5c8e509b428fae75aa2746854cee10b60794633076859.js" integrity="sha256-o1Zw8vkMOY5e5cjlCbQo&#43;udaonRoVM7hC2B5RjMHaFk=" crossorigin="anonymous" defer></script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('\/service-worker.js').then(function(reg) {
+      console.log('Successfully registered service worker', reg);
+    }).catch(function(err) {
+      console.warn('Error whilst registering service worker', err);
+    });
+  });
+}
+</script><script src="/js/viewer.min.4dba52a0a790f909408b7385316651299158381686401d50ff1f04dda6476473.js" integrity="sha256-TbpSoKeQ&#43;QlAi3OFMWZRKZFYOBaGQB1Q/x8E3aZHZHM=" crossorigin="anonymous" defer></script>
+</body>
+</html>
