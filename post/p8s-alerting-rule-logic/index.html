@@ -3,17 +3,17 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Prometheus报警逻辑分析 - 颇忒脱的技术博客</title><link rel="apple-touch-icon" href="/images/icons/icon-180x180.png" sizes="180x180">
+    <title>Prometheus告警逻辑分析 - 颇忒脱的技术博客</title><link rel="apple-touch-icon" href="/images/icons/icon-180x180.png" sizes="180x180">
 <link rel="icon" href="/images/icons/icon-32x32.png" sizes="32x32" type="image/png">
 <link rel="icon" href="/images/icons/icon-16x16.png" sizes="16x16" type="image/png">
 <link rel="icon" href="/images/icons/favicon.ico">
 <link rel="manifest" href="/manifest.json">
 <meta name="keywords" content="" />
-<meta name="description" content="" /><meta itemprop="name" content="Prometheus报警逻辑分析">
+<meta name="description" content="" /><meta itemprop="name" content="Prometheus告警逻辑分析">
 <meta itemprop="description" content=""><meta itemprop="datePublished" content="2021-02-26T09:42:05+08:00" />
 <meta itemprop="dateModified" content="2021-02-26T09:42:05+08:00" />
-<meta itemprop="wordCount" content="910">
-<meta itemprop="keywords" content="prometheus," /><meta property="og:title" content="Prometheus报警逻辑分析" />
+<meta itemprop="wordCount" content="1094">
+<meta itemprop="keywords" content="prometheus," /><meta property="og:title" content="Prometheus告警逻辑分析" />
 <meta property="og:description" content="" />
 <meta property="og:type" content="article" />
 <meta property="og:url" content="/post/p8s-alerting-rule-logic/" /><meta property="article:section" content="post" />
@@ -21,7 +21,7 @@
 <meta property="article:modified_time" content="2021-02-26T09:42:05+08:00" /><meta property="og:site_name" content="颇忒脱的技术博客" />
 
 <meta name="twitter:card" content="summary"/>
-<meta name="twitter:title" content="Prometheus报警逻辑分析"/>
+<meta name="twitter:title" content="Prometheus告警逻辑分析"/>
 <meta name="twitter:description" content=""/>
 <meta name="robots" content="index, follow" /><link rel="stylesheet" href="/css/main.min.b7a6eda8d46e39a549f182cf72a9ff4f4c1d4d82c31ecc3ede0b7f4d5b26f32b.css" integrity="sha256-t6btqNRuOaVJ8YLPcqn/T0wdTYLDHsw&#43;3gt/TVsm8ys=" crossorigin="anonymous"><link rel="stylesheet" href="/css/viewer.min.3d228794bcedbbfa0412beb8fbc1ec6973202945e42af7004f742a4d7bd620ab.css" integrity="sha256-PSKHlLztu/oEEr64&#43;8HsaXMgKUXkKvcAT3QqTXvWIKs=" crossorigin="anonymous"></head>
   <body><script>const items=['mode','palette'];items.forEach(function(a){const b=localStorage.getItem('hbs-'+a);b&&document.body.parentElement.setAttribute('data-'+a,b)})</script><header><nav class="navbar top-app-bar top-app-bar-expand-lg fixed-top">
@@ -184,7 +184,7 @@
 <div class="col-lg-8">
   <div class="container"><nav class="row card component" aria-label="breadcrumb">
   <div class="card-body">
-    <ol class="breadcrumb "><li class="breadcrumb-item"><a href="/">主页</a></li><li class="breadcrumb-item"><a href="/post/">文章</a></li><li class="breadcrumb-item active">Prometheus报警逻辑分析</li></ol>
+    <ol class="breadcrumb "><li class="breadcrumb-item"><a href="/">主页</a></li><li class="breadcrumb-item"><a href="/post/">文章</a></li><li class="breadcrumb-item active">Prometheus告警逻辑分析</li></ol>
   </div>
 </nav><div class="post-panel-wrapper">
   <div class="d-flex flex-column component rounded post-panel">
@@ -213,20 +213,20 @@
 </div>
 <article class="row card component mb-4 post">
   <div class="card-header ">
-    <h1 class="card-title post-title">Prometheus报警逻辑分析
+    <h1 class="card-title post-title">Prometheus告警逻辑分析
 </h1>
   </div>
   <div class="card-body"><div class="post-meta">
   <span class="post-date" title="创建于 2021-02-26 09:42:05 &#43;0800 CST。">
     2021-02-26
   </span><span class="post-reading-time">
-    2 分钟阅读
+    3 分钟阅读
   </span><span class="post-taxonomies"><a href="/tags/prometheus/" class="badge post-taxonomy">prometheus</a></span>
 </div>
-<div class="post-content mb-3"><p>本文分析Prometheus的<a href="https://prometheus.io/docs/prometheus/2.25/configuration/alerting_rules/" target="_blank" rel="noopener noreferrer">Alerting Rule</a>
+<div class="post-content mb-3"><p>本文分析Prometheus的<a href="https://prometheus.io/docs/prometheus/latest/configuration/alerting_rules/" target="_blank" rel="noopener noreferrer">Alerting Rule</a>
 的执行逻辑。</p>
 <h2 id="领域模型">领域模型<a class="anchor ms-1" href="#领域模型"><i class="fas fa-link"></i></a></h2>
-<p>在Prometheus的定义中，报警规则由AlertingRule来描述，而AlertingRule则被归到<a href="https://prometheus.io/docs/prometheus/2.25/configuration/recording_rules/#rule_group" target="_blank" rel="noopener noreferrer">Group</a>
+<p>在Prometheus的定义中，告警规则由AlertingRule来描述，而AlertingRule则被归到<a href="https://prometheus.io/docs/prometheus/2.25/configuration/recording_rules/#rule_group" target="_blank" rel="noopener noreferrer">Group</a>
 中，比如下面的配置文件例子：</p>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
@@ -256,36 +256,83 @@
 </span><span class="w">      </span><span class="nt">summary</span><span class="p">:</span><span class="w"> </span><span class="l">High request latency</span><span class="w">
 </span></code></pre></td></tr></table>
 </div>
-</div><p>每个AlertingRule在运行时还维护具体的报警对象（Alert）。</p>
+</div><p>每个AlertingRule在运行时还维护具体的告警对象（Alert）。</p>
 <p>下面是领域模型：</p>
 <img src="domain.png" style="zoom:50%" />
-<h2 id="报警逻辑">报警逻辑<a class="anchor ms-1" href="#报警逻辑"><i class="fas fa-link"></i></a></h2>
-<p>Prometheus会根据<code>group.interval</code>规定的时间，定时来执行AlertingRule（执行Eval方法），然后发送报警到Alertmanager，最后再更新AlertingRule的状态、Group的状态。</p>
+<h2 id="告警逻辑">告警逻辑<a class="anchor ms-1" href="#告警逻辑"><i class="fas fa-link"></i></a></h2>
+<p>Prometheus会根据<code>group.interval</code> (下图的 <code>check_interval</code>）定时执行AlertingRule（执行Eval方法），然后发送告警到Alertmanager，最后再更新AlertingRule的状态、Group的状态。</p>
 <img src="logic.png" style="zoom:65%" />
 <h3 id="规则执行逻辑">规则执行逻辑<a class="anchor ms-1" href="#规则执行逻辑"><i class="fas fa-link"></i></a></h3>
-<p>上图已经说明了，执行报警规则第一步是执行表达式（<code>expr</code>属性），然后是根据表达式执行结果，管理Alert对象，逻辑如下：</p>
+<p>上图已经说明了，执行告警规则第一步是执行表达式（<code>expr</code>属性），然后是根据表达式执行结果，管理Alert对象，逻辑如下：</p>
 <img src="alert-state.png" style="zoom:65%" />
 <p>Alert对象有三个状态：</p>
 <ul>
-<li><strong>Pending</strong>：活跃但是还未发送给Alertmanager，是Alert对象的初始状态。</li>
-<li><strong>Firing</strong>：长发送到Alertmanager。</li>
-<li><strong>Inactive</strong>：不活跃，即当前没有触发报警。</li>
-<li>虚拟状态“被删除”</li>
+<li><strong>Pending</strong>：活跃但是还未发送给 Alertmanager，是所有 Alert 对象的初始状态。</li>
+<li><strong>Firing</strong>：告警发送中，特指发送到 Alertmanager。</li>
+<li><strong>Inactive</strong>：未激活，这类告警会保留 <code>resolved_retension</code> 规定的时间 (程序常量 15 分钟），而不是马上删除。</li>
+<li>虚拟状态“被删除”，处于 Inactive 状态的告警超过 <code>resolved_retention</code> 规定的时间之后，就会被删除。</li>
 </ul>
 <p>三种状态的迁移逻辑：</p>
 <p><strong>Pending -&gt; Firing</strong></p>
-<p>Alert对象当前处于Pending，触发报警规则，且距离初次活跃时间（<code>Alert.ActiveAt</code>）超过<code>&lt;for&gt;</code>（<code>AlertingRule.holdDuration</code>）的时长，那么这个Alert对象就会变成<strong>Firing</strong>状态。</p>
+<p>Alert 对象当前处于 Pending，Eval 结果是 true，且距离初次活跃时间（<code>Alert.ActiveAt</code>）超过<code>&lt;for&gt;</code>（<code>AlertingRule.holdDuration</code>）的时长，那么这个Alert对象就会变成 <strong>Firing</strong> 状态。</p>
 <p><strong>Pending -&gt; 被删除</strong></p>
-<p>Alert对象当前处于Pending状态，不触发报警规则，那么这个Alert对象就直接被删除。</p>
+<p>Alert 对象当前处于 Pending 状态，Eval 结果是 false，那么这个 Alert 对象就直接被删除。</p>
 <p><strong>Firing -&gt; Inactive</strong></p>
-<p>Alert对象当前处于Firing状态，不触发报警规则，那么这个Alert对象会变成<strong>Inactive状态</strong>。</p>
+<p>Alert 对象当前处于 Firing 状态，Eval 结果是 false，那么这个 Alert 对象会变成 <strong>Inactive状态</strong>。</p>
 <p><strong>Inactive -&gt; Pending</strong></p>
-<p>Alert对象当前处于Inactive状态，触发报警规则，那么这个Alert对象会重置为Pending状态。</p>
+<p>Alert 对象当前处于 Inactive状态，Eval 结果是 true，那么这个 Alert 对象会重置为 <strong>Pending</strong> 状态。</p>
 <p><strong>Inactive -&gt; 被删除</strong></p>
-<p>Alert对象当前处于Inactive状态，且保持超过了<code>resolved_retention</code>时长，则被删除。</p>
-<h3 id="报警发送的逻辑">报警发送的逻辑<a class="anchor ms-1" href="#报警发送的逻辑"><i class="fas fa-link"></i></a></h3>
-<p>AlertingRule执行之后，会把Firing状态的Alert发送出去，逻辑如下：</p>
-<img src="alert-sending.png" style="zoom:65%" />
+<p>Alert对象当前处于Inactive状态，且保持超过了 <code>resolved_retention</code> （p8s里写死 15 分钟），则被删除。</p>
+<h3 id="告警发送的逻辑">告警发送的逻辑<a class="anchor ms-1" href="#告警发送的逻辑"><i class="fas fa-link"></i></a></h3>
+<p>AlertingRule 执行之后，会把 Firing / Inactive 状态的 Alert 发送出去，逻辑如下：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="kd">func</span> <span class="p">(</span><span class="nx">a</span> <span class="o">*</span><span class="nx">Alert</span><span class="p">)</span> <span class="nf">needsSending</span><span class="p">(</span><span class="nx">ts</span> <span class="nx">time</span><span class="p">.</span><span class="nx">Time</span><span class="p">,</span> <span class="nx">resendDelay</span> <span class="nx">time</span><span class="p">.</span><span class="nx">Duration</span><span class="p">)</span> <span class="kt">bool</span> <span class="p">{</span>
+	<span class="k">if</span> <span class="nx">a</span><span class="p">.</span><span class="nx">State</span> <span class="o">==</span> <span class="nx">StatePending</span> <span class="p">{</span>
+		<span class="k">return</span> <span class="kc">false</span>
+	<span class="p">}</span>
+
+	<span class="c1">// if an alert has been resolved since the last send, resend it
+</span><span class="c1"></span>	<span class="k">if</span> <span class="nx">a</span><span class="p">.</span><span class="nx">ResolvedAt</span><span class="p">.</span><span class="nf">After</span><span class="p">(</span><span class="nx">a</span><span class="p">.</span><span class="nx">LastSentAt</span><span class="p">)</span> <span class="p">{</span>
+		<span class="k">return</span> <span class="kc">true</span>
+	<span class="p">}</span>
+
+	<span class="k">return</span> <span class="nx">a</span><span class="p">.</span><span class="nx">LastSentAt</span><span class="p">.</span><span class="nf">Add</span><span class="p">(</span><span class="nx">resendDelay</span><span class="p">).</span><span class="nf">Before</span><span class="p">(</span><span class="nx">ts</span><span class="p">)</span>
+<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>代码中的连个参数：</p>
+<ul>
+<li>ts，是当前时间</li>
+<li>resendDelay，是程序启动参数 <code>--rules.alert.resend-delay</code> 规定的，默认 <code>1m</code>。</li>
+</ul>
+<p>Alert 发送之后会更新 <code>LastSentAt</code> 和 <code>ValidUntil</code> 字段：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="nx">Alert</span><span class="p">.</span><span class="nx">LastSentAt</span> <span class="p">=</span> <span class="nx">ts</span>
+<span class="nx">Alert</span><span class="p">.</span><span class="nx">ValidUntil</span> <span class="p">=</span> <span class="nf">max</span><span class="p">([</span><span class="nx">check_interval</span><span class="p">],</span> <span class="p">[</span><span class="nx">resend_delay</span><span class="p">])</span> <span class="o">*</span> <span class="mi">4</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>其实你可以看到，在 Prometheus 层面，告警消息是会重复发送给 Alertmanager 的，而 Alermanager 则通过 <code>route.repeat_interval</code> (<a href="https://prometheus.io/docs/alerting/latest/configuration/#route" target="_blank" rel="noopener noreferrer">文档</a>
+) 来避免重复发送给 Receiver。</p>
 <h3 id="更新alertingrule规则">更新AlertingRule规则<a class="anchor ms-1" href="#更新alertingrule规则"><i class="fas fa-link"></i></a></h3>
 <p>最后更新AlertingRule的状态，逻辑如下：</p>
 <img src="alerting-rule-state.png" style="zoom:65%" /></div></div>
@@ -370,10 +417,10 @@
     <nav id="TableOfContents">
   <ul>
     <li><a href="#领域模型">领域模型</a></li>
-    <li><a href="#报警逻辑">报警逻辑</a>
+    <li><a href="#告警逻辑">告警逻辑</a>
       <ul>
         <li><a href="#规则执行逻辑">规则执行逻辑</a></li>
-        <li><a href="#报警发送的逻辑">报警发送的逻辑</a></li>
+        <li><a href="#告警发送的逻辑">告警发送的逻辑</a></li>
         <li><a href="#更新alertingrule规则">更新AlertingRule规则</a></li>
       </ul>
     </li>
