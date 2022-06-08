@@ -12,7 +12,7 @@
 <meta name="description" content="" /><meta itemprop="name" content="Prometheus告警逻辑分析">
 <meta itemprop="description" content=""><meta itemprop="datePublished" content="2021-02-26T09:42:05+08:00" />
 <meta itemprop="dateModified" content="2021-02-26T09:42:05+08:00" />
-<meta itemprop="wordCount" content="2127">
+<meta itemprop="wordCount" content="2226">
 <meta itemprop="keywords" content="prometheus," /><meta property="og:title" content="Prometheus告警逻辑分析" />
 <meta property="og:description" content="" />
 <meta property="og:type" content="article" />
@@ -492,7 +492,7 @@
 <span class="p">}</span>
 </code></pre></td></tr></table>
 </div>
-</div><p>收到 Inactive 的消息，Alertmanager 发给 webhook 的消息如下，可以看到 status=resolved，当前时间戳比 endsAt 晚一些，startsAt 则保持不变：</p>
+</div><p>收到 Inactive 的消息（<code>endsAt</code> &lt;= 当前时间），Alertmanager 发给 webhook 的消息如下，可以看到 status=resolved，当前时间戳比 endsAt 晚一些，startsAt 则保持不变：</p>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre tabindex="0" class="chroma"><code><span class="lnt"> 1
@@ -549,7 +549,8 @@
 <span class="p">}</span>
 </code></pre></td></tr></table>
 </div>
-</div><p>Prometheus 需要 <strong>持续</strong> 的将 Firing 告警发送给 Alertmanager，遇到以下一种情况，Alertmanager 会认为告警已经解决，发送一个 resolved：</p>
+</div><p><strong>注意：Alertmanager 里必须有 Inactive 消息所对应的告警，否则是会被忽略的</strong>。换句话说如果一个告警在 Alertmanager 里已经解除了，再发同样的 Inactive 消息，Alertmanager 是不会发给 webhook 的。</p>
+<p>Prometheus 需要 <strong>持续</strong> 的将 Firing 告警发送给 Alertmanager，遇到以下一种情况，Alertmanager 会认为告警已经解决，发送一个 resolved：</p>
 <ol>
 <li>Prometheus 发送了 Inactive 的消息给 Alertmanager，即 <code>endsAt=当前时间</code></li>
 <li>Prometheus 在上一次消息的 <code>endsAt</code> 之前，一直没有发送任何消息给 Alertmanager</li>
