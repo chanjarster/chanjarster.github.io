@@ -12,7 +12,7 @@
 <meta name="description" content="" /><meta itemprop="name" content="Prometheus告警逻辑分析">
 <meta itemprop="description" content=""><meta itemprop="datePublished" content="2021-02-26T09:42:05+08:00" />
 <meta itemprop="dateModified" content="2021-02-26T09:42:05+08:00" />
-<meta itemprop="wordCount" content="1094">
+<meta itemprop="wordCount" content="2127">
 <meta itemprop="keywords" content="prometheus," /><meta property="og:title" content="Prometheus告警逻辑分析" />
 <meta property="og:description" content="" />
 <meta property="og:type" content="article" />
@@ -220,7 +220,7 @@
   <span class="post-date" title="创建于 2021-02-26 09:42:05 &#43;0800 CST。">
     2021-02-26
   </span><span class="post-reading-time">
-    3 分钟阅读
+    5 分钟阅读
   </span><span class="post-taxonomies"><a href="/tags/prometheus/" class="badge post-taxonomy">prometheus</a></span>
 </div>
 <div class="post-content mb-3"><p>本文分析Prometheus的<a href="https://prometheus.io/docs/prometheus/latest/configuration/alerting_rules/" target="_blank" rel="noopener noreferrer">Alerting Rule</a>
@@ -328,11 +328,296 @@
 </span></code></pre></td>
 <td class="lntd">
 <pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="nx">Alert</span><span class="p">.</span><span class="nx">LastSentAt</span> <span class="p">=</span> <span class="nx">ts</span>
-<span class="nx">Alert</span><span class="p">.</span><span class="nx">ValidUntil</span> <span class="p">=</span> <span class="nf">max</span><span class="p">([</span><span class="nx">check_interval</span><span class="p">],</span> <span class="p">[</span><span class="nx">resend_delay</span><span class="p">])</span> <span class="o">*</span> <span class="mi">4</span>
+<span class="nx">Alert</span><span class="p">.</span><span class="nx">ValidUntil</span> <span class="p">=</span> <span class="nx">ts</span> <span class="o">+</span> <span class="nf">max</span><span class="p">([</span><span class="nx">check_interval</span><span class="p">],</span> <span class="p">[</span><span class="nx">resend_delay</span><span class="p">])</span> <span class="o">*</span> <span class="mi">4</span>
 </code></pre></td></tr></table>
 </div>
-</div><p>其实你可以看到，在 Prometheus 层面，告警消息是会重复发送给 Alertmanager 的，而 Alermanager 则通过 <code>route.repeat_interval</code> (<a href="https://prometheus.io/docs/alerting/latest/configuration/#route" target="_blank" rel="noopener noreferrer">文档</a>
-) 来避免重复发送给 Receiver。</p>
+</div><p><code>ValidUntil</code> 字段是一个预估的告警有效时间，超过这个时间点告警会被认为已经解除，具体逻辑见下文。</p>
+<h4 id="prometheus---alertmanager-机制">Prometheus -> Alertmanager 机制<a class="anchor ms-1" href="#prometheus---alertmanager-机制"><i class="fas fa-link"></i></a></h4>
+<p>当告警变成 <code>Firing</code> 时，发送给 Alertmanager 的消息如下，可以看到 <code>startsAt</code> 就是当前时间，而 <code>endsAt</code> 则是 <code>ValidUntil</code>：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-json" data-lang="json"><span class="err">ts</span> <span class="err">=</span> <span class="mi">2022-06-08</span> <span class="mi">14</span><span class="err">:</span><span class="mi">41</span><span class="err">:</span><span class="mf">14.199515</span> <span class="err">+</span><span class="mi">0800</span> 
+<span class="p">[</span>
+  <span class="p">{</span>
+    <span class="nt">&#34;annotations&#34;</span><span class="p">:</span> <span class="p">{</span> <span class="err">...</span> <span class="p">},</span>
+    <span class="nt">&#34;startsAt&#34;</span><span class="p">:</span> <span class="s2">&#34;2022-06-08T06:41:14.185Z&#34;</span><span class="p">,</span>
+    <span class="nt">&#34;endsAt&#34;</span><span class="p">:</span> <span class="s2">&#34;2022-06-08T06:45:14.185Z&#34;</span><span class="p">,</span>
+    <span class="nt">&#34;generatorURL&#34;</span><span class="p">:</span> <span class="s2">&#34;...&#34;</span><span class="p">,</span>
+    <span class="nt">&#34;labels&#34;</span><span class="p">:</span> <span class="p">{</span> <span class="err">...</span> <span class="p">}</span>
+  <span class="p">}</span>
+<span class="p">]</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>当告警 Inactive 后，发送给 Alertmanager 的消息如下， <code>endsAt</code> 就是当前时间，而 <code>startsAt</code> 和原来一样：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-json" data-lang="json"><span class="err">ts</span> <span class="err">=</span> <span class="mi">2022-06-08</span> <span class="mi">14</span><span class="err">:</span><span class="mi">41</span><span class="err">:</span><span class="mf">29.195836</span> <span class="err">+</span><span class="mi">0800</span> 
+<span class="p">[</span>
+  <span class="p">{</span>
+    <span class="nt">&#34;annotations&#34;</span><span class="p">:</span> <span class="p">{</span> <span class="err">...</span> <span class="p">},</span>
+    <span class="nt">&#34;startsAt&#34;</span><span class="p">:</span> <span class="s2">&#34;2022-06-08T06:41:14.185Z&#34;</span><span class="p">,</span>
+    <span class="nt">&#34;endsAt&#34;</span><span class="p">:</span> <span class="s2">&#34;2022-06-08T06:41:29.185Z&#34;</span><span class="p">,</span>
+    <span class="nt">&#34;generatorURL&#34;</span><span class="p">:</span> <span class="s2">&#34;...&#34;</span><span class="p">,</span>
+    <span class="nt">&#34;labels&#34;</span><span class="p">:</span> <span class="p">{</span> <span class="err">...</span> <span class="p">}</span>
+  <span class="p">}</span>
+<span class="p">]</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>如果告警一直 Firing，那么 Prometheus 会在 <code>resend_dealy</code> 的间隔重复发送，而 <code>startsAt</code> 保持不变， <code>endsAt</code> 跟着 <code>ValidUntil</code> 变：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-json" data-lang="json"><span class="err">ts</span> <span class="err">=</span> <span class="mi">2022-06-08</span> <span class="mi">14</span><span class="err">:</span><span class="mi">48</span><span class="err">:</span><span class="mf">34.197001</span> <span class="err">+</span><span class="mi">0800</span>
+<span class="p">[</span>
+  <span class="p">{</span>
+    <span class="nt">&#34;annotations&#34;</span><span class="p">:</span> <span class="p">{</span> <span class="err">...</span> <span class="p">},</span>
+    <span class="nt">&#34;startsAt&#34;</span><span class="p">:</span> <span class="s2">&#34;2022-06-08T06:48:34.185Z&#34;</span><span class="p">,</span>
+    <span class="nt">&#34;endsAt&#34;</span><span class="p">:</span> <span class="s2">&#34;2022-06-08T06:52:34.185Z&#34;</span><span class="p">,</span>
+    <span class="nt">&#34;generatorURL&#34;</span><span class="p">:</span> <span class="s2">&#34;...&#34;</span><span class="p">,</span>
+    <span class="nt">&#34;labels&#34;</span><span class="p">:</span> <span class="p">{</span> <span class="err">...</span> <span class="p">}</span>
+  <span class="p">}</span>
+<span class="p">]</span>
+<span class="err">ts</span> <span class="err">=</span> <span class="mi">2022-06-08</span> <span class="mi">14</span><span class="err">:</span><span class="mi">49</span><span class="err">:</span><span class="mf">39.195611</span> <span class="err">+</span><span class="mi">0800</span> 
+<span class="p">[</span>
+  <span class="p">{</span>
+    <span class="nt">&#34;annotations&#34;</span><span class="p">:</span> <span class="p">{</span> <span class="err">...</span> <span class="p">},</span>
+    <span class="nt">&#34;startsAt&#34;</span><span class="p">:</span> <span class="s2">&#34;2022-06-08T06:48:34.185Z&#34;</span><span class="p">,</span>
+    <span class="nt">&#34;endsAt&#34;</span><span class="p">:</span> <span class="s2">&#34;2022-06-08T06:53:39.185Z&#34;</span><span class="p">,</span>
+    <span class="nt">&#34;generatorURL&#34;</span><span class="p">:</span> <span class="s2">&#34;...&#34;</span><span class="p">,</span>
+    <span class="nt">&#34;labels&#34;</span><span class="p">:</span> <span class="p">{</span> <span class="err">...</span> <span class="p">}</span>
+  <span class="p">}</span>
+<span class="p">]</span>
+</code></pre></td></tr></table>
+</div>
+</div><h4 id="alertmanager---webhook-机制">Alertmanager -> webhook 机制<a class="anchor ms-1" href="#alertmanager---webhook-机制"><i class="fas fa-link"></i></a></h4>
+<p>第一次收到 Firing 的告警消息，Alertmanager 发给 webhook 的消息如下，则可以看到 status=firing，当前时间戳比 startsAt 晚一些，endsAt 没有提供（忽略了 Prometheus 提供的信息）：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-json" data-lang="json"><span class="err">ts</span> <span class="err">=</span> <span class="mi">2022-06-08</span> <span class="mi">14</span><span class="err">:</span><span class="mi">55</span><span class="err">:</span><span class="mf">49.201768</span> <span class="err">+</span><span class="mi">0800</span> 
+<span class="p">{</span>
+  <span class="nt">&#34;receiver&#34;</span><span class="p">:</span> <span class="s2">&#34;webhook&#34;</span><span class="p">,</span>
+  <span class="nt">&#34;status&#34;</span><span class="p">:</span> <span class="s2">&#34;firing&#34;</span><span class="p">,</span>
+  <span class="nt">&#34;alerts&#34;</span><span class="p">:</span> <span class="p">[</span>
+    <span class="p">{</span>
+      <span class="nt">&#34;status&#34;</span><span class="p">:</span> <span class="s2">&#34;firing&#34;</span><span class="p">,</span>
+      <span class="nt">&#34;labels&#34;</span><span class="p">:</span> <span class="p">{</span> <span class="err">...</span> <span class="p">},</span>
+      <span class="nt">&#34;annotations&#34;</span><span class="p">:</span> <span class="p">{</span> <span class="err">...</span> <span class="p">},</span>
+      <span class="nt">&#34;startsAt&#34;</span><span class="p">:</span> <span class="s2">&#34;2022-06-08T06:55:44.185Z&#34;</span><span class="p">,</span>
+      <span class="nt">&#34;endsAt&#34;</span><span class="p">:</span> <span class="s2">&#34;0001-01-01T00:00:00Z&#34;</span><span class="p">,</span>
+      <span class="nt">&#34;generatorURL&#34;</span><span class="p">:</span> <span class="s2">&#34;...&#34;</span><span class="p">,</span>
+      <span class="nt">&#34;fingerprint&#34;</span><span class="p">:</span> <span class="s2">&#34;3ec2d9fb9c4f7f1a&#34;</span>
+    <span class="p">}</span>
+  <span class="p">],</span>
+  <span class="nt">&#34;groupLabels&#34;</span><span class="p">:</span> <span class="p">{</span>
+    <span class="nt">&#34;alertname&#34;</span><span class="p">:</span> <span class="s2">&#34;mock2&#34;</span>
+  <span class="p">},</span>
+  <span class="nt">&#34;commonLabels&#34;</span><span class="p">:</span> <span class="p">{</span> <span class="err">alerts</span> <span class="err">数组里的共同</span> <span class="err">label</span> <span class="p">},</span>
+  <span class="nt">&#34;commonAnnotations&#34;</span><span class="p">:</span> <span class="p">{</span> <span class="err">alerts</span> <span class="err">数组里的共同</span> <span class="err">annotation</span> <span class="p">},</span>
+  <span class="nt">&#34;externalURL&#34;</span><span class="p">:</span> <span class="s2">&#34;...&#34;</span><span class="p">,</span>
+  <span class="nt">&#34;version&#34;</span><span class="p">:</span> <span class="s2">&#34;4&#34;</span><span class="p">,</span>
+  <span class="nt">&#34;groupKey&#34;</span><span class="p">:</span> <span class="s2">&#34;{}:{alertname=\&#34;mock2\&#34;}&#34;</span><span class="p">,</span>
+  <span class="nt">&#34;truncatedAlerts&#34;</span><span class="p">:</span> <span class="mi">0</span>
+<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>收到 Inactive 的消息，Alertmanager 发给 webhook 的消息如下，可以看到 status=resolved，当前时间戳比 endsAt 晚一些，startsAt 则保持不变：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-json" data-lang="json"><span class="err">ts</span> <span class="err">=</span> <span class="mi">2022-06-08</span> <span class="mi">14</span><span class="err">:</span><span class="mi">56</span><span class="err">:</span><span class="mf">19.201334</span> <span class="err">+</span><span class="mi">0800</span> 
+<span class="p">{</span>
+  <span class="nt">&#34;receiver&#34;</span><span class="p">:</span> <span class="s2">&#34;webhook&#34;</span><span class="p">,</span>
+  <span class="nt">&#34;status&#34;</span><span class="p">:</span> <span class="s2">&#34;resolved&#34;</span><span class="p">,</span>
+  <span class="nt">&#34;alerts&#34;</span><span class="p">:</span> <span class="p">[</span>
+    <span class="p">{</span>
+      <span class="nt">&#34;status&#34;</span><span class="p">:</span> <span class="s2">&#34;resolved&#34;</span><span class="p">,</span>
+      <span class="nt">&#34;labels&#34;</span><span class="p">:</span> <span class="p">{</span> <span class="err">...</span> <span class="p">},</span>
+      <span class="nt">&#34;annotations&#34;</span><span class="p">:</span> <span class="p">{</span> <span class="err">...</span> <span class="p">},</span>
+      <span class="nt">&#34;startsAt&#34;</span><span class="p">:</span> <span class="s2">&#34;2022-06-08T06:55:44.185Z&#34;</span><span class="p">,</span>
+      <span class="nt">&#34;endsAt&#34;</span><span class="p">:</span> <span class="s2">&#34;2022-06-08T06:56:04.185Z&#34;</span><span class="p">,</span>
+      <span class="nt">&#34;generatorURL&#34;</span><span class="p">:</span> <span class="s2">&#34;...&#34;</span><span class="p">,</span>
+      <span class="nt">&#34;fingerprint&#34;</span><span class="p">:</span> <span class="s2">&#34;3ec2d9fb9c4f7f1a&#34;</span>
+    <span class="p">}</span>
+  <span class="p">],</span>
+  <span class="nt">&#34;groupLabels&#34;</span><span class="p">:</span> <span class="p">{</span>
+    <span class="nt">&#34;alertname&#34;</span><span class="p">:</span> <span class="s2">&#34;mock2&#34;</span>
+  <span class="p">},</span>
+  <span class="nt">&#34;commonLabels&#34;</span><span class="p">:</span> <span class="p">{</span> <span class="err">alerts</span> <span class="err">数组里的共同</span> <span class="err">label</span> <span class="p">},</span>
+  <span class="nt">&#34;commonAnnotations&#34;</span><span class="p">:</span> <span class="p">{</span> <span class="err">alerts</span> <span class="err">数组里的共同</span> <span class="err">annotation</span> <span class="p">},</span>
+  <span class="nt">&#34;externalURL&#34;</span><span class="p">:</span> <span class="s2">&#34;&lt;alertmanager 的URL&gt;&#34;</span><span class="p">,</span>
+  <span class="nt">&#34;version&#34;</span><span class="p">:</span> <span class="s2">&#34;4&#34;</span><span class="p">,</span>
+  <span class="nt">&#34;groupKey&#34;</span><span class="p">:</span> <span class="s2">&#34;{}:{alertname=\&#34;mock2\&#34;}&#34;</span><span class="p">,</span>
+  <span class="nt">&#34;truncatedAlerts&#34;</span><span class="p">:</span> <span class="mi">0</span>
+<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>Prometheus 需要 <strong>持续</strong> 的将 Firing 告警发送给 Alertmanager，遇到以下一种情况，Alertmanager 会认为告警已经解决，发送一个 resolved：</p>
+<ol>
+<li>Prometheus 发送了 Inactive 的消息给 Alertmanager，即 <code>endsAt=当前时间</code></li>
+<li>Prometheus 在上一次消息的 <code>endsAt</code> 之前，一直没有发送任何消息给 Alertmanager</li>
+</ol>
+<p>不用担心 Alertmanager 会将告警消息重复发送给 webhook，<code>route.repeat_interval</code> (<a href="https://prometheus.io/docs/alerting/latest/configuration/#route" target="_blank" rel="noopener noreferrer">文档</a>
+) 会避免这个问题。</p>
+<p>对于第二种情况，Alertmanager 发送给 webhook 的消息如下，status=resolved，当前时间戳比 endsAt 稍晚一些，startsAt 则保持不变：：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-json" data-lang="json"><span class="err">ts</span> <span class="err">=</span> <span class="mi">2022-06-08</span> <span class="mi">15</span><span class="err">:</span><span class="mi">34</span><span class="err">:</span><span class="mf">27.167246</span> <span class="err">+</span><span class="mi">0800</span> 
+<span class="p">{</span>
+  <span class="nt">&#34;receiver&#34;</span><span class="p">:</span> <span class="s2">&#34;webhook&#34;</span><span class="p">,</span>
+  <span class="nt">&#34;status&#34;</span><span class="p">:</span> <span class="s2">&#34;resolved&#34;</span><span class="p">,</span>
+  <span class="nt">&#34;alerts&#34;</span><span class="p">:</span> <span class="p">[</span>
+    <span class="p">{</span>
+      <span class="nt">&#34;status&#34;</span><span class="p">:</span> <span class="s2">&#34;resolved&#34;</span><span class="p">,</span>
+      <span class="nt">&#34;labels&#34;</span><span class="p">:</span> <span class="p">{</span> <span class="err">...</span> <span class="p">},</span>
+      <span class="nt">&#34;annotations&#34;</span><span class="p">:</span> <span class="p">{</span> <span class="err">...</span> <span class="p">},</span>
+      <span class="nt">&#34;startsAt&#34;</span><span class="p">:</span> <span class="s2">&#34;2022-06-08T07:25:58Z&#34;</span><span class="p">,</span>
+      <span class="nt">&#34;endsAt&#34;</span><span class="p">:</span> <span class="s2">&#34;2022-06-08T07:34:00Z&#34;</span><span class="p">,</span>
+      <span class="nt">&#34;generatorURL&#34;</span><span class="p">:</span> <span class="s2">&#34;...&#34;</span><span class="p">,</span>
+      <span class="nt">&#34;fingerprint&#34;</span><span class="p">:</span> <span class="s2">&#34;3ec2d9fb9c4f7f1a&#34;</span>
+    <span class="p">}</span>
+  <span class="p">],</span>
+  <span class="nt">&#34;groupLabels&#34;</span><span class="p">:</span> <span class="p">{</span>
+    <span class="nt">&#34;alertname&#34;</span><span class="p">:</span> <span class="s2">&#34;mock2&#34;</span>
+  <span class="p">},</span>
+  <span class="nt">&#34;commonLabels&#34;</span><span class="p">:</span> <span class="p">{</span> <span class="err">alerts</span> <span class="err">数组里的共同</span> <span class="err">label</span> <span class="p">},</span>
+  <span class="nt">&#34;commonAnnotations&#34;</span><span class="p">:</span> <span class="p">{</span> <span class="err">alerts</span> <span class="err">数组里的共同</span> <span class="err">annotation</span> <span class="p">},</span>
+  <span class="nt">&#34;externalURL&#34;</span><span class="p">:</span> <span class="s2">&#34;&lt;alertmanager 的URL&gt;&#34;</span><span class="p">,</span>
+  <span class="nt">&#34;version&#34;</span><span class="p">:</span> <span class="s2">&#34;4&#34;</span><span class="p">,</span>
+  <span class="nt">&#34;groupKey&#34;</span><span class="p">:</span> <span class="s2">&#34;{}:{alertname=\&#34;mock2\&#34;}&#34;</span><span class="p">,</span>
+  <span class="nt">&#34;truncatedAlerts&#34;</span><span class="p">:</span> <span class="mi">0</span>
+<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>另外两个细节：</p>
+<ul>
+<li>如果 <code>startsAt</code> 没有提供，则自动等于当前时间</li>
+<li>如果 <code>endsAt</code> 没有提供，则自动等于 <code>startsAt + resolve_timeout(默认 5m)</code></li>
+</ul>
 <h3 id="更新alertingrule规则">更新AlertingRule规则<a class="anchor ms-1" href="#更新alertingrule规则"><i class="fas fa-link"></i></a></h3>
 <p>最后更新AlertingRule的状态，逻辑如下：</p>
 <img src="alerting-rule-state.png" style="zoom:65%" /></div></div>
