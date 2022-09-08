@@ -9,10 +9,10 @@
 <link rel="icon" href="/images/icons/favicon.ico">
 <link rel="manifest" href="/manifest.json">
 <meta name="keywords" content="" />
-<meta name="description" content="" /><meta itemprop="name" content="SQL优化:一个含有JOIN&#43;LIMIT&#43;ORDER BY的SQL(上)">
+<meta name="description" content="" /><meta name="robots" content="index, follow" /><meta itemprop="name" content="SQL优化:一个含有JOIN&#43;LIMIT&#43;ORDER BY的SQL(上)">
 <meta itemprop="description" content=""><meta itemprop="datePublished" content="2021-09-27T11:39:00+08:00" />
 <meta itemprop="dateModified" content="2021-09-27T11:39:00+08:00" />
-<meta itemprop="wordCount" content="2633">
+<meta itemprop="wordCount" content="2689">
 <meta itemprop="keywords" content="mysql,性能调优," /><meta property="og:title" content="SQL优化:一个含有JOIN&#43;LIMIT&#43;ORDER BY的SQL(上)" />
 <meta property="og:description" content="" />
 <meta property="og:type" content="article" />
@@ -23,7 +23,8 @@
 <meta name="twitter:card" content="summary"/>
 <meta name="twitter:title" content="SQL优化:一个含有JOIN&#43;LIMIT&#43;ORDER BY的SQL(上)"/>
 <meta name="twitter:description" content=""/>
-<meta name="robots" content="index, follow" /><link rel="stylesheet" href="/css/main.min.b7a6eda8d46e39a549f182cf72a9ff4f4c1d4d82c31ecc3ede0b7f4d5b26f32b.css" integrity="sha256-t6btqNRuOaVJ8YLPcqn/T0wdTYLDHsw&#43;3gt/TVsm8ys=" crossorigin="anonymous"><link rel="stylesheet" href="/css/viewer.min.3d228794bcedbbfa0412beb8fbc1ec6973202945e42af7004f742a4d7bd620ab.css" integrity="sha256-PSKHlLztu/oEEr64&#43;8HsaXMgKUXkKvcAT3QqTXvWIKs=" crossorigin="anonymous"></head>
+<meta property="og:image" content="/images/avatar.jpg"/>
+  <meta name="twitter:image" content="/images/avatar.jpg"/><link rel="stylesheet" href="/css/main.min.507afbe6e4670fa3e961a0b35816b5daeb36029866fd6bd7b9d7871fcf88faa5.css" integrity="sha256-UHr75uRnD6PpYaCzWBa12us2Aphm/WvXudeHH8&#43;I&#43;qU=" crossorigin="anonymous"><link rel="stylesheet" href="/css/viewer.min.3d228794bcedbbfa0412beb8fbc1ec6973202945e42af7004f742a4d7bd620ab.css" integrity="sha256-PSKHlLztu/oEEr64&#43;8HsaXMgKUXkKvcAT3QqTXvWIKs=" crossorigin="anonymous"></head>
   <body><script>const items=['mode','palette'];items.forEach(function(a){const b=localStorage.getItem('hbs-'+a);b&&document.body.parentElement.setAttribute('data-'+a,b)})</script><header><nav class="navbar top-app-bar top-app-bar-expand-lg fixed-top">
   <div class="container">
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent"
@@ -881,8 +882,7 @@
 </code></pre></td></tr></table>
 </div>
 </div><h4 id="优化方案一">优化方案一<a class="anchor ms-1" href="#优化方案一"><i class="fas fa-link"></i></a></h4>
-<p>A做驱动表 N=500，B是被驱动表 M=14w，利用<a href="http://mysql.taobao.org/monthly/2014/11/10/" target="_blank" rel="noopener noreferrer">filesort with small LIMIT optimization</a>
-优化，即利用一个尺寸20的堆（LIMIT 20）来取前20条数据，前提是数据能够在<code>sort_buffer_size</code>里放得下。</p>
+<p>A做驱动表 N=500，B是被驱动表 M=14w，利用<a href="http://mysql.taobao.org/monthly/2014/11/10/" target="_blank" rel="noopener noreferrer">filesort with small LIMIT optimization</a>优化，即利用一个尺寸20的堆（LIMIT 20）来取前20条数据，前提是数据能够在<code>sort_buffer_size</code>里放得下。</p>
 <p>算法复杂度分析：</p>
 <p>扫描A表 + A表每一行利用B表索引查找 + B表每行查找主键索引（回表） + B表每行过一遍堆。</p>
 <div class="highlight"><div class="chroma">
@@ -981,12 +981,9 @@
 </div><p>可以看到<code>num_initial_chunks_spilled_to_disk:141</code>，写了141个临时文件。</p>
 <p>让filesort在内存中发生的相关系统参数有：</p>
 <ul>
-<li><a href="https://dev.mysql.com/doc/refman/8.0/en/server-system-variables.html#sysvar_sort_buffer_size" target="_blank" rel="noopener noreferrer">sort_buffer_size</a>
-，规定了用于排序的缓存大小（字节），默认262144=256K。如果排序的数据在此buffer中能hold住，那么就会避免写磁盘。</li>
-<li><a href="https://dev.mysql.com/doc/refman/8.0/en/server-system-variables.html#sysvar_max_sort_length" target="_blank" rel="noopener noreferrer"><code>max_sort_length</code></a>
-，规定了排序时，每行最多取前多少个字节，如果行的尺寸超出该值，MySQL也就只会使用前多少个字节进行比较，该参数默认1024=1K。</li>
-<li><a href="https://dev.mysql.com/doc/refman/8.0/en/server-status-variables.html#statvar_Sort_merge_passes" target="_blank" rel="noopener noreferrer">Sort_merge_passes</a>
-，是一个状态变量，表示了排序合并的次数。</li>
+<li><a href="https://dev.mysql.com/doc/refman/8.0/en/server-system-variables.html#sysvar_sort_buffer_size" target="_blank" rel="noopener noreferrer">sort_buffer_size</a>，规定了用于排序的缓存大小（字节），默认262144=256K。如果排序的数据在此buffer中能hold住，那么就会避免写磁盘。</li>
+<li><a href="https://dev.mysql.com/doc/refman/8.0/en/server-system-variables.html#sysvar_max_sort_length" target="_blank" rel="noopener noreferrer"><code>max_sort_length</code></a>，规定了排序时，每行最多取前多少个字节，如果行的尺寸超出该值，MySQL也就只会使用前多少个字节进行比较，该参数默认1024=1K。</li>
+<li><a href="https://dev.mysql.com/doc/refman/8.0/en/server-status-variables.html#statvar_Sort_merge_passes" target="_blank" rel="noopener noreferrer">Sort_merge_passes</a>，是一个状态变量，表示了排序合并的次数。</li>
 </ul>
 <p>我们先设置<code>sort_buffer_size</code>到1M（默认256K）</p>
 <div class="highlight"><div class="chroma">
@@ -1168,19 +1165,14 @@
 </ul>
 <h2 id="参考资料">参考资料<a class="anchor ms-1" href="#参考资料"><i class="fas fa-link"></i></a></h2>
 <ul>
-<li><a href="https://dev.mysql.com/doc/refman/8.0/en/explain-output.html" target="_blank" rel="noopener noreferrer">MySQL EXPLAIN解读</a>
-</li>
-<li><a href="https://dev.mysql.com/doc/refman/8.0/en/limit-optimization.html" target="_blank" rel="noopener noreferrer">MySQL LIMIT 优化</a>
-</li>
-<li><a href="https://dev.mysql.com/doc/refman/8.0/en/order-by-optimization.html" target="_blank" rel="noopener noreferrer">MySQL ORDER BY 优化</a>
-</li>
-<li><a href="http://mysql.taobao.org/monthly/2014/11/10/" target="_blank" rel="noopener noreferrer">MySQL filesort with small LIMIT optimization</a>
-</li>
-<li><a href="https://dev.mysql.com/doc/internals/en/optimizer-tracing.html" target="_blank" rel="noopener noreferrer">MySQL 优化器跟踪</a>
-</li>
+<li><a href="https://dev.mysql.com/doc/refman/8.0/en/explain-output.html" target="_blank" rel="noopener noreferrer">MySQL EXPLAIN解读</a></li>
+<li><a href="https://dev.mysql.com/doc/refman/8.0/en/limit-optimization.html" target="_blank" rel="noopener noreferrer">MySQL LIMIT 优化</a></li>
+<li><a href="https://dev.mysql.com/doc/refman/8.0/en/order-by-optimization.html" target="_blank" rel="noopener noreferrer">MySQL ORDER BY 优化</a></li>
+<li><a href="http://mysql.taobao.org/monthly/2014/11/10/" target="_blank" rel="noopener noreferrer">MySQL filesort with small LIMIT optimization</a></li>
+<li><a href="https://dev.mysql.com/doc/internals/en/optimizer-tracing.html" target="_blank" rel="noopener noreferrer">MySQL 优化器跟踪</a></li>
 </ul></div></div>
-  <div class="card-footer"><div class="post-navs d-flex justify-content-evenly">
-  <div class="post-nav post-prev"><i class="fas fa-fw fa-chevron-left"></i>
+  <div class="card-footer"><div class="post-navs d-flex justify-content-evenly"><div class="post-nav post-prev">
+    <i class="fas fa-fw fa-chevron-left"></i>
     <a href="/post/linux/net-params/">常用网络内核参数优化
 </a>
   </div><div class="post-nav post-next">
@@ -1417,7 +1409,7 @@
     <img src="https://www.netlify.com/img/global/badges/netlify-color-accent.svg" alt="Deploys by Netlify" width="114" height="51" />
 </a>
 </footer>
-<script src="/js/main.cbf2ace5d5fcb68b11b93647393ec41735869f18f31091c0941a01dfdf417dfc.js" integrity="sha256-y/Ks5dX8tosRuTZHOT7EFzWGnxjzEJHAlBoB399Bffw=" crossorigin="anonymous" defer></script><script src="/js/icons.min.a35670f2f90c398e5ee5c8e509b428fae75aa2746854cee10b60794633076859.js" integrity="sha256-o1Zw8vkMOY5e5cjlCbQo&#43;udaonRoVM7hC2B5RjMHaFk=" crossorigin="anonymous" defer></script>
+<script src="/js/main.2cdce25f280f570596c88888d6af930fe5e15ea030005291dad293defbb231d3.js" integrity="sha256-LNziXygPVwWWyIiI1q&#43;TD&#43;XhXqAwAFKR2tKT3vuyMdM=" crossorigin="anonymous" defer></script><script src="/js/icons.min.8ddcaafc364ff0296c2209c5495287f0de039b852da9b24847f94c198b7639b6.js" integrity="sha256-jdyq/DZP8ClsIgnFSVKH8N4Dm4UtqbJIR/lMGYt2ObY=" crossorigin="anonymous" defer></script>
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
@@ -1428,6 +1420,6 @@ if ('serviceWorker' in navigator) {
     });
   });
 }
-</script><script src="/js/viewer.min.4dba52a0a790f909408b7385316651299158381686401d50ff1f04dda6476473.js" integrity="sha256-TbpSoKeQ&#43;QlAi3OFMWZRKZFYOBaGQB1Q/x8E3aZHZHM=" crossorigin="anonymous" defer></script>
+</script><script src="/js/viewer.min.652118a9fbf3403cdfde4026209f97ace22f9e334f0b45a33431a221b3db46a8.js" integrity="sha256-ZSEYqfvzQDzf3kAmIJ&#43;XrOIvnjNPC0WjNDGiIbPbRqg=" crossorigin="anonymous" defer></script>
 </body>
 </html>

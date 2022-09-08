@@ -9,10 +9,10 @@
 <link rel="icon" href="/images/icons/favicon.ico">
 <link rel="manifest" href="/manifest.json">
 <meta name="keywords" content="" />
-<meta name="description" content="" /><meta itemprop="name" content="Scheduling In Go : Part II - Go Scheduler 阅读笔记">
+<meta name="description" content="" /><meta name="robots" content="index, follow" /><meta itemprop="name" content="Scheduling In Go : Part II - Go Scheduler 阅读笔记">
 <meta itemprop="description" content=""><meta itemprop="datePublished" content="2020-03-30T18:10:26+08:00" />
 <meta itemprop="dateModified" content="2020-03-30T18:10:26+08:00" />
-<meta itemprop="wordCount" content="2479">
+<meta itemprop="wordCount" content="2487">
 <meta itemprop="keywords" content="go,kernel,thread,scheduling,arts,arts-r," /><meta property="og:title" content="Scheduling In Go : Part II - Go Scheduler 阅读笔记" />
 <meta property="og:description" content="" />
 <meta property="og:type" content="article" />
@@ -23,7 +23,8 @@
 <meta name="twitter:card" content="summary"/>
 <meta name="twitter:title" content="Scheduling In Go : Part II - Go Scheduler 阅读笔记"/>
 <meta name="twitter:description" content=""/>
-<meta name="robots" content="index, follow" /><link rel="stylesheet" href="/css/main.min.b7a6eda8d46e39a549f182cf72a9ff4f4c1d4d82c31ecc3ede0b7f4d5b26f32b.css" integrity="sha256-t6btqNRuOaVJ8YLPcqn/T0wdTYLDHsw&#43;3gt/TVsm8ys=" crossorigin="anonymous"><link rel="stylesheet" href="/css/viewer.min.3d228794bcedbbfa0412beb8fbc1ec6973202945e42af7004f742a4d7bd620ab.css" integrity="sha256-PSKHlLztu/oEEr64&#43;8HsaXMgKUXkKvcAT3QqTXvWIKs=" crossorigin="anonymous"></head>
+<meta property="og:image" content="/images/avatar.jpg"/>
+  <meta name="twitter:image" content="/images/avatar.jpg"/><link rel="stylesheet" href="/css/main.min.507afbe6e4670fa3e961a0b35816b5daeb36029866fd6bd7b9d7871fcf88faa5.css" integrity="sha256-UHr75uRnD6PpYaCzWBa12us2Aphm/WvXudeHH8&#43;I&#43;qU=" crossorigin="anonymous"><link rel="stylesheet" href="/css/viewer.min.3d228794bcedbbfa0412beb8fbc1ec6973202945e42af7004f742a4d7bd620ab.css" integrity="sha256-PSKHlLztu/oEEr64&#43;8HsaXMgKUXkKvcAT3QqTXvWIKs=" crossorigin="anonymous"></head>
   <body><script>const items=['mode','palette'];items.forEach(function(a){const b=localStorage.getItem('hbs-'+a);b&&document.body.parentElement.setAttribute('data-'+a,b)})</script><header><nav class="navbar top-app-bar top-app-bar-expand-lg fixed-top">
   <div class="container">
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent"
@@ -223,10 +224,8 @@
     5 分钟阅读
   </span><span class="post-taxonomies"><a href="/tags/go/" class="badge post-taxonomy">go</a><a href="/tags/kernel/" class="badge post-taxonomy">kernel</a><a href="/tags/thread/" class="badge post-taxonomy">thread</a><a href="/tags/scheduling/" class="badge post-taxonomy">scheduling</a><a href="/tags/arts/" class="badge post-taxonomy">arts</a><a href="/tags/arts-r/" class="badge post-taxonomy">arts-r</a></span>
 </div>
-<div class="post-content mb-3"><p>原文：<a href="https://www.ardanlabs.com/blog/2018/08/scheduling-in-go-part2.html" target="_blank" rel="noopener noreferrer">Scheduling In Go : Part II - Go Scheduler</a>
-</p>
-<p>可以同步阅读：<a href="https://rakyll.org/scheduler/" target="_blank" rel="noopener noreferrer">Go&rsquo;s work-stealing scheduler</a>
-，不过没有本文写的明白。</p>
+<div class="post-content mb-3"><p>原文：<a href="https://www.ardanlabs.com/blog/2018/08/scheduling-in-go-part2.html" target="_blank" rel="noopener noreferrer">Scheduling In Go : Part II - Go Scheduler</a></p>
+<p>可以同步阅读：<a href="https://rakyll.org/scheduler/" target="_blank" rel="noopener noreferrer">Go&rsquo;s work-stealing scheduler</a>，不过没有本文写的明白。</p>
 <h2 id="几个数字">几个数字<a class="anchor ms-1" href="#几个数字"><i class="fas fa-link"></i></a></h2>
 <table>
 <thead>
@@ -267,8 +266,7 @@
 <p>M：操作系统线程。这个线程依然由操作系统调度。每个P被分配一个M。</p>
 </li>
 <li>
-<p>G：Go程。Go程实际上是协程（<a href="https://en.wikipedia.org/wiki/Coroutine" target="_blank" rel="noopener noreferrer">Coroutine</a>
-）。和操作系统线程有点像，只是操作系统线程上下文切换在core上，而Go程上下文切换在M上。Go程的上下文切换发生在用户空间，开销更低。</p>
+<p>G：Go程。Go程实际上是协程（<a href="https://en.wikipedia.org/wiki/Coroutine" target="_blank" rel="noopener noreferrer">Coroutine</a>）。和操作系统线程有点像，只是操作系统线程上下文切换在core上，而Go程上下文切换在M上。Go程的上下文切换发生在用户空间，开销更低。</p>
 </li>
 <li>
 <p>运行队列（队列中的G都是runnable的）：</p>
@@ -421,11 +419,10 @@
 <ul>
 <li>OS线程始终保持运行，没有进入waiting</li>
 <li>Go程上下文切换不是发生在OS层面，代价相对低， ~200 nanoseconds 或 ~2.4k instructions。</li>
-<li>始终都是在同一个core上，优化了cache miss的问题，这个对于<a href="http://frankdenneman.nl/2016/07/07/numa-deep-dive-part-1-uma-numa" target="_blank" rel="noopener noreferrer">NUMA架构</a>
-特别友好。</li>
+<li>始终都是在同一个core上，优化了cache miss的问题，这个对于<a href="http://frankdenneman.nl/2016/07/07/numa-deep-dive-part-1-uma-numa" target="_blank" rel="noopener noreferrer">NUMA架构</a>特别友好。</li>
 </ul></div></div>
-  <div class="card-footer"><div class="post-navs d-flex justify-content-evenly">
-  <div class="post-nav post-prev"><i class="fas fa-fw fa-chevron-left"></i>
+  <div class="card-footer"><div class="post-navs d-flex justify-content-evenly"><div class="post-nav post-prev">
+    <i class="fas fa-fw fa-chevron-left"></i>
     <a href="/post/go/scheduling-in-go-part-1/">Scheduling in Go : Part I - OS Scheduler 阅读笔记
 </a>
   </div><div class="post-nav post-next">
@@ -661,7 +658,7 @@
     <img src="https://www.netlify.com/img/global/badges/netlify-color-accent.svg" alt="Deploys by Netlify" width="114" height="51" />
 </a>
 </footer>
-<script src="/js/main.cbf2ace5d5fcb68b11b93647393ec41735869f18f31091c0941a01dfdf417dfc.js" integrity="sha256-y/Ks5dX8tosRuTZHOT7EFzWGnxjzEJHAlBoB399Bffw=" crossorigin="anonymous" defer></script><script src="/js/icons.min.a35670f2f90c398e5ee5c8e509b428fae75aa2746854cee10b60794633076859.js" integrity="sha256-o1Zw8vkMOY5e5cjlCbQo&#43;udaonRoVM7hC2B5RjMHaFk=" crossorigin="anonymous" defer></script>
+<script src="/js/main.2cdce25f280f570596c88888d6af930fe5e15ea030005291dad293defbb231d3.js" integrity="sha256-LNziXygPVwWWyIiI1q&#43;TD&#43;XhXqAwAFKR2tKT3vuyMdM=" crossorigin="anonymous" defer></script><script src="/js/icons.min.8ddcaafc364ff0296c2209c5495287f0de039b852da9b24847f94c198b7639b6.js" integrity="sha256-jdyq/DZP8ClsIgnFSVKH8N4Dm4UtqbJIR/lMGYt2ObY=" crossorigin="anonymous" defer></script>
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
@@ -672,6 +669,6 @@ if ('serviceWorker' in navigator) {
     });
   });
 }
-</script><script src="/js/viewer.min.4dba52a0a790f909408b7385316651299158381686401d50ff1f04dda6476473.js" integrity="sha256-TbpSoKeQ&#43;QlAi3OFMWZRKZFYOBaGQB1Q/x8E3aZHZHM=" crossorigin="anonymous" defer></script>
+</script><script src="/js/viewer.min.652118a9fbf3403cdfde4026209f97ace22f9e334f0b45a33431a221b3db46a8.js" integrity="sha256-ZSEYqfvzQDzf3kAmIJ&#43;XrOIvnjNPC0WjNDGiIbPbRqg=" crossorigin="anonymous" defer></script>
 </body>
 </html>

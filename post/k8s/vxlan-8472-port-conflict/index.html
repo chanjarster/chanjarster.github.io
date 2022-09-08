@@ -9,7 +9,7 @@
 <link rel="icon" href="/images/icons/favicon.ico">
 <link rel="manifest" href="/manifest.json">
 <meta name="keywords" content="" />
-<meta name="description" content="" /><meta itemprop="name" content="记一次K8S VXLAN Overlay网络8472端口冲突问题的排查">
+<meta name="description" content="" /><meta name="robots" content="index, follow" /><meta itemprop="name" content="记一次K8S VXLAN Overlay网络8472端口冲突问题的排查">
 <meta itemprop="description" content=""><meta itemprop="datePublished" content="2020-11-10T08:49:44+08:00" />
 <meta itemprop="dateModified" content="2020-11-10T08:49:44+08:00" />
 <meta itemprop="wordCount" content="1154">
@@ -23,7 +23,8 @@
 <meta name="twitter:card" content="summary"/>
 <meta name="twitter:title" content="记一次K8S VXLAN Overlay网络8472端口冲突问题的排查"/>
 <meta name="twitter:description" content=""/>
-<meta name="robots" content="index, follow" /><link rel="stylesheet" href="/css/main.min.b7a6eda8d46e39a549f182cf72a9ff4f4c1d4d82c31ecc3ede0b7f4d5b26f32b.css" integrity="sha256-t6btqNRuOaVJ8YLPcqn/T0wdTYLDHsw&#43;3gt/TVsm8ys=" crossorigin="anonymous"><link rel="stylesheet" href="/css/viewer.min.3d228794bcedbbfa0412beb8fbc1ec6973202945e42af7004f742a4d7bd620ab.css" integrity="sha256-PSKHlLztu/oEEr64&#43;8HsaXMgKUXkKvcAT3QqTXvWIKs=" crossorigin="anonymous"></head>
+<meta property="og:image" content="/images/avatar.jpg"/>
+  <meta name="twitter:image" content="/images/avatar.jpg"/><link rel="stylesheet" href="/css/main.min.507afbe6e4670fa3e961a0b35816b5daeb36029866fd6bd7b9d7871fcf88faa5.css" integrity="sha256-UHr75uRnD6PpYaCzWBa12us2Aphm/WvXudeHH8&#43;I&#43;qU=" crossorigin="anonymous"><link rel="stylesheet" href="/css/viewer.min.3d228794bcedbbfa0412beb8fbc1ec6973202945e42af7004f742a4d7bd620ab.css" integrity="sha256-PSKHlLztu/oEEr64&#43;8HsaXMgKUXkKvcAT3QqTXvWIKs=" crossorigin="anonymous"></head>
   <body><script>const items=['mode','palette'];items.forEach(function(a){const b=localStorage.getItem('hbs-'+a);b&&document.body.parentElement.setAttribute('data-'+a,b)})</script><header><nav class="navbar top-app-bar top-app-bar-expand-lg fixed-top">
   <div class="container">
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent"
@@ -228,12 +229,10 @@
 <p>操作系统版本：CentOS 7.8</p>
 <p>内核版本：3.10</p>
 <h2 id="现象">现象<a class="anchor ms-1" href="#现象"><i class="fas fa-link"></i></a></h2>
-<p>在20-22三台上安装K8S集群（通过rancher的rke安装），安装完毕后，发现访问各个节点的80端口，只有20服务器能够正常返回，其余的都是Gateway Timeout。使用<a href="https://docs.rancher.cn/docs/rancher2/troubleshooting/networking/_index/#%E6%A3%80%E6%9F%A5-overlay-%E7%BD%91%E7%BB%9C%E6%98%AF%E5%90%A6%E6%AD%A3%E5%B8%B8%E8%BF%90%E8%A1%8C" target="_blank" rel="noopener noreferrer">Rancher的提供的这个办法</a>
-得知Overlay网络不通。</p>
+<p>在20-22三台上安装K8S集群（通过rancher的rke安装），安装完毕后，发现访问各个节点的80端口，只有20服务器能够正常返回，其余的都是Gateway Timeout。使用<a href="https://docs.rancher.cn/docs/rancher2/troubleshooting/networking/_index/#%E6%A3%80%E6%9F%A5-overlay-%E7%BD%91%E7%BB%9C%E6%98%AF%E5%90%A6%E6%AD%A3%E5%B8%B8%E8%BF%90%E8%A1%8C" target="_blank" rel="noopener noreferrer">Rancher的提供的这个办法</a>得知Overlay网络不通。</p>
 <h2 id="排查过程">排查过程<a class="anchor ms-1" href="#排查过程"><i class="fas fa-link"></i></a></h2>
 <h3 id="排查网络通性">排查网络通性<a class="anchor ms-1" href="#排查网络通性"><i class="fas fa-link"></i></a></h3>
-<p>根据<a href="https://docs.rancher.cn/docs/rancher2/installation/requirements/ports/_index" target="_blank" rel="noopener noreferrer">Rancher文档上提到的</a>
-，Host的8472/udp端口是Flannel/Calico的VXLAN Overlay网络专用端口，即所有跨Host的容器间网络通信都走这个端口。因此：</p>
+<p>根据<a href="https://docs.rancher.cn/docs/rancher2/installation/requirements/ports/_index" target="_blank" rel="noopener noreferrer">Rancher文档上提到的</a>，Host的8472/udp端口是Flannel/Calico的VXLAN Overlay网络专用端口，即所有跨Host的容器间网络通信都走这个端口。因此：</p>
 <p>在172.17.17.22上，用tcpdump抓发出的包：</p>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
@@ -275,17 +274,14 @@
 <ol>
 <li>k8s使用的是基于VXLAN的Overlay network，VNI=1，并且是基于UDP协议。而深信服aCloud高概率也使用VXLAN做Overlay网络。</li>
 <li>普通的udp协议数据传输tcpdump能够抓到包（见前面）</li>
-<li>tcpdump在网络栈中的位置inbound在iptables之前，outbound在iptables之后（<a href="https://superuser.com/a/925332/1239120" target="_blank" rel="noopener noreferrer">资料</a>
-）。如果tcpdump能够抓到发出的包，那么说明是真的发出了。如果inbound没有抓到接受的包，那么就说明这个包没有到达网卡。</li>
+<li>tcpdump在网络栈中的位置inbound在iptables之前，outbound在iptables之后（<a href="https://superuser.com/a/925332/1239120" target="_blank" rel="noopener noreferrer">资料</a>）。如果tcpdump能够抓到发出的包，那么说明是真的发出了。如果inbound没有抓到接受的包，那么就说明这个包没有到达网卡。</li>
 </ol>
 <h2 id="解决办法">解决办法<a class="anchor ms-1" href="#解决办法"><i class="fas fa-link"></i></a></h2>
 <p>和深信服的同学沟通后，其确认是物理机也是用了8472/udp端口做Overlay网络，两者冲突了，因此当UDP包内包含了OTV数据内容后，先一步被aCloud拦截，结果就是虚拟机的8472/udp端口收不到数据。</p>
 <p>将物理机的8472/udp端口改掉后，问题解决。</p>
-<p>PS. 8472/udp还是一个<a href="https://www.speedguide.net/port.php?port=8472" target="_blank" rel="noopener noreferrer">著名端口</a>
-</p>
+<p>PS. 8472/udp还是一个<a href="https://www.speedguide.net/port.php?port=8472" target="_blank" rel="noopener noreferrer">著名端口</a></p>
 <h2 id="解决办法2">解决办法2<a class="anchor ms-1" href="#解决办法2"><i class="fas fa-link"></i></a></h2>
-<p>也可以在rke创建k8s集群的时候修改flannel的端口，需要修改cluster.yml（<a href="https://docs.rancher.cn/docs/rke/config-options/add-ons/network-plugins/_index#canal-%E6%8F%92%E4%BB%B6%E9%80%89%E9%A1%B9" target="_blank" rel="noopener noreferrer">参考文档</a>
-）。</p>
+<p>也可以在rke创建k8s集群的时候修改flannel的端口，需要修改cluster.yml（<a href="https://docs.rancher.cn/docs/rke/config-options/add-ons/network-plugins/_index#canal-%E6%8F%92%E4%BB%B6%E9%80%89%E9%A1%B9" target="_blank" rel="noopener noreferrer">参考文档</a>）。</p>
 <p>如果你用的是canal网络插件（默认）：</p>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
@@ -328,8 +324,7 @@
 </span><span class="w">  </span><span class="l">...</span><span class="w">
 </span></code></pre></td></tr></table>
 </div>
-</div><p>在Rancher中创建自定义集群的时候，需要自定义集群参数来修改端口（<a href="https://docs.rancher.cn/docs/rancher2/cluster-provisioning/rke-clusters/options/_index" target="_blank" rel="noopener noreferrer">参考文档</a>
-）。</p>
+</div><p>在Rancher中创建自定义集群的时候，需要自定义集群参数来修改端口（<a href="https://docs.rancher.cn/docs/rancher2/cluster-provisioning/rke-clusters/options/_index" target="_blank" rel="noopener noreferrer">参考文档</a>）。</p>
 <p>如果用的是canal网络插件（默认）：</p>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
@@ -373,8 +368,8 @@
 </span></code></pre></td></tr></table>
 </div>
 </div></div></div>
-  <div class="card-footer"><div class="post-navs d-flex justify-content-evenly">
-  <div class="post-nav post-prev"><i class="fas fa-fw fa-chevron-left"></i>
+  <div class="card-footer"><div class="post-navs d-flex justify-content-evenly"><div class="post-nav post-prev">
+    <i class="fas fa-fw fa-chevron-left"></i>
     <a href="/post/mysql-case-insensitive-query/">Mysql字符串字段查询默认大小写不敏感
 </a>
   </div><div class="post-nav post-next">
@@ -607,7 +602,7 @@
     <img src="https://www.netlify.com/img/global/badges/netlify-color-accent.svg" alt="Deploys by Netlify" width="114" height="51" />
 </a>
 </footer>
-<script src="/js/main.cbf2ace5d5fcb68b11b93647393ec41735869f18f31091c0941a01dfdf417dfc.js" integrity="sha256-y/Ks5dX8tosRuTZHOT7EFzWGnxjzEJHAlBoB399Bffw=" crossorigin="anonymous" defer></script><script src="/js/icons.min.a35670f2f90c398e5ee5c8e509b428fae75aa2746854cee10b60794633076859.js" integrity="sha256-o1Zw8vkMOY5e5cjlCbQo&#43;udaonRoVM7hC2B5RjMHaFk=" crossorigin="anonymous" defer></script>
+<script src="/js/main.2cdce25f280f570596c88888d6af930fe5e15ea030005291dad293defbb231d3.js" integrity="sha256-LNziXygPVwWWyIiI1q&#43;TD&#43;XhXqAwAFKR2tKT3vuyMdM=" crossorigin="anonymous" defer></script><script src="/js/icons.min.8ddcaafc364ff0296c2209c5495287f0de039b852da9b24847f94c198b7639b6.js" integrity="sha256-jdyq/DZP8ClsIgnFSVKH8N4Dm4UtqbJIR/lMGYt2ObY=" crossorigin="anonymous" defer></script>
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
@@ -618,6 +613,6 @@ if ('serviceWorker' in navigator) {
     });
   });
 }
-</script><script src="/js/viewer.min.4dba52a0a790f909408b7385316651299158381686401d50ff1f04dda6476473.js" integrity="sha256-TbpSoKeQ&#43;QlAi3OFMWZRKZFYOBaGQB1Q/x8E3aZHZHM=" crossorigin="anonymous" defer></script>
+</script><script src="/js/viewer.min.652118a9fbf3403cdfde4026209f97ace22f9e334f0b45a33431a221b3db46a8.js" integrity="sha256-ZSEYqfvzQDzf3kAmIJ&#43;XrOIvnjNPC0WjNDGiIbPbRqg=" crossorigin="anonymous" defer></script>
 </body>
 </html>

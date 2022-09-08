@@ -9,10 +9,10 @@
 <link rel="icon" href="/images/icons/favicon.ico">
 <link rel="manifest" href="/manifest.json">
 <meta name="keywords" content="" />
-<meta name="description" content="本文介绍重启K8S Deployment的小技巧" /><meta itemprop="name" content="K8S重启Deployment的小技巧">
+<meta name="description" content="本文介绍重启K8S Deployment的小技巧" /><meta name="robots" content="index, follow" /><meta itemprop="name" content="K8S重启Deployment的小技巧">
 <meta itemprop="description" content="本文介绍重启K8S Deployment的小技巧"><meta itemprop="datePublished" content="2018-10-22T10:00:34+08:00" />
 <meta itemprop="dateModified" content="2018-10-22T10:00:34+08:00" />
-<meta itemprop="wordCount" content="515">
+<meta itemprop="wordCount" content="533">
 <meta itemprop="keywords" content="k8s," /><meta property="og:title" content="K8S重启Deployment的小技巧" />
 <meta property="og:description" content="本文介绍重启K8S Deployment的小技巧" />
 <meta property="og:type" content="article" />
@@ -23,7 +23,8 @@
 <meta name="twitter:card" content="summary"/>
 <meta name="twitter:title" content="K8S重启Deployment的小技巧"/>
 <meta name="twitter:description" content="本文介绍重启K8S Deployment的小技巧"/>
-<meta name="robots" content="index, follow" /><link rel="stylesheet" href="/css/main.min.b7a6eda8d46e39a549f182cf72a9ff4f4c1d4d82c31ecc3ede0b7f4d5b26f32b.css" integrity="sha256-t6btqNRuOaVJ8YLPcqn/T0wdTYLDHsw&#43;3gt/TVsm8ys=" crossorigin="anonymous"><link rel="stylesheet" href="/css/viewer.min.3d228794bcedbbfa0412beb8fbc1ec6973202945e42af7004f742a4d7bd620ab.css" integrity="sha256-PSKHlLztu/oEEr64&#43;8HsaXMgKUXkKvcAT3QqTXvWIKs=" crossorigin="anonymous"></head>
+<meta property="og:image" content="/images/avatar.jpg"/>
+  <meta name="twitter:image" content="/images/avatar.jpg"/><link rel="stylesheet" href="/css/main.min.507afbe6e4670fa3e961a0b35816b5daeb36029866fd6bd7b9d7871fcf88faa5.css" integrity="sha256-UHr75uRnD6PpYaCzWBa12us2Aphm/WvXudeHH8&#43;I&#43;qU=" crossorigin="anonymous"><link rel="stylesheet" href="/css/viewer.min.3d228794bcedbbfa0412beb8fbc1ec6973202945e42af7004f742a4d7bd620ab.css" integrity="sha256-PSKHlLztu/oEEr64&#43;8HsaXMgKUXkKvcAT3QqTXvWIKs=" crossorigin="anonymous"></head>
   <body><script>const items=['mode','palette'];items.forEach(function(a){const b=localStorage.getItem('hbs-'+a);b&&document.body.parentElement.setAttribute('data-'+a,b)})</script><header><nav class="navbar top-app-bar top-app-bar-expand-lg fixed-top">
   <div class="container">
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent"
@@ -229,10 +230,8 @@
 <li>ConfigMap/Secret变更了，想重启一下应用新配置</li>
 </ol>
 <p>上面两种情况的共同之处在于，Deployment spec没有发生任何变化，因此即使你<code>kubectl appply -f deployment-spec.yaml</code>也是没用的，因为K8S会认为你这个没有变化就什么都不做了。</p>
-<p>但是我们又不想使用手工删除Pod-让K8S新建Pod的方式来重启Deployment，最好的办法应该是像<a href="https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#updating-a-deployment" target="_blank" rel="noopener noreferrer">Updating a deployment</a>
-一样，让K8S自己滚动的删除-新建Pod。</p>
-<p>有人对此给了一个<a href="https://github.com/kubernetes/kubernetes/issues/13488#issuecomment-356892053" target="_blank" rel="noopener noreferrer">workaround</a>
-：</p>
+<p>但是我们又不想使用手工删除Pod-让K8S新建Pod的方式来重启Deployment，最好的办法应该是像<a href="https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#updating-a-deployment" target="_blank" rel="noopener noreferrer">Updating a deployment</a>一样，让K8S自己滚动的删除-新建Pod。</p>
+<p>有人对此给了一个<a href="https://github.com/kubernetes/kubernetes/issues/13488#issuecomment-356892053" target="_blank" rel="noopener noreferrer">workaround</a>：</p>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre tabindex="0" class="chroma"><code><span class="lnt">1
@@ -243,10 +242,9 @@
 </span><span class="se"></span>  -p <span class="s1">&#39;{&#34;spec&#34;:{&#34;template&#34;:{&#34;spec&#34;:{&#34;containers&#34;:[{&#34;name&#34;:&#34;&lt;container-name&gt;&#34;,&#34;env&#34;:[{&#34;name&#34;:&#34;RESTART_&#34;,&#34;value&#34;:&#34;&#39;</span><span class="k">$(</span>date +%s<span class="k">)</span><span class="s1">&#39;&#34;}]}]}}}}&#39;</span>
 </code></pre></td></tr></table>
 </div>
-</div><p>基本思路就是给Container添加一个无关紧要的环境变量，这个环境变量的值就是时间戳，而这个时间戳则是每次执行上述命令的系统当前时间。这样一来对于K8S来讲这个Deployment spec就变化了，就可以像<a href="https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#updating-a-deployment" target="_blank" rel="noopener noreferrer">Updating a deployment</a>
-一样，重启Pod了。</p></div></div>
-  <div class="card-footer"><div class="post-navs d-flex justify-content-evenly">
-  <div class="post-nav post-prev"><i class="fas fa-fw fa-chevron-left"></i>
+</div><p>基本思路就是给Container添加一个无关紧要的环境变量，这个环境变量的值就是时间戳，而这个时间戳则是每次执行上述命令的系统当前时间。这样一来对于K8S来讲这个Deployment spec就变化了，就可以像<a href="https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#updating-a-deployment" target="_blank" rel="noopener noreferrer">Updating a deployment</a>一样，重启Pod了。</p></div></div>
+  <div class="card-footer"><div class="post-navs d-flex justify-content-evenly"><div class="post-nav post-prev">
+    <i class="fas fa-fw fa-chevron-left"></i>
     <a href="/post/intro-diskbenchmark/">使用Diskbenchmark测试硬盘性能
 </a>
   </div><div class="post-nav post-next">
@@ -458,7 +456,7 @@
     <img src="https://www.netlify.com/img/global/badges/netlify-color-accent.svg" alt="Deploys by Netlify" width="114" height="51" />
 </a>
 </footer>
-<script src="/js/main.cbf2ace5d5fcb68b11b93647393ec41735869f18f31091c0941a01dfdf417dfc.js" integrity="sha256-y/Ks5dX8tosRuTZHOT7EFzWGnxjzEJHAlBoB399Bffw=" crossorigin="anonymous" defer></script><script src="/js/icons.min.a35670f2f90c398e5ee5c8e509b428fae75aa2746854cee10b60794633076859.js" integrity="sha256-o1Zw8vkMOY5e5cjlCbQo&#43;udaonRoVM7hC2B5RjMHaFk=" crossorigin="anonymous" defer></script>
+<script src="/js/main.2cdce25f280f570596c88888d6af930fe5e15ea030005291dad293defbb231d3.js" integrity="sha256-LNziXygPVwWWyIiI1q&#43;TD&#43;XhXqAwAFKR2tKT3vuyMdM=" crossorigin="anonymous" defer></script><script src="/js/icons.min.8ddcaafc364ff0296c2209c5495287f0de039b852da9b24847f94c198b7639b6.js" integrity="sha256-jdyq/DZP8ClsIgnFSVKH8N4Dm4UtqbJIR/lMGYt2ObY=" crossorigin="anonymous" defer></script>
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
@@ -469,6 +467,6 @@ if ('serviceWorker' in navigator) {
     });
   });
 }
-</script><script src="/js/viewer.min.4dba52a0a790f909408b7385316651299158381686401d50ff1f04dda6476473.js" integrity="sha256-TbpSoKeQ&#43;QlAi3OFMWZRKZFYOBaGQB1Q/x8E3aZHZHM=" crossorigin="anonymous" defer></script>
+</script><script src="/js/viewer.min.652118a9fbf3403cdfde4026209f97ace22f9e334f0b45a33431a221b3db46a8.js" integrity="sha256-ZSEYqfvzQDzf3kAmIJ&#43;XrOIvnjNPC0WjNDGiIbPbRqg=" crossorigin="anonymous" defer></script>
 </body>
 </html>

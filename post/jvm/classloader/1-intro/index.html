@@ -9,10 +9,10 @@
 <link rel="icon" href="/images/icons/favicon.ico">
 <link rel="manifest" href="/manifest.json">
 <meta name="keywords" content="" />
-<meta name="description" content="" /><meta itemprop="name" content="ClassLoader（一）- 介绍">
+<meta name="description" content="" /><meta name="robots" content="index, follow" /><meta itemprop="name" content="ClassLoader（一）- 介绍">
 <meta itemprop="description" content=""><meta itemprop="datePublished" content="2019-01-24T20:25:52+08:00" />
 <meta itemprop="dateModified" content="2019-01-24T20:25:52+08:00" />
-<meta itemprop="wordCount" content="3592">
+<meta itemprop="wordCount" content="3629">
 <meta itemprop="keywords" content="ClassLoader,JVM," /><meta property="og:title" content="ClassLoader（一）- 介绍" />
 <meta property="og:description" content="" />
 <meta property="og:type" content="article" />
@@ -23,7 +23,8 @@
 <meta name="twitter:card" content="summary"/>
 <meta name="twitter:title" content="ClassLoader（一）- 介绍"/>
 <meta name="twitter:description" content=""/>
-<meta name="robots" content="index, follow" /><link rel="stylesheet" href="/css/main.min.b7a6eda8d46e39a549f182cf72a9ff4f4c1d4d82c31ecc3ede0b7f4d5b26f32b.css" integrity="sha256-t6btqNRuOaVJ8YLPcqn/T0wdTYLDHsw&#43;3gt/TVsm8ys=" crossorigin="anonymous"><link rel="stylesheet" href="/css/viewer.min.3d228794bcedbbfa0412beb8fbc1ec6973202945e42af7004f742a4d7bd620ab.css" integrity="sha256-PSKHlLztu/oEEr64&#43;8HsaXMgKUXkKvcAT3QqTXvWIKs=" crossorigin="anonymous"></head>
+<meta property="og:image" content="/images/avatar.jpg"/>
+  <meta name="twitter:image" content="/images/avatar.jpg"/><link rel="stylesheet" href="/css/main.min.507afbe6e4670fa3e961a0b35816b5daeb36029866fd6bd7b9d7871fcf88faa5.css" integrity="sha256-UHr75uRnD6PpYaCzWBa12us2Aphm/WvXudeHH8&#43;I&#43;qU=" crossorigin="anonymous"><link rel="stylesheet" href="/css/viewer.min.3d228794bcedbbfa0412beb8fbc1ec6973202945e42af7004f742a4d7bd620ab.css" integrity="sha256-PSKHlLztu/oEEr64&#43;8HsaXMgKUXkKvcAT3QqTXvWIKs=" crossorigin="anonymous"></head>
   <body><script>const items=['mode','palette'];items.forEach(function(a){const b=localStorage.getItem('hbs-'+a);b&&document.body.parentElement.setAttribute('data-'+a,b)})</script><header><nav class="navbar top-app-bar top-app-bar-expand-lg fixed-top">
   <div class="container">
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent"
@@ -223,11 +224,9 @@
     8 分钟阅读
   </span><span class="post-taxonomies"><a href="/tags/classloader/" class="badge post-taxonomy">ClassLoader</a><a href="/tags/jvm/" class="badge post-taxonomy">jvm</a></span>
 </div>
-<div class="post-content mb-3"><p>本文源代码在<a href="https://github.com/chanjarster/java-relearn/tree/master/classloader" target="_blank" rel="noopener noreferrer">Github</a>
-。</p>
+<div class="post-content mb-3"><p>本文源代码在<a href="https://github.com/chanjarster/java-relearn/tree/master/classloader" target="_blank" rel="noopener noreferrer">Github</a>。</p>
 <h2 id="什么是classloader">什么是ClassLoader<a class="anchor ms-1" href="#什么是classloader"><i class="fas fa-link"></i></a></h2>
-<p><a href="https://docs.oracle.com/javase/7/docs/api/java/lang/ClassLoader.html" target="_blank" rel="noopener noreferrer">javadoc ClassLoader</a>
-：</p>
+<p><a href="https://docs.oracle.com/javase/7/docs/api/java/lang/ClassLoader.html" target="_blank" rel="noopener noreferrer">javadoc ClassLoader</a>：</p>
 <blockquote>
 <p>A class loader is an object that is responsible for loading classes.
 &hellip;
@@ -282,18 +281,15 @@ Classloader for this class: sun.misc.Launcher$AppClassLoader@18b4aac2
 </div>
 </div><ul>
 <li>Bootstrap class loader。bootstrap class loader是native code写的。它是所有ClassLoader的祖先，它是顶级ClassLoader。它负责加载JDK的内部类型，一般来说就是位于<code>$JAVA_HOME/jre/lib</code>下的核心库和<code>rt.jar</code>。</li>
-<li>Extension class loader。即Extension class loader，负责加载Java核心类的扩展，加载<code>$JAVA_HOME/lib/ext</code>目录和System Property <code>java.ext.dirs</code>所指定目录下的类（见<a href="https://docs.oracle.com/javase/6/docs/technotes/guides/extensions/spec.htm" target="_blank" rel="noopener noreferrer">Java Extension Mechanism Architecture</a>
-）。</li>
+<li>Extension class loader。即Extension class loader，负责加载Java核心类的扩展，加载<code>$JAVA_HOME/lib/ext</code>目录和System Property <code>java.ext.dirs</code>所指定目录下的类（见<a href="https://docs.oracle.com/javase/6/docs/technotes/guides/extensions/spec.htm" target="_blank" rel="noopener noreferrer">Java Extension Mechanism Architecture</a>）。</li>
 <li>System class loader，又称Application class loader。它的parent class loader是extension class loader（可以从<code>sun.misc.Launcher</code>的构造函数里看到），负责加载<code>CLASSPATH</code>环境变量、<code>-classpath/-cp</code>启动参数指定路径下的类。</li>
 </ul>
 <h3 id="类的classloader">类的ClassLoader<a class="anchor ms-1" href="#类的classloader"><i class="fas fa-link"></i></a></h3>
-<p>每个Class对象引用了当初加载自己的ClassLoader（<a href="https://docs.oracle.com/javase/7/docs/api/java/lang/ClassLoader.html" target="_blank" rel="noopener noreferrer">javadoc ClassLoader</a>
-）：</p>
+<p>每个Class对象引用了当初加载自己的ClassLoader（<a href="https://docs.oracle.com/javase/7/docs/api/java/lang/ClassLoader.html" target="_blank" rel="noopener noreferrer">javadoc ClassLoader</a>）：</p>
 <blockquote>
 <p>Every Class object contains a reference to the ClassLoader that defined it.</p>
 </blockquote>
-<p>其实Class对象的<code>getClassLoader()</code>方法就能够得到这个ClassLoader，并且说了如果该方法返回空，则说明此Class对象是被bootstrap class loader加载的，见<a href="https://docs.oracle.com/javase/7/docs/api/java/lang/Class.html#getClassLoader%28%29" target="_blank" rel="noopener noreferrer">getClassLoader() javadoc</a>
-：</p>
+<p>其实Class对象的<code>getClassLoader()</code>方法就能够得到这个ClassLoader，并且说了如果该方法返回空，则说明此Class对象是被bootstrap class loader加载的，见<a href="https://docs.oracle.com/javase/7/docs/api/java/lang/Class.html#getClassLoader%28%29" target="_blank" rel="noopener noreferrer">getClassLoader() javadoc</a>：</p>
 <blockquote>
 <p>Returns the class loader for the class. Some implementations may use null to represent the bootstrap class loader. This method will return null in such implementations if this class was loaded by the bootstrap class loader.</p>
 </blockquote>
@@ -446,8 +442,7 @@ ClassLoader for custom ClassLoader: null
 </div><h2 id="classloader解决了什么问题">ClassLoader解决了什么问题<a class="anchor ms-1" href="#classloader解决了什么问题"><i class="fas fa-link"></i></a></h2>
 <p>简单来说ClassLoader就是解决类加载问题的，当然这是一句废话。JDK里的ClassLoader是一个抽象类，这样做的目的是能够让应用开发者定制自己的ClassLoader实现（比如添加解密/加密）、动态插入字节码等，我认为这才是ClassLoader存在的最大意义。</p>
 <h2 id="classloader的工作原理">ClassLoader的工作原理<a class="anchor ms-1" href="#classloader的工作原理"><i class="fas fa-link"></i></a></h2>
-<p>还是看<a href="https://docs.oracle.com/javase/7/docs/api/java/lang/ClassLoader.html" target="_blank" rel="noopener noreferrer">javadoc的说法</a>
-：</p>
+<p>还是看<a href="https://docs.oracle.com/javase/7/docs/api/java/lang/ClassLoader.html" target="_blank" rel="noopener noreferrer">javadoc的说法</a>：</p>
 <blockquote>
 <p>The ClassLoader class uses a delegation model to search for classes and resources. Each instance of ClassLoader has an associated parent class loader. When requested to find a class or resource, a ClassLoader instance will delegate the search for the class or resource to its parent class loader before attempting to find the class or resource itself. The virtual machine&rsquo;s built-in class loader, called the &ldquo;bootstrap class loader&rdquo;, does not itself have a parent but may serve as the parent of a ClassLoader instance.</p>
 </blockquote>
@@ -602,23 +597,16 @@ Two ClassUniqueness class equals? false```
 <p>这种机制对于解决诸如类冲突问题非常有用，类冲突问题就是在运行时存在同一个类的两个不同版本，同时代码里又都需要使用这两个不同版本的类。解决这个问题的思路就是使用不同的ClassLoader加载这两个版本的类。事实上OSGi或者Web容器就是这样做的（它们不是严格遵照委托模型，而是先自己找，找不到了再委托给parent ClassLoader）。</p>
 <h2 id="参考文档">参考文档<a class="anchor ms-1" href="#参考文档"><i class="fas fa-link"></i></a></h2>
 <ul>
-<li><a href="https://docs.oracle.com/javase/7/docs/api/java/lang/ClassLoader.html" target="_blank" rel="noopener noreferrer">JDK Javadoc - ClassLoader</a>
-</li>
-<li><a href="https://docs.oracle.com/javase/7/docs/api/java/lang/Class.html#getClassLoader%28%29" target="_blank" rel="noopener noreferrer">JDK Javadoc - Class</a>
-</li>
-<li><a href="https://time.geekbang.org/column/article/11523" target="_blank" rel="noopener noreferrer">Java虚拟机是如何加载Java类的?</a>
-（极客时间专栏，需付费购买）</li>
-<li><a href="https://www.baeldung.com/java-classloaders" target="_blank" rel="noopener noreferrer">Class Loaders in Java</a>
-</li>
-<li><a href="https://www.ibm.com/developerworks/cn/java/j-lo-classloader/index.html" target="_blank" rel="noopener noreferrer">深入探讨Java类加载器</a>
-</li>
-<li><a href="https://docs.oracle.com/javase/specs/jls/se8/html/jls-12.html" target="_blank" rel="noopener noreferrer">Java Language Specification - Chapter 12. Execution</a>
-</li>
-<li><a href="https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-5.html" target="_blank" rel="noopener noreferrer">Java Virtual Machine Specification - Chapter 5. Loading, Linking, and Initializing</a>
-</li>
+<li><a href="https://docs.oracle.com/javase/7/docs/api/java/lang/ClassLoader.html" target="_blank" rel="noopener noreferrer">JDK Javadoc - ClassLoader</a></li>
+<li><a href="https://docs.oracle.com/javase/7/docs/api/java/lang/Class.html#getClassLoader%28%29" target="_blank" rel="noopener noreferrer">JDK Javadoc - Class</a></li>
+<li><a href="https://time.geekbang.org/column/article/11523" target="_blank" rel="noopener noreferrer">Java虚拟机是如何加载Java类的?</a>（极客时间专栏，需付费购买）</li>
+<li><a href="https://www.baeldung.com/java-classloaders" target="_blank" rel="noopener noreferrer">Class Loaders in Java</a></li>
+<li><a href="https://www.ibm.com/developerworks/cn/java/j-lo-classloader/index.html" target="_blank" rel="noopener noreferrer">深入探讨Java类加载器</a></li>
+<li><a href="https://docs.oracle.com/javase/specs/jls/se8/html/jls-12.html" target="_blank" rel="noopener noreferrer">Java Language Specification - Chapter 12. Execution</a></li>
+<li><a href="https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-5.html" target="_blank" rel="noopener noreferrer">Java Virtual Machine Specification - Chapter 5. Loading, Linking, and Initializing</a></li>
 </ul></div></div>
-  <div class="card-footer"><div class="post-navs d-flex justify-content-evenly">
-  <div class="post-nav post-prev"><i class="fas fa-fw fa-chevron-left"></i>
+  <div class="card-footer"><div class="post-navs d-flex justify-content-evenly"><div class="post-nav post-prev">
+    <i class="fas fa-fw fa-chevron-left"></i>
     <a href="/post/bookmarks/bookmarks-blog/">收藏夹 - 博客
 </a>
   </div><div class="post-nav post-next">
@@ -853,7 +841,7 @@ Two ClassUniqueness class equals? false```
     <img src="https://www.netlify.com/img/global/badges/netlify-color-accent.svg" alt="Deploys by Netlify" width="114" height="51" />
 </a>
 </footer>
-<script src="/js/main.cbf2ace5d5fcb68b11b93647393ec41735869f18f31091c0941a01dfdf417dfc.js" integrity="sha256-y/Ks5dX8tosRuTZHOT7EFzWGnxjzEJHAlBoB399Bffw=" crossorigin="anonymous" defer></script><script src="/js/icons.min.a35670f2f90c398e5ee5c8e509b428fae75aa2746854cee10b60794633076859.js" integrity="sha256-o1Zw8vkMOY5e5cjlCbQo&#43;udaonRoVM7hC2B5RjMHaFk=" crossorigin="anonymous" defer></script>
+<script src="/js/main.2cdce25f280f570596c88888d6af930fe5e15ea030005291dad293defbb231d3.js" integrity="sha256-LNziXygPVwWWyIiI1q&#43;TD&#43;XhXqAwAFKR2tKT3vuyMdM=" crossorigin="anonymous" defer></script><script src="/js/icons.min.8ddcaafc364ff0296c2209c5495287f0de039b852da9b24847f94c198b7639b6.js" integrity="sha256-jdyq/DZP8ClsIgnFSVKH8N4Dm4UtqbJIR/lMGYt2ObY=" crossorigin="anonymous" defer></script>
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
@@ -864,6 +852,6 @@ if ('serviceWorker' in navigator) {
     });
   });
 }
-</script><script src="/js/viewer.min.4dba52a0a790f909408b7385316651299158381686401d50ff1f04dda6476473.js" integrity="sha256-TbpSoKeQ&#43;QlAi3OFMWZRKZFYOBaGQB1Q/x8E3aZHZHM=" crossorigin="anonymous" defer></script>
+</script><script src="/js/viewer.min.652118a9fbf3403cdfde4026209f97ace22f9e334f0b45a33431a221b3db46a8.js" integrity="sha256-ZSEYqfvzQDzf3kAmIJ&#43;XrOIvnjNPC0WjNDGiIbPbRqg=" crossorigin="anonymous" defer></script>
 </body>
 </html>

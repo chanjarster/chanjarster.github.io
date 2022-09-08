@@ -9,7 +9,7 @@
 <link rel="icon" href="/images/icons/favicon.ico">
 <link rel="manifest" href="/manifest.json">
 <meta name="keywords" content="" />
-<meta name="description" content="" /><meta itemprop="name" content="算法 - 如何实现短网址服务">
+<meta name="description" content="" /><meta name="robots" content="index, follow" /><meta itemprop="name" content="算法 - 如何实现短网址服务">
 <meta itemprop="description" content=""><meta itemprop="datePublished" content="2020-05-12T20:25:10+08:00" />
 <meta itemprop="dateModified" content="2020-05-12T20:25:10+08:00" />
 <meta itemprop="wordCount" content="1422">
@@ -23,7 +23,8 @@
 <meta name="twitter:card" content="summary"/>
 <meta name="twitter:title" content="算法 - 如何实现短网址服务"/>
 <meta name="twitter:description" content=""/>
-<meta name="robots" content="index, follow" /><link rel="stylesheet" href="/css/main.min.b7a6eda8d46e39a549f182cf72a9ff4f4c1d4d82c31ecc3ede0b7f4d5b26f32b.css" integrity="sha256-t6btqNRuOaVJ8YLPcqn/T0wdTYLDHsw&#43;3gt/TVsm8ys=" crossorigin="anonymous"><link rel="stylesheet" href="/css/viewer.min.3d228794bcedbbfa0412beb8fbc1ec6973202945e42af7004f742a4d7bd620ab.css" integrity="sha256-PSKHlLztu/oEEr64&#43;8HsaXMgKUXkKvcAT3QqTXvWIKs=" crossorigin="anonymous"></head>
+<meta property="og:image" content="/images/avatar.jpg"/>
+  <meta name="twitter:image" content="/images/avatar.jpg"/><link rel="stylesheet" href="/css/main.min.507afbe6e4670fa3e961a0b35816b5daeb36029866fd6bd7b9d7871fcf88faa5.css" integrity="sha256-UHr75uRnD6PpYaCzWBa12us2Aphm/WvXudeHH8&#43;I&#43;qU=" crossorigin="anonymous"><link rel="stylesheet" href="/css/viewer.min.3d228794bcedbbfa0412beb8fbc1ec6973202945e42af7004f742a4d7bd620ab.css" integrity="sha256-PSKHlLztu/oEEr64&#43;8HsaXMgKUXkKvcAT3QqTXvWIKs=" crossorigin="anonymous"></head>
   <body><script>const items=['mode','palette'];items.forEach(function(a){const b=localStorage.getItem('hbs-'+a);b&&document.body.parentElement.setAttribute('data-'+a,b)})</script><header><nav class="navbar top-app-bar top-app-bar-expand-lg fixed-top">
   <div class="container">
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent"
@@ -223,16 +224,13 @@
     3 分钟阅读
   </span><span class="post-taxonomies"><a href="/tags/arts-a/" class="badge post-taxonomy">ARTS-A</a></span>
 </div>
-<div class="post-content mb-3"><p><a href="https://time.geekbang.org/column/article/80850" target="_blank" rel="noopener noreferrer">如何实现短网址服务</a>
-</p>
+<div class="post-content mb-3"><p><a href="https://time.geekbang.org/column/article/80850" target="_blank" rel="noopener noreferrer">如何实现短网址服务</a></p>
 <h2 id="哈希法">哈希法<a class="anchor ms-1" href="#哈希法"><i class="fas fa-link"></i></a></h2>
 <p>大致思路：对原始网址求哈希值，把这个哈希值作为key，原始网址作为value存在redis或数据库中。用户访问短网址的时候，到库中找，然后302重定向到原始网址。</p>
 <p><strong>用什么哈希算法？</strong></p>
-<p>你可以用SHA256、MD5、java的String#hashCode都可以。比较著名的是<a href="https://zh.wikipedia.org/wiki/Murmur%E5%93%88%E5%B8%8C" target="_blank" rel="noopener noreferrer">MurmurHash3算法</a>
-。MurmurHash比SHA和MD5性能高，因为它是非密码学算法，它可以产生32bit和128bit两种哈希值。</p>
+<p>你可以用SHA256、MD5、java的String#hashCode都可以。比较著名的是<a href="https://zh.wikipedia.org/wiki/Murmur%E5%93%88%E5%B8%8C" target="_blank" rel="noopener noreferrer">MurmurHash3算法</a>。MurmurHash比SHA和MD5性能高，因为它是非密码学算法，它可以产生32bit和128bit两种哈希值。</p>
 <p>如何把哈希值转换成短网址？</p>
-<p>虽然你可以采用32bit的版本得到一个int，直接把这个作为短网址，比如<code>shorturl.cn/181338494</code>，但是这样还不够短，可以把把十进制转换成十六进制，也可以转换成62进制，用52个大小写英文字母 + 10个数字来表示。算法代码看<a href="../31-radix-convert">进制转换</a>
-。</p>
+<p>虽然你可以采用32bit的版本得到一个int，直接把这个作为短网址，比如<code>shorturl.cn/181338494</code>，但是这样还不够短，可以把把十进制转换成十六进制，也可以转换成62进制，用52个大小写英文字母 + 10个数字来表示。算法代码看<a href="../31-radix-convert">进制转换</a>。</p>
 <p><strong>哈希值冲突了怎么办？</strong></p>
 <p>分析冲突的原因：</p>
 <p>1）一种原因，用户用同样的原始网址求了两次短网址，那么哈希值肯定会冲突。解决思路有两个：</p>
@@ -320,8 +318,7 @@
 <span class="p">}</span>
 </code></pre></td></tr></table>
 </div>
-</div><p>2）可以利用布隆过滤器，布隆过滤器是比较节省内存的一种存储结构，长度是 10 亿的<a href="../32-bloom-filter">布隆过滤器</a>
-，也只需要 125MB 左右的内存空间。</p>
+</div><p>2）可以利用布隆过滤器，布隆过滤器是比较节省内存的一种存储结构，长度是 10 亿的<a href="../32-bloom-filter">布隆过滤器</a>，也只需要 125MB 左右的内存空间。</p>
 <h2 id="自增id法">自增ID法<a class="anchor ms-1" href="#自增id法"><i class="fas fa-link"></i></a></h2>
 <p>数据库中自增ID生成作为短网址。</p>
 <p><strong>相同的原始网址可能会对应不同的短网址</strong></p>
@@ -335,11 +332,10 @@
 <p>解决思路：</p>
 <ol>
 <li>多个ID生成器，每个都有一个号段，号段问一个号段管理器要。号段用完了再要新的号段。这样可以增加并发效率。</li>
-<li>多个ID生辰器，他们天然就不会生成相同的ID，比如一个只生成尾号为0的，一个只生成尾号为1的。再比如<a href="https://juejin.im/post/5a7f9176f265da4e721c73a8" target="_blank" rel="noopener noreferrer">Twitter的雪花算法</a>
-。</li>
+<li>多个ID生辰器，他们天然就不会生成相同的ID，比如一个只生成尾号为0的，一个只生成尾号为1的。再比如<a href="https://juejin.im/post/5a7f9176f265da4e721c73a8" target="_blank" rel="noopener noreferrer">Twitter的雪花算法</a>。</li>
 </ol></div></div>
-  <div class="card-footer"><div class="post-navs d-flex justify-content-evenly">
-  <div class="post-nav post-prev"><i class="fas fa-fw fa-chevron-left"></i>
+  <div class="card-footer"><div class="post-navs d-flex justify-content-evenly"><div class="post-nav post-prev">
+    <i class="fas fa-fw fa-chevron-left"></i>
     <a href="/post/jvm/oop-compress/">JVM - 指针压缩
 </a>
   </div><div class="post-nav post-next">
@@ -563,7 +559,7 @@
     <img src="https://www.netlify.com/img/global/badges/netlify-color-accent.svg" alt="Deploys by Netlify" width="114" height="51" />
 </a>
 </footer>
-<script src="/js/main.cbf2ace5d5fcb68b11b93647393ec41735869f18f31091c0941a01dfdf417dfc.js" integrity="sha256-y/Ks5dX8tosRuTZHOT7EFzWGnxjzEJHAlBoB399Bffw=" crossorigin="anonymous" defer></script><script src="/js/icons.min.a35670f2f90c398e5ee5c8e509b428fae75aa2746854cee10b60794633076859.js" integrity="sha256-o1Zw8vkMOY5e5cjlCbQo&#43;udaonRoVM7hC2B5RjMHaFk=" crossorigin="anonymous" defer></script>
+<script src="/js/main.2cdce25f280f570596c88888d6af930fe5e15ea030005291dad293defbb231d3.js" integrity="sha256-LNziXygPVwWWyIiI1q&#43;TD&#43;XhXqAwAFKR2tKT3vuyMdM=" crossorigin="anonymous" defer></script><script src="/js/icons.min.8ddcaafc364ff0296c2209c5495287f0de039b852da9b24847f94c198b7639b6.js" integrity="sha256-jdyq/DZP8ClsIgnFSVKH8N4Dm4UtqbJIR/lMGYt2ObY=" crossorigin="anonymous" defer></script>
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
@@ -574,6 +570,6 @@ if ('serviceWorker' in navigator) {
     });
   });
 }
-</script><script src="/js/viewer.min.4dba52a0a790f909408b7385316651299158381686401d50ff1f04dda6476473.js" integrity="sha256-TbpSoKeQ&#43;QlAi3OFMWZRKZFYOBaGQB1Q/x8E3aZHZHM=" crossorigin="anonymous" defer></script>
+</script><script src="/js/viewer.min.652118a9fbf3403cdfde4026209f97ace22f9e334f0b45a33431a221b3db46a8.js" integrity="sha256-ZSEYqfvzQDzf3kAmIJ&#43;XrOIvnjNPC0WjNDGiIbPbRqg=" crossorigin="anonymous" defer></script>
 </body>
 </html>

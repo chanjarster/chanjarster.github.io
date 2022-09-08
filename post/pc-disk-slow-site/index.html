@@ -9,7 +9,7 @@
 <link rel="icon" href="/images/icons/favicon.ico">
 <link rel="manifest" href="/manifest.json">
 <meta name="keywords" content="" />
-<meta name="description" content="" /><meta itemprop="name" content="PC磁盘性能地下导致访问网站很慢问题排查记录">
+<meta name="description" content="" /><meta name="robots" content="index, follow" /><meta itemprop="name" content="PC磁盘性能地下导致访问网站很慢问题排查记录">
 <meta itemprop="description" content=""><meta itemprop="datePublished" content="2021-07-13T11:40:25+08:00" />
 <meta itemprop="dateModified" content="2021-07-13T11:40:25+08:00" />
 <meta itemprop="wordCount" content="1615">
@@ -23,7 +23,8 @@
 <meta name="twitter:card" content="summary"/>
 <meta name="twitter:title" content="PC磁盘性能地下导致访问网站很慢问题排查记录"/>
 <meta name="twitter:description" content=""/>
-<meta name="robots" content="index, follow" /><link rel="stylesheet" href="/css/main.min.b7a6eda8d46e39a549f182cf72a9ff4f4c1d4d82c31ecc3ede0b7f4d5b26f32b.css" integrity="sha256-t6btqNRuOaVJ8YLPcqn/T0wdTYLDHsw&#43;3gt/TVsm8ys=" crossorigin="anonymous"><link rel="stylesheet" href="/css/viewer.min.3d228794bcedbbfa0412beb8fbc1ec6973202945e42af7004f742a4d7bd620ab.css" integrity="sha256-PSKHlLztu/oEEr64&#43;8HsaXMgKUXkKvcAT3QqTXvWIKs=" crossorigin="anonymous"></head>
+<meta property="og:image" content="/images/avatar.jpg"/>
+  <meta name="twitter:image" content="/images/avatar.jpg"/><link rel="stylesheet" href="/css/main.min.507afbe6e4670fa3e961a0b35816b5daeb36029866fd6bd7b9d7871fcf88faa5.css" integrity="sha256-UHr75uRnD6PpYaCzWBa12us2Aphm/WvXudeHH8&#43;I&#43;qU=" crossorigin="anonymous"><link rel="stylesheet" href="/css/viewer.min.3d228794bcedbbfa0412beb8fbc1ec6973202945e42af7004f742a4d7bd620ab.css" integrity="sha256-PSKHlLztu/oEEr64&#43;8HsaXMgKUXkKvcAT3QqTXvWIKs=" crossorigin="anonymous"></head>
   <body><script>const items=['mode','palette'];items.forEach(function(a){const b=localStorage.getItem('hbs-'+a);b&&document.body.parentElement.setAttribute('data-'+a,b)})</script><header><nav class="navbar top-app-bar top-app-bar-expand-lg fixed-top">
   <div class="container">
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent"
@@ -259,8 +260,7 @@
 <p>和开发人员沟通后表示，同版本网站在另一个客户打开时间只需要2-3秒，且同样是在内网环境。</p>
 <p>仔细查看每个请求的Timing，发现Stalled的时间非常长，有的光Stalled就有 &gt; 2秒。</p>
 <img src="net-normal-timing.jpg" style="zoom: 50%" />
-<p>根据Chrome对于<strong>Stalled</strong>的<a href="https://www.chromium.org/developers/design-documents/network-stack/disk-cache#TOC-Implementation-Notes" target="_blank" rel="noopener noreferrer">解释</a>
-，有三个原因：</p>
+<p>根据Chrome对于<strong>Stalled</strong>的<a href="https://www.chromium.org/developers/design-documents/network-stack/disk-cache#TOC-Implementation-Notes" target="_blank" rel="noopener noreferrer">解释</a>，有三个原因：</p>
 <ul>
 <li>There are higher priority requests.</li>
 <li>There are already six TCP connections open for this origin, which is the limit. Applies to HTTP/1.0 and HTTP/1.1 only.</li>
@@ -289,20 +289,17 @@
 <p>结果是没有发现特别之处。</p>
 <h3 id="chromenet-export">chrome://net-export<a class="anchor ms-1" href="#chromenet-export"><i class="fas fa-link"></i></a></h3>
 <p>Chrome打开chrome://net-export ，正常模式下访问门户时抓网络事件。</p>
-<p>然后使用 <a href="https://netlog-viewer.appspot.com/#import" target="_blank" rel="noopener noreferrer">https://netlog-viewer.appspot.com/#import</a>
- 打开。</p>
+<p>然后使用 <a href="https://netlog-viewer.appspot.com/#import" target="_blank" rel="noopener noreferrer">https://netlog-viewer.appspot.com/#import</a> 打开。</p>
 <p>没有发现特别的地方。</p>
 <h2 id="pc的磁盘">PC的磁盘<a class="anchor ms-1" href="#pc的磁盘"><i class="fas fa-link"></i></a></h2>
-<p>回顾根据Chrome关于<strong>Stalled</strong>的<a href="https://www.chromium.org/developers/design-documents/network-stack/disk-cache#TOC-Implementation-Notes" target="_blank" rel="noopener noreferrer">解释</a>
-，有三个原因：</p>
+<p>回顾根据Chrome关于<strong>Stalled</strong>的<a href="https://www.chromium.org/developers/design-documents/network-stack/disk-cache#TOC-Implementation-Notes" target="_blank" rel="noopener noreferrer">解释</a>，有三个原因：</p>
 <ul>
 <li>There are higher priority requests.</li>
 <li>There are already six TCP connections open for this origin, which is the limit. Applies to HTTP/1.0 and HTTP/1.1 only.</li>
 <li>The browser is briefly allocating space in the disk cache</li>
 </ul>
 <p>前两个原因已经排除，默非真的是因为PC的磁盘不给力？</p>
-<p>在google搜索<code>The browser is briefly allocating space in the disk cache incognito</code>在Chromium的<a href="https://www.chromium.org/developers/design-documents/network-stack/disk-cache#TOC-Implementation-Notes" target="_blank" rel="noopener noreferrer">wiki</a>
-中发现无痕模式的Cache采用的是内存实现，普通模式采用的是磁盘实现：</p>
+<p>在google搜索<code>The browser is briefly allocating space in the disk cache incognito</code>在Chromium的<a href="https://www.chromium.org/developers/design-documents/network-stack/disk-cache#TOC-Implementation-Notes" target="_blank" rel="noopener noreferrer">wiki</a>中发现无痕模式的Cache采用的是内存实现，普通模式采用的是磁盘实现：</p>
 <blockquote>
 <p>Chromium has two different implementations of the cache interfaces: while the main one is used to store info on a given disk, there is also a very simple implementation that doesn’t use a hard drive at all, and stores everything in memory. The in-memory implementation is used for the <em>Incognito</em> mode &hellip;</p>
 </blockquote>
@@ -317,8 +314,8 @@
 <h2 id="总结">总结<a class="anchor ms-1" href="#总结"><i class="fas fa-link"></i></a></h2>
 <p>在排除一切可能性之后，目前最大的可能是PC的磁盘不给力，导致了这个现象。</p>
 <p>后续工作：找一台配置更好的PC来访问网站看看，验证一下这个结果。</p></div></div>
-  <div class="card-footer"><div class="post-navs d-flex justify-content-evenly">
-  <div class="post-nav post-prev"><i class="fas fa-fw fa-chevron-left"></i>
+  <div class="card-footer"><div class="post-navs d-flex justify-content-evenly"><div class="post-nav post-prev">
+    <i class="fas fa-fw fa-chevron-left"></i>
     <a href="/post/chrome-incognito-mode-faster/">Chrome隐私模式网页加载速度更快
 </a>
   </div><div class="post-nav post-next">
@@ -562,7 +559,7 @@
     <img src="https://www.netlify.com/img/global/badges/netlify-color-accent.svg" alt="Deploys by Netlify" width="114" height="51" />
 </a>
 </footer>
-<script src="/js/main.cbf2ace5d5fcb68b11b93647393ec41735869f18f31091c0941a01dfdf417dfc.js" integrity="sha256-y/Ks5dX8tosRuTZHOT7EFzWGnxjzEJHAlBoB399Bffw=" crossorigin="anonymous" defer></script><script src="/js/icons.min.a35670f2f90c398e5ee5c8e509b428fae75aa2746854cee10b60794633076859.js" integrity="sha256-o1Zw8vkMOY5e5cjlCbQo&#43;udaonRoVM7hC2B5RjMHaFk=" crossorigin="anonymous" defer></script>
+<script src="/js/main.2cdce25f280f570596c88888d6af930fe5e15ea030005291dad293defbb231d3.js" integrity="sha256-LNziXygPVwWWyIiI1q&#43;TD&#43;XhXqAwAFKR2tKT3vuyMdM=" crossorigin="anonymous" defer></script><script src="/js/icons.min.8ddcaafc364ff0296c2209c5495287f0de039b852da9b24847f94c198b7639b6.js" integrity="sha256-jdyq/DZP8ClsIgnFSVKH8N4Dm4UtqbJIR/lMGYt2ObY=" crossorigin="anonymous" defer></script>
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
@@ -573,6 +570,6 @@ if ('serviceWorker' in navigator) {
     });
   });
 }
-</script><script src="/js/viewer.min.4dba52a0a790f909408b7385316651299158381686401d50ff1f04dda6476473.js" integrity="sha256-TbpSoKeQ&#43;QlAi3OFMWZRKZFYOBaGQB1Q/x8E3aZHZHM=" crossorigin="anonymous" defer></script>
+</script><script src="/js/viewer.min.652118a9fbf3403cdfde4026209f97ace22f9e334f0b45a33431a221b3db46a8.js" integrity="sha256-ZSEYqfvzQDzf3kAmIJ&#43;XrOIvnjNPC0WjNDGiIbPbRqg=" crossorigin="anonymous" defer></script>
 </body>
 </html>

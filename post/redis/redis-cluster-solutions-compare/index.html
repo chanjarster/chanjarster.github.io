@@ -9,10 +9,10 @@
 <link rel="icon" href="/images/icons/favicon.ico">
 <link rel="manifest" href="/manifest.json">
 <meta name="keywords" content="" />
-<meta name="description" content="本文专注于从程序角度看如何使用Redis集群，以及相关的方案。" /><meta itemprop="name" content="Redis集群方案对比">
+<meta name="description" content="本文专注于从程序角度看如何使用Redis集群，以及相关的方案。" /><meta name="robots" content="index, follow" /><meta itemprop="name" content="Redis集群方案对比">
 <meta itemprop="description" content="本文专注于从程序角度看如何使用Redis集群，以及相关的方案。"><meta itemprop="datePublished" content="2022-01-13T10:03:00+08:00" />
 <meta itemprop="dateModified" content="2022-01-13T10:03:00+08:00" />
-<meta itemprop="wordCount" content="1610">
+<meta itemprop="wordCount" content="1627">
 <meta itemprop="keywords" content="redis,分布式算法," /><meta property="og:title" content="Redis集群方案对比" />
 <meta property="og:description" content="本文专注于从程序角度看如何使用Redis集群，以及相关的方案。" />
 <meta property="og:type" content="article" />
@@ -23,7 +23,8 @@
 <meta name="twitter:card" content="summary"/>
 <meta name="twitter:title" content="Redis集群方案对比"/>
 <meta name="twitter:description" content="本文专注于从程序角度看如何使用Redis集群，以及相关的方案。"/>
-<meta name="robots" content="index, follow" /><link rel="stylesheet" href="/css/main.min.b7a6eda8d46e39a549f182cf72a9ff4f4c1d4d82c31ecc3ede0b7f4d5b26f32b.css" integrity="sha256-t6btqNRuOaVJ8YLPcqn/T0wdTYLDHsw&#43;3gt/TVsm8ys=" crossorigin="anonymous"><link rel="stylesheet" href="/css/viewer.min.3d228794bcedbbfa0412beb8fbc1ec6973202945e42af7004f742a4d7bd620ab.css" integrity="sha256-PSKHlLztu/oEEr64&#43;8HsaXMgKUXkKvcAT3QqTXvWIKs=" crossorigin="anonymous"></head>
+<meta property="og:image" content="/images/avatar.jpg"/>
+  <meta name="twitter:image" content="/images/avatar.jpg"/><link rel="stylesheet" href="/css/main.min.507afbe6e4670fa3e961a0b35816b5daeb36029866fd6bd7b9d7871fcf88faa5.css" integrity="sha256-UHr75uRnD6PpYaCzWBa12us2Aphm/WvXudeHH8&#43;I&#43;qU=" crossorigin="anonymous"><link rel="stylesheet" href="/css/viewer.min.3d228794bcedbbfa0412beb8fbc1ec6973202945e42af7004f742a4d7bd620ab.css" integrity="sha256-PSKHlLztu/oEEr64&#43;8HsaXMgKUXkKvcAT3QqTXvWIKs=" crossorigin="anonymous"></head>
   <body><script>const items=['mode','palette'];items.forEach(function(a){const b=localStorage.getItem('hbs-'+a);b&&document.body.parentElement.setAttribute('data-'+a,b)})</script><header><nav class="navbar top-app-bar top-app-bar-expand-lg fixed-top">
   <div class="container">
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent"
@@ -226,8 +227,7 @@
 <div class="post-content mb-3"><p>本文专注于从程序角度看如何使用Redis集群，以及相关的方案。</p>
 <h2 id="概要">概要<a class="anchor ms-1" href="#概要"><i class="fas fa-link"></i></a></h2>
 <p>为何要做集群？主要原因就是为了做Sharding/Partitioning，所以Redis集群方案等价为Redis Sharding/Partitioning方案。</p>
-<p><a href="https://redis.io/topics/partitioning" target="_blank" rel="noopener noreferrer">Partitioning: how to split data among multiple Redis instances</a>
- 对Redis做集群的利弊和考量做了详细说明。因此，在确定方案之前，要先确定你的Redis是用来做什么的？做Cache还是数据持久化，不同方案对此的支持程度是不同的。不言自明的是，如果Redis用途是Cache，整个集群方案会更简单。</p>
+<p><a href="https://redis.io/topics/partitioning" target="_blank" rel="noopener noreferrer">Partitioning: how to split data among multiple Redis instances</a> 对Redis做集群的利弊和考量做了详细说明。因此，在确定方案之前，要先确定你的Redis是用来做什么的？做Cache还是数据持久化，不同方案对此的支持程度是不同的。不言自明的是，如果Redis用途是Cache，整个集群方案会更简单。</p>
 <p>需要注意的是，无论采取何种方案，因为Sharding的存在，天然会导致有些命令在集群环境下是无法（正常）工作的，因此对于程序的改造是不可避免的。</p>
 <p>Redis集群的方案基本上由以下组件构成：</p>
 <ul>
@@ -254,8 +254,7 @@
 <tr>
 <td style="text-align:center"></td>
 <td style="text-align:center">cluster</td>
-<td style="text-align:left"><a href="https://redis.io/topics/cluster-tutorial" target="_blank" rel="noopener noreferrer">Redis Cluster</a>
-</td>
+<td style="text-align:left"><a href="https://redis.io/topics/cluster-tutorial" target="_blank" rel="noopener noreferrer">Redis Cluster</a></td>
 </tr>
 <tr>
 <td style="text-align:center">Proxy</td>
@@ -265,8 +264,7 @@
 <tr>
 <td style="text-align:center"></td>
 <td style="text-align:center">cluster</td>
-<td style="text-align:left">支持<a href="https://redis.io/topics/cluster-tutorial" target="_blank" rel="noopener noreferrer">Redis Cluster</a>
-</td>
+<td style="text-align:left">支持<a href="https://redis.io/topics/cluster-tutorial" target="_blank" rel="noopener noreferrer">Redis Cluster</a></td>
 </tr>
 <tr>
 <td style="text-align:center">Client</td>
@@ -281,8 +279,7 @@
 <tr>
 <td style="text-align:center"></td>
 <td style="text-align:center">cluster</td>
-<td style="text-align:left">支持<a href="https://redis.io/topics/cluster-tutorial" target="_blank" rel="noopener noreferrer">Redis Cluster</a>
-</td>
+<td style="text-align:left">支持<a href="https://redis.io/topics/cluster-tutorial" target="_blank" rel="noopener noreferrer">Redis Cluster</a></td>
 </tr>
 </tbody>
 </table>
@@ -294,9 +291,7 @@
 <p>这种类型的Proxy连接多个simple redis实例，根据自己的Sharding/LB算法，把请求分配到各个redis实例上。</p>
 <p>这类Proxy 需要配合 Dashboard（管理组件）才能够更新节点列表。更复杂的运维任务也需要Dashboard配合。</p>
 <h4 id="cluster类型">cluster类型<a class="anchor ms-1" href="#cluster类型"><i class="fas fa-link"></i></a></h4>
-<p>这种类型的Proxy直接连接在<a href="https://redis.io/topics/cluster-tutorial" target="_blank" rel="noopener noreferrer">Redis Cluster</a>
-上，集群的管理工作全部交给<a href="https://redis.io/topics/cluster-tutorial" target="_blank" rel="noopener noreferrer">Redis Cluster</a>
-，Proxy能够感知到集群节点变化，并且路由命令到正确的Slot上，避免MOVED/ASK重定向，提升执行效率。</p>
+<p>这种类型的Proxy直接连接在<a href="https://redis.io/topics/cluster-tutorial" target="_blank" rel="noopener noreferrer">Redis Cluster</a>上，集群的管理工作全部交给<a href="https://redis.io/topics/cluster-tutorial" target="_blank" rel="noopener noreferrer">Redis Cluster</a>，Proxy能够感知到集群节点变化，并且路由命令到正确的Slot上，避免MOVED/ASK重定向，提升执行效率。</p>
 <h4 id="开源项目">开源项目<a class="anchor ms-1" href="#开源项目"><i class="fas fa-link"></i></a></h4>
 <table>
 <thead>
@@ -310,68 +305,56 @@
 </thead>
 <tbody>
 <tr>
-<td style="text-align:center"><a href="https://github.com/twitter/twemproxy" target="_blank" rel="noopener noreferrer">twemproxy</a>
-</td>
+<td style="text-align:center"><a href="https://github.com/twitter/twemproxy" target="_blank" rel="noopener noreferrer">twemproxy</a></td>
 <td style="text-align:center">Y</td>
 <td style="text-align:center"></td>
 <td style="text-align:center">不活跃</td>
 <td style="text-align:left"></td>
 </tr>
 <tr>
-<td style="text-align:center"><a href="https://github.com/eleme/corvus" target="_blank" rel="noopener noreferrer">corvus</a>
-</td>
+<td style="text-align:center"><a href="https://github.com/eleme/corvus" target="_blank" rel="noopener noreferrer">corvus</a></td>
 <td style="text-align:center">Y</td>
 <td style="text-align:center"></td>
 <td style="text-align:center">停止</td>
-<td style="text-align:left">改进<a href="https://github.com/twitter/twemproxy" target="_blank" rel="noopener noreferrer">twemproxy</a>
-，饿了么</td>
+<td style="text-align:left">改进<a href="https://github.com/twitter/twemproxy" target="_blank" rel="noopener noreferrer">twemproxy</a>，饿了么</td>
 </tr>
 <tr>
-<td style="text-align:center"><a href="https://github.com/CodisLabs/codis" target="_blank" rel="noopener noreferrer">Codis</a>
-</td>
+<td style="text-align:center"><a href="https://github.com/CodisLabs/codis" target="_blank" rel="noopener noreferrer">Codis</a></td>
 <td style="text-align:center">Y</td>
 <td style="text-align:center"></td>
 <td style="text-align:center">停止</td>
-<td style="text-align:left">改进<a href="https://github.com/twitter/twemproxy" target="_blank" rel="noopener noreferrer">twemproxy</a>
-，自带Dashboard，豌豆荚</td>
+<td style="text-align:left">改进<a href="https://github.com/twitter/twemproxy" target="_blank" rel="noopener noreferrer">twemproxy</a>，自带Dashboard，豌豆荚</td>
 </tr>
 <tr>
-<td style="text-align:center"><a href="https://samaritan-proxy.github.io/docs/arch/protocol/redis/redis/" target="_blank" rel="noopener noreferrer">samaritan</a>
-</td>
+<td style="text-align:center"><a href="https://samaritan-proxy.github.io/docs/arch/protocol/redis/redis/" target="_blank" rel="noopener noreferrer">samaritan</a></td>
 <td style="text-align:center">?</td>
 <td style="text-align:center">Y</td>
 <td style="text-align:center">停止</td>
-<td style="text-align:left"><a href="https://github.com/eleme/corvus" target="_blank" rel="noopener noreferrer">corvus</a>
-的继任项目，sidecar形式的proxy，只支持Redis &lt;= 5.0，配套Dashboard <a href="https://github.com/samaritan-proxy/sash" target="_blank" rel="noopener noreferrer">sash</a>
-</td>
+<td style="text-align:left"><a href="https://github.com/eleme/corvus" target="_blank" rel="noopener noreferrer">corvus</a>的继任项目，sidecar形式的proxy，只支持Redis &lt;= 5.0，配套Dashboard <a href="https://github.com/samaritan-proxy/sash" target="_blank" rel="noopener noreferrer">sash</a></td>
 </tr>
 <tr>
-<td style="text-align:center"><a href="https://github.com/RedisLabs/redis-cluster-proxy" target="_blank" rel="noopener noreferrer">Redis Cluster Proxy</a>
-</td>
+<td style="text-align:center"><a href="https://github.com/RedisLabs/redis-cluster-proxy" target="_blank" rel="noopener noreferrer">Redis Cluster Proxy</a></td>
 <td style="text-align:center"></td>
 <td style="text-align:center">Y</td>
 <td style="text-align:center">停止</td>
 <td style="text-align:left">官方搞的，处于alpha状态，不推荐生产使用</td>
 </tr>
 <tr>
-<td style="text-align:center"><a href="https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/other_protocols/redis" target="_blank" rel="noopener noreferrer">envoy</a>
-</td>
+<td style="text-align:center"><a href="https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/other_protocols/redis" target="_blank" rel="noopener noreferrer">envoy</a></td>
 <td style="text-align:center">?</td>
 <td style="text-align:center">Y</td>
 <td style="text-align:center">活跃</td>
 <td style="text-align:left">sidecar形式的proxy, redis只是其中一项功能</td>
 </tr>
 <tr>
-<td style="text-align:center"><a href="https://github.com/netease-im/camellia" target="_blank" rel="noopener noreferrer">camellia-redis-proxy</a>
-</td>
+<td style="text-align:center"><a href="https://github.com/netease-im/camellia" target="_blank" rel="noopener noreferrer">camellia-redis-proxy</a></td>
 <td style="text-align:center">Y</td>
 <td style="text-align:center">Y</td>
 <td style="text-align:center">活跃</td>
 <td style="text-align:left">网易</td>
 </tr>
 <tr>
-<td style="text-align:center"><a href="https://github.com/bilibili/overlord" target="_blank" rel="noopener noreferrer">bilibili-overlord</a>
-</td>
+<td style="text-align:center"><a href="https://github.com/bilibili/overlord" target="_blank" rel="noopener noreferrer">bilibili-overlord</a></td>
 <td style="text-align:center">Y</td>
 <td style="text-align:center">Y</td>
 <td style="text-align:center">不活跃</td>
@@ -388,8 +371,7 @@
 <p>这种类型的Client连接多个simple redis实例，根据自己的Sharding/LB算法，把请求分配到各个redis实例上。</p>
 <p>这类Client 需要配合 Dashboard（管理组件）才能够更新节点列表。更复杂的运维任务也需要Dashboard配合。</p>
 <h4 id="cluster类型-1">cluster类型<a class="anchor ms-1" href="#cluster类型-1"><i class="fas fa-link"></i></a></h4>
-<p>这种类型的 Client 直接支持 <a href="https://redis.io/topics/cluster-tutorial" target="_blank" rel="noopener noreferrer">Redis Cluster</a>
- 协议，能够感知到集群中节点的变化。</p>
+<p>这种类型的 Client 直接支持 <a href="https://redis.io/topics/cluster-tutorial" target="_blank" rel="noopener noreferrer">Redis Cluster</a> 协议，能够感知到集群中节点的变化。</p>
 <h4 id="开源项目-1">开源项目<a class="anchor ms-1" href="#开源项目-1"><i class="fas fa-link"></i></a></h4>
 <table>
 <thead>
@@ -404,18 +386,15 @@
 </thead>
 <tbody>
 <tr>
-<td style="text-align:center"><a href="https://github.com/redis/jedis" target="_blank" rel="noopener noreferrer">jedis</a>
-</td>
-<td style="text-align:center"><a href="https://github.com/redis/jedis/wiki/AdvancedUsage#shardedjedis" target="_blank" rel="noopener noreferrer">ShardedJedis</a>
-</td>
+<td style="text-align:center"><a href="https://github.com/redis/jedis" target="_blank" rel="noopener noreferrer">jedis</a></td>
+<td style="text-align:center"><a href="https://github.com/redis/jedis/wiki/AdvancedUsage#shardedjedis" target="_blank" rel="noopener noreferrer">ShardedJedis</a></td>
 <td style="text-align:center"></td>
 <td style="text-align:center">N</td>
 <td style="text-align:center"></td>
 <td style="text-align:left"></td>
 </tr>
 <tr>
-<td style="text-align:center"><a href="https://lettuce.io/docs/" target="_blank" rel="noopener noreferrer">lettuce</a>
-</td>
+<td style="text-align:center"><a href="https://lettuce.io/docs/" target="_blank" rel="noopener noreferrer">lettuce</a></td>
 <td style="text-align:center"></td>
 <td style="text-align:center">Y</td>
 <td style="text-align:center">Y</td>
@@ -423,8 +402,7 @@
 <td style="text-align:left"></td>
 </tr>
 <tr>
-<td style="text-align:center"><a href="https://github.com/netease-im/camellia" target="_blank" rel="noopener noreferrer">camellia-redis</a>
-</td>
+<td style="text-align:center"><a href="https://github.com/netease-im/camellia" target="_blank" rel="noopener noreferrer">camellia-redis</a></td>
 <td style="text-align:center">Y</td>
 <td style="text-align:center">Y</td>
 <td style="text-align:center">Y</td>
@@ -472,8 +450,8 @@
 </tbody>
 </table>
 <p>注意：这里的程序改动指的是建立连接或者API的改动，不包括Redis命令的改动，这部分改动是不可避免的。</p></div></div>
-  <div class="card-footer"><div class="post-navs d-flex justify-content-evenly">
-  <div class="post-nav post-prev"><i class="fas fa-fw fa-chevron-left"></i>
+  <div class="card-footer"><div class="post-navs d-flex justify-content-evenly"><div class="post-nav post-prev">
+    <i class="fas fa-fw fa-chevron-left"></i>
     <a href="/post/linux/namespace/">Linux命名空间一些笔记
 </a>
   </div><div class="post-nav post-next">
@@ -703,7 +681,7 @@
     <img src="https://www.netlify.com/img/global/badges/netlify-color-accent.svg" alt="Deploys by Netlify" width="114" height="51" />
 </a>
 </footer>
-<script src="/js/main.cbf2ace5d5fcb68b11b93647393ec41735869f18f31091c0941a01dfdf417dfc.js" integrity="sha256-y/Ks5dX8tosRuTZHOT7EFzWGnxjzEJHAlBoB399Bffw=" crossorigin="anonymous" defer></script><script src="/js/icons.min.a35670f2f90c398e5ee5c8e509b428fae75aa2746854cee10b60794633076859.js" integrity="sha256-o1Zw8vkMOY5e5cjlCbQo&#43;udaonRoVM7hC2B5RjMHaFk=" crossorigin="anonymous" defer></script>
+<script src="/js/main.2cdce25f280f570596c88888d6af930fe5e15ea030005291dad293defbb231d3.js" integrity="sha256-LNziXygPVwWWyIiI1q&#43;TD&#43;XhXqAwAFKR2tKT3vuyMdM=" crossorigin="anonymous" defer></script><script src="/js/icons.min.8ddcaafc364ff0296c2209c5495287f0de039b852da9b24847f94c198b7639b6.js" integrity="sha256-jdyq/DZP8ClsIgnFSVKH8N4Dm4UtqbJIR/lMGYt2ObY=" crossorigin="anonymous" defer></script>
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
@@ -714,6 +692,6 @@ if ('serviceWorker' in navigator) {
     });
   });
 }
-</script><script src="/js/viewer.min.4dba52a0a790f909408b7385316651299158381686401d50ff1f04dda6476473.js" integrity="sha256-TbpSoKeQ&#43;QlAi3OFMWZRKZFYOBaGQB1Q/x8E3aZHZHM=" crossorigin="anonymous" defer></script>
+</script><script src="/js/viewer.min.652118a9fbf3403cdfde4026209f97ace22f9e334f0b45a33431a221b3db46a8.js" integrity="sha256-ZSEYqfvzQDzf3kAmIJ&#43;XrOIvnjNPC0WjNDGiIbPbRqg=" crossorigin="anonymous" defer></script>
 </body>
 </html>

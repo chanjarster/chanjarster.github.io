@@ -9,10 +9,10 @@
 <link rel="icon" href="/images/icons/favicon.ico">
 <link rel="manifest" href="/manifest.json">
 <meta name="keywords" content="" />
-<meta name="description" content="" /><meta itemprop="name" content="理解Spring Cloud Gateway Filters的执行顺序">
+<meta name="description" content="" /><meta name="robots" content="index, follow" /><meta itemprop="name" content="理解Spring Cloud Gateway Filters的执行顺序">
 <meta itemprop="description" content=""><meta itemprop="datePublished" content="2019-04-22T10:31:54+08:00" />
 <meta itemprop="dateModified" content="2019-04-22T10:31:54+08:00" />
-<meta itemprop="wordCount" content="2481">
+<meta itemprop="wordCount" content="2505">
 <meta itemprop="keywords" content="微服务,java," /><meta property="og:title" content="理解Spring Cloud Gateway Filters的执行顺序" />
 <meta property="og:description" content="" />
 <meta property="og:type" content="article" />
@@ -23,7 +23,8 @@
 <meta name="twitter:card" content="summary"/>
 <meta name="twitter:title" content="理解Spring Cloud Gateway Filters的执行顺序"/>
 <meta name="twitter:description" content=""/>
-<meta name="robots" content="index, follow" /><link rel="stylesheet" href="/css/main.min.b7a6eda8d46e39a549f182cf72a9ff4f4c1d4d82c31ecc3ede0b7f4d5b26f32b.css" integrity="sha256-t6btqNRuOaVJ8YLPcqn/T0wdTYLDHsw&#43;3gt/TVsm8ys=" crossorigin="anonymous"><link rel="stylesheet" href="/css/viewer.min.3d228794bcedbbfa0412beb8fbc1ec6973202945e42af7004f742a4d7bd620ab.css" integrity="sha256-PSKHlLztu/oEEr64&#43;8HsaXMgKUXkKvcAT3QqTXvWIKs=" crossorigin="anonymous"></head>
+<meta property="og:image" content="/images/avatar.jpg"/>
+  <meta name="twitter:image" content="/images/avatar.jpg"/><link rel="stylesheet" href="/css/main.min.507afbe6e4670fa3e961a0b35816b5daeb36029866fd6bd7b9d7871fcf88faa5.css" integrity="sha256-UHr75uRnD6PpYaCzWBa12us2Aphm/WvXudeHH8&#43;I&#43;qU=" crossorigin="anonymous"><link rel="stylesheet" href="/css/viewer.min.3d228794bcedbbfa0412beb8fbc1ec6973202945e42af7004f742a4d7bd620ab.css" integrity="sha256-PSKHlLztu/oEEr64&#43;8HsaXMgKUXkKvcAT3QqTXvWIKs=" crossorigin="anonymous"></head>
   <body><script>const items=['mode','palette'];items.forEach(function(a){const b=localStorage.getItem('hbs-'+a);b&&document.body.parentElement.setAttribute('data-'+a,b)})</script><header><nav class="navbar top-app-bar top-app-bar-expand-lg fixed-top">
   <div class="container">
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent"
@@ -261,8 +262,7 @@
 </div>
 </div><p>上面的<code>StripPrefix</code>和<code>RemoveRequestHeader</code>就是Route Filter，而SCG的Global Filter则是隐式的，无需显式配置，它们会在请求过来的时候被SCG调用。</p>
 <p>也就是说你可以配置不同的Route，然后为每个Route配置不同的Route Filter，这一切都是在配置阶段就决定下来的。</p>
-<p>而Zuul2则都是Global Filter，因此你得运行时在每个Filter内部自己决定是否要干活，除此之外，发送到Origin（被代理的服务）的url也得你自己设置，下面是一个例子（来自<a href="https://github.com/Netflix/zuul/tree/2.1/zuul-sample" target="_blank" rel="noopener noreferrer">Zuul2 Sample</a>
-）：</p>
+<p>而Zuul2则都是Global Filter，因此你得运行时在每个Filter内部自己决定是否要干活，除此之外，发送到Origin（被代理的服务）的url也得你自己设置，下面是一个例子（来自<a href="https://github.com/Netflix/zuul/tree/2.1/zuul-sample" target="_blank" rel="noopener noreferrer">Zuul2 Sample</a>）：</p>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre tabindex="0" class="chroma"><code><span class="lnt"> 1
@@ -306,8 +306,7 @@
 <li>在SCG概念中只有一种Filter（撇开Global和Route的区别），它用代码来区分Pre Filter、Post Filter。在文档中还提到了Routing Filter，其实也是Pre Filter。</li>
 <li>Zuul2在代码中显示得提供了InboundFilter（负责进来的请求）、OutboundFilter（负责出去的响应）、ProxyEndpoint（负责请求到Origin，串起Inbound和Outbound）。</li>
 </ul>
-<p>下面是SCG的Pre Filter（裁剪自官方例子<a href="https://cloud.spring.io/spring-cloud-static/spring-cloud-gateway/2.1.1.RELEASE/single/spring-cloud-gateway.html#_writing_custom_gatewayfilter_factories" target="_blank" rel="noopener noreferrer">12.2 Writing Custom GatewayFilter Factories</a>
-）：</p>
+<p>下面是SCG的Pre Filter（裁剪自官方例子<a href="https://cloud.spring.io/spring-cloud-static/spring-cloud-gateway/2.1.1.RELEASE/single/spring-cloud-gateway.html#_writing_custom_gatewayfilter_factories" target="_blank" rel="noopener noreferrer">12.2 Writing Custom GatewayFilter Factories</a>）：</p>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre tabindex="0" class="chroma"><code><span class="lnt">1
@@ -365,8 +364,7 @@
 <p>但是随着对SCG的深入了解，发现了关于Filter的执行顺序存在一些坑，如果不了解清楚会容易出错。</p>
 <h3 id="filter的排序">Filter的排序<a class="anchor ms-1" href="#filter的排序"><i class="fas fa-link"></i></a></h3>
 <p>前面讲了，SCG在执行过程中Global Filter和Route Filter是一起执行的，那么它们的order是怎样的？</p>
-<p>先来看看Global Filter，你可以访问<code>/actuator/gateway/globalfilters</code>（见<a href="https://cloud.spring.io/spring-cloud-static/spring-cloud-gateway/2.1.1.RELEASE/single/spring-cloud-gateway.html#_global_filters_2" target="_blank" rel="noopener noreferrer">文档</a>
-）得到Global Filter的排序：</p>
+<p>先来看看Global Filter，你可以访问<code>/actuator/gateway/globalfilters</code>（见<a href="https://cloud.spring.io/spring-cloud-static/spring-cloud-gateway/2.1.1.RELEASE/single/spring-cloud-gateway.html#_global_filters_2" target="_blank" rel="noopener noreferrer">文档</a>）得到Global Filter的排序：</p>
 <p><img class="img-fluid" alt="" src="/post/spring-cloud-gateway-filters-ordering/filters-order.png" loading="lazy"
   
    />
@@ -377,17 +375,14 @@
 <li>如果你的自定义Global Filter实现了<code>Ordered</code>接口或者写了<code>@Order</code>注解，那么它的order就是它自己设定的值</li>
 <li>否则，它就没有order</li>
 </ul>
-<p>关于这点可以看<a href="https://github.com/spring-cloud/spring-cloud-gateway/blob/v2.1.1.RELEASE/spring-cloud-gateway-core/src/main/java/org/springframework/cloud/gateway/handler/FilteringWebHandler.java#L58-L67" target="_blank" rel="noopener noreferrer">FilteringWebHandler.java的源代码</a>
-。</p>
+<p>关于这点可以看<a href="https://github.com/spring-cloud/spring-cloud-gateway/blob/v2.1.1.RELEASE/spring-cloud-gateway-core/src/main/java/org/springframework/cloud/gateway/handler/FilteringWebHandler.java#L58-L67" target="_blank" rel="noopener noreferrer">FilteringWebHandler.java的源代码</a>。</p>
 <p>再来看看Route Filter，这也分两种情况：</p>
 <ul>
 <li>如果RouteFilter实现了<code>Ordered</code>接口或者写了<code>@Order</code>注解，那么它的order就是它自己设定的值。</li>
 <li>否则，它的order则是从1开始，按照Route中定义的顺序依次排序。</li>
 </ul>
-<p>关于这点可以看<a href="https://github.com/spring-cloud/spring-cloud-gateway/blob/v2.1.1.RELEASE/spring-cloud-gateway-core/src/main/java/org/springframework/cloud/gateway/route/RouteDefinitionRouteLocator.java#L183-L192" target="_blank" rel="noopener noreferrer">RouteDefinitionRouteLocator.java的源代码</a>
-。</p>
-<p>最后SCG把它们两个结合起来，做一个排序，对于没有order的Filter，它的order则默认为<code>Ordered.LOWEST_PRECEDENCE</code>。关于这点可以看<a href="https://github.com/spring-cloud/spring-cloud-gateway/blob/v2.1.1.RELEASE/spring-cloud-gateway-core/src/main/java/org/springframework/cloud/gateway/handler/FilteringWebHandler.java#L75-L82" target="_blank" rel="noopener noreferrer">FilteringWebHandler.java的源代码</a>
-。</p>
+<p>关于这点可以看<a href="https://github.com/spring-cloud/spring-cloud-gateway/blob/v2.1.1.RELEASE/spring-cloud-gateway-core/src/main/java/org/springframework/cloud/gateway/route/RouteDefinitionRouteLocator.java#L183-L192" target="_blank" rel="noopener noreferrer">RouteDefinitionRouteLocator.java的源代码</a>。</p>
+<p>最后SCG把它们两个结合起来，做一个排序，对于没有order的Filter，它的order则默认为<code>Ordered.LOWEST_PRECEDENCE</code>。关于这点可以看<a href="https://github.com/spring-cloud/spring-cloud-gateway/blob/v2.1.1.RELEASE/spring-cloud-gateway-core/src/main/java/org/springframework/cloud/gateway/handler/FilteringWebHandler.java#L75-L82" target="_blank" rel="noopener noreferrer">FilteringWebHandler.java的源代码</a>。</p>
 <p>用一张图做总结：</p>
 <p><img class="img-fluid" alt="" src="/post/spring-cloud-gateway-filters-ordering/filters-order-2.png" loading="lazy"
   
@@ -395,15 +390,13 @@
 
 </p>
 <h3 id="filter的执行顺序">Filter的执行顺序<a class="anchor ms-1" href="#filter的执行顺序"><i class="fas fa-link"></i></a></h3>
-<p>先看SCG文档<a href="https://cloud.spring.io/spring-cloud-static/spring-cloud-gateway/2.1.1.RELEASE/single/spring-cloud-gateway.html#gateway-how-it-works" target="_blank" rel="noopener noreferrer">3. How It Works</a>
-中的这张图：</p>
+<p>先看SCG文档<a href="https://cloud.spring.io/spring-cloud-static/spring-cloud-gateway/2.1.1.RELEASE/single/spring-cloud-gateway.html#gateway-how-it-works" target="_blank" rel="noopener noreferrer">3. How It Works</a>中的这张图：</p>
 <p><img class="img-fluid" alt="" src="https://raw.githubusercontent.com/spring-cloud/spring-cloud-gateway/master/docs/src/main/asciidoc/images/spring_cloud_gateway_diagram.png" loading="lazy"
   
    />
 
 </p>
-<p>这张图大概告诉你了SCG的调用过程，可以看到经过了一堆Filters，但是并没有告诉你Filter的执行顺序。然后在SCG的<a href="https://cloud.spring.io/spring-cloud-static/spring-cloud-gateway/2.1.1.RELEASE/single/spring-cloud-gateway.html#_combined_global_filter_and_gatewayfilter_ordering" target="_blank" rel="noopener noreferrer">6.1 Combined Global Filter and GatewayFilter Ordering</a>
-提到了：</p>
+<p>这张图大概告诉你了SCG的调用过程，可以看到经过了一堆Filters，但是并没有告诉你Filter的执行顺序。然后在SCG的<a href="https://cloud.spring.io/spring-cloud-static/spring-cloud-gateway/2.1.1.RELEASE/single/spring-cloud-gateway.html#_combined_global_filter_and_gatewayfilter_ordering" target="_blank" rel="noopener noreferrer">6.1 Combined Global Filter and GatewayFilter Ordering</a>提到了：</p>
 <blockquote>
 <p>As Spring Cloud Gateway distinguishes between &ldquo;pre&rdquo; and &ldquo;post&rdquo; phases for filter logic execution (see: How It Works), the filter with the highest precedence will be the first in the &ldquo;pre&rdquo;-phase and the last in the &ldquo;post&rdquo;-phase.</p>
 </blockquote>
@@ -420,8 +413,7 @@
 <ul>
 <li>没有给order的Global Filter则保持order为null去排序</li>
 <li>没有给order的Route Filter的order则从1开始，根据Route中定义的顺序给值</li>
-<li>排序逻辑见<a href="https://docs.spring.io/spring/docs/5.1.6.RELEASE/javadoc-api/org/springframework/core/annotation/AnnotationAwareOrderComparator.html" target="_blank" rel="noopener noreferrer">AnnotationAwareOrderComparator</a>
-</li>
+<li>排序逻辑见<a href="https://docs.spring.io/spring/docs/5.1.6.RELEASE/javadoc-api/org/springframework/core/annotation/AnnotationAwareOrderComparator.html" target="_blank" rel="noopener noreferrer">AnnotationAwareOrderComparator</a></li>
 </ul>
 </li>
 <li>对于Pre Filter，执行顺序同排序顺序</li>
@@ -439,8 +431,8 @@
 </ul>
 </li>
 </ul></div></div>
-  <div class="card-footer"><div class="post-navs d-flex justify-content-evenly">
-  <div class="post-nav post-prev"><i class="fas fa-fw fa-chevron-left"></i>
+  <div class="card-footer"><div class="post-navs d-flex justify-content-evenly"><div class="post-nav post-prev">
+    <i class="fas fa-fw fa-chevron-left"></i>
     <a href="/post/reactor/handle-empty-mono/">处理Empty Mono&lt;T&gt;的方法
 </a>
   </div><div class="post-nav post-next">
@@ -671,7 +663,7 @@
     <img src="https://www.netlify.com/img/global/badges/netlify-color-accent.svg" alt="Deploys by Netlify" width="114" height="51" />
 </a>
 </footer>
-<script src="/js/main.cbf2ace5d5fcb68b11b93647393ec41735869f18f31091c0941a01dfdf417dfc.js" integrity="sha256-y/Ks5dX8tosRuTZHOT7EFzWGnxjzEJHAlBoB399Bffw=" crossorigin="anonymous" defer></script><script src="/js/icons.min.a35670f2f90c398e5ee5c8e509b428fae75aa2746854cee10b60794633076859.js" integrity="sha256-o1Zw8vkMOY5e5cjlCbQo&#43;udaonRoVM7hC2B5RjMHaFk=" crossorigin="anonymous" defer></script>
+<script src="/js/main.2cdce25f280f570596c88888d6af930fe5e15ea030005291dad293defbb231d3.js" integrity="sha256-LNziXygPVwWWyIiI1q&#43;TD&#43;XhXqAwAFKR2tKT3vuyMdM=" crossorigin="anonymous" defer></script><script src="/js/icons.min.8ddcaafc364ff0296c2209c5495287f0de039b852da9b24847f94c198b7639b6.js" integrity="sha256-jdyq/DZP8ClsIgnFSVKH8N4Dm4UtqbJIR/lMGYt2ObY=" crossorigin="anonymous" defer></script>
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
@@ -682,6 +674,6 @@ if ('serviceWorker' in navigator) {
     });
   });
 }
-</script><script src="/js/viewer.min.4dba52a0a790f909408b7385316651299158381686401d50ff1f04dda6476473.js" integrity="sha256-TbpSoKeQ&#43;QlAi3OFMWZRKZFYOBaGQB1Q/x8E3aZHZHM=" crossorigin="anonymous" defer></script>
+</script><script src="/js/viewer.min.652118a9fbf3403cdfde4026209f97ace22f9e334f0b45a33431a221b3db46a8.js" integrity="sha256-ZSEYqfvzQDzf3kAmIJ&#43;XrOIvnjNPC0WjNDGiIbPbRqg=" crossorigin="anonymous" defer></script>
 </body>
 </html>

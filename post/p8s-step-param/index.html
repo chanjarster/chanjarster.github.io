@@ -9,10 +9,10 @@
 <link rel="icon" href="/images/icons/favicon.ico">
 <link rel="manifest" href="/manifest.json">
 <meta name="keywords" content="" />
-<meta name="description" content="详细解释Prometheus range query中的step参数的作用。" /><meta itemprop="name" content="Prometheus range query中的step参数">
+<meta name="description" content="详细解释Prometheus range query中的step参数的作用。" /><meta name="robots" content="index, follow" /><meta itemprop="name" content="Prometheus range query中的step参数">
 <meta itemprop="description" content="详细解释Prometheus range query中的step参数的作用。"><meta itemprop="datePublished" content="2018-12-28T13:50:25+08:00" />
 <meta itemprop="dateModified" content="2018-12-28T13:50:25+08:00" />
-<meta itemprop="wordCount" content="2268">
+<meta itemprop="wordCount" content="2290">
 <meta itemprop="keywords" content="prometheus," /><meta property="og:title" content="Prometheus range query中的step参数" />
 <meta property="og:description" content="详细解释Prometheus range query中的step参数的作用。" />
 <meta property="og:type" content="article" />
@@ -23,7 +23,8 @@
 <meta name="twitter:card" content="summary"/>
 <meta name="twitter:title" content="Prometheus range query中的step参数"/>
 <meta name="twitter:description" content="详细解释Prometheus range query中的step参数的作用。"/>
-<meta name="robots" content="index, follow" /><link rel="stylesheet" href="/css/main.min.b7a6eda8d46e39a549f182cf72a9ff4f4c1d4d82c31ecc3ede0b7f4d5b26f32b.css" integrity="sha256-t6btqNRuOaVJ8YLPcqn/T0wdTYLDHsw&#43;3gt/TVsm8ys=" crossorigin="anonymous"><link rel="stylesheet" href="/css/viewer.min.3d228794bcedbbfa0412beb8fbc1ec6973202945e42af7004f742a4d7bd620ab.css" integrity="sha256-PSKHlLztu/oEEr64&#43;8HsaXMgKUXkKvcAT3QqTXvWIKs=" crossorigin="anonymous"></head>
+<meta property="og:image" content="/images/avatar.jpg"/>
+  <meta name="twitter:image" content="/images/avatar.jpg"/><link rel="stylesheet" href="/css/main.min.507afbe6e4670fa3e961a0b35816b5daeb36029866fd6bd7b9d7871fcf88faa5.css" integrity="sha256-UHr75uRnD6PpYaCzWBa12us2Aphm/WvXudeHH8&#43;I&#43;qU=" crossorigin="anonymous"><link rel="stylesheet" href="/css/viewer.min.3d228794bcedbbfa0412beb8fbc1ec6973202945e42af7004f742a4d7bd620ab.css" integrity="sha256-PSKHlLztu/oEEr64&#43;8HsaXMgKUXkKvcAT3QqTXvWIKs=" crossorigin="anonymous"></head>
   <body><script>const items=['mode','palette'];items.forEach(function(a){const b=localStorage.getItem('hbs-'+a);b&&document.body.parentElement.setAttribute('data-'+a,b)})</script><header><nav class="navbar top-app-bar top-app-bar-expand-lg fixed-top">
   <div class="container">
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent"
@@ -224,9 +225,7 @@
   </span><span class="post-taxonomies"><a href="/tags/prometheus/" class="badge post-taxonomy">prometheus</a></span>
 </div>
 <div class="post-content mb-3"><p>详细解释Prometheus range query中的step参数的作用。</p>
-<p>Prometheus有两种query：<a href="https://prometheus.io/docs/prometheus/latest/querying/api/#instant-queries" target="_blank" rel="noopener noreferrer">instant query</a>
-、<a href="https://prometheus.io/docs/prometheus/latest/querying/api/#range-queries" target="_blank" rel="noopener noreferrer">range query</a>
-。本文要讲的就是range query中的step参数。</p>
+<p>Prometheus有两种query：<a href="https://prometheus.io/docs/prometheus/latest/querying/api/#instant-queries" target="_blank" rel="noopener noreferrer">instant query</a>、<a href="https://prometheus.io/docs/prometheus/latest/querying/api/#range-queries" target="_blank" rel="noopener noreferrer">range query</a>。本文要讲的就是range query中的step参数。</p>
 <p>range query是非常常见的一种query，看看它有哪些参数：</p>
 <ul>
 <li><code>query=&lt;string&gt;</code>: PromQL表达式。</li>
@@ -239,16 +238,13 @@
 <img src="expression-browser-overview.png" alt="Expression Browser" style="zoom:50%" />
 <p>注意到上图中的Res框里没有给值，没有给的话Prometheus会自动给一个值，这个值在图示右上角可以看到。</p>
 <h2 id="step对于查询结果的影响">step对于查询结果的影响<a class="anchor ms-1" href="#step对于查询结果的影响"><i class="fas fa-link"></i></a></h2>
-<p>Prometheues在对PromQL表达式求值的逻辑是这样的（详见这个<a href="https://github.com/prometheus/docs/issues/699#issuecomment-449703646" target="_blank" rel="noopener noreferrer">issue</a>
-里的回答）：</p>
+<p>Prometheues在对PromQL表达式求值的逻辑是这样的（详见这个<a href="https://github.com/prometheus/docs/issues/699#issuecomment-449703646" target="_blank" rel="noopener noreferrer">issue</a>里的回答）：</p>
 <ol>
 <li>对于[start, end]时间区间，从start开始，以step为长度，把时间区间分成若干段</li>
 <li>对每个段进行求值</li>
 </ol>
 <p>举例：<code>start=10,end=20,step=2</code>，那么就会有<code>ts=10,ts=12,ts=14,ts=16,ts=18,ts=20</code>6段，然后为这6个段进行求值。求值方式视乎表达式中Time series selector的类型而定。</p>
-<p>PromQL有两种Time series selector：<a href="https://prometheus.io/docs/prometheus/latest/querying/basics/#instant-vector-selectors" target="_blank" rel="noopener noreferrer">instant vector selector</a>
-和<a href="https://prometheus.io/docs/prometheus/latest/querying/basics/#range-vector-selectors" target="_blank" rel="noopener noreferrer">range vector selector</a>
-。下面将分别讲解：</p>
+<p>PromQL有两种Time series selector：<a href="https://prometheus.io/docs/prometheus/latest/querying/basics/#instant-vector-selectors" target="_blank" rel="noopener noreferrer">instant vector selector</a>和<a href="https://prometheus.io/docs/prometheus/latest/querying/basics/#range-vector-selectors" target="_blank" rel="noopener noreferrer">range vector selector</a>。下面将分别讲解：</p>
 <h3 id="instant-vector-selector">Instant vector selector<a class="anchor ms-1" href="#instant-vector-selector"><i class="fas fa-link"></i></a></h3>
 <p>形如下面的就是Instant vector selector，<code>x</code>是metric的名字。</p>
 <div class="highlight"><div class="chroma">
@@ -288,8 +284,7 @@
 <pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">x<span class="o">[</span>5m<span class="o">]</span>
 </code></pre></td></tr></table>
 </div>
-</div><p>range vector select返回的是当前timestamp之前的<code>range duration</code>内的所有data point。range vector是不能直接用做绘图的，你得用某些function把range vector转换成instant vector才行，比如<a href="https://prometheus.io/docs/prometheus/latest/querying/functions/#rate" target="_blank" rel="noopener noreferrer">rate()</a>
-。</p>
+</div><p>range vector select返回的是当前timestamp之前的<code>range duration</code>内的所有data point。range vector是不能直接用做绘图的，你得用某些function把range vector转换成instant vector才行，比如<a href="https://prometheus.io/docs/prometheus/latest/querying/functions/#rate" target="_blank" rel="noopener noreferrer">rate()</a>。</p>
 <p>下图解释了是如何对Range vector selector进行分段求值的：</p>
 <p><img class="img-fluid" alt="range vector" src="/post/p8s-step-param/graph/range-vector-selector.png" loading="lazy"
   
@@ -297,16 +292,12 @@
 
 </p>
 <h3 id="step和rate-duration">step和rate duration<a class="anchor ms-1" href="#step和rate-duration"><i class="fas fa-link"></i></a></h3>
-<p><code>step</code>和<code>range duration</code>是独立的两个参数，在某些情况下两者的值存在某种限制条件，这里例举<a href="https://prometheus.io/docs/prometheus/latest/querying/functions/#rate" target="_blank" rel="noopener noreferrer">rate()</a>
-来说明。<code>rate()</code>的作用是获得一个range-vector的每秒平均增长率。</p>
+<p><code>step</code>和<code>range duration</code>是独立的两个参数，在某些情况下两者的值存在某种限制条件，这里例举<a href="https://prometheus.io/docs/prometheus/latest/querying/functions/#rate" target="_blank" rel="noopener noreferrer">rate()</a>来说明。<code>rate()</code>的作用是获得一个range-vector的每秒平均增长率。</p>
 <p>如果<code>step=10m</code>而<code>range duration=5m</code>，那么<code>rate</code>在计算的时候会丢失一半的数据，两个分段之间的data point有一半没有被纳入计算。前面那张图就存在数据丢失的情况，有一个data point被漏掉了。</p>
 <p>因此在使用<code>rate()</code>时，<code>range duration</code>得大于等于<code>step</code>。</p>
-<p>而如果是<a href="https://prometheus.io/docs/prometheus/latest/querying/functions/#irate" target="_blank" rel="noopener noreferrer">irate()</a>
-，这个限制则是<code>range duration</code>不得大于<code>step</code>（详见<a href="https://www.youtube.com/watch?v=67Ulrq6DxwA&amp;feature=youtu.be&amp;t=1826" target="_blank" rel="noopener noreferrer">Brian Brazil的Presentation</a>
-）。</p>
+<p>而如果是<a href="https://prometheus.io/docs/prometheus/latest/querying/functions/#irate" target="_blank" rel="noopener noreferrer">irate()</a>，这个限制则是<code>range duration</code>不得大于<code>step</code>（详见<a href="https://www.youtube.com/watch?v=67Ulrq6DxwA&amp;feature=youtu.be&amp;t=1826" target="_blank" rel="noopener noreferrer">Brian Brazil的Presentation</a>）。</p>
 <h3 id="grafana中的step参数">Grafana中的step参数<a class="anchor ms-1" href="#grafana中的step参数"><i class="fas fa-link"></i></a></h3>
-<p>在Grafana中并没有直接提供<code>step</code>参数，而是这两个参数：<code>min step</code>和<code>resolution</code>（<a href="http://docs.grafana.org/features/datasources/prometheus/#query-editor" target="_blank" rel="noopener noreferrer">文档在这里</a>
-)。<code>min step</code>故名思义设定的是<code>step</code>的最小值，那么<code>resolution</code>是什么呢？</p>
+<p>在Grafana中并没有直接提供<code>step</code>参数，而是这两个参数：<code>min step</code>和<code>resolution</code>（<a href="http://docs.grafana.org/features/datasources/prometheus/#query-editor" target="_blank" rel="noopener noreferrer">文档在这里</a>)。<code>min step</code>故名思义设定的是<code>step</code>的最小值，那么<code>resolution</code>是什么呢？</p>
 <p>大家都知道Grafana都是用来画图的，比如下面这张图Y轴是值，X轴则是时间线，因此在X轴方向的每个像素都代表了一个timestamp。</p>
 <img src="grafana-graph.png" style="zoom:50%" />
 <p><code>resolution</code>就是用来根据像素来计算<code>step</code>的一个参数。下面用6个像素以及它们的timestamp来说明：</p>
@@ -331,8 +322,7 @@
 </ol>
 <p>所以在Grafana发起的查询中<code>step</code>参数是动态的。其实这也是很合理的，因为只有这样才能够在Graph宽度小的时候绘图更粗糙（即<code>step</code>更大），Graph宽度大的时候绘图更精细（即<code>step</code>更小，但是不能小于<code>min step</code>）。实际发起的请求的<code>step</code>参数你可以在Graph的Query Inspector里看到：</p>
 <img src="grafana-query-inspector.png" style="zoom:50%" />
-<p>但是我们之前不说过了<code>rate()</code>的<code>range duration</code>不能小于<code>step</code>吗？那么把<code>range duration</code>给固定值的化就不太好了，怎么办呢？你可以使用Grafana提供的内置变量<code>$__interval</code>，它代表的Grafana就是计算出来的<code>step</code>的值。比如这样就能够将<code>range duration</code>和<code>step</code>保持一致了（更多内置变量可以见<a href="http://docs.grafana.org/features/datasources/prometheus/#using-interval-and-range-variables" target="_blank" rel="noopener noreferrer">这里</a>
-）：</p>
+<p>但是我们之前不说过了<code>rate()</code>的<code>range duration</code>不能小于<code>step</code>吗？那么把<code>range duration</code>给固定值的化就不太好了，怎么办呢？你可以使用Grafana提供的内置变量<code>$__interval</code>，它代表的Grafana就是计算出来的<code>step</code>的值。比如这样就能够将<code>range duration</code>和<code>step</code>保持一致了（更多内置变量可以见<a href="http://docs.grafana.org/features/datasources/prometheus/#using-interval-and-range-variables" target="_blank" rel="noopener noreferrer">这里</a>）：</p>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre tabindex="0" class="chroma"><code><span class="lnt">1
@@ -342,10 +332,9 @@
 </code></pre></td></tr></table>
 </div>
 </div><h2 id="所以你想自己实验一把">所以，你想自己实验一把<a class="anchor ms-1" href="#所以你想自己实验一把"><i class="fas fa-link"></i></a></h2>
-<p>如果你想自己动手实验，但是又苦于无法制造干净的假数据，那么可以参考<a href="../p8s-mock-data">这篇文章推荐的方法</a>
-。</p></div></div>
-  <div class="card-footer"><div class="post-navs d-flex justify-content-evenly">
-  <div class="post-nav post-prev"><i class="fas fa-fw fa-chevron-left"></i>
+<p>如果你想自己动手实验，但是又苦于无法制造干净的假数据，那么可以参考<a href="../p8s-mock-data">这篇文章推荐的方法</a>。</p></div></div>
+  <div class="card-footer"><div class="post-navs d-flex justify-content-evenly"><div class="post-nav post-prev">
+    <i class="fas fa-fw fa-chevron-left"></i>
     <a href="/post/bookmarks/bookmarks-monitoring/">收藏夹 - 监控（持续更新）
 </a>
   </div><div class="post-nav post-next">
@@ -576,7 +565,7 @@
     <img src="https://www.netlify.com/img/global/badges/netlify-color-accent.svg" alt="Deploys by Netlify" width="114" height="51" />
 </a>
 </footer>
-<script src="/js/main.cbf2ace5d5fcb68b11b93647393ec41735869f18f31091c0941a01dfdf417dfc.js" integrity="sha256-y/Ks5dX8tosRuTZHOT7EFzWGnxjzEJHAlBoB399Bffw=" crossorigin="anonymous" defer></script><script src="/js/icons.min.a35670f2f90c398e5ee5c8e509b428fae75aa2746854cee10b60794633076859.js" integrity="sha256-o1Zw8vkMOY5e5cjlCbQo&#43;udaonRoVM7hC2B5RjMHaFk=" crossorigin="anonymous" defer></script>
+<script src="/js/main.2cdce25f280f570596c88888d6af930fe5e15ea030005291dad293defbb231d3.js" integrity="sha256-LNziXygPVwWWyIiI1q&#43;TD&#43;XhXqAwAFKR2tKT3vuyMdM=" crossorigin="anonymous" defer></script><script src="/js/icons.min.8ddcaafc364ff0296c2209c5495287f0de039b852da9b24847f94c198b7639b6.js" integrity="sha256-jdyq/DZP8ClsIgnFSVKH8N4Dm4UtqbJIR/lMGYt2ObY=" crossorigin="anonymous" defer></script>
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
@@ -587,6 +576,6 @@ if ('serviceWorker' in navigator) {
     });
   });
 }
-</script><script src="/js/viewer.min.4dba52a0a790f909408b7385316651299158381686401d50ff1f04dda6476473.js" integrity="sha256-TbpSoKeQ&#43;QlAi3OFMWZRKZFYOBaGQB1Q/x8E3aZHZHM=" crossorigin="anonymous" defer></script>
+</script><script src="/js/viewer.min.652118a9fbf3403cdfde4026209f97ace22f9e334f0b45a33431a221b3db46a8.js" integrity="sha256-ZSEYqfvzQDzf3kAmIJ&#43;XrOIvnjNPC0WjNDGiIbPbRqg=" crossorigin="anonymous" defer></script>
 </body>
 </html>

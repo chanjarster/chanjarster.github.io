@@ -9,10 +9,10 @@
 <link rel="icon" href="/images/icons/favicon.ico">
 <link rel="manifest" href="/manifest.json">
 <meta name="keywords" content="" />
-<meta name="description" content="" /><meta itemprop="name" content="Kibana Alerting的实现分析">
+<meta name="description" content="" /><meta name="robots" content="index, follow" /><meta itemprop="name" content="Kibana Alerting的实现分析">
 <meta itemprop="description" content=""><meta itemprop="datePublished" content="2021-01-27T09:14:35+08:00" />
 <meta itemprop="dateModified" content="2021-01-27T09:14:35+08:00" />
-<meta itemprop="wordCount" content="1746">
+<meta itemprop="wordCount" content="1806">
 <meta itemprop="keywords" content="elasticsearch,kibana," /><meta property="og:title" content="Kibana Alerting的实现分析" />
 <meta property="og:description" content="" />
 <meta property="og:type" content="article" />
@@ -23,7 +23,8 @@
 <meta name="twitter:card" content="summary"/>
 <meta name="twitter:title" content="Kibana Alerting的实现分析"/>
 <meta name="twitter:description" content=""/>
-<meta name="robots" content="index, follow" /><link rel="stylesheet" href="/css/main.min.b7a6eda8d46e39a549f182cf72a9ff4f4c1d4d82c31ecc3ede0b7f4d5b26f32b.css" integrity="sha256-t6btqNRuOaVJ8YLPcqn/T0wdTYLDHsw&#43;3gt/TVsm8ys=" crossorigin="anonymous"><link rel="stylesheet" href="/css/viewer.min.3d228794bcedbbfa0412beb8fbc1ec6973202945e42af7004f742a4d7bd620ab.css" integrity="sha256-PSKHlLztu/oEEr64&#43;8HsaXMgKUXkKvcAT3QqTXvWIKs=" crossorigin="anonymous"></head>
+<meta property="og:image" content="/images/avatar.jpg"/>
+  <meta name="twitter:image" content="/images/avatar.jpg"/><link rel="stylesheet" href="/css/main.min.507afbe6e4670fa3e961a0b35816b5daeb36029866fd6bd7b9d7871fcf88faa5.css" integrity="sha256-UHr75uRnD6PpYaCzWBa12us2Aphm/WvXudeHH8&#43;I&#43;qU=" crossorigin="anonymous"><link rel="stylesheet" href="/css/viewer.min.3d228794bcedbbfa0412beb8fbc1ec6973202945e42af7004f742a4d7bd620ab.css" integrity="sha256-PSKHlLztu/oEEr64&#43;8HsaXMgKUXkKvcAT3QqTXvWIKs=" crossorigin="anonymous"></head>
   <body><script>const items=['mode','palette'];items.forEach(function(a){const b=localStorage.getItem('hbs-'+a);b&&document.body.parentElement.setAttribute('data-'+a,b)})</script><header><nav class="navbar top-app-bar top-app-bar-expand-lg fixed-top">
   <div class="container">
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent"
@@ -223,8 +224,7 @@
     4 分钟阅读
   </span><span class="post-taxonomies"><a href="/tags/elasticsearch/" class="badge post-taxonomy">elasticsearch</a><a href="/tags/kibana/" class="badge post-taxonomy">kibana</a></span>
 </div>
-<div class="post-content mb-3"><p>本文分析<a href="https://www.elastic.co/guide/en/kibana/7.10/alert-types.html" target="_blank" rel="noopener noreferrer">Kibana Alerting</a>
-的实现。</p>
+<div class="post-content mb-3"><p>本文分析<a href="https://www.elastic.co/guide/en/kibana/7.10/alert-types.html" target="_blank" rel="noopener noreferrer">Kibana Alerting</a>的实现。</p>
 <h2 id="alerting的配置">Alerting的配置<a class="anchor ms-1" href="#alerting的配置"><i class="fas fa-link"></i></a></h2>
 <h3 id="基本信息">基本信息<a class="anchor ms-1" href="#基本信息"><i class="fas fa-link"></i></a></h3>
 <ul>
@@ -237,30 +237,25 @@
 <ul>
 <li>Index，被查询的Index名字或者Index Pattern，可以是多个。
 <ul>
-<li>time field，<a href="https://www.elastic.co/guide/en/elasticsearch/reference/7.10/date.html" target="_blank" rel="noopener noreferrer">date类型</a>
-的字段</li>
+<li>time field，<a href="https://www.elastic.co/guide/en/elasticsearch/reference/7.10/date.html" target="_blank" rel="noopener noreferrer">date类型</a>的字段</li>
 </ul>
 </li>
 <li>When，配置怎么计算值，有count、average、sum、min、max：
 <ul>
-<li>Of，聚合字段，必须是<a href="https://www.elastic.co/guide/en/elasticsearch/reference/7.10/keyword.html" target="_blank" rel="noopener noreferrer">keyword mapping</a>
-的，count时不需要填</li>
+<li>Of，聚合字段，必须是<a href="https://www.elastic.co/guide/en/elasticsearch/reference/7.10/keyword.html" target="_blank" rel="noopener noreferrer">keyword mapping</a>的，count时不需要填</li>
 </ul>
 </li>
 <li>Over/Group Over，有两种：
 <ul>
 <li>all documents，不对结果进行分组</li>
-<li>top <code>N</code> by <code>field</code>，根据<code>field</code>字段对结果进行分组，取doc数量前<code>N</code>个的组。<code>field</code>字段必须是<a href="https://www.elastic.co/guide/en/elasticsearch/reference/7.10/keyword.html" target="_blank" rel="noopener noreferrer">keyword mapping</a>
-的。报警会根据每个组的情况分别触发。</li>
+<li>top <code>N</code> by <code>field</code>，根据<code>field</code>字段对结果进行分组，取doc数量前<code>N</code>个的组。<code>field</code>字段必须是<a href="https://www.elastic.co/guide/en/elasticsearch/reference/7.10/keyword.html" target="_blank" rel="noopener noreferrer">keyword mapping</a>的。报警会根据每个组的情况分别触发。</li>
 </ul>
 </li>
 </ul>
 <h3 id="index-阈值触发条件">Index 阈值触发条件<a class="anchor ms-1" href="#index-阈值触发条件"><i class="fas fa-link"></i></a></h3>
 <ul>
 <li>Threshold，<code>is above</code>, <code>is above or equals</code>, <code>is below</code>, <code>is below or equals</code>, 和 <code>is between</code>，然后是具体值<code>value</code>。</li>
-<li>时间窗口，只支持For the last <code>N</code> second/minute/hour/day，即从当前时间开始往前推多少时间的数据。其实就是<a href="https://www.elastic.co/guide/en/elasticsearch/reference/7.10/query-dsl-range-query.html" target="_blank" rel="noopener noreferrer">range query</a>
-加上<a href="https://www.elastic.co/guide/en/elasticsearch/reference/7.10/common-options.html#date-math" target="_blank" rel="noopener noreferrer">date math</a>
-（注意不需要做rounding）：</li>
+<li>时间窗口，只支持For the last <code>N</code> second/minute/hour/day，即从当前时间开始往前推多少时间的数据。其实就是<a href="https://www.elastic.co/guide/en/elasticsearch/reference/7.10/query-dsl-range-query.html" target="_blank" rel="noopener noreferrer">range query</a>加上<a href="https://www.elastic.co/guide/en/elasticsearch/reference/7.10/common-options.html#date-math" target="_blank" rel="noopener noreferrer">date math</a>（注意不需要做rounding）：</li>
 </ul>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
@@ -292,16 +287,13 @@
 </div>
 </div><h2 id="alerting配置的要点">Alerting配置的要点<a class="anchor ms-1" href="#alerting配置的要点"><i class="fas fa-link"></i></a></h2>
 <ul>
-<li>不是所有Index都支持配置Alerting，必须得有<a href="https://www.elastic.co/guide/en/elasticsearch/reference/7.10/date.html" target="_blank" rel="noopener noreferrer">date类型</a>
-字段才行。</li>
+<li>不是所有Index都支持配置Alerting，必须得有<a href="https://www.elastic.co/guide/en/elasticsearch/reference/7.10/date.html" target="_blank" rel="noopener noreferrer">date类型</a>字段才行。</li>
 <li>只支持对最近的数据进行统计，从<code>now-duration</code>到<code>now</code>的范围内的数据做一些统计工作。</li>
 </ul>
 <h2 id="index求值模式">Index求值模式<a class="anchor ms-1" href="#index求值模式"><i class="fas fa-link"></i></a></h2>
 <p>Index求值模式由两个维度组成，共四种：</p>
 <ul>
-<li>是否分组，如果分组则用到<a href="https://www.elastic.co/guide/en/elasticsearch/reference/7.10/search-aggregations-bucket-terms-aggregation.html" target="_blank" rel="noopener noreferrer">terms agg</a>
-和<a href="https://www.elastic.co/guide/en/elasticsearch/reference/7.10/search-aggregations.html#run-sub-aggs" target="_blank" rel="noopener noreferrer">sub aggregation</a>
-</li>
+<li>是否分组，如果分组则用到<a href="https://www.elastic.co/guide/en/elasticsearch/reference/7.10/search-aggregations-bucket-terms-aggregation.html" target="_blank" rel="noopener noreferrer">terms agg</a>和<a href="https://www.elastic.co/guide/en/elasticsearch/reference/7.10/search-aggregations.html#run-sub-aggs" target="_blank" rel="noopener noreferrer">sub aggregation</a></li>
 <li>是否聚合</li>
 </ul>
 <h3 id="不分组不聚合">不分组，不聚合<a class="anchor ms-1" href="#不分组不聚合"><i class="fas fa-link"></i></a></h3>
@@ -367,12 +359,7 @@
 </code></pre></td></tr></table>
 </div>
 </div><h3 id="不分组聚合">不分组，聚合<a class="anchor ms-1" href="#不分组聚合"><i class="fas fa-link"></i></a></h3>
-<p><a href="https://www.elastic.co/guide/en/elasticsearch/reference/7.10/search-aggregations-metrics-avg-aggregation.html" target="_blank" rel="noopener noreferrer">average</a>
-、<a href="https://www.elastic.co/guide/en/elasticsearch/reference/7.10/search-aggregations-metrics-sum-aggregation.html" target="_blank" rel="noopener noreferrer">sum</a>
-、<a href="https://www.elastic.co/guide/en/elasticsearch/reference/7.10/search-aggregations-metrics-min-aggregation.html" target="_blank" rel="noopener noreferrer">min</a>
-、<a href="https://www.elastic.co/guide/en/elasticsearch/reference/7.10/search-aggregations-metrics-max-aggregation.html" target="_blank" rel="noopener noreferrer">max</a>
-都是聚合查询，需要配置聚合字段，字段必须是<a href="https://www.elastic.co/guide/en/elasticsearch/reference/7.10/keyword.html" target="_blank" rel="noopener noreferrer">keyword mapping</a>
-的，比如：</p>
+<p><a href="https://www.elastic.co/guide/en/elasticsearch/reference/7.10/search-aggregations-metrics-avg-aggregation.html" target="_blank" rel="noopener noreferrer">average</a>、<a href="https://www.elastic.co/guide/en/elasticsearch/reference/7.10/search-aggregations-metrics-sum-aggregation.html" target="_blank" rel="noopener noreferrer">sum</a>、<a href="https://www.elastic.co/guide/en/elasticsearch/reference/7.10/search-aggregations-metrics-min-aggregation.html" target="_blank" rel="noopener noreferrer">min</a>、<a href="https://www.elastic.co/guide/en/elasticsearch/reference/7.10/search-aggregations-metrics-max-aggregation.html" target="_blank" rel="noopener noreferrer">max</a>都是聚合查询，需要配置聚合字段，字段必须是<a href="https://www.elastic.co/guide/en/elasticsearch/reference/7.10/keyword.html" target="_blank" rel="noopener noreferrer">keyword mapping</a>的，比如：</p>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre tabindex="0" class="chroma"><code><span class="lnt"> 1
@@ -437,9 +424,7 @@
 </code></pre></td></tr></table>
 </div>
 </div><h3 id="分组不聚合">分组，不聚合<a class="anchor ms-1" href="#分组不聚合"><i class="fas fa-link"></i></a></h3>
-<p>因为count不是聚合查询，所以只需要用<a href="https://www.elastic.co/guide/en/elasticsearch/reference/7.10/search-aggregations-bucket-terms-aggregation.html" target="_blank" rel="noopener noreferrer">terms agg</a>
-分组，同样分组的字段必须是<a href="https://www.elastic.co/guide/en/elasticsearch/reference/7.10/keyword.html" target="_blank" rel="noopener noreferrer">keyword mapping</a>
-的，同时配置了<code>aggs.apiSvcPerOp_buck.terms.size=2</code>对应top <code>N</code>语义：</p>
+<p>因为count不是聚合查询，所以只需要用<a href="https://www.elastic.co/guide/en/elasticsearch/reference/7.10/search-aggregations-bucket-terms-aggregation.html" target="_blank" rel="noopener noreferrer">terms agg</a>分组，同样分组的字段必须是<a href="https://www.elastic.co/guide/en/elasticsearch/reference/7.10/keyword.html" target="_blank" rel="noopener noreferrer">keyword mapping</a>的，同时配置了<code>aggs.apiSvcPerOp_buck.terms.size=2</code>对应top <code>N</code>语义：</p>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre tabindex="0" class="chroma"><code><span class="lnt"> 1
@@ -534,13 +519,7 @@
 </code></pre></td></tr></table>
 </div>
 </div><h3 id="分组聚合">分组，聚合<a class="anchor ms-1" href="#分组聚合"><i class="fas fa-link"></i></a></h3>
-<p>针对<a href="https://www.elastic.co/guide/en/elasticsearch/reference/7.10/search-aggregations-metrics-avg-aggregation.html" target="_blank" rel="noopener noreferrer">average</a>
-、<a href="https://www.elastic.co/guide/en/elasticsearch/reference/7.10/search-aggregations-metrics-sum-aggregation.html" target="_blank" rel="noopener noreferrer">sum</a>
-、<a href="https://www.elastic.co/guide/en/elasticsearch/reference/7.10/search-aggregations-metrics-min-aggregation.html" target="_blank" rel="noopener noreferrer">min</a>
-、<a href="https://www.elastic.co/guide/en/elasticsearch/reference/7.10/search-aggregations-metrics-max-aggregation.html" target="_blank" rel="noopener noreferrer">max</a>
-的分组查询则是，先用<a href="https://www.elastic.co/guide/en/elasticsearch/reference/7.10/search-aggregations-bucket-terms-aggregation.html" target="_blank" rel="noopener noreferrer">terms agg</a>
-然后把avg等作为它的<a href="https://www.elastic.co/guide/en/elasticsearch/reference/7.10/search-aggregations.html#run-sub-aggs" target="_blank" rel="noopener noreferrer">sub aggregation</a>
-：</p>
+<p>针对<a href="https://www.elastic.co/guide/en/elasticsearch/reference/7.10/search-aggregations-metrics-avg-aggregation.html" target="_blank" rel="noopener noreferrer">average</a>、<a href="https://www.elastic.co/guide/en/elasticsearch/reference/7.10/search-aggregations-metrics-sum-aggregation.html" target="_blank" rel="noopener noreferrer">sum</a>、<a href="https://www.elastic.co/guide/en/elasticsearch/reference/7.10/search-aggregations-metrics-min-aggregation.html" target="_blank" rel="noopener noreferrer">min</a>、<a href="https://www.elastic.co/guide/en/elasticsearch/reference/7.10/search-aggregations-metrics-max-aggregation.html" target="_blank" rel="noopener noreferrer">max</a>的分组查询则是，先用<a href="https://www.elastic.co/guide/en/elasticsearch/reference/7.10/search-aggregations-bucket-terms-aggregation.html" target="_blank" rel="noopener noreferrer">terms agg</a>然后把avg等作为它的<a href="https://www.elastic.co/guide/en/elasticsearch/reference/7.10/search-aggregations.html#run-sub-aggs" target="_blank" rel="noopener noreferrer">sub aggregation</a>：</p>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre tabindex="0" class="chroma"><code><span class="lnt"> 1
@@ -655,8 +634,8 @@
 </code></pre></td></tr></table>
 </div>
 </div></div></div>
-  <div class="card-footer"><div class="post-navs d-flex justify-content-evenly">
-  <div class="post-nav post-prev"><i class="fas fa-fw fa-chevron-left"></i>
+  <div class="card-footer"><div class="post-navs d-flex justify-content-evenly"><div class="post-nav post-prev">
+    <i class="fas fa-fw fa-chevron-left"></i>
     <a href="/post/docker/scripts/">Docker实用小脚本
 </a>
   </div><div class="post-nav post-next">
@@ -894,7 +873,7 @@
     <img src="https://www.netlify.com/img/global/badges/netlify-color-accent.svg" alt="Deploys by Netlify" width="114" height="51" />
 </a>
 </footer>
-<script src="/js/main.cbf2ace5d5fcb68b11b93647393ec41735869f18f31091c0941a01dfdf417dfc.js" integrity="sha256-y/Ks5dX8tosRuTZHOT7EFzWGnxjzEJHAlBoB399Bffw=" crossorigin="anonymous" defer></script><script src="/js/icons.min.a35670f2f90c398e5ee5c8e509b428fae75aa2746854cee10b60794633076859.js" integrity="sha256-o1Zw8vkMOY5e5cjlCbQo&#43;udaonRoVM7hC2B5RjMHaFk=" crossorigin="anonymous" defer></script>
+<script src="/js/main.2cdce25f280f570596c88888d6af930fe5e15ea030005291dad293defbb231d3.js" integrity="sha256-LNziXygPVwWWyIiI1q&#43;TD&#43;XhXqAwAFKR2tKT3vuyMdM=" crossorigin="anonymous" defer></script><script src="/js/icons.min.8ddcaafc364ff0296c2209c5495287f0de039b852da9b24847f94c198b7639b6.js" integrity="sha256-jdyq/DZP8ClsIgnFSVKH8N4Dm4UtqbJIR/lMGYt2ObY=" crossorigin="anonymous" defer></script>
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
@@ -905,6 +884,6 @@ if ('serviceWorker' in navigator) {
     });
   });
 }
-</script><script src="/js/viewer.min.4dba52a0a790f909408b7385316651299158381686401d50ff1f04dda6476473.js" integrity="sha256-TbpSoKeQ&#43;QlAi3OFMWZRKZFYOBaGQB1Q/x8E3aZHZHM=" crossorigin="anonymous" defer></script>
+</script><script src="/js/viewer.min.652118a9fbf3403cdfde4026209f97ace22f9e334f0b45a33431a221b3db46a8.js" integrity="sha256-ZSEYqfvzQDzf3kAmIJ&#43;XrOIvnjNPC0WjNDGiIbPbRqg=" crossorigin="anonymous" defer></script>
 </body>
 </html>

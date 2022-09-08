@@ -9,10 +9,10 @@
 <link rel="icon" href="/images/icons/favicon.ico">
 <link rel="manifest" href="/manifest.json">
 <meta name="keywords" content="" />
-<meta name="description" content="" /><meta itemprop="name" content="MySQL - 幻读、间隙锁和next-key lock">
+<meta name="description" content="" /><meta name="robots" content="index, follow" /><meta itemprop="name" content="MySQL - 幻读、间隙锁和next-key lock">
 <meta itemprop="description" content=""><meta itemprop="datePublished" content="2021-10-09T16:03:02+08:00" />
 <meta itemprop="dateModified" content="2021-10-09T16:03:02+08:00" />
-<meta itemprop="wordCount" content="1893">
+<meta itemprop="wordCount" content="1899">
 <meta itemprop="keywords" content="mysql," /><meta property="og:title" content="MySQL - 幻读、间隙锁和next-key lock" />
 <meta property="og:description" content="" />
 <meta property="og:type" content="article" />
@@ -23,7 +23,8 @@
 <meta name="twitter:card" content="summary"/>
 <meta name="twitter:title" content="MySQL - 幻读、间隙锁和next-key lock"/>
 <meta name="twitter:description" content=""/>
-<meta name="robots" content="index, follow" /><link rel="stylesheet" href="/css/main.min.b7a6eda8d46e39a549f182cf72a9ff4f4c1d4d82c31ecc3ede0b7f4d5b26f32b.css" integrity="sha256-t6btqNRuOaVJ8YLPcqn/T0wdTYLDHsw&#43;3gt/TVsm8ys=" crossorigin="anonymous"><link rel="stylesheet" href="/css/viewer.min.3d228794bcedbbfa0412beb8fbc1ec6973202945e42af7004f742a4d7bd620ab.css" integrity="sha256-PSKHlLztu/oEEr64&#43;8HsaXMgKUXkKvcAT3QqTXvWIKs=" crossorigin="anonymous"></head>
+<meta property="og:image" content="/images/avatar.jpg"/>
+  <meta name="twitter:image" content="/images/avatar.jpg"/><link rel="stylesheet" href="/css/main.min.507afbe6e4670fa3e961a0b35816b5daeb36029866fd6bd7b9d7871fcf88faa5.css" integrity="sha256-UHr75uRnD6PpYaCzWBa12us2Aphm/WvXudeHH8&#43;I&#43;qU=" crossorigin="anonymous"><link rel="stylesheet" href="/css/viewer.min.3d228794bcedbbfa0412beb8fbc1ec6973202945e42af7004f742a4d7bd620ab.css" integrity="sha256-PSKHlLztu/oEEr64&#43;8HsaXMgKUXkKvcAT3QqTXvWIKs=" crossorigin="anonymous"></head>
   <body><script>const items=['mode','palette'];items.forEach(function(a){const b=localStorage.getItem('hbs-'+a);b&&document.body.parentElement.setAttribute('data-'+a,b)})</script><header><nav class="navbar top-app-bar top-app-bar-expand-lg fixed-top">
   <div class="container">
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent"
@@ -256,8 +257,7 @@
 </blockquote>
 <blockquote>
 <p><code>SELECT ... FOR UPDATE</code>除了会锁定扫描过程中<em><strong>使用</strong></em>的索引里的记录行，相关的其他索引的记录行也会被锁定。换句话说就算你使用了覆盖索引，但是主键索引里的记录行也会被锁定。而又因为主键索引就已经包含了所有字段，那么就相当于锁定表的整行记录。</p>
-<p>详情见：<a href="https://dev.mysql.com/doc/refman/8.0/en/innodb-locking-reads.html" target="_blank" rel="noopener noreferrer">Locking Reads</a>
-</p>
+<p>详情见：<a href="https://dev.mysql.com/doc/refman/8.0/en/innodb-locking-reads.html" target="_blank" rel="noopener noreferrer">Locking Reads</a></p>
 </blockquote>
 <p>所以分析问题的时候：</p>
 <ul>
@@ -266,8 +266,7 @@
 <li>最后再根据索引的类型和扫描到的行，分析间隙锁和next-key lock。</li>
 </ul>
 <h2 id="间隙锁gap-lock">间隙锁(gap lock)<a class="anchor ms-1" href="#间隙锁gap-lock"><i class="fas fa-link"></i></a></h2>
-<p>传统的行锁只能锁定表中已经存在的行，因此就算你把表中所有行都锁住，也无法阻止插入新行（幻读问题）。为了解决这个问题InnoDB引入<a href="https://dev.mysql.com/doc/refman/8.0/en/glossary.html#glos_gap_lock" target="_blank" rel="noopener noreferrer">gap lock</a>
-（间隙锁）。</p>
+<p>传统的行锁只能锁定表中已经存在的行，因此就算你把表中所有行都锁住，也无法阻止插入新行（幻读问题）。为了解决这个问题InnoDB引入<a href="https://dev.mysql.com/doc/refman/8.0/en/glossary.html#glos_gap_lock" target="_blank" rel="noopener noreferrer">gap lock</a>（间隙锁）。</p>
 <p>表t就有7个间隙：</p>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
@@ -334,8 +333,7 @@
 <h3 id="间隙锁和binlog">间隙锁和binlog<a class="anchor ms-1" href="#间隙锁和binlog"><i class="fas fa-link"></i></a></h3>
 <p>MySQL在可重复读个里级别下（默认），才会启用间隙锁。你如果把隔离级别设置为读提交的话，就没有间隙锁了。但同时，你要解决可能出现的数据和日志不一致问题，需要把 binlog 格式设置为 row。</p>
 <h2 id="next-key-lock">next-key lock<a class="anchor ms-1" href="#next-key-lock"><i class="fas fa-link"></i></a></h2>
-<p>行锁 + 该行<em><strong>之前</strong></em>的间隙锁 合称 <a href="https://dev.mysql.com/doc/refman/8.0/en/glossary.html#glos_next_key_lock" target="_blank" rel="noopener noreferrer">next-key lock</a>
-，每个 next-key lock 是前开后闭区间。也就是说，我们的表 t 初始化以后，如果用 <code>select * from t for update</code> 要把整个表所有记录锁起来，就形成了 7 个 next-key lock，分别是 (-∞,0]、(0,5]、(5,10]、(10,15]、(15,20]、(20, 25]、(25, +supremum]（supremum只是为了保证开闭区间的一致性，可以理解为无穷大）。</p>
+<p>行锁 + 该行<em><strong>之前</strong></em>的间隙锁 合称 <a href="https://dev.mysql.com/doc/refman/8.0/en/glossary.html#glos_next_key_lock" target="_blank" rel="noopener noreferrer">next-key lock</a>，每个 next-key lock 是前开后闭区间。也就是说，我们的表 t 初始化以后，如果用 <code>select * from t for update</code> 要把整个表所有记录锁起来，就形成了 7 个 next-key lock，分别是 (-∞,0]、(0,5]、(5,10]、(10,15]、(15,20]、(20, 25]、(25, +supremum]（supremum只是为了保证开闭区间的一致性，可以理解为无穷大）。</p>
 <p>next-key lock的加锁过程是先加间隙锁再加行锁，这不是一个原子性操作，因此会出现只加了间隙锁但加行锁被阻塞的情况，比如下面这个情况：</p>
 <p><img class="img-fluid" alt="" src="/post/mysql/gap-lock-next-key-lock/next-key-lock-half.webp" loading="lazy"
   
@@ -369,13 +367,11 @@
 <h3 id="案例分析">案例分析<a class="anchor ms-1" href="#案例分析"><i class="fas fa-link"></i></a></h3>
 <p>案例分析见：</p>
 <ul>
-<li><a href="https://time.geekbang.org/column/article/75659" target="_blank" rel="noopener noreferrer">极客时间 - 为什么我只改一行的语句，锁这么多？</a>
-</li>
-<li><a href="https://time.geekbang.org/column/article/78427" target="_blank" rel="noopener noreferrer">用动态的观点看加锁</a>
-</li>
+<li><a href="https://time.geekbang.org/column/article/75659" target="_blank" rel="noopener noreferrer">极客时间 - 为什么我只改一行的语句，锁这么多？</a></li>
+<li><a href="https://time.geekbang.org/column/article/78427" target="_blank" rel="noopener noreferrer">用动态的观点看加锁</a></li>
 </ul></div></div>
-  <div class="card-footer"><div class="post-navs d-flex justify-content-evenly">
-  <div class="post-nav post-prev"><i class="fas fa-fw fa-chevron-left"></i>
+  <div class="card-footer"><div class="post-navs d-flex justify-content-evenly"><div class="post-nav post-prev">
+    <i class="fas fa-fw fa-chevron-left"></i>
     <a href="/post/mysql/lock-cause/">MySQL - 诊断锁的方法
 </a>
   </div><div class="post-nav post-next">
@@ -610,7 +606,7 @@
     <img src="https://www.netlify.com/img/global/badges/netlify-color-accent.svg" alt="Deploys by Netlify" width="114" height="51" />
 </a>
 </footer>
-<script src="/js/main.cbf2ace5d5fcb68b11b93647393ec41735869f18f31091c0941a01dfdf417dfc.js" integrity="sha256-y/Ks5dX8tosRuTZHOT7EFzWGnxjzEJHAlBoB399Bffw=" crossorigin="anonymous" defer></script><script src="/js/icons.min.a35670f2f90c398e5ee5c8e509b428fae75aa2746854cee10b60794633076859.js" integrity="sha256-o1Zw8vkMOY5e5cjlCbQo&#43;udaonRoVM7hC2B5RjMHaFk=" crossorigin="anonymous" defer></script>
+<script src="/js/main.2cdce25f280f570596c88888d6af930fe5e15ea030005291dad293defbb231d3.js" integrity="sha256-LNziXygPVwWWyIiI1q&#43;TD&#43;XhXqAwAFKR2tKT3vuyMdM=" crossorigin="anonymous" defer></script><script src="/js/icons.min.8ddcaafc364ff0296c2209c5495287f0de039b852da9b24847f94c198b7639b6.js" integrity="sha256-jdyq/DZP8ClsIgnFSVKH8N4Dm4UtqbJIR/lMGYt2ObY=" crossorigin="anonymous" defer></script>
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
@@ -621,6 +617,6 @@ if ('serviceWorker' in navigator) {
     });
   });
 }
-</script><script src="/js/viewer.min.4dba52a0a790f909408b7385316651299158381686401d50ff1f04dda6476473.js" integrity="sha256-TbpSoKeQ&#43;QlAi3OFMWZRKZFYOBaGQB1Q/x8E3aZHZHM=" crossorigin="anonymous" defer></script>
+</script><script src="/js/viewer.min.652118a9fbf3403cdfde4026209f97ace22f9e334f0b45a33431a221b3db46a8.js" integrity="sha256-ZSEYqfvzQDzf3kAmIJ&#43;XrOIvnjNPC0WjNDGiIbPbRqg=" crossorigin="anonymous" defer></script>
 </body>
 </html>
