@@ -1,0 +1,660 @@
+<!doctype html><html lang="zh-cn" data-palette="blue"
+  >
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>子网分割 - 颇忒脱的技术博客</title><link rel="apple-touch-icon" href="/images/icons/icon-180x180.png" sizes="180x180">
+<link rel="icon" href="/images/icons/icon-32x32.png" sizes="32x32" type="image/png">
+<link rel="icon" href="/images/icons/icon-16x16.png" sizes="16x16" type="image/png">
+<link rel="icon" href="/images/icons/favicon.ico">
+<link rel="manifest" href="/manifest.json">
+<meta name="keywords" content="" />
+<meta name="description" content="" /><meta name="robots" content="index, follow" /><meta itemprop="name" content="子网分割">
+<meta itemprop="description" content=""><meta itemprop="datePublished" content="2021-09-12T08:50:15+08:00" />
+<meta itemprop="dateModified" content="2021-09-12T08:50:15+08:00" />
+<meta itemprop="wordCount" content="2426">
+<meta itemprop="keywords" content="network," /><meta property="og:title" content="子网分割" />
+<meta property="og:description" content="" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="/post/network/subnetting/" /><meta property="article:section" content="post" />
+<meta property="article:published_time" content="2021-09-12T08:50:15+08:00" />
+<meta property="article:modified_time" content="2021-09-12T08:50:15+08:00" /><meta property="og:site_name" content="颇忒脱的技术博客" />
+
+<meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="子网分割"/>
+<meta name="twitter:description" content=""/>
+<meta property="og:image" content="/images/avatar.jpg"/>
+  <meta name="twitter:image" content="/images/avatar.jpg"/><link rel="stylesheet" href="/css/main.min.507afbe6e4670fa3e961a0b35816b5daeb36029866fd6bd7b9d7871fcf88faa5.css" integrity="sha256-UHr75uRnD6PpYaCzWBa12us2Aphm/WvXudeHH8&#43;I&#43;qU=" crossorigin="anonymous"><link rel="stylesheet" href="/css/viewer.min.3d228794bcedbbfa0412beb8fbc1ec6973202945e42af7004f742a4d7bd620ab.css" integrity="sha256-PSKHlLztu/oEEr64&#43;8HsaXMgKUXkKvcAT3QqTXvWIKs=" crossorigin="anonymous"></head>
+  <body><script>const items=['mode','palette'];items.forEach(function(a){const b=localStorage.getItem('hbs-'+a);b&&document.body.parentElement.setAttribute('data-'+a,b)})</script><header><nav class="navbar top-app-bar top-app-bar-expand-lg fixed-top">
+  <div class="container">
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent"
+      aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <i class="fas fa-bars"></i>
+    </button><a class="navbar-brand flex-grow-1 flex-lg-grow-0 text-center text-lg-start mx-auto me-lg-3" href="/"><img class="logo" alt="Logo" src="/images/avatar.jpg" loading="lazy"
+   width="455" height="455"
+   />
+颇忒脱的技术博客
+    </a>
+    
+    <button class="navbar-settings" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvasSettings"
+  aria-controls="offcanvasSettings" aria-label="Toggle settings">
+  <i class="fas fa-ellipsis-v"></i>
+</button>
+
+<div class="offcanvas offcanvas-end surface h-100" tabindex="-1" id="offcanvasSettings" aria-labelledby="offcanvasSettings">
+  <div class="offcanvas-header">
+    <h3 class="offcanvas-title">设置</h3>
+    <button type="button" class="btn btn-sm btn-outline-primary" data-bs-dismiss="offcanvas" aria-label="Close">
+      <i class="fas fa-times"></i>
+    </button>
+  </div>
+  <div class="offcanvas-body d-flex flex-column">
+
+<section class="setting">
+  <form class="row">
+    <div class="col-auto">
+      <label><i class="fas fa-fw fa-adjust"></i> 模式</label>
+    </div>
+    <div class="col-auto ms-auto">
+      <div class="form-check form-switch">
+        <input class="form-check-input" type="checkbox" id="modeSwitcher">
+      </div>
+    </div>
+  </form>
+</section>
+
+<section class="setting">
+  <form class="font-size-switcher-form row">
+    <div class="col-auto">
+      <label for="fontSize" class="form-label"><i class="fas fa-fw fa-font"></i> 字体大小</label>
+    </div>
+    <div class="col-auto ms-auto">
+      <input type="range" class="form-range" min="-2" max="2" id="fontSize">
+    </div>
+  </form>
+</section>
+
+
+<section class="setting palettes">
+  <form class="row">
+    <div class="col-auto">
+      <label><i class="fas fa-fw fa-palette"></i> 配色</label>
+    </div>
+    <div class="col-auto ms-auto">
+      <a id="btnPalette" class="btn btn-sm btn-outline-primary" role="button" aria-label="palettePicker">
+        <i class="fas fa-eye-dropper"></i>
+      </a>
+    </div>
+  </form>
+  <div class="mt-2 d-flex justify-content-between visually-hidden" id="palettePicker"><button type="button" id="palette-blue" aria-label="蓝色"
+        class="btn btn-sm w-100 palette" data-palette="blue">
+      </button><button type="button" id="palette-blue-gray" aria-label="蓝灰色"
+        class="btn btn-sm w-100 palette" data-palette="blue-gray">
+      </button><button type="button" id="palette-brown" aria-label="棕色"
+        class="btn btn-sm w-100 palette" data-palette="brown">
+      </button><button type="button" id="palette-cyan" aria-label="青色"
+        class="btn btn-sm w-100 palette" data-palette="cyan">
+      </button><button type="button" id="palette-green" aria-label="绿色"
+        class="btn btn-sm w-100 palette" data-palette="green">
+      </button><button type="button" id="palette-indigo" aria-label="靛青色"
+        class="btn btn-sm w-100 palette" data-palette="indigo">
+      </button><button type="button" id="palette-orange" aria-label="橙色"
+        class="btn btn-sm w-100 palette" data-palette="orange">
+      </button><button type="button" id="palette-pink" aria-label="粉色"
+        class="btn btn-sm w-100 palette" data-palette="pink">
+      </button><button type="button" id="palette-purple" aria-label="紫色"
+        class="btn btn-sm w-100 palette" data-palette="purple">
+      </button><button type="button" id="palette-red" aria-label="红色"
+        class="btn btn-sm w-100 palette" data-palette="red">
+      </button><button type="button" id="palette-teal" aria-label="蓝绿色"
+        class="btn btn-sm w-100 palette" data-palette="teal">
+      </button><button type="button" id="palette-yellow" aria-label="黄色"
+        class="btn btn-sm w-100 palette" data-palette="yellow">
+      </button></div>
+</section>
+<section class="setting actions d-flex justify-content-around mt-auto overflow-auto">
+  <a role="button" class="action action-go-back" href="javascript: window.history.back();">
+    <span class="action-icon"><i class="fas fa-2x fa-arrow-left"></i></span> 返回
+  </a>
+  <a role="button" class="action action-reload-page">
+    <span class="action-icon"><i class="fas fa-2x fa-redo-alt"></i></span> 刷新
+  </a>
+  <a role="button" class="action action-copy-url">
+    <span class="action-icon"><i class="fas fa-2x fa-link"></i></span> 复制链接
+  </a></section>
+
+</div>
+</div>
+
+    <div class="collapse navbar-collapse" tabindex="-1" id="navbarSupportedContent" aria-labelledby="navbarSupportedContent">
+      <form class="search-bar my-1" action="/search">
+  <div class="input-group input-group-sm">
+    <span class="btn btn-search disabled position-absolute left-0"><i class="fas fa-fw fa-search"></i></span>
+    <input class="form-control rounded-pill" name="q" type="search" aria-label="Search">
+  </div>
+</form>
+      <ul class="navbar-nav ms-auto"><li class="nav-item">
+          <a class="nav-link" href="/series/">
+            <i class="fas fa-fw fa-columns"></i>专栏
+          </a>
+        </li><li class="nav-item dropdown">
+          <a class="nav-link" id="navbarDropdownIndex" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+            <i class="fas fa-fw fa-chevron-circle-down"></i>快速索引
+          </a>
+          <ul class="dropdown-menu" aria-labelledby="navbarDropdownIndex"><li>
+              <a class="dropdown-item"
+                href="/tags/go">
+                Go
+              </a>
+            </li><li>
+              <a class="dropdown-item"
+                href="/tags/gc">
+                GC
+              </a>
+            </li><li>
+              <a class="dropdown-item"
+                href="/tags/kernel">
+                Kernel
+              </a>
+            </li><li>
+              <a class="dropdown-item"
+                href="/tags/cheatsheet">
+                Cheatsheet
+              </a>
+            </li><li>
+              <a class="dropdown-item"
+                href="/tags/troubleshooting">
+                排障实战记录
+              </a>
+            </li></ul>
+        </li><li class="nav-item">
+          <a class="nav-link" href="/tags/">
+            <i class="fas fa-fw fa-tags"></i>标签
+          </a>
+        </li><li class="nav-item">
+          <a class="nav-link" href="/archives/">
+            <i class="fas fa-fw fa-file-archive"></i>归档
+          </a>
+        </li></ul>
+    </div>
+  </div>
+</nav>
+</header>
+<main role="main" class="container">
+      <div class="row content">
+<div class="col-lg-8">
+  <div class="container"><nav class="row card component" aria-label="breadcrumb">
+  <div class="card-body">
+    <ol class="breadcrumb "><li class="breadcrumb-item"><a href="/">主页</a></li><li class="breadcrumb-item"><a href="/post/">文章</a></li><li class="breadcrumb-item active">子网分割</li></ol>
+  </div>
+</nav><div class="post-panel-wrapper">
+  <div class="d-flex flex-column component rounded post-panel">
+    
+    <a class="action action-panel-toggler" role="button" title="Panel toggler">
+      <i class="fas fa-fw fa-chevron-circle-down"></i>
+    </a>
+    <a id="sidebarToggler" class="action d-none d-lg-block" role="button" title="Sidebar toggler">
+  <i class="fas fa-fw fa-expand-alt" data-fa-transform="rotate-45"></i>
+</a>
+
+    
+
+    
+    <a class="action" href="#post-copyright" role="button" aria-label="Copyright" title="Copyright">
+  <i class="fas fa-fw fa-copyright"></i>
+</a>
+    <a class="action" href="#post-comments" role="button" aria-label="Comments" title="Comments">
+  <i class="fas fa-fw fa-comments"></i>
+</a>
+    <a class="action" href="#postTOC" aria-controls="Table of contents" role="button" title="Table of contents">
+  <i class="fas fa-fw fa-list-alt"></i>
+</a>
+    
+  </div>
+</div>
+<article class="row card component mb-4 post">
+  <div class="card-header ">
+    <h1 class="card-title post-title">子网分割
+</h1>
+  </div>
+  <div class="card-body"><div class="post-meta">
+  <span class="post-date" title="创建于 2021-09-12 08:50:15 &#43;0800 CST。">
+    2021-09-12
+  </span><span class="post-reading-time">
+    5 分钟阅读
+  </span><span class="post-taxonomies"><a href="/tags/network/" class="badge post-taxonomy">network</a></span>
+</div>
+<div class="post-content mb-3"><p>在<a href="../ip-address/">IP地址</a>一文中我们提到了A、B、C三类IP地址，也提到了IP地址中包含了network id和host信息，那么你知道这3类地址分别能够容纳多少台host吗？</p>
+<p>以一个C类地址<code>192.168.1.xxx/24</code>为例，因为子网掩码的1占用了24位，剩余的0都是用来给host用的——有8位，所以block size = 2 ^ 8 = 256，又因按约定一个block中的第一个值被留作network id（<code>192.168.1.0</code>），最后一个值被留作 broadcast addr（<code>192.168.1.255</code>），所以实际host的数量 = 256 - 2 = 254。</p>
+<p>同理一个B类地址<code>128.10.xxx.xxx/16</code>的host数量 = 2 ^ 16 - 2 = 65,534个，一个A类地址<code>10.xxx.xxx.xxx/8</code>的host数量 = 2 ^ 24 - 2 = 16,777,214个。</p>
+<p>看到问题没有，当你在使用一个A或B类地址的时候会发现host数量太过巨大，那么现实生活中组建如此巨大的网络是不现实的，因此我们需要划分子网。</p>
+<h2 id="无类型ip编址">无类型IP编址<a class="anchor ms-1" href="#无类型ip编址"><i class="fas fa-link"></i></a></h2>
+<p>给一个有类型IP地址划分子网的方式很简单，在子网掩码中借用后面的0把它们变成1，比如将一个C类地址的子网掩码1的位数变成25：<code>192.168.1.0/25</code>，它比C类地址的<code>/24</code>多了一个bit，这种形式称为<a href="https://zh.wikipedia.org/wiki/%E6%97%A0%E7%B1%BB%E5%88%AB%E5%9F%9F%E9%97%B4%E8%B7%AF%E7%94%B1" target="_blank" rel="noopener noreferrer">无类别域间路由</a>（CIDR），它的子网掩码就是<code>255.255.255.128</code>，这样一来就将原本<code>192.168.1.0/24</code>分割成了两个子网。</p>
+<h2 id="一张计算表">一张计算表<a class="anchor ms-1" href="#一张计算表"><i class="fas fa-link"></i></a></h2>
+<p>下面这张表列出了借用bit数与分割子网数的关系：</p>
+<table>
+<thead>
+<tr>
+<th style="text-align:center">Borrowed Bits</th>
+<th style="text-align:center">1</th>
+<th style="text-align:center">2</th>
+<th style="text-align:center">3</th>
+<th style="text-align:center">4</th>
+<th style="text-align:center">5</th>
+<th style="text-align:center">6</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:center">Mask Value</td>
+<td style="text-align:center">128</td>
+<td style="text-align:center">192</td>
+<td style="text-align:center">224</td>
+<td style="text-align:center">240</td>
+<td style="text-align:center">248</td>
+<td style="text-align:center">252</td>
+</tr>
+<tr>
+<td style="text-align:center">Subnets</td>
+<td style="text-align:center">2</td>
+<td style="text-align:center">4</td>
+<td style="text-align:center">8</td>
+<td style="text-align:center">16</td>
+<td style="text-align:center">32</td>
+<td style="text-align:center">64</td>
+</tr>
+<tr>
+<td style="text-align:center">Block size</td>
+<td style="text-align:center">128</td>
+<td style="text-align:center">64</td>
+<td style="text-align:center">32</td>
+<td style="text-align:center">16</td>
+<td style="text-align:center">8</td>
+<td style="text-align:center">4</td>
+</tr>
+<tr>
+<td style="text-align:center">Hosts</td>
+<td style="text-align:center">126</td>
+<td style="text-align:center">62</td>
+<td style="text-align:center">30</td>
+<td style="text-align:center">14</td>
+<td style="text-align:center">6</td>
+<td style="text-align:center">2</td>
+</tr>
+</tbody>
+</table>
+<p>为何没有列出借用7、8个bit的情况，因为如果借用7个bit则host数量=0。如果借用8个bit则block size=1，host数量=-1，显然不够用。</p>
+<p>如果借用的bit数超过8会怎样，比如一个A类地址<code>10.10.1.1/8</code>变成<code>10.10.1.1/18</code>会怎样呢？我们吧这个IP地址和子网掩码变成二进制观察一下：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback">IP Addr(dec)     : 10       . 10       . 1        . 1
+IP Addr(bin)     : 00001010 . 00001010 . 00000001 . 00000001
+subnet mask(bin) : 11111111 . 11111111 . 11000000 . 00000000
+subnet mask(dec) : 255      . 255      . 192      . 0
+</code></pre></td></tr></table>
+</div>
+</div><p>可以看到子网掩码的1扩展到了第三个字节且占用了第三个字节的2个bit，因此分割子网数 = 2 ^ 2 = 4，block size = 256 / 4 = 64。</p>
+<p>到这里你会发现子网数、block size、host数都比较好算，Mask Value不太好算，下表总结了一个计算方式：将绿色连接的两个数字相加就能够得到红色箭头所指格子里的数字：</p>
+<p><img class="img-fluid" alt="mask value计算表" src="/post/network/subnetting/subnetting-mask-calc-table.png" loading="lazy"
+  
+   />
+
+</p>
+<h2 id="c类地址的子网分割">C类地址的子网分割<a class="anchor ms-1" href="#c类地址的子网分割"><i class="fas fa-link"></i></a></h2>
+<p>现在我们来计算一下<code>192.168.1.0/25</code>的每个子网的network id、 broadcast addr、block size、host数量、mask value：</p>
+<ul>
+<li><code>192.168.1.0/25</code>被划分为了2个子网，为什么是两个？其实很简单，子网数 = 2 ^ borrowed bits = 2 ^ 1 = 2</li>
+<li>每个子网block size = 256 / subnets = 256 / 2 = 128</li>
+<li>host数量 = block size - 2 = 128 - 2 = 126</li>
+</ul>
+<p>那么每个子网的network id和 broadcast addr是什么呢？其实可以根据block size来计算：</p>
+<ul>
+<li>第一个子网的network id肯定是0，因此是<code>192.168.1.0</code>，因为block size = 128，所以下一个子网network id就是0 + 128 = 128 = <code>192.168.1.128</code>。</li>
+<li>因为每个子网的broadcast addr是其block中的最后一个，因此第一个子网的broadcast addr是后下一个子网的network id - 1 = <code>192.168.1.127</code>，因下一个子网是最后一个子网，所以它的 broadcast addr肯定是 255 = <code>192.168.1.255</code>。下面是详细表格：</li>
+<li>去掉每个子网的network id和 broadcast addr，剩下的就是host的范围了</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th style="text-align:center">subnet</th>
+<th style="text-align:center">0</th>
+<th style="text-align:center">128</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:center">first host</td>
+<td style="text-align:center">1</td>
+<td style="text-align:center">129</td>
+</tr>
+<tr>
+<td style="text-align:center">last host</td>
+<td style="text-align:center">126</td>
+<td style="text-align:center">254</td>
+</tr>
+<tr>
+<td style="text-align:center">broadcast addr</td>
+<td style="text-align:center">127</td>
+<td style="text-align:center">255</td>
+</tr>
+</tbody>
+</table>
+<h2 id="ab类地址的子网分割">A/B类地址的子网分割<a class="anchor ms-1" href="#ab类地址的子网分割"><i class="fas fa-link"></i></a></h2>
+<p>前面讲的是如何分割C类地址的子网，因为一个C类地址的前3个字节总是固定的，所以计算network id总是发生在第4个字节上。总结一下，对于A类地址来讲，分割子网的CIDR是<code>/8+</code>，B类地址是<code>/16+</code>，C类地址是<code>/24+</code>。</p>
+<p>问题来了，如果对一个A类地址比如<code>10.10.0.0/18</code>分割字网，那么该如何计算呢？</p>
+<p>在这里我们得先讲一下IP地址“进位”的方式。当你对第n个字节做加法，加到256的时候，则第n个字节清0，第n-1个字节进位，比如我们对<code>10.10.0.0</code>的第3个字节不断的加128：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback">10  . 10  . 0   . 0
+10  . 10  . 128 . 0
+10  . 11  . 0   . 0
+10  . 11  . 128 . 0
+...
+</code></pre></td></tr></table>
+</div>
+</div><p>这很重要，因为当看到一个CIDR时，我们要知道它的子网掩码延伸到第几个字节，然后在这个字节上不断的加block size，从而得到每个子网的network id，然后计算broadcast addr、host范围等。</p>
+<p>举个例子，<code>10.10.0.0/18</code>的掩码延伸到了第3个字节，占用了2个bit，block size = 64，所以：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback">subnet1: network id=10.10.0.0    broadcast addr=10.10.63.255
+subnet2: network id=10.10.64.0   broadcast addr=10.10.127.255
+subnet3: network id=10.10.128.0  broadcast addr=10.10.191.255
+subnet4: network id=10.10.192.0  broadcast addr=10.10.255.255
+subnet5: network id=10.11.0.0    broadcast addr=10.11.63.255
+subnet6: network id=10.11.64.0   broadcast addr=10.11.127.255
+...
+</code></pre></td></tr></table>
+</div>
+</div><p>注意看broadcast addr，subnet 1的broadcast addr = subnet 2 network id - 1 = 10.10.64.0 - 1，因为IP地址是一个“进位”系统，所以得到10.10.63.255。</p>
+<h2 id="变长子网掩码">变长子网掩码<a class="anchor ms-1" href="#变长子网掩码"><i class="fas fa-link"></i></a></h2>
+<p>上面我们已经了解如何进行子网分割，虽然我们避免了IP地址的浪费，但是依然还会有问题。比如一个公司有三个部门，PC数量分别是100台、53台、50台，现在有一个C类地址<code>192.168.1.0</code>，我们怎么分割子网呢——要求是每个部门有自己的子网？</p>
+<p>如果我们这样<code>192.168.1.0/25</code>，则只能分割2个子网，如果<code>192.168.1.0/26</code>，能够分割4个子网，但是每个子网的host数量=62，而有一个部门的PC有100台，容纳不了。那该怎么办呢？</p>
+<p>这里我们要引入一个工具：变长子网掩码VLSM（Variable Length Subnet Mask），它允许网管可以使用长度不同的子网掩码分割一个网络。</p>
+<p>回到上面的例子，我们会这样分割：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback">192.168.1.0   /26
+192.168.1.64  /26
+192.168.1.128 /25
+</code></pre></td></tr></table>
+</div>
+</div><p>使用VLSM需要很多技巧，本文就不在做详述了。</p>
+<h2 id="参考资料">参考资料<a class="anchor ms-1" href="#参考资料"><i class="fas fa-link"></i></a></h2>
+<ul>
+<li><a href="https://zh.wikipedia.org/wiki/%E6%97%A0%E7%B1%BB%E5%88%AB%E5%9F%9F%E9%97%B4%E8%B7%AF%E7%94%B1" target="_blank" rel="noopener noreferrer">无类别域间路由</a></li>
+<li><a href="https://www.youtube.com/watch?v=Ct4PU6CyvTQ" target="_blank" rel="noopener noreferrer">NetworKing CCNA: IP Address V4 PM</a></li>
+<li><a href="https://www.youtube.com/watch?v=-e3e9w1GmBw" target="_blank" rel="noopener noreferrer">NetworKing CCNA: IP Address V4 LN</a></li>
+</ul></div></div>
+  <div class="card-footer"><div class="post-navs d-flex justify-content-evenly"><div class="post-nav post-prev">
+    <i class="fas fa-fw fa-chevron-left"></i>
+    <a href="/post/network/ip-address/">IP地址
+</a>
+  </div><div class="post-nav post-next">
+    <a href="/post/mysql/sql-opt-join-limit-order-by/">SQL优化:一个含有JOIN&#43;LIMIT&#43;ORDER BY的SQL(上)
+</a>
+    <i class="fas fa-fw fa-chevron-right"></i>
+  </div></div></div>
+</article><div class="post-copyright mb-3 row card component" id="post-copyright">
+    <div class="card-header">
+        <h2 class="card-title">版权</h2>
+    </div>
+    <div class="card-body"><a class="d-flex align-items-center flex-column" target="_blank" rel="license noopener noreferrer" href="https://creativecommons.org/licenses/by-nc-nd/4.0/deed.zh">
+  <span><i class="fab fa-fw fa-2x fa-creative-commons"></i><i class="fab fa-fw fa-2x fa-creative-commons-by"></i><i class="fab fa-fw fa-2x fa-creative-commons-nc"></i><i class="fab fa-fw fa-2x fa-creative-commons-nd"></i></span>
+  CC BY-NC-ND 4.0 
+</a>
+
+
+    </div>
+</div><section class="related-posts row card component">
+    <div class="card-header">
+      <h2 class="card-title">相关文章</h2>
+    </div>
+    <div class="card-body">
+      <ul class="post-list"><li>
+          <a href="/post/network/ip-address/">IP地址
+</a>
+          <span class="float-end post-date">2021-09-12
+</span>
+        </li><li>
+          <a href="/post/network/network-model-and-devices/">网络模型及网络设备
+</a>
+          <span class="float-end post-date">2021-09-12
+</span>
+        </li><li>
+          <a href="/post/linux/net-params/">常用网络内核参数优化
+</a>
+          <span class="float-end post-date">2021-09-08
+</span>
+        </li><li>
+          <a href="/post/linux/net-debug-scripts/">网络监控实用脚本
+</a>
+          <span class="float-end post-date">2021-09-07
+</span>
+        </li><li>
+          <a href="/post/chrome-incognito-mode-faster/">Chrome隐私模式网页加载速度更快
+</a>
+          <span class="float-end post-date">2021-07-13
+</span>
+        </li></ul>
+    </div>
+  </section><div class="card component row post-comments" id="post-comments">
+  <div class="card-header">
+    <h2 class="card-title">评论</h2>
+  </div>
+  <div class="card-body"></div>
+</div></div>
+</div><aside class="col-lg-4 sidebar d-flex">
+  <div class="container d-flex flex-column">
+    
+    <section class="card row text-center profile component">
+  <div class="card-body">
+    <div class="col-12 d-flex align-items-center justify-content-center"><img class="profile-avatar rounded-circle" alt="颇忒脱" src="/images/avatar.jpg" loading="lazy"
+   width="455" height="455"
+   />
+</div>
+    <div class="col-12 profile-meta"><div class="profile-name">颇忒脱</div><nav class="social-links nav justify-content-center"><a class="nav-link social-link" target="_blank" href="https://github.com/chanjarster" title="GitHub" rel="noopener noreferrer">
+        <i class="fa-fw fa-2x fab fa-github"></i>
+      </a></nav>
+</div>
+  </div>
+</section>
+  <div class="post-toc row mb-4 card component" id="postTOC">
+  <div class="card-header">
+    <h2 class="card-title">目录</h2>
+  </div>
+  <div class="card-body">
+    <nav id="TableOfContents">
+  <ul>
+    <li><a href="#无类型ip编址">无类型IP编址</a></li>
+    <li><a href="#一张计算表">一张计算表</a></li>
+    <li><a href="#c类地址的子网分割">C类地址的子网分割</a></li>
+    <li><a href="#ab类地址的子网分割">A/B类地址的子网分割</a></li>
+    <li><a href="#变长子网掩码">变长子网掩码</a></li>
+    <li><a href="#参考资料">参考资料</a></li>
+  </ul>
+</nav>
+  </div>
+</div><section class="featured-posts row card component">
+    <div class="card-header">
+      <h2 class="card-title">精选文章</h2>
+    </div>
+    <div class="card-body">
+      <ul class="post-list"><li>
+          <a href="/post/network/index-page/">Networking系列
+</a>
+        </li><li>
+          <a href="/post/mysql/index-page/">MySQL系列
+</a>
+        </li><li>
+          <a href="/post/concurrent-programming/index-page/">并发编程系列
+</a>
+        </li><li>
+          <a href="/post/jvm/index-page/">JVM系列
+</a>
+        </li></ul>
+    </div>
+  </section><section class="recent-posts row card component">
+  <div class="card-header">
+    <h2 class="card-title">最近文章</h2>
+  </div>
+  <div class="card-body">
+    <ul class="post-list"><li>
+        <a href="/post/network/ip-forwarding/">IP Forwarding 软路由的安全问题
+</a>
+      </li><li>
+        <a href="/post/network/index-page/">Networking系列
+</a>
+      </li><li>
+        <a href="/post/go/err-throw-rules/">Go Error 的处理最佳实践
+</a>
+      </li><li>
+        <a href="/post/k8s/enable-auditing/">Rancher 中给集群开启日志审计
+</a>
+      </li><li>
+        <a href="/post/k8s/delete-namespace/">删除无法删掉的namespace
+</a>
+      </li></ul>
+  </div>
+</section><section class="tags-taxonomies row card component">
+      <div class="card-header">
+        <h2 class="card-title">
+          <a href="/tags">标签</a>
+        </h2>
+      </div>
+      <div class="card-body">
+        <div class="py-2"><a href="/tags/arts-a/" class="badge rounded post-taxonomy" title="ARTS-A">
+            ARTS-A<span class="badge badge-sm text-white bg-accent ms-1">125</span></a><a href="/tags/k8s/" class="badge rounded post-taxonomy" title="k8s">
+            k8s<span class="badge badge-sm text-white bg-accent ms-1">39</span></a><a href="/tags/jvm/" class="badge rounded post-taxonomy" title="jvm">
+            jvm<span class="badge badge-sm text-white bg-accent ms-1">36</span></a><a href="/tags/troubleshooting/" class="badge rounded post-taxonomy" title="troubleshooting">
+            troubleshooting<span class="badge badge-sm text-white bg-accent ms-1">25</span></a><a href="/tags/docker/" class="badge rounded post-taxonomy" title="docker">
+            docker<span class="badge badge-sm text-white bg-accent ms-1">22</span></a><a href="/tags/mysql/" class="badge rounded post-taxonomy" title="mysql">
+            mysql<span class="badge badge-sm text-white bg-accent ms-1">22</span></a><a href="/tags/%E5%B9%B6%E5%8F%91%E7%BC%96%E7%A8%8B/" class="badge rounded post-taxonomy" title="并发编程">
+            并发编程<span class="badge badge-sm text-white bg-accent ms-1">20</span></a><a href="/tags/cheatsheet/" class="badge rounded post-taxonomy" title="cheatsheet">
+            cheatsheet<span class="badge badge-sm text-white bg-accent ms-1">19</span></a><a href="/tags/java/" class="badge rounded post-taxonomy" title="java">
+            java<span class="badge badge-sm text-white bg-accent ms-1">16</span></a><a href="/tags/kernel/" class="badge rounded post-taxonomy" title="kernel">
+            kernel<span class="badge badge-sm text-white bg-accent ms-1">15</span></a><a href="/tags/%E6%80%A7%E8%83%BD%E8%B0%83%E4%BC%98/" class="badge rounded post-taxonomy" title="性能调优">
+            性能调优<span class="badge badge-sm text-white bg-accent ms-1">11</span></a><a href="/tags/%E5%BE%AE%E6%9C%8D%E5%8A%A1/" class="badge rounded post-taxonomy" title="微服务">
+            微服务<span class="badge badge-sm text-white bg-accent ms-1">10</span></a><a href="/tags/go/" class="badge rounded post-taxonomy" title="go">
+            go<span class="badge badge-sm text-white bg-accent ms-1">9</span></a><a href="/tags/prometheus/" class="badge rounded post-taxonomy" title="prometheus">
+            prometheus<span class="badge badge-sm text-white bg-accent ms-1">9</span></a><a href="/tags/linux/" class="badge rounded post-taxonomy" title="linux">
+            linux<span class="badge badge-sm text-white bg-accent ms-1">8</span></a><a href="/tags/network/" class="badge rounded post-taxonomy" title="network">
+            network<span class="badge badge-sm text-white bg-accent ms-1">8</span></a><a href="/tags/redis/" class="badge rounded post-taxonomy" title="redis">
+            redis<span class="badge badge-sm text-white bg-accent ms-1">8</span></a><a href="/tags/gc/" class="badge rounded post-taxonomy" title="gc">
+            gc<span class="badge badge-sm text-white bg-accent ms-1">6</span></a><a href="/tags/%E8%BF%90%E7%BB%B4/" class="badge rounded post-taxonomy" title="运维">
+            运维<span class="badge badge-sm text-white bg-accent ms-1">6</span></a><a href="/tags/ci_cd/" class="badge rounded post-taxonomy" title="CI_CD">
+            CI_CD<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/debug/" class="badge rounded post-taxonomy" title="debug">
+            debug<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/interview/" class="badge rounded post-taxonomy" title="interview">
+            interview<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/jmx/" class="badge rounded post-taxonomy" title="jmx">
+            jmx<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/rancher/" class="badge rounded post-taxonomy" title="rancher">
+            rancher<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/%E5%88%86%E5%B8%83%E5%BC%8F%E4%BA%8B%E5%8A%A1/" class="badge rounded post-taxonomy" title="分布式事务">
+            分布式事务<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/%E5%88%86%E5%B8%83%E5%BC%8F%E7%AE%97%E6%B3%95/" class="badge rounded post-taxonomy" title="分布式算法">
+            分布式算法<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/%E6%94%B6%E8%97%8F%E5%A4%B9/" class="badge rounded post-taxonomy" title="收藏夹">
+            收藏夹<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/ingress/" class="badge rounded post-taxonomy" title="ingress">
+            ingress<span class="badge badge-sm text-white bg-accent ms-1">4</span></a><a href="/tags/openssl/" class="badge rounded post-taxonomy" title="openssl">
+            openssl<span class="badge badge-sm text-white bg-accent ms-1">4</span></a><a href="/tags/tls/" class="badge rounded post-taxonomy" title="tls">
+            tls<span class="badge badge-sm text-white bg-accent ms-1">4</span></a><a href="/tags/visualvm/" class="badge rounded post-taxonomy" title="visualvm">
+            visualvm<span class="badge badge-sm text-white bg-accent ms-1">4</span></a><a href="/tags/%E6%97%A5%E5%BF%97/" class="badge rounded post-taxonomy" title="日志">
+            日志<span class="badge badge-sm text-white bg-accent ms-1">4</span></a><a href="/tags/arts/" class="badge rounded post-taxonomy" title="arts">
+            arts<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/arts-r/" class="badge rounded post-taxonomy" title="arts-r">
+            arts-r<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/classloader/" class="badge rounded post-taxonomy" title="ClassLoader">
+            ClassLoader<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/jenkins/" class="badge rounded post-taxonomy" title="Jenkins">
+            Jenkins<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/nginx/" class="badge rounded post-taxonomy" title="nginx">
+            nginx<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/scheduling/" class="badge rounded post-taxonomy" title="scheduling">
+            scheduling<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/thread/" class="badge rounded post-taxonomy" title="thread">
+            thread<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/%E5%88%86%E5%B8%83%E5%BC%8F%E6%9E%B6%E6%9E%84/" class="badge rounded post-taxonomy" title="分布式架构">
+            分布式架构<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/%E9%AB%98%E5%B9%B6%E5%8F%91/" class="badge rounded post-taxonomy" title="高并发">
+            高并发<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/grafana/" class="badge rounded post-taxonomy" title="grafana">
+            grafana<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/jdbc/" class="badge rounded post-taxonomy" title="JDBC">
+            JDBC<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/%E6%95%B0%E6%8D%AE%E5%BA%93%E6%97%B6%E5%8C%BA%E9%82%A3%E4%BA%9B%E4%BA%8B%E5%84%BF/" class="badge rounded post-taxonomy" title="数据库时区那些事儿">
+            数据库时区那些事儿<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/%E7%9B%91%E6%8E%A7/" class="badge rounded post-taxonomy" title="监控">
+            监控<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/%E9%99%90%E6%B5%81/" class="badge rounded post-taxonomy" title="限流">
+            限流<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/akka/" class="badge rounded post-taxonomy" title="Akka">
+            Akka<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/alertmanager/" class="badge rounded post-taxonomy" title="alertmanager">
+            alertmanager<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/bash/" class="badge rounded post-taxonomy" title="bash">
+            bash<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/chrome/" class="badge rounded post-taxonomy" title="chrome">
+            chrome<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/elasticsearch/" class="badge rounded post-taxonomy" title="elasticsearch">
+            elasticsearch<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/etcd/" class="badge rounded post-taxonomy" title="etcd">
+            etcd<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/fluentd/" class="badge rounded post-taxonomy" title="fluentd">
+            fluentd<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/harbor/" class="badge rounded post-taxonomy" title="harbor">
+            harbor<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/helm/" class="badge rounded post-taxonomy" title="helm">
+            helm<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/hystrix/" class="badge rounded post-taxonomy" title="hystrix">
+            hystrix<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/ingres/" class="badge rounded post-taxonomy" title="ingres">
+            ingres<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/io/" class="badge rounded post-taxonomy" title="io">
+            io<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/jdpa/" class="badge rounded post-taxonomy" title="jdpa">
+            jdpa<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/jwt/" class="badge rounded post-taxonomy" title="jwt">
+            jwt<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/kafka/" class="badge rounded post-taxonomy" title="kafka">
+            kafka<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/kibana/" class="badge rounded post-taxonomy" title="kibana">
+            kibana<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/mq/" class="badge rounded post-taxonomy" title="MQ">
+            MQ<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/oauth/" class="badge rounded post-taxonomy" title="oauth">
+            oauth<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/oracle/" class="badge rounded post-taxonomy" title="Oracle">
+            Oracle<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/reactor/" class="badge rounded post-taxonomy" title="reactor">
+            reactor<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/spring-boot/" class="badge rounded post-taxonomy" title="spring-boot">
+            spring-boot<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/spring-cloud/" class="badge rounded post-taxonomy" title="Spring Cloud">
+            Spring Cloud<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/ssl/" class="badge rounded post-taxonomy" title="ssl">
+            ssl<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/tiller/" class="badge rounded post-taxonomy" title="tiller">
+            tiller<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/vtable/" class="badge rounded post-taxonomy" title="vtable">
+            vtable<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/%E6%95%B0%E7%A0%81/" class="badge rounded post-taxonomy" title="数码">
+            数码<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/%E6%B6%88%E6%81%AF%E9%98%9F%E5%88%97/" class="badge rounded post-taxonomy" title="消息队列">
+            消息队列<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/%E7%BC%93%E5%AD%98/" class="badge rounded post-taxonomy" title="缓存">
+            缓存<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/%E8%B0%83%E7%94%A8%E9%93%BE%E8%BF%BD%E8%B8%AA/" class="badge rounded post-taxonomy" title="调用链追踪">
+            调用链追踪<span class="badge badge-sm text-white bg-accent ms-1">1</span></a></div>
+      </div>
+    </section>
+    
+  </div>
+</aside>
+</div>
+    </main><footer class="footer mt-auto py-3 text-center container"><nav class="social-links nav justify-content-center mb-2"><a class="nav-link social-link" target="_blank" href="https://github.com/chanjarster" title="GitHub" rel="noopener noreferrer">
+        <i class="fa-fw fa-2x fab fa-github"></i>
+      </a></nav>
+<div class="copyright mb-2">
+  Copyright © 2016-2022 Razon Yang. All Rights Reserved.
+</div>
+<div class="powered-by mb-2">
+  Powered by <a href="https://gohugo.io" target="_blank" rel="noopener noreferrer">Hugo</a> and the <a href="https://github.com/razonyang/hugo-theme-bootstrap" target="_blank" rel="noopener noreferrer">Bootstrap</a> theme.
+</div>
+<a href="https://www.netlify.com" target="_blank" rel="noopener noreferrer">
+    <img src="https://www.netlify.com/img/global/badges/netlify-color-accent.svg" alt="Deploys by Netlify" width="114" height="51" />
+</a>
+</footer>
+<script src="/js/main.2cdce25f280f570596c88888d6af930fe5e15ea030005291dad293defbb231d3.js" integrity="sha256-LNziXygPVwWWyIiI1q&#43;TD&#43;XhXqAwAFKR2tKT3vuyMdM=" crossorigin="anonymous" defer></script><script src="/js/icons.min.8ddcaafc364ff0296c2209c5495287f0de039b852da9b24847f94c198b7639b6.js" integrity="sha256-jdyq/DZP8ClsIgnFSVKH8N4Dm4UtqbJIR/lMGYt2ObY=" crossorigin="anonymous" defer></script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('\/service-worker.js').then(function(reg) {
+      console.log('Successfully registered service worker', reg);
+    }).catch(function(err) {
+      console.warn('Error whilst registering service worker', err);
+    });
+  });
+}
+</script><script src="/js/viewer.min.652118a9fbf3403cdfde4026209f97ace22f9e334f0b45a33431a221b3db46a8.js" integrity="sha256-ZSEYqfvzQDzf3kAmIJ&#43;XrOIvnjNPC0WjNDGiIbPbRqg=" crossorigin="anonymous" defer></script>
+</body>
+</html>
