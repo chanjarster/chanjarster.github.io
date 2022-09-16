@@ -12,7 +12,7 @@
 <meta name="description" content="" /><meta name="robots" content="index, follow" /><meta itemprop="name" content="IP Forwarding 软路由的安全问题">
 <meta itemprop="description" content=""><meta itemprop="datePublished" content="2022-09-16T08:50:00+08:00" />
 <meta itemprop="dateModified" content="2022-09-16T08:50:00+08:00" />
-<meta itemprop="wordCount" content="1618">
+<meta itemprop="wordCount" content="1776">
 <meta itemprop="keywords" content="network," /><meta property="og:title" content="IP Forwarding 软路由的安全问题" />
 <meta property="og:description" content="" />
 <meta property="og:type" content="article" />
@@ -224,17 +224,28 @@
     4 分钟阅读
   </span><span class="post-taxonomies"><a href="/tags/network/" class="badge post-taxonomy">network</a></span>
 </div>
-<div class="post-content mb-3"><p>在<a href="../network-model-and-devices/">网络模型和网络设备</a>提到了路由器。我们可以把任何一台 Linux 服务器都变成一个路由器，只需要设置内核参数 <code>net.ipv4.ip_forward = 1</code> 即可。</p>
-<p>把此开关打开，意味着服务器打开了 IP 包转发的能力，而转发规则则是根据本地路由表。</p>
+<div class="post-content mb-3"><p>在<a href="../network-model-and-devices/">网络模型和网络设备</a>提到了路由器。我们可以把任何一台 Linux 服务器都变成一个路由器，只需要设置内核参数 <code>net.ipv4.ip_forward = 1</code> 即可，这意味着服务器打开了 IP 包转发的能力，而转发规则是根据本地路由表。</p>
 <p>有些同学可能会担心，把此开关打开会造成安全问题，我们具体分析。</p>
 <p>为了说明的简便，下面规定了一些简写规则：</p>
 <ul>
 <li>软路由：开启了 IP Forwarding 的 Linux 服务器。</li>
 <li>硬路由：真正的路由器</li>
 </ul>
-<h2 id="软路由只有一张网卡">软路由只有一张网卡<a class="anchor ms-1" href="#软路由只有一张网卡"><i class="fas fa-link"></i></a></h2>
-<p>子网 192.168.0.0/24 中有 3 个设备：192.168.0.1 硬路由、192.168.0.2 软路由、192.168.0.3 服务器。</p>
-<p>软路由 192.168.0.2 的路由规则是这样的：</p>
+<h2 id="软路由只有一张网卡时">软路由只有一张网卡时<a class="anchor ms-1" href="#软路由只有一张网卡时"><i class="fas fa-link"></i></a></h2>
+<p>子网 192.168.0.0/24 中有 3 个设备：192.168.0.1 硬路由、192.168.0.2 软路由、192.168.0.3 服务器。拓扑如下：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback">┌---- srv ----┐     ┌--- router --┐     ┌--s/router --┐
+| 192.168.0.3 |&lt;---&gt;| 192.168.0.1 |&lt;---&gt;| 192.168.0.2 |
+└-------------┘     └-------------┘     └-------------┘
+</code></pre></td></tr></table>
+</div>
+</div><p>软路由 192.168.0.2 的路由规则是这样的：</p>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre tabindex="0" class="chroma"><code><span class="lnt">1
@@ -281,9 +292,9 @@ Error: Nexthop has invalid gateway.
 </div><p>上面的命令的意思是如果我要去 192.168.0.0/24 子网，则转发给 192.168.0.2 软路由。而因为网段不同，这个操作是不可能成功的。</p>
 <p>同理，我直接使用硬路由也不可行。</p>
 <h3 id="同子网添加软路由">同子网添加软路由<a class="anchor ms-1" href="#同子网添加软路由"><i class="fas fa-link"></i></a></h3>
-<p>其实前面也讲了，必须是同子网的才能添加软路由或硬路由。</p>
-<p>那么既然我——黑客——已经控制了一台同子网的服务器，那我废那劲添加软路由干嘛呢？同子网的通信压根就不走路由，在交换机层面就解决了。</p>
-<h2 id="软路由有两张网卡">软路由有两张网卡<a class="anchor ms-1" href="#软路由有两张网卡"><i class="fas fa-link"></i></a></h2>
+<p>前面讲了，必须是同子网的才能添加软路由或硬路由。</p>
+<p>那么既然我——黑客——已经控制了一台 192.168.0.0/24 子网的服务器，那我废那劲添加软路由干嘛呢？同子网的通信压根就不走路由，在交换机层面就解决了。</p>
+<h2 id="软路由有两张网卡时">软路由有两张网卡时<a class="anchor ms-1" href="#软路由有两张网卡时"><i class="fas fa-link"></i></a></h2>
 <p>假设有子网一：</p>
 <ul>
 <li>CIDR: 192.168.0.0/24</li>
@@ -296,7 +307,7 @@ Error: Nexthop has invalid gateway.
 <li>硬路由: 172.18.0.1</li>
 <li>服务器: 172.18.0.2，用的硬路由。</li>
 </ul>
-<p>注意，两个硬路由不互通。</p>
+<p>注意，两个硬路由不互通，即两个子网隔离。</p>
 <p>还有一个软路由，上面有两张网卡：</p>
 <ul>
 <li>网卡1: 192.168.0.3</li>
@@ -355,21 +366,22 @@ default via 192.168.0.1 dev ens18 metric <span class="m">103</span>
 </span><span class="lnt">4
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell">&gt; ip route add 172.18.0.0/16 via 192.168.0.3
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell">&gt; ip route add 172.18.0.0/24 via 192.168.0.3
 &gt; ip route
 ...
 172.18.0.0/16 via 192.168.0.3 dev ens18
 </code></pre></td></tr></table>
 </div>
-</div><p>然后你去 ping，实际上是 ping 不通的。</p>
-<p>因为 172.18.0.2 默认用的是硬路由，ICMP echo reply 的包会交给硬路由 172.168.0.1，而它无法和 192.168.0.1 子网通信。</p>
-<p>除非在 172.18.0.2 添加路由规则：</p>
+</div><p>意思是，要去 172.18.0.0/24 子网，走 192.168.0.3 软路由。</p>
+<p>然后你去 ping，实际上是 ping 不通的。</p>
+<p>因为 172.18.0.2 默认用的是硬路由 172.168.0.1，它可以收到来自 192.168.0.2 的 ICMP echo request 包，但是当它返回 ICMP echo reply 时会交给硬路由 ，而硬路由无法和 192.168.0.0/24 子网通信。</p>
+<p>除非在 172.18.0.2 添加路由规则，凡是去 192.168.0.0/24 走软路由 ：</p>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre tabindex="0" class="chroma"><code><span class="lnt">1
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell">&gt; ip route add 192.168.0.0/16 via 172.18.0.3
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell">&gt; ip route add 192.168.0.0/24 via 172.18.0.3
 </code></pre></td></tr></table>
 </div>
 </div><p>拓扑图就变成这样了：</p>
@@ -393,7 +405,7 @@ default via 192.168.0.1 dev ens18 metric <span class="m">103</span>
 └-------------┘&lt;--┘ └-------------┘
 </code></pre></td></tr></table>
 </div>
-</div><p>不过我既然都已经能够控制 172.18.0.2 了，那我还废那劲去在 192.168.0.2 上设置路由表干嘛呢？</p>
+</div><p>不过我既然都已经能够控制 172.18.0.2 了，那我还废那劲去在 192.168.0.2 上设置路由表干嘛呢？让这两个服务器之间互相通信还重要吗？</p>
 <h2 id="总结">总结<a class="anchor ms-1" href="#总结"><i class="fas fa-link"></i></a></h2>
 <ul>
 <li>黑客必须控制了软路由其所在子网的服务器，才可以利用软路由。</li>
@@ -403,6 +415,7 @@ default via 192.168.0.1 dev ens18 metric <span class="m">103</span>
 </ul>
 <h2 id="参考资料">参考资料<a class="anchor ms-1" href="#参考资料"><i class="fas fa-link"></i></a></h2>
 <ul>
+<li><a href="https://zh.wikipedia.org/zh-cn/IP%E8%BD%AC%E5%8F%91" target="_blank" rel="noopener noreferrer">Wiki IP 转发</a></li>
 <li><a href="https://devconnected.com/how-to-add-route-on-linux/" target="_blank" rel="noopener noreferrer">How To Add Route on Linux</a></li>
 <li><a href="https://www.tecmint.com/setup-linux-as-router/" target="_blank" rel="noopener noreferrer">Setup Linux As Router</a></li>
 <li><a href="https://time.geekbang.org/column/article/8590" target="_blank" rel="noopener noreferrer">极客时间 - 路由</a></li>
@@ -483,13 +496,13 @@ default via 192.168.0.1 dev ens18 metric <span class="m">103</span>
   <div class="card-body">
     <nav id="TableOfContents">
   <ul>
-    <li><a href="#软路由只有一张网卡">软路由只有一张网卡</a>
+    <li><a href="#软路由只有一张网卡时">软路由只有一张网卡时</a>
       <ul>
         <li><a href="#跨子网添加软路由">跨子网添加软路由</a></li>
         <li><a href="#同子网添加软路由">同子网添加软路由</a></li>
       </ul>
     </li>
-    <li><a href="#软路由有两张网卡">软路由有两张网卡</a>
+    <li><a href="#软路由有两张网卡时">软路由有两张网卡时</a>
       <ul>
         <li><a href="#利用软路由访问另一个子网">利用软路由访问另一个子网</a></li>
       </ul>
