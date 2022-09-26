@@ -12,7 +12,7 @@
 <meta name="description" content="" /><meta name="robots" content="index, follow" /><meta itemprop="name" content="保护 K8S IP Forwarding 的安全">
 <meta itemprop="description" content=""><meta itemprop="datePublished" content="2022-09-23T15:50:00+08:00" />
 <meta itemprop="dateModified" content="2022-09-23T15:50:00+08:00" />
-<meta itemprop="wordCount" content="1226">
+<meta itemprop="wordCount" content="1264">
 <meta itemprop="keywords" content="network,k8s," /><meta property="og:title" content="保护 K8S IP Forwarding 的安全" />
 <meta property="og:description" content="" />
 <meta property="og:type" content="article" />
@@ -295,7 +295,7 @@ num  target     prot opt <span class="nb">source</span>               destinatio
 <pre tabindex="0" class="chroma"><code><span class="lnt">1
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell">sudo iptables -t filter -I FORWARD <span class="m">12</span> -i ens18 -m <span class="nb">set</span> ! --match-set cluster_nodes src -j REJECT
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell">sudo iptables -t filter -I FORWARD <span class="m">12</span> -i ens18 -m <span class="nb">set</span> ! --match-set cluster_nodes src -m comment --comment <span class="s2">&#34;路由转发保护&#34;</span> -j REJECT
 </code></pre></td></tr></table>
 </div>
 </div><p>这条命令的意思是，把一条规则插入在 <code>12</code> 之前，而这个规则的意思是：凡是来自于网卡 <code>ens18</code> 的 IP 转发包，如果其来源 IP 不在 ipset <code>cluster_nodes</code> 范围内，那么就拒绝。</p>
@@ -402,7 +402,7 @@ num   pkts bytes target     prot opt in     out     <span class="nb">source</spa
 <pre tabindex="0" class="chroma"><code><span class="lnt">1
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell">sudo iptables -t filter -D FORWARD -i ens18 -m <span class="nb">set</span> ! --match-set cluster_nodes src -j REJECT
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell">sudo iptables -t filter -D FORWARD -i ens18 -m <span class="nb">set</span> ! --match-set cluster_nodes src -m comment --comment <span class="s2">&#34;路由转发保护&#34;</span> -j REJECT
 </code></pre></td></tr></table>
 </div>
 </div><p>注意：删除的规则时，规则定义必须和你增加规则时的定义完全一样，否则会出现下面这种结果：</p>
