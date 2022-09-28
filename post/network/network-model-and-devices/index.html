@@ -12,7 +12,7 @@
 <meta name="description" content="" /><meta name="robots" content="index, follow" /><meta itemprop="name" content="网络模型及网络设备">
 <meta itemprop="description" content=""><meta itemprop="datePublished" content="2021-09-12T08:50:00+08:00" />
 <meta itemprop="dateModified" content="2021-09-12T08:50:00+08:00" />
-<meta itemprop="wordCount" content="2478">
+<meta itemprop="wordCount" content="2453">
 <meta itemprop="keywords" content="network," /><meta property="og:title" content="网络模型及网络设备" />
 <meta property="og:description" content="" />
 <meta property="og:type" content="article" />
@@ -278,25 +278,27 @@
 <p>交换机在某个端口收到数据后，会查看Frame（上图中Data Link层的PDU）中的<strong>目的地MAC地址</strong>，然后根据“MAC地址表”找到对应端口，然后将数据转发到这个端口。</p>
 <p>但是我们在现实生活中从来没有使用MAC地址来通信对不对？我们都是使用IP来通信的，比如：<code>ping 192.168.1.20</code>。这是因为操作系统会使用<a href="https://zh.wikipedia.org/wiki/%E5%9C%B0%E5%9D%80%E8%A7%A3%E6%9E%90%E5%8D%8F%E8%AE%AE" target="_blank" rel="noopener noreferrer">ARP协议</a>来获知<code>192.168.1.20</code>的MAC地址，而交换机在此过程中会学习到这个信息，并且记录到“MAC地址表”中（具体过程本文不做详述）。</p>
 <p>关于ARP协议、以及交换机的其他功能细节本文不做详述，读者朋友只需知道交换机是一个二层设备，它维护了一张“MAC地址表”并运用此表让处于同一个二层网络的两个网卡通信就可以了。</p>
+<h3 id="l2-网络和-l3-网络">L2 网络和 L3 网络<a class="anchor ms-1" href="#l2-网络和-l3-网络"><i class="fas fa-link"></i></a></h3>
 <h3 id="路由器">路由器<a class="anchor ms-1" href="#路由器"><i class="fas fa-link"></i></a></h3>
-<p>交换机只能让处于同一个二层网络的两个网卡进行通信，如何让处于不同二层网络的设备是通信呢？</p>
-<p>答案是使用路由器（Router），路由器是一个三层设备（L3 Device），它的作用是将两个二层网络连接起来，使其能够互相通信。</p>
-<p>下图是一个将两个二层网络连接起来的例子：</p>
+<p>一般来说 L2 网络对应一个 L3 网络，比如插在同一个交换机的设备分配 <code>192.168.10.0/24</code> 子网（子网的解释见<a href="../ip-address/">这篇</a>和<a href="../subnetting/">这篇</a>）。</p>
+<p>当然也可以插在同一个交换机的设备分配两个不同的子网，此时有两个 L3 网络，但是 L2 网络则是同一个。</p>
+<p>当发生跨 L3 网络通信时，需要使用路由器（Router），路由器是一个三层设备（L3 Device），它的作用是将两个 L3 网络连接起来，使其能够互相通信。</p>
+<p>下图是一个例子：</p>
 <p><img class="img-fluid" alt="图2" src="/post/network/network-model-and-devices/router-1.png" loading="lazy"
   
    />
 
 </p>
-<p>在这张图中可以看到有两个子网——192.168.1.0/24和192.168.2.0/24（如果你不知道这是什么，不要紧张，我们会在<a href="subnetting.md">子网分割</a>章节详细讲解），它们是两个独立的二层网络。路由器1有两个端口，一个端口连接在交换机1上，IP是192.168.1.1；另一个端口连接在交换机2上，IP是192.168.2.1。</p>
-<p>当PC1要和PC3通信的时候，比如<code>ping 192.168.2.10</code>，它会发现PC3和自己不在同一个子网中（究竟是如何知道的你现在不用关心，我们会在<a href="subnetting.md">子网分割</a>章节中详细讲解），那它数据交给路由器1，路由器1它会读取Packet（Network层的PDU）中的目的地IP地址，发现是192.168.2.10，结合其内部的路由表（关于路由表本文不做讲解）决定将其转发到交换机2，交换机2再转发到PC3.</p>
-<p>我们再考虑一个更贴近现实的问题，我们的电脑是如何访问到<code>baidu.com</code>的呢？</p>
-<p>实际上当访问<code>baidu.com</code>的时候你的数据是经过多层路由器，最终到达baidu服务器的，如下图：</p>
+<p>在这张图中可以看到有两个子网 <code>192.168.1.0/24</code> 和 <code>192.168.2.0/24</code>，它们是两个独立的 L3 网络。路由器1有两个端口，一个端口连接在交换机1上，IP是 <code>192.168.1.1</code>，另一个端口连接在交换机2上，IP是 <code>192.168.2.1</code>。</p>
+<p>当 PC1 要和 PC3 通信的时候，比如<code>ping 192.168.2.10</code>，它会发现 PC3 和自己不在同一个子网中（究竟是如何知道的你现在不用关心，我们会在<a href="subnetting.md">子网分割</a>章节中详细讲解），那它数据交给路由器1，路由器1它会读取Packet（Network层的PDU）中的目的地IP地址，发现是 <code>192.168.2.10</code>，结合其内部的路由表（关于路由表本文不做讲解）决定将其转发到交换机2，交换机2再转发到PC3.</p>
+<p>我们再考虑一个更贴近现实的问题，我们的电脑是如何访问到 <code>baidu.com</code> 的呢？</p>
+<p>实际上当访问 <code>baidu.com</code> 的时候你的数据是经过多层路由器，最终到达baidu服务器的，如下图：</p>
 <p><img class="img-fluid" alt="图2" src="/post/network/network-model-and-devices/router-2.png" loading="lazy"
   
    />
 
 </p>
-<p>你也许会问，路由器是一个L3设备，它是通过IP来转发数据的，那它是怎么知道<code>baidu.com</code>的IP地址呢？实际上路由器并不知道<code>baidu.com</code>的IP地址，操作系统在发送请求的时候会将<code>baidu.com</code>转化为IP地址放到Packet中传递给路由器。关于这个我们会在<a href="dns.md">DNS</a>章节中做详细说明。</p>
+<p>你也许会问，路由器是一个L3设备，它是通过IP来转发数据的，那它是怎么知道<code>baidu.com</code>的IP地址呢？实际上路由器并不知道<code>baidu.com</code>的IP地址，操作系统在发送请求的时候会通过 DNS 将<code>baidu.com</code>转化为IP地址放到Packet中传递给路由器。</p>
 <h2 id="为何程序不能获得源mac地址">为何程序不能获得源MAC地址？<a class="anchor ms-1" href="#为何程序不能获得源mac地址"><i class="fas fa-link"></i></a></h2>
 <p>实际上这个问题本身存在一个错误的假设，我们已经知道在同一个二层网络中是直接通过MAC地址来通信的，在这种情况下我们是可以获得MAC地址的。但这只是极少的一种情况，因为大部分时候我们都必须经过路由器才能访问网络的。</p>
 <p>我们再来看这张图：</p>
@@ -327,6 +329,7 @@
 <h2 id="参考资料">参考资料<a class="anchor ms-1" href="#参考资料"><i class="fas fa-link"></i></a></h2>
 <ul>
 <li><a href="https://zh.wikipedia.org/wiki/OSI%E6%A8%A1%E5%9E%8B" target="_blank" rel="noopener noreferrer">OSI模型</a></li>
+<li><a href="https://iximiuz.com/en/posts/computer-networking-101" target="_blank" rel="noopener noreferrer">Computer Networking Introduction - Ethernet and IP (Heavily Illustrated)</a></li>
 <li><a href="https://projectcalico.docs.tigera.io/about/about-networking" target="_blank" rel="noopener noreferrer">Calico - About Networking</a></li>
 <li><a href="https://www.youtube.com/watch?v=l_OPR2yh2co" target="_blank" rel="noopener noreferrer">NetworKing CCNA: OSI - TCP/IP Model</a></li>
 <li><a href="https://zh.wikipedia.org/wiki/%E5%9C%B0%E5%9D%80%E8%A7%A3%E6%9E%90%E5%8D%8F%E8%AE%AE" target="_blank" rel="noopener noreferrer">ARP协议</a></li>
@@ -418,6 +421,7 @@
     <li><a href="#网络设备">网络设备</a>
       <ul>
         <li><a href="#交换机">交换机</a></li>
+        <li><a href="#l2-网络和-l3-网络">L2 网络和 L3 网络</a></li>
         <li><a href="#路由器">路由器</a></li>
       </ul>
     </li>
@@ -451,6 +455,9 @@
   </div>
   <div class="card-body">
     <ul class="post-list"><li>
+        <a href="/post/network/vlan-vxlan/">VLAN 和 VXLAN
+</a>
+      </li><li>
         <a href="/post/network/find-docker-netns/">找到 Docker 的 Netns
 </a>
       </li><li>
@@ -461,9 +468,6 @@
 </a>
       </li><li>
         <a href="/post/network/ip-forwarding-trbst/">排查 IP Forwarding 故障
-</a>
-      </li><li>
-        <a href="/post/network/ip-forwarding-masq-nat/">IP Forwarding, Masquerading 和 NAT
 </a>
       </li></ul>
   </div>
@@ -482,12 +486,12 @@
             docker<span class="badge badge-sm text-white bg-accent ms-1">24</span></a><a href="/tags/mysql/" class="badge rounded post-taxonomy" title="mysql">
             mysql<span class="badge badge-sm text-white bg-accent ms-1">22</span></a><a href="/tags/%E5%B9%B6%E5%8F%91%E7%BC%96%E7%A8%8B/" class="badge rounded post-taxonomy" title="并发编程">
             并发编程<span class="badge badge-sm text-white bg-accent ms-1">20</span></a><a href="/tags/cheatsheet/" class="badge rounded post-taxonomy" title="cheatsheet">
-            cheatsheet<span class="badge badge-sm text-white bg-accent ms-1">19</span></a><a href="/tags/java/" class="badge rounded post-taxonomy" title="java">
-            java<span class="badge badge-sm text-white bg-accent ms-1">16</span></a><a href="/tags/network/" class="badge rounded post-taxonomy" title="network">
-            network<span class="badge badge-sm text-white bg-accent ms-1">16</span></a><a href="/tags/kernel/" class="badge rounded post-taxonomy" title="kernel">
-            kernel<span class="badge badge-sm text-white bg-accent ms-1">15</span></a><a href="/tags/%E6%80%A7%E8%83%BD%E8%B0%83%E4%BC%98/" class="badge rounded post-taxonomy" title="性能调优">
-            性能调优<span class="badge badge-sm text-white bg-accent ms-1">11</span></a><a href="/tags/linux/" class="badge rounded post-taxonomy" title="linux">
-            linux<span class="badge badge-sm text-white bg-accent ms-1">10</span></a><a href="/tags/%E5%BE%AE%E6%9C%8D%E5%8A%A1/" class="badge rounded post-taxonomy" title="微服务">
+            cheatsheet<span class="badge badge-sm text-white bg-accent ms-1">19</span></a><a href="/tags/network/" class="badge rounded post-taxonomy" title="network">
+            network<span class="badge badge-sm text-white bg-accent ms-1">17</span></a><a href="/tags/java/" class="badge rounded post-taxonomy" title="java">
+            java<span class="badge badge-sm text-white bg-accent ms-1">16</span></a><a href="/tags/kernel/" class="badge rounded post-taxonomy" title="kernel">
+            kernel<span class="badge badge-sm text-white bg-accent ms-1">15</span></a><a href="/tags/linux/" class="badge rounded post-taxonomy" title="linux">
+            linux<span class="badge badge-sm text-white bg-accent ms-1">11</span></a><a href="/tags/%E6%80%A7%E8%83%BD%E8%B0%83%E4%BC%98/" class="badge rounded post-taxonomy" title="性能调优">
+            性能调优<span class="badge badge-sm text-white bg-accent ms-1">11</span></a><a href="/tags/%E5%BE%AE%E6%9C%8D%E5%8A%A1/" class="badge rounded post-taxonomy" title="微服务">
             微服务<span class="badge badge-sm text-white bg-accent ms-1">10</span></a><a href="/tags/go/" class="badge rounded post-taxonomy" title="go">
             go<span class="badge badge-sm text-white bg-accent ms-1">9</span></a><a href="/tags/prometheus/" class="badge rounded post-taxonomy" title="prometheus">
             prometheus<span class="badge badge-sm text-white bg-accent ms-1">9</span></a><a href="/tags/redis/" class="badge rounded post-taxonomy" title="redis">
