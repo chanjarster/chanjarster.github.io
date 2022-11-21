@@ -12,7 +12,7 @@
 <meta name="description" content="" /><meta name="robots" content="index, follow" /><meta itemprop="name" content="记一次K8S VXLAN Overlay网络8472端口冲突问题的排查">
 <meta itemprop="description" content=""><meta itemprop="datePublished" content="2020-11-10T08:49:44+08:00" />
 <meta itemprop="dateModified" content="2020-11-10T08:49:44+08:00" />
-<meta itemprop="wordCount" content="1154">
+<meta itemprop="wordCount" content="1469">
 <meta itemprop="keywords" content="k8s,rancher,troubleshooting," /><meta property="og:title" content="记一次K8S VXLAN Overlay网络8472端口冲突问题的排查" />
 <meta property="og:description" content="" />
 <meta property="og:type" content="article" />
@@ -281,6 +281,9 @@
 <p>将物理机的8472/udp端口改掉后，问题解决。</p>
 <p>PS. 8472/udp还是一个<a href="https://www.speedguide.net/port.php?port=8472" target="_blank" rel="noopener noreferrer">著名端口</a></p>
 <h2 id="解决办法2">解决办法2<a class="anchor ms-1" href="#解决办法2"><i class="fas fa-link"></i></a></h2>
+<blockquote>
+<p>此方法在 Rancher官方文档里已经删除，不要参考。</p>
+</blockquote>
 <p>也可以在rke创建k8s集群的时候修改flannel的端口，需要修改cluster.yml（<a href="https://docs.rancher.cn/docs/rke/config-options/add-ons/network-plugins/_index#canal-%E6%8F%92%E4%BB%B6%E9%80%89%E9%A1%B9" target="_blank" rel="noopener noreferrer">参考文档</a>）。</p>
 <p>如果你用的是canal网络插件（默认）：</p>
 <div class="highlight"><div class="chroma">
@@ -367,7 +370,61 @@
 </span><span class="w">    </span><span class="nt">plugin</span><span class="p">:</span><span class="w"> </span><span class="l">flannel</span><span class="w">
 </span></code></pre></td></tr></table>
 </div>
-</div></div></div>
+</div><h2 id="解决办法3">解决办法3<a class="anchor ms-1" href="#解决办法3"><i class="fas fa-link"></i></a></h2>
+<p>修改 <code>kube-system</code> 命名空间下，<code>kube-flannel-cfg</code> ConfigMap，修改 <code>net-conf.json</code> Key，在Backend里加,和&quot;Port&quot;: 8475：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-yaml" data-lang="yaml"><span class="nt">net-conf.json</span><span class="p">:</span><span class="w"> </span><span class="p">|</span><span class="sd">
+</span><span class="sd">    {
+</span><span class="sd">      &#34;Network&#34;: &#34;172.27.0.0/16&#34;,
+</span><span class="sd">      &#34;Backend&#34;: {
+</span><span class="sd">        &#34;Type&#34;: &#34;vxlan&#34;,
+</span><span class="sd">        &#34;Port&#34;: 8475
+</span><span class="sd">      }
+</span><span class="sd">    }</span><span class="w">    
+</span></code></pre></td></tr></table>
+</div>
+</div><p>如果是 Rancher，则修改 <code>canal-config</code> ConfigMap，对 <code>net-conf.json</code> 做出相同的修改。</p>
+<p>完成之后在每个服务器上执行 <code>netstat -anupl | grep 8475</code> 看看是否启动了 8475 UDP 端口监听。</p>
+<p>参考资料：<a href="https://github.com/flannel-io/flannel/blob/master/Documentation/backends.md" target="_blank" rel="noopener noreferrer">Flannel Backends</a></p>
+<h2 id="解决办法4">解决办法4<a class="anchor ms-1" href="#解决办法4"><i class="fas fa-link"></i></a></h2>
+<blockquote>
+<p>这个方法未经实验，仅供参考</p>
+</blockquote>
+<p>也可以修改 Flannel VXLAN 的 VNI 属性，把它从 1 改成其他值：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-yaml" data-lang="yaml"><span class="nt">net-conf.json</span><span class="p">:</span><span class="w"> </span><span class="p">|</span><span class="sd">
+</span><span class="sd">    {
+</span><span class="sd">      &#34;Network&#34;: &#34;172.27.0.0/16&#34;,
+</span><span class="sd">      &#34;Backend&#34;: {
+</span><span class="sd">        &#34;Type&#34;: &#34;vxlan&#34;,
+</span><span class="sd">        &#34;VNI&#34;: 10
+</span><span class="sd">      }
+</span><span class="sd">    }</span><span class="w">    
+</span></code></pre></td></tr></table>
+</div>
+</div><p>参考资料：<a href="https://github.com/flannel-io/flannel/blob/master/Documentation/backends.md" target="_blank" rel="noopener noreferrer">Flannel Backends</a>，<a href="https://p.wpseco.cn/wiki/doc/626a0269352c70b82e6ac9fa" target="_blank" rel="noopener noreferrer">深信服虚拟化平台下k8s使用flannel&hellip;</a></p></div></div>
   <div class="card-footer"><div class="post-navs d-flex justify-content-evenly"><div class="post-nav post-prev">
     <i class="fas fa-fw fa-chevron-left"></i>
     <a href="/post/mysql-case-insensitive-query/">Mysql字符串字段查询默认大小写不敏感
@@ -459,6 +516,8 @@
     <li><a href="#初步假设">初步假设</a></li>
     <li><a href="#解决办法">解决办法</a></li>
     <li><a href="#解决办法2">解决办法2</a></li>
+    <li><a href="#解决办法3">解决办法3</a></li>
+    <li><a href="#解决办法4">解决办法4</a></li>
   </ul>
 </nav>
   </div>
@@ -487,6 +546,12 @@
   </div>
   <div class="card-body">
     <ul class="post-list"><li>
+        <a href="/post/k8s/bad-security-daemons/">可能引起 K8S 集群故障的安全软件
+</a>
+      </li><li>
+        <a href="/post/k8s/qaxsafed-nfs-error-troubleshooting/">奇安信安全软件导致 NFS 不正常
+</a>
+      </li><li>
         <a href="/post/k8s/flannel-udp-comm-error/">Flannel VXLAN 通信异常问题排障记录
 </a>
       </li><li>
@@ -494,12 +559,6 @@
 </a>
       </li><li>
         <a href="/post/network/vlan-vxlan/">VLAN 和 VXLAN
-</a>
-      </li><li>
-        <a href="/post/network/find-docker-netns/">找到 Docker 的 Netns
-</a>
-      </li><li>
-        <a href="/post/network/container-networking/">容器网络原理
 </a>
       </li></ul>
   </div>
@@ -512,9 +571,9 @@
       <div class="card-body">
         <div class="py-2"><a href="/tags/arts-a/" class="badge rounded post-taxonomy" title="ARTS-A">
             ARTS-A<span class="badge badge-sm text-white bg-accent ms-1">125</span></a><a href="/tags/k8s/" class="badge rounded post-taxonomy" title="k8s">
-            k8s<span class="badge badge-sm text-white bg-accent ms-1">44</span></a><a href="/tags/jvm/" class="badge rounded post-taxonomy" title="jvm">
+            k8s<span class="badge badge-sm text-white bg-accent ms-1">46</span></a><a href="/tags/jvm/" class="badge rounded post-taxonomy" title="jvm">
             jvm<span class="badge badge-sm text-white bg-accent ms-1">36</span></a><a href="/tags/troubleshooting/" class="badge rounded post-taxonomy" title="troubleshooting">
-            troubleshooting<span class="badge badge-sm text-white bg-accent ms-1">26</span></a><a href="/tags/docker/" class="badge rounded post-taxonomy" title="docker">
+            troubleshooting<span class="badge badge-sm text-white bg-accent ms-1">28</span></a><a href="/tags/docker/" class="badge rounded post-taxonomy" title="docker">
             docker<span class="badge badge-sm text-white bg-accent ms-1">24</span></a><a href="/tags/mysql/" class="badge rounded post-taxonomy" title="mysql">
             mysql<span class="badge badge-sm text-white bg-accent ms-1">22</span></a><a href="/tags/%E5%B9%B6%E5%8F%91%E7%BC%96%E7%A8%8B/" class="badge rounded post-taxonomy" title="并发编程">
             并发编程<span class="badge badge-sm text-white bg-accent ms-1">20</span></a><a href="/tags/cheatsheet/" class="badge rounded post-taxonomy" title="cheatsheet">
@@ -572,7 +631,8 @@
             jwt<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/kafka/" class="badge rounded post-taxonomy" title="kafka">
             kafka<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/kibana/" class="badge rounded post-taxonomy" title="kibana">
             kibana<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/mq/" class="badge rounded post-taxonomy" title="MQ">
-            MQ<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/oauth/" class="badge rounded post-taxonomy" title="oauth">
+            MQ<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/nfs/" class="badge rounded post-taxonomy" title="nfs">
+            nfs<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/oauth/" class="badge rounded post-taxonomy" title="oauth">
             oauth<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/oracle/" class="badge rounded post-taxonomy" title="Oracle">
             Oracle<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/reactor/" class="badge rounded post-taxonomy" title="reactor">
             reactor<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/spring-boot/" class="badge rounded post-taxonomy" title="spring-boot">
