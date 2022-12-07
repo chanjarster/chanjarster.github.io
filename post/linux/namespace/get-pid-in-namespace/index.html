@@ -12,7 +12,7 @@
 <meta name="description" content="" /><meta name="robots" content="index, follow" /><meta itemprop="name" content="得到进程在下层 namespace 里的 PID">
 <meta itemprop="description" content=""><meta itemprop="datePublished" content="2022-12-06T16:13:45+08:00" />
 <meta itemprop="dateModified" content="2022-12-06T16:13:45+08:00" />
-<meta itemprop="wordCount" content="653">
+<meta itemprop="wordCount" content="947">
 <meta itemprop="keywords" content="linux,kernel,namespace,docker,container," /><meta property="og:title" content="得到进程在下层 namespace 里的 PID" />
 <meta property="og:description" content="" />
 <meta property="og:type" content="article" />
@@ -242,7 +242,79 @@
 </code></pre></td></tr></table>
 </div>
 </div><h2 id="linux-kernel--41-1">Linux Kernel < 4.1<a class="anchor ms-1" href="#linux-kernel--41-1"><i class="fas fa-link"></i></a></h2>
-<p>在 Linux Kernel 4.1 之前的版本则没有 <code>NSpid</code> 字段可以利用，那么就需要迂回一点，利用 procfs 的 <code>/proc/[pid]/maps</code> 伪文件来匹配查找。</p>
+<p>在 Linux Kernel 4.1 之前的版本则没有 <code>NSpid</code> 字段可以利用，那么就需要迂回一点，下面有两种方法。</p>
+<h3 id="方法一">方法一<a class="anchor ms-1" href="#方法一"><i class="fas fa-link"></i></a></h3>
+<p>利用 procfs 的 <code>/proc/[pid]/sched</code> 伪文件来匹配查找。</p>
+<p>如果你打开任何进程的 <code>/proc/[pid]/sched</code> 文件，可以看到类似下面的内容：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback">$ cat /proc/8416/sched
+bash (918, #threads: 1)
+-------------------------------------------------------------------
+se.exec_start                                :    2664031641.263979
+se.vruntime                                  :       2781932.438772
+se.sum_exec_runtime                          :             5.544571
+se.nr_migrations                             :                    5
+</code></pre></td></tr></table>
+</div>
+</div><p><code>8416</code> 是进程在下层 namespace 里的 PID，而 <code>918</code> 是进程在 root namespace 里的 PID。</p>
+<p>所以你可以这样：</p>
+<ul>
+<li>进入 <code>host_pid</code> 的 namespace</li>
+<li>用 ps 列出这个 namespace 下所有的 PID，下面称为 <code>cont_pid</code>，然后遍历：
+<ul>
+<li>提取下层 namespace 里 <code>/proc/[cont_pid]/sched</code> 里的 PID</li>
+<li>如果和 <code>host_pid</code> 一样，则 <code>cont_pid</code> 就是答案</li>
+</ul>
+</li>
+</ul>
+<p>下面是脚本：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="k">function</span> get_container_pid_by_host_pid
+<span class="o">{</span>
+  <span class="nb">local</span> <span class="nv">host_pid</span><span class="o">=</span><span class="nv">$1</span>
+  <span class="k">for</span> cont_pid in <span class="k">$(</span>nsenter --target <span class="s2">&#34;</span><span class="nv">$host_pid</span><span class="s2">&#34;</span> --mount --pid ps -o <span class="s1">&#39;pid=&#39;</span><span class="k">)</span>
+  <span class="k">do</span>
+    <span class="c1"># 通过 /proc/[pid]/sched 来找 host_pid 对应的 cont_pid （容器 pid），这个文件的内容如下：</span>
+    <span class="nb">local</span> <span class="nv">sched_pid</span><span class="o">=</span><span class="k">$(</span>nsenter --target <span class="s2">&#34;</span><span class="nv">$host_pid</span><span class="s2">&#34;</span> --mount --pid head -1 /proc/<span class="s2">&#34;</span><span class="nv">$cont_pid</span><span class="s2">&#34;</span>/sched <span class="p">|</span> sed <span class="s1">&#39;s/[(),#:]//g&#39;</span> <span class="p">|</span> awk <span class="s1">&#39;{print $2}&#39;</span><span class="k">)</span>
+    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&#34;</span><span class="nv">$host_pid</span><span class="s2">&#34;</span> <span class="o">==</span> <span class="s2">&#34;</span><span class="nv">$sched_pid</span><span class="s2">&#34;</span> <span class="o">]]</span><span class="p">;</span> <span class="k">then</span>
+      <span class="nb">echo</span> <span class="s2">&#34;</span><span class="nv">$cont_pid</span><span class="s2">&#34;</span>
+      <span class="k">return</span> <span class="m">0</span>
+    <span class="k">fi</span>
+  <span class="k">done</span>
+  <span class="nb">echo</span> <span class="s2">&#34;&#34;</span>  
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>上面这个方法是受到 jattach 项目的这个 <a href="https://github.com/apangin/jattach/issues/13" target="_blank" rel="noopener noreferrer">issue</a> 和这个 <a href="https://github.com/apangin/jattach/commit/e408839a7b2f90b31cba8810012a9261c910b968" target="_blank" rel="noopener noreferrer">commit</a> 的启发。</p>
+<h3 id="方法二">方法二<a class="anchor ms-1" href="#方法二"><i class="fas fa-link"></i></a></h3>
+<p>利用 procfs 的 <code>/proc/[pid]/maps</code> 伪文件来匹配查找。</p>
 <p>具体原理是，只要两个 PID 实际指向的是同一个进程，那么 <code>/proc/[pid]/maps</code> 文件就应该是一样的，因为这个文件记录了进程的内存映射信息。</p>
 <p>具体步骤：</p>
 <ul>
@@ -280,12 +352,12 @@
 <pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="k">function</span> get_container_pid_by_host_pid
 <span class="o">{</span>
   <span class="nb">local</span> <span class="nv">host_pid</span><span class="o">=</span><span class="nv">$1</span>
-  <span class="k">for</span> cont_pid in <span class="k">$(</span>nsenter --target <span class="s2">&#34;</span><span class="nv">$host_pid</span><span class="s2">&#34;</span> --mount --uts --ipc --net --pid ps -o<span class="s1">&#39;pid=&#39;</span><span class="k">)</span>
+  <span class="k">for</span> cont_pid in <span class="k">$(</span>nsenter --target <span class="s2">&#34;</span><span class="nv">$host_pid</span><span class="s2">&#34;</span> --mount --pid ps -o<span class="s1">&#39;pid=&#39;</span><span class="k">)</span>
   <span class="k">do</span>
     <span class="c1"># 通过 md5 来找 host_pid 对应的 cont_pid （容器 pid）</span>
     <span class="c1"># 注意 /proc/[pid]/maps 文件会变，如果两次命令的间隔期间文件变了，则得到的 md5 会不同</span>
     <span class="nv">host_maps_md5</span><span class="o">=</span><span class="k">$(</span>md5sum /proc/<span class="s2">&#34;</span><span class="nv">$host_pid</span><span class="s2">&#34;</span>/maps <span class="p">|</span> awk <span class="s1">&#39;{print $1}&#39;</span><span class="k">)</span>
-    <span class="nv">cont_maps_md5</span><span class="o">=</span><span class="k">$(</span>nsenter --target <span class="s2">&#34;</span><span class="nv">$host_pid</span><span class="s2">&#34;</span> --mount --uts --ipc --net --pid md5sum /proc/  <span class="s2">&#34;</span><span class="nv">$cont_pid</span><span class="s2">&#34;</span>/maps <span class="p">|</span> awk <span class="s1">&#39;{print $1}&#39;</span><span class="k">)</span>
+    <span class="nv">cont_maps_md5</span><span class="o">=</span><span class="k">$(</span>nsenter --target <span class="s2">&#34;</span><span class="nv">$host_pid</span><span class="s2">&#34;</span> --mount --pid md5sum /proc/  <span class="s2">&#34;</span><span class="nv">$cont_pid</span><span class="s2">&#34;</span>/maps <span class="p">|</span> awk <span class="s1">&#39;{print $1}&#39;</span><span class="k">)</span>
     <span class="k">if</span> <span class="o">[[</span> <span class="s2">&#34;</span><span class="nv">$host_maps_md5</span><span class="s2">&#34;</span> <span class="o">==</span> <span class="s2">&#34;</span><span class="nv">$cont_maps_md5</span><span class="s2">&#34;</span> <span class="o">]]</span><span class="p">;</span> <span class="k">then</span>
       <span class="nb">echo</span> <span class="s2">&#34;</span><span class="nv">$cont_pid</span><span class="s2">&#34;</span>
       <span class="k">return</span> <span class="m">0</span>
@@ -385,7 +457,12 @@
     <nav id="TableOfContents">
   <ul>
     <li><a href="#linux-kernel--41">Linux Kernel &gt;= 4.1</a></li>
-    <li><a href="#linux-kernel--41-1">Linux Kernel &lt; 4.1</a></li>
+    <li><a href="#linux-kernel--41-1">Linux Kernel &lt; 4.1</a>
+      <ul>
+        <li><a href="#方法一">方法一</a></li>
+        <li><a href="#方法二">方法二</a></li>
+      </ul>
+    </li>
     <li><a href="#参考资料">参考资料</a></li>
   </ul>
 </nav>
