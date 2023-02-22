@@ -1,0 +1,939 @@
+<!doctype html><html lang="zh-cn" data-palette="blue"
+  >
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>虚拟化平台网络资源分配不当导致网络吐量下降 - 颇忒脱的技术博客</title><link rel="apple-touch-icon" href="/images/icons/icon-180x180.png" sizes="180x180">
+<link rel="icon" href="/images/icons/icon-32x32.png" sizes="32x32" type="image/png">
+<link rel="icon" href="/images/icons/icon-16x16.png" sizes="16x16" type="image/png">
+<link rel="icon" href="/images/icons/favicon.ico">
+<link rel="manifest" href="/manifest.json">
+<meta name="keywords" content="" />
+<meta name="description" content="" /><meta name="robots" content="index, follow" /><meta itemprop="name" content="虚拟化平台网络资源分配不当导致网络吐量下降">
+<meta itemprop="description" content=""><meta itemprop="datePublished" content="2023-02-22T08:02:45+08:00" />
+<meta itemprop="dateModified" content="2023-02-22T08:02:45+08:00" />
+<meta itemprop="wordCount" content="1881">
+<meta itemprop="keywords" content="nginx,troubleshooting,linux,深信服,acloud,虚拟化," /><meta property="og:title" content="虚拟化平台网络资源分配不当导致网络吐量下降" />
+<meta property="og:description" content="" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="/post/network/few-cores-cause-net-throughput/" /><meta property="article:section" content="post" />
+<meta property="article:published_time" content="2023-02-22T08:02:45+08:00" />
+<meta property="article:modified_time" content="2023-02-22T08:02:45+08:00" /><meta property="og:site_name" content="颇忒脱的技术博客" />
+
+<meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="虚拟化平台网络资源分配不当导致网络吐量下降"/>
+<meta name="twitter:description" content=""/>
+<meta property="og:image" content="/images/avatar.jpg"/>
+  <meta name="twitter:image" content="/images/avatar.jpg"/><link rel="stylesheet" href="/css/main.min.507afbe6e4670fa3e961a0b35816b5daeb36029866fd6bd7b9d7871fcf88faa5.css" integrity="sha256-UHr75uRnD6PpYaCzWBa12us2Aphm/WvXudeHH8&#43;I&#43;qU=" crossorigin="anonymous"><link rel="stylesheet" href="/css/viewer.min.3d228794bcedbbfa0412beb8fbc1ec6973202945e42af7004f742a4d7bd620ab.css" integrity="sha256-PSKHlLztu/oEEr64&#43;8HsaXMgKUXkKvcAT3QqTXvWIKs=" crossorigin="anonymous"></head>
+  <body><script>const items=['mode','palette'];items.forEach(function(a){const b=localStorage.getItem('hbs-'+a);b&&document.body.parentElement.setAttribute('data-'+a,b)})</script><header><nav class="navbar top-app-bar top-app-bar-expand-lg fixed-top">
+  <div class="container">
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent"
+      aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <i class="fas fa-bars"></i>
+    </button><a class="navbar-brand flex-grow-1 flex-lg-grow-0 text-center text-lg-start mx-auto me-lg-3" href="/"><img class="logo" alt="Logo" src="/images/avatar.jpg" loading="lazy"
+   width="455" height="455"
+   />
+颇忒脱的技术博客
+    </a>
+    
+    <button class="navbar-settings" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvasSettings"
+  aria-controls="offcanvasSettings" aria-label="Toggle settings">
+  <i class="fas fa-ellipsis-v"></i>
+</button>
+
+<div class="offcanvas offcanvas-end surface h-100" tabindex="-1" id="offcanvasSettings" aria-labelledby="offcanvasSettings">
+  <div class="offcanvas-header">
+    <h3 class="offcanvas-title">设置</h3>
+    <button type="button" class="btn btn-sm btn-outline-primary" data-bs-dismiss="offcanvas" aria-label="Close">
+      <i class="fas fa-times"></i>
+    </button>
+  </div>
+  <div class="offcanvas-body d-flex flex-column">
+
+<section class="setting">
+  <form class="row">
+    <div class="col-auto">
+      <label><i class="fas fa-fw fa-adjust"></i> 模式</label>
+    </div>
+    <div class="col-auto ms-auto">
+      <div class="form-check form-switch">
+        <input class="form-check-input" type="checkbox" id="modeSwitcher">
+      </div>
+    </div>
+  </form>
+</section>
+
+<section class="setting">
+  <form class="font-size-switcher-form row">
+    <div class="col-auto">
+      <label for="fontSize" class="form-label"><i class="fas fa-fw fa-font"></i> 字体大小</label>
+    </div>
+    <div class="col-auto ms-auto">
+      <input type="range" class="form-range" min="-2" max="2" id="fontSize">
+    </div>
+  </form>
+</section>
+
+
+<section class="setting palettes">
+  <form class="row">
+    <div class="col-auto">
+      <label><i class="fas fa-fw fa-palette"></i> 配色</label>
+    </div>
+    <div class="col-auto ms-auto">
+      <a id="btnPalette" class="btn btn-sm btn-outline-primary" role="button" aria-label="palettePicker">
+        <i class="fas fa-eye-dropper"></i>
+      </a>
+    </div>
+  </form>
+  <div class="mt-2 d-flex justify-content-between visually-hidden" id="palettePicker"><button type="button" id="palette-blue" aria-label="蓝色"
+        class="btn btn-sm w-100 palette" data-palette="blue">
+      </button><button type="button" id="palette-blue-gray" aria-label="蓝灰色"
+        class="btn btn-sm w-100 palette" data-palette="blue-gray">
+      </button><button type="button" id="palette-brown" aria-label="棕色"
+        class="btn btn-sm w-100 palette" data-palette="brown">
+      </button><button type="button" id="palette-cyan" aria-label="青色"
+        class="btn btn-sm w-100 palette" data-palette="cyan">
+      </button><button type="button" id="palette-green" aria-label="绿色"
+        class="btn btn-sm w-100 palette" data-palette="green">
+      </button><button type="button" id="palette-indigo" aria-label="靛青色"
+        class="btn btn-sm w-100 palette" data-palette="indigo">
+      </button><button type="button" id="palette-orange" aria-label="橙色"
+        class="btn btn-sm w-100 palette" data-palette="orange">
+      </button><button type="button" id="palette-pink" aria-label="粉色"
+        class="btn btn-sm w-100 palette" data-palette="pink">
+      </button><button type="button" id="palette-purple" aria-label="紫色"
+        class="btn btn-sm w-100 palette" data-palette="purple">
+      </button><button type="button" id="palette-red" aria-label="红色"
+        class="btn btn-sm w-100 palette" data-palette="red">
+      </button><button type="button" id="palette-teal" aria-label="蓝绿色"
+        class="btn btn-sm w-100 palette" data-palette="teal">
+      </button><button type="button" id="palette-yellow" aria-label="黄色"
+        class="btn btn-sm w-100 palette" data-palette="yellow">
+      </button></div>
+</section>
+<section class="setting actions d-flex justify-content-around mt-auto overflow-auto">
+  <a role="button" class="action action-go-back" href="javascript: window.history.back();">
+    <span class="action-icon"><i class="fas fa-2x fa-arrow-left"></i></span> 返回
+  </a>
+  <a role="button" class="action action-reload-page">
+    <span class="action-icon"><i class="fas fa-2x fa-redo-alt"></i></span> 刷新
+  </a>
+  <a role="button" class="action action-copy-url">
+    <span class="action-icon"><i class="fas fa-2x fa-link"></i></span> 复制链接
+  </a></section>
+
+</div>
+</div>
+
+    <div class="collapse navbar-collapse" tabindex="-1" id="navbarSupportedContent" aria-labelledby="navbarSupportedContent">
+      <form class="search-bar my-1" action="/search">
+  <div class="input-group input-group-sm">
+    <span class="btn btn-search disabled position-absolute left-0"><i class="fas fa-fw fa-search"></i></span>
+    <input class="form-control rounded-pill" name="q" type="search" aria-label="Search">
+  </div>
+</form>
+      <ul class="navbar-nav ms-auto"><li class="nav-item">
+          <a class="nav-link" href="/series/">
+            <i class="fas fa-fw fa-columns"></i>专栏
+          </a>
+        </li><li class="nav-item dropdown">
+          <a class="nav-link" id="navbarDropdownIndex" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+            <i class="fas fa-fw fa-chevron-circle-down"></i>快速索引
+          </a>
+          <ul class="dropdown-menu" aria-labelledby="navbarDropdownIndex"><li>
+              <a class="dropdown-item"
+                href="/tags/go">
+                Go
+              </a>
+            </li><li>
+              <a class="dropdown-item"
+                href="/tags/gc">
+                GC
+              </a>
+            </li><li>
+              <a class="dropdown-item"
+                href="/tags/kernel">
+                Kernel
+              </a>
+            </li><li>
+              <a class="dropdown-item"
+                href="/tags/cheatsheet">
+                Cheatsheet
+              </a>
+            </li><li>
+              <a class="dropdown-item"
+                href="/tags/troubleshooting">
+                排障实战记录
+              </a>
+            </li></ul>
+        </li><li class="nav-item">
+          <a class="nav-link" href="/tags/">
+            <i class="fas fa-fw fa-tags"></i>标签
+          </a>
+        </li><li class="nav-item">
+          <a class="nav-link" href="/archives/">
+            <i class="fas fa-fw fa-file-archive"></i>归档
+          </a>
+        </li></ul>
+    </div>
+  </div>
+</nav>
+</header>
+<main role="main" class="container">
+      <div class="row content">
+<div class="col-lg-8">
+  <div class="container"><nav class="row card component" aria-label="breadcrumb">
+  <div class="card-body">
+    <ol class="breadcrumb "><li class="breadcrumb-item"><a href="/">主页</a></li><li class="breadcrumb-item"><a href="/post/">文章</a></li><li class="breadcrumb-item active">虚拟化平台网络资源分配不当导致网络吐量下降</li></ol>
+  </div>
+</nav><div class="post-panel-wrapper">
+  <div class="d-flex flex-column component rounded post-panel">
+    
+    <a class="action action-panel-toggler" role="button" title="Panel toggler">
+      <i class="fas fa-fw fa-chevron-circle-down"></i>
+    </a>
+    <a id="sidebarToggler" class="action d-none d-lg-block" role="button" title="Sidebar toggler">
+  <i class="fas fa-fw fa-expand-alt" data-fa-transform="rotate-45"></i>
+</a>
+
+    
+
+    
+    <a class="action" href="#post-copyright" role="button" aria-label="Copyright" title="Copyright">
+  <i class="fas fa-fw fa-copyright"></i>
+</a>
+    <a class="action" href="#post-comments" role="button" aria-label="Comments" title="Comments">
+  <i class="fas fa-fw fa-comments"></i>
+</a>
+    <a class="action" href="#postTOC" aria-controls="Table of contents" role="button" title="Table of contents">
+  <i class="fas fa-fw fa-list-alt"></i>
+</a>
+    
+  </div>
+</div>
+<article class="row card component mb-4 post">
+  <div class="card-header ">
+    <h1 class="card-title post-title">虚拟化平台网络资源分配不当导致网络吐量下降
+</h1>
+  </div>
+  <div class="card-body"><div class="post-meta">
+  <span class="post-date" title="创建于 2023-02-22 08:02:45 &#43;0800 CST。">
+    2023-02-22
+  </span><span class="post-reading-time">
+    4 分钟阅读
+  </span><span class="post-taxonomies"><a href="/tags/nginx/" class="badge post-taxonomy">nginx</a><a href="/tags/troubleshooting/" class="badge post-taxonomy">troubleshooting</a><a href="/tags/linux/" class="badge post-taxonomy">linux</a><a href="/tags/%E6%B7%B1%E4%BF%A1%E6%9C%8D/" class="badge post-taxonomy">深信服</a><a href="/tags/acloud/" class="badge post-taxonomy">acloud</a><a href="/tags/%E8%99%9A%E6%8B%9F%E5%8C%96/" class="badge post-taxonomy">虚拟化</a></span>
+</div>
+<div class="post-content mb-3"><h2 id="环境">环境<a class="anchor ms-1" href="#环境"><i class="fas fa-link"></i></a></h2>
+<ul>
+<li>拓扑：<code>Wrk --&gt; Nginx --&gt; Tomcat</code></li>
+<li>三者是部署在同一个物理服务器上的 3 个虚拟机</li>
+<li>三者都是 4c 4g配置</li>
+<li>三者操作系统相同，都是 Anolis Linux 8.6</li>
+<li>三者之间的带宽用 iperf3 测试过，可达 14~16Gbits/s</li>
+</ul>
+<p>软件版本：</p>
+<ul>
+<li><a href="https://github.com/wg/wrk" target="_blank" rel="noopener noreferrer">wrk</a> master 最新版</li>
+<li>Nginx 1.23.3</li>
+<li>Tomcat 8.5.85，配置了 <code>-Xms2G -Xmx2G</code>，这个配置可以避免 Full GC</li>
+<li>测试的是 Tomcat 下的 <code>/docs/config/filter.html</code> 地址，这个地址响应大小在 ~91K</li>
+</ul>
+<p>测试脚本：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell">./wrk -c <span class="m">500</span> -t <span class="m">4</span> -d 1m --latency  http://&lt;tomcat-ip&gt;:8080/docs/config/filter.html
+./wrk -c <span class="m">500</span> -t <span class="m">4</span> -d 1m --latency  http://&lt;nginx-ip&gt;:8080/docs/config/filter.html
+</code></pre></td></tr></table>
+</div>
+</div><p>nginx 配置：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span><span class="lnt">46
+</span><span class="lnt">47
+</span><span class="lnt">48
+</span><span class="lnt">49
+</span><span class="lnt">50
+</span><span class="lnt">51
+</span><span class="lnt">52
+</span><span class="lnt">53
+</span><span class="lnt">54
+</span><span class="lnt">55
+</span><span class="lnt">56
+</span><span class="lnt">57
+</span><span class="lnt">58
+</span><span class="lnt">59
+</span><span class="lnt">60
+</span><span class="lnt">61
+</span><span class="lnt">62
+</span><span class="lnt">63
+</span><span class="lnt">64
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback">user  nginx;
+worker_processes  4;
+worker_cpu_affinity 0001 0010 0100 1000;
+
+worker_rlimit_nofile 30000;
+
+error_log  /var/log/nginx/error.log notice;
+pid        /var/run/nginx.pid;
+
+events {
+    use epoll;
+    multi_accept on;
+    worker_connections  7500;
+}
+
+http {
+    include       /etc/nginx/mime.types;
+    default_type  application/octet-stream;
+
+    log_format  main  &#39;$remote_addr - $remote_user [$time_local] &#34;$request&#34; &#39;
+                      &#39;$status $body_bytes_sent &#34;$http_referer&#34; &#39;
+                      &#39;&#34;$http_user_agent&#34; &#34;$http_x_forwarded_for&#34;&#39;;
+
+    access_log  /var/log/nginx/access.log  main;
+
+    sendfile        on;
+    #tcp_nopush     on;
+
+    keepalive_timeout  65;
+    keepalive_requests 1000;
+
+    proxy_connect_timeout 15s;
+    proxy_read_timeout 10s;
+
+    proxy_send_timeout 10s;
+    proxy_buffering on;
+    proxy_buffers 16 128k;
+    proxy_busy_buffers_size 512k;
+    proxy_socket_keepalive on;
+
+    upstream tomcat_server {
+        server &lt;tomcat-ip&gt;:8080 max_fails=20;
+        keepalive 1000;
+        keepalive_requests 10000;
+        keepalive_time 1h;
+        keepalive_timeout 60s;
+    }
+    
+    server {
+        listen       8080 reuseport;
+        server_name  localhost;
+
+        location / {
+            proxy_set_header Host $host;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_set_header X-Forwarded-Port $server_port;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_pass http://tomcat_server;
+            proxy_http_version 1.1;
+            proxy_set_header Connection &#34;&#34;;
+            proxy_read_timeout 900s;
+        }
+    }
+}
+</code></pre></td></tr></table>
+</div>
+</div><h2 id="现象">现象<a class="anchor ms-1" href="#现象"><i class="fas fa-link"></i></a></h2>
+<h3 id="吞吐量损耗严重">吞吐量损耗严重<a class="anchor ms-1" href="#吞吐量损耗严重"><i class="fas fa-link"></i></a></h3>
+<p>直压 Tomcat：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell">  <span class="m">4</span> threads and <span class="m">500</span> connections
+  Thread Stats   Avg      Stdev     Max   +/- Stdev
+    Latency    62.59ms   55.90ms 734.80ms   84.47%
+    Req/Sec     2.30k   426.21     4.09k    75.95%
+  Latency Distribution
+     50%   47.14ms
+     75%   91.74ms
+     90%  128.89ms
+     99%  264.21ms
+  <span class="m">548199</span> requests in 1.00m, 47.64GB <span class="nb">read</span>
+Requests/sec:   9122.52
+Transfer/sec:    811.76MB
+</code></pre></td></tr></table>
+</div>
+</div><p>压 Nginx：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell">  <span class="m">4</span> threads and <span class="m">500</span> connections
+  Thread Stats   Avg      Stdev     Max   +/- Stdev
+    Latency   118.55ms  117.78ms   1.60s    87.93%
+    Req/Sec     1.27k   257.82     2.09k    70.84%
+  Latency Distribution
+     50%  101.58ms
+     75%  175.02ms
+     90%  256.53ms
+     99%  525.25ms
+  <span class="m">303731</span> requests in 1.00m, 26.40GB <span class="nb">read</span>
+Requests/sec:   5056.02
+Transfer/sec:    449.97MB
+</code></pre></td></tr></table>
+</div>
+</div><p>发现吞吐量的性能损失在 (9122 - 5056) / 9122 = 44% 左右。同时延迟也有显著的增加。</p>
+<h3 id="cpu-空闲">CPU 空闲<a class="anchor ms-1" href="#cpu-空闲"><i class="fas fa-link"></i></a></h3>
+<p>看 top，发现压测期间 Nginx 服务器的 CPU 使用率只有 50% 左右：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback">top - 10:02:00 up 1 day, 18:49,  1 user,  load average: 1.45, 0.91, 0.45
+Tasks: 154 total,   4 running, 150 sleeping,   0 stopped,   0 zombie
+%Cpu(s):  6.5 us, 16.5 sy,  0.0 ni, 48.8 id,  0.0 wa,  0.0 hi, 27.4 si,  0.8 st
+MiB Mem :   3708.1 total,   1912.4 free,    272.5 used,   1523.2 buff/cache
+MiB Swap:   4032.0 total,   4032.0 free,      0.0 used.   3206.9 avail Mem
+
+    PID USER      PR  NI    VIRT    RES    SHR S  %CPU  %MEM     TIME+ COMMAND
+3379959 nginx     20   0   81668  12272   4432 R  30.6   0.3   1:04.68 nginx
+3379958 nginx     20   0   82336  13072   4432 R  29.9   0.3   0:59.11 nginx
+3379957 nginx     20   0   80680  11552   4432 R  25.9   0.3   0:52.61 nginx
+3379956 nginx     20   0   81240  11972   4428 S  25.2   0.3   0:53.03 nginx
+</code></pre></td></tr></table>
+</div>
+</div><p>看 pidstat 查看 Nginx 进程的 CPU 利用率和进程上下文切换情况，发现存在较高的 %wait，以及比较稳定的 cswch/s：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell">pidstat -G nginx -u -w <span class="m">1</span>
+
+10时05分17秒     USER       PID    %usr %system  %guest   %wait    %CPU   CPU  Command
+10时05分18秒    nginx   <span class="m">3379956</span>    5.00   18.00    0.00   16.00   23.00     <span class="m">0</span>  nginx
+10时05分18秒    nginx   <span class="m">3379957</span>    6.00   20.00    0.00   16.00   26.00     <span class="m">1</span>  nginx
+10时05分18秒    nginx   <span class="m">3379958</span>    5.00   23.00    0.00   18.00   28.00     <span class="m">2</span>  nginx
+10时05分18秒    nginx   <span class="m">3379959</span>    6.00   24.00    0.00   16.00   30.00     <span class="m">3</span>  nginx
+
+10时05分17秒     USER       PID   cswch/s nvcswch/s  Command
+10时05分18秒    nginx   <span class="m">3379956</span>    938.00      0.00  nginx
+10时05分18秒    nginx   <span class="m">3379957</span>    969.00      0.00  nginx
+10时05分18秒    nginx   <span class="m">3379958</span>    802.00      0.00  nginx
+10时05分18秒    nginx   <span class="m">3379959</span>    827.00      0.00  nginx
+</code></pre></td></tr></table>
+</div>
+</div><p>关于 %wait 和 cswch/s 的解释：</p>
+<blockquote>
+<p>%wait: Percentage of CPU spent by the task while waiting to run.</p>
+<p>cswch/s: Total number of voluntary context switches the task made per second.  A voluntary context switch occurs when a task blocks because it requires a resource that is unavailable.</p>
+</blockquote>
+<h3 id="off-cpu-时间较多">Off CPU 时间较多<a class="anchor ms-1" href="#off-cpu-时间较多"><i class="fas fa-link"></i></a></h3>
+<p>针对 %wait 较高这个现象，使用 bcc offcputime 来采样 Off-CPU 事件，采样 30 秒：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell">/usr/share/bcc/tools/offcputime -df -p <span class="k">$(</span>pgrep -nx nginx<span class="k">)</span> <span class="m">30</span> &gt; offcpu.stacks <span class="se">\
+</span><span class="se"></span><span class="o">&amp;&amp;</span> /root/FlameGraph/flamegraph.pl --color<span class="o">=</span>io --title<span class="o">=</span><span class="s2">&#34;Off-CPU Time Flame Graph&#34;</span> --countname<span class="o">=</span>us &lt; offcpu.stacks &gt; /usr/share/nginx/html/offcpu.svg
+</code></pre></td></tr></table>
+</div>
+</div><p>发现 Off CPU 的时间高达 16.8s 左右（<a href="origin-offcpu.svg">点击此处进入交互界面</a>）：</p>
+<p><img class="img-fluid" alt="" src="/post/network/few-cores-cause-net-throughput/origin-offcpu.svg" loading="lazy"
+  
+   />
+
+</p>
+<p>要特别注意的是，这里采集的是单个 nginx 进程（总共有 4 个）所绑定的 CPU 的 Off CPU 时间，也就是说在 30s 时间内，这颗 CPU 有 16.8s 超过 50% 的时间是闲着的。</p>
+<h2 id="解决办法">解决办法<a class="anchor ms-1" href="#解决办法"><i class="fas fa-link"></i></a></h2>
+<p>试了很多解决办法，找了很多工具，调了很多参数，但是都没有效果。</p>
+<p>最终在深信服的 aCloud 管理后台里看到了这个参数：</p>
+<p><img class="img-fluid" alt="" src="/post/network/few-cores-cause-net-throughput/acloud.jpg" loading="lazy"
+  
+   />
+
+</p>
+<p>尝试将其改成 4 核独占之后，性能有显著提升。</p>
+<h2 id="优化之后">优化之后<a class="anchor ms-1" href="#优化之后"><i class="fas fa-link"></i></a></h2>
+<h3 id="吞吐量损耗降低且整体吞吐量提升明显">吞吐量损耗降低且整体吞吐量提升明显<a class="anchor ms-1" href="#吞吐量损耗降低且整体吞吐量提升明显"><i class="fas fa-link"></i></a></h3>
+<p>压 Tomcat 的结果：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell">  <span class="m">4</span> threads and <span class="m">500</span> connections
+  Thread Stats   Avg      Stdev     Max   +/- Stdev
+    Latency    60.17ms  105.13ms   1.03s    86.99%
+    Req/Sec     6.42k     1.18k   10.03k    76.11%
+  Latency Distribution
+     50%   13.72ms
+     75%   38.80ms
+     90%  208.72ms
+     99%  471.67ms
+  <span class="m">1507277</span> requests in 1.00m, 130.93GB <span class="nb">read</span>
+Requests/sec:  25082.70
+Transfer/sec:      2.18GB
+</code></pre></td></tr></table>
+</div>
+</div><p>压 Nginx 的结果：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell">  <span class="m">4</span> threads and <span class="m">500</span> connections
+  Thread Stats   Avg      Stdev     Max   +/- Stdev
+    Latency    48.61ms   77.76ms 827.67ms   87.91%
+    Req/Sec     5.65k     1.03k    8.53k    77.67%
+  Latency Distribution
+     50%   16.63ms
+     75%   35.39ms
+     90%  150.32ms
+     99%  360.11ms
+  <span class="m">1329066</span> requests in 1.00m, 115.50GB <span class="nb">read</span>
+Requests/sec:  22138.86
+Transfer/sec:      1.92GB
+</code></pre></td></tr></table>
+</div>
+</div><p>首先，吞吐量整体提升有明显提升，直压 Tomcat 从 9122 QPS 提升到了 25082 QPS，压 Nginx 从 3959 QPS 提升到了 22138 QPS。</p>
+<p>同时，吞吐量性能损失降低明显，从原来的 44% 的损失降低到了现在的 (25082 - 22138) / 25082 = 11%。</p>
+<h3 id="cpu-利用率提升">CPU 利用率提升<a class="anchor ms-1" href="#cpu-利用率提升"><i class="fas fa-link"></i></a></h3>
+<p>pidstat 方面也有显著提升：</p>
+<ul>
+<li>CPU 利用率显著提升，从原来的 ~30% 提升到了 ~80%</li>
+<li><code>%wait</code> 的比例从原来的 ~16% 降到了 ~4%</li>
+<li>cswch/s（自愿上下文切换）从原来的 ~800 降到了 ~500 左右</li>
+<li>不过 nvcswch/s (非自愿上下文切换）从原来的 0 升到了 ~30，这说明 CPU 繁忙了存在调度切换，是正常现象。</li>
+</ul>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell">平均时间:   UID       PID    %usr %system  %guest   %wait    %CPU   CPU  Command
+平均时间:   <span class="m">990</span>   <span class="m">3515387</span>   13.01   67.56    0.00    3.36   80.57     -  nginx
+平均时间:   <span class="m">990</span>   <span class="m">3515388</span>   13.82   68.24    0.00    3.42   82.07     -  nginx
+平均时间:   <span class="m">990</span>   <span class="m">3515389</span>   13.01   65.38    0.00    4.55   78.39     -  nginx
+平均时间:   <span class="m">990</span>   <span class="m">3515390</span>   13.64   67.25    0.00    3.61   80.88     -  nginx
+
+平均时间:   UID       PID   cswch/s nvcswch/s  Command
+平均时间:   <span class="m">990</span>   <span class="m">3515387</span>    435.74     28.70  nginx
+平均时间:   <span class="m">990</span>   <span class="m">3515388</span>    359.90     31.63  nginx
+平均时间:   <span class="m">990</span>   <span class="m">3515389</span>    527.46     38.17  nginx
+平均时间:   <span class="m">990</span>   <span class="m">3515390</span>    418.62     32.13  nginx
+</code></pre></td></tr></table>
+</div>
+</div><h3 id="off-cpu-时间减少">Off CPU 时间减少<a class="anchor ms-1" href="#off-cpu-时间减少"><i class="fas fa-link"></i></a></h3>
+<p>再用 bcc offcputime 采样 30 秒内的 off cpu 时间：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell">/usr/share/bcc/tools/offcputime -df -p <span class="k">$(</span>pgrep -nx nginx<span class="k">)</span> <span class="m">30</span> &gt; offcpu.stacks <span class="se">\
+</span><span class="se"></span><span class="o">&amp;&amp;</span> /root/FlameGraph/flamegraph.pl --color<span class="o">=</span>io --title<span class="o">=</span><span class="s2">&#34;Off-CPU Time Flame Graph&#34;</span> --countname<span class="o">=</span>us &lt; offcpu.stacks &gt; /usr/share/nginx/html/offcpu.svg
+</code></pre></td></tr></table>
+</div>
+</div><p>发现显著总体时间显著减少，只有 2.5s 左右（<a href="optimized-offcpu.svg">点击此处进入交互界面</a>）：</p>
+<p><img class="img-fluid" alt="" src="/post/network/few-cores-cause-net-throughput/optimized-offcpu.svg" loading="lazy"
+  
+   />
+
+</p>
+<p>对比之前的 16.8s 有显著的降低。</p>
+<h2 id="结论">结论<a class="anchor ms-1" href="#结论"><i class="fas fa-link"></i></a></h2>
+<p>分配给物理机用于处理网络转发的 CPU 数量对于虚拟机内的网络性能存在显著影响，适当增加 CPU 数量对性能有显著的好处。</p>
+<h2 id="题外话">题外话<a class="anchor ms-1" href="#题外话"><i class="fas fa-link"></i></a></h2>
+<p>在优化前后都使用 iperf3 做了测试，测试结果没有明显的差别，这里应该是 iperf3 和 wrk 压测机制不同有关。</p>
+<p>也许 iperf3 只能用来测试带宽，无法测试网络的并发处理性能或者网络包的转发性能？</p></div></div>
+  <div class="card-footer"><div class="post-navs d-flex justify-content-evenly"><div class="post-nav post-prev">
+    <i class="fas fa-fw fa-chevron-left"></i>
+    <a href="/post/linux/stap-kernel-debug-mismatch/">内核版本不匹配导致 Systemtap 不可用问题的解决办法
+</a>
+  </div></div></div>
+</article><div class="post-copyright mb-3 row card component" id="post-copyright">
+    <div class="card-header">
+        <h2 class="card-title">版权</h2>
+    </div>
+    <div class="card-body"><a class="d-flex align-items-center flex-column" target="_blank" rel="license noopener noreferrer" href="https://creativecommons.org/licenses/by-nc-nd/4.0/deed.zh">
+  <span><i class="fab fa-fw fa-2x fa-creative-commons"></i><i class="fab fa-fw fa-2x fa-creative-commons-by"></i><i class="fab fa-fw fa-2x fa-creative-commons-nc"></i><i class="fab fa-fw fa-2x fa-creative-commons-nd"></i></span>
+  CC BY-NC-ND 4.0 
+</a>
+
+
+    </div>
+</div><section class="related-posts row card component">
+    <div class="card-header">
+      <h2 class="card-title">相关文章</h2>
+    </div>
+    <div class="card-body">
+      <ul class="post-list"><li>
+          <a href="/post/network/soft-irq-unbalance/">NET_RX 软中断不平衡问题
+</a>
+          <span class="float-end post-date">2023-02-08
+</span>
+        </li><li>
+          <a href="/post/nginx/a-lot-of-time-wait/">Nginx 造成 Upstream 服务器大量 TIME_WAIT 连接
+</a>
+          <span class="float-end post-date">2023-02-01
+</span>
+        </li><li>
+          <a href="/post/bash-long-var-corrupt/">Bash 长变量值损坏问题排查
+</a>
+          <span class="float-end post-date">2022-02-16
+</span>
+        </li><li>
+          <a href="/post/linux/too-many-time-wait-troubleshooting/">压测时大量TIME_WAIT问题排查
+</a>
+          <span class="float-end post-date">2021-09-07
+</span>
+        </li><li>
+          <a href="/post/nginx/benchmark-toubleshooting/">某次压力测试中对Nginx的排障
+</a>
+          <span class="float-end post-date">2021-09-07
+</span>
+        </li></ul>
+    </div>
+  </section><div class="card component row post-comments" id="post-comments">
+  <div class="card-header">
+    <h2 class="card-title">评论</h2>
+  </div>
+  <div class="card-body"></div>
+</div></div>
+</div><aside class="col-lg-4 sidebar d-flex">
+  <div class="container d-flex flex-column">
+    
+    <section class="card row text-center profile component">
+  <div class="card-body">
+    <div class="col-12 d-flex align-items-center justify-content-center"><img class="profile-avatar rounded-circle" alt="颇忒脱" src="/images/avatar.jpg" loading="lazy"
+   width="455" height="455"
+   />
+</div>
+    <div class="col-12 profile-meta"><div class="profile-name">颇忒脱</div><nav class="social-links nav justify-content-center"><a class="nav-link social-link" target="_blank" href="https://github.com/chanjarster" title="GitHub" rel="noopener noreferrer">
+        <i class="fa-fw fa-2x fab fa-github"></i>
+      </a></nav>
+</div>
+  </div>
+</section>
+  <div class="post-toc row mb-4 card component" id="postTOC">
+  <div class="card-header">
+    <h2 class="card-title">目录</h2>
+  </div>
+  <div class="card-body">
+    <nav id="TableOfContents">
+  <ul>
+    <li><a href="#环境">环境</a></li>
+    <li><a href="#现象">现象</a>
+      <ul>
+        <li><a href="#吞吐量损耗严重">吞吐量损耗严重</a></li>
+        <li><a href="#cpu-空闲">CPU 空闲</a></li>
+        <li><a href="#off-cpu-时间较多">Off CPU 时间较多</a></li>
+      </ul>
+    </li>
+    <li><a href="#解决办法">解决办法</a></li>
+    <li><a href="#优化之后">优化之后</a>
+      <ul>
+        <li><a href="#吞吐量损耗降低且整体吞吐量提升明显">吞吐量损耗降低且整体吞吐量提升明显</a></li>
+        <li><a href="#cpu-利用率提升">CPU 利用率提升</a></li>
+        <li><a href="#off-cpu-时间减少">Off CPU 时间减少</a></li>
+      </ul>
+    </li>
+    <li><a href="#结论">结论</a></li>
+    <li><a href="#题外话">题外话</a></li>
+  </ul>
+</nav>
+  </div>
+</div><section class="featured-posts row card component">
+    <div class="card-header">
+      <h2 class="card-title">精选文章</h2>
+    </div>
+    <div class="card-body">
+      <ul class="post-list"><li>
+          <a href="/post/linux/namespace/index-page/">Linux Namespace系列
+</a>
+        </li><li>
+          <a href="/post/network/index-page/">Networking系列
+</a>
+        </li><li>
+          <a href="/post/mysql/index-page/">MySQL系列
+</a>
+        </li><li>
+          <a href="/post/concurrent-programming/index-page/">并发编程系列
+</a>
+        </li><li>
+          <a href="/post/jvm/index-page/">JVM系列
+</a>
+        </li></ul>
+    </div>
+  </section><section class="recent-posts row card component">
+  <div class="card-header">
+    <h2 class="card-title">最近文章</h2>
+  </div>
+  <div class="card-body">
+    <ul class="post-list"><li>
+        <a href="/post/network/few-cores-cause-net-throughput/">虚拟化平台网络资源分配不当导致网络吐量下降
+</a>
+      </li><li>
+        <a href="/post/linux/stap-kernel-debug-mismatch/">内核版本不匹配导致 Systemtap 不可用问题的解决办法
+</a>
+      </li><li>
+        <a href="/post/network/soft-irq-unbalance/">NET_RX 软中断不平衡问题
+</a>
+      </li><li>
+        <a href="/post/jmeter/analyze-connect-time/">JMeter 分析 Connect Time
+</a>
+      </li><li>
+        <a href="/post/jmeter/how-jmeter-calc-throughput/">JMeter 是如何计算吞吐量的
+</a>
+      </li></ul>
+  </div>
+</section><section class="tags-taxonomies row card component">
+      <div class="card-header">
+        <h2 class="card-title">
+          <a href="/tags">标签</a>
+        </h2>
+      </div>
+      <div class="card-body">
+        <div class="py-2"><a href="/tags/arts-a/" class="badge rounded post-taxonomy" title="ARTS-A">
+            ARTS-A<span class="badge badge-sm text-white bg-accent ms-1">125</span></a><a href="/tags/k8s/" class="badge rounded post-taxonomy" title="k8s">
+            k8s<span class="badge badge-sm text-white bg-accent ms-1">47</span></a><a href="/tags/jvm/" class="badge rounded post-taxonomy" title="jvm">
+            jvm<span class="badge badge-sm text-white bg-accent ms-1">39</span></a><a href="/tags/troubleshooting/" class="badge rounded post-taxonomy" title="troubleshooting">
+            troubleshooting<span class="badge badge-sm text-white bg-accent ms-1">32</span></a><a href="/tags/docker/" class="badge rounded post-taxonomy" title="docker">
+            docker<span class="badge badge-sm text-white bg-accent ms-1">26</span></a><a href="/tags/mysql/" class="badge rounded post-taxonomy" title="mysql">
+            mysql<span class="badge badge-sm text-white bg-accent ms-1">22</span></a><a href="/tags/cheatsheet/" class="badge rounded post-taxonomy" title="cheatsheet">
+            cheatsheet<span class="badge badge-sm text-white bg-accent ms-1">21</span></a><a href="/tags/network/" class="badge rounded post-taxonomy" title="network">
+            network<span class="badge badge-sm text-white bg-accent ms-1">21</span></a><a href="/tags/%E5%B9%B6%E5%8F%91%E7%BC%96%E7%A8%8B/" class="badge rounded post-taxonomy" title="并发编程">
+            并发编程<span class="badge badge-sm text-white bg-accent ms-1">20</span></a><a href="/tags/kernel/" class="badge rounded post-taxonomy" title="kernel">
+            kernel<span class="badge badge-sm text-white bg-accent ms-1">18</span></a><a href="/tags/java/" class="badge rounded post-taxonomy" title="java">
+            java<span class="badge badge-sm text-white bg-accent ms-1">16</span></a><a href="/tags/linux/" class="badge rounded post-taxonomy" title="linux">
+            linux<span class="badge badge-sm text-white bg-accent ms-1">16</span></a><a href="/tags/%E6%80%A7%E8%83%BD%E8%B0%83%E4%BC%98/" class="badge rounded post-taxonomy" title="性能调优">
+            性能调优<span class="badge badge-sm text-white bg-accent ms-1">11</span></a><a href="/tags/prometheus/" class="badge rounded post-taxonomy" title="prometheus">
+            prometheus<span class="badge badge-sm text-white bg-accent ms-1">10</span></a><a href="/tags/%E5%BE%AE%E6%9C%8D%E5%8A%A1/" class="badge rounded post-taxonomy" title="微服务">
+            微服务<span class="badge badge-sm text-white bg-accent ms-1">10</span></a><a href="/tags/go/" class="badge rounded post-taxonomy" title="go">
+            go<span class="badge badge-sm text-white bg-accent ms-1">9</span></a><a href="/tags/redis/" class="badge rounded post-taxonomy" title="redis">
+            redis<span class="badge badge-sm text-white bg-accent ms-1">8</span></a><a href="/tags/debug/" class="badge rounded post-taxonomy" title="debug">
+            debug<span class="badge badge-sm text-white bg-accent ms-1">7</span></a><a href="/tags/gc/" class="badge rounded post-taxonomy" title="gc">
+            gc<span class="badge badge-sm text-white bg-accent ms-1">7</span></a><a href="/tags/rancher/" class="badge rounded post-taxonomy" title="rancher">
+            rancher<span class="badge badge-sm text-white bg-accent ms-1">7</span></a><a href="/tags/ingress/" class="badge rounded post-taxonomy" title="ingress">
+            ingress<span class="badge badge-sm text-white bg-accent ms-1">6</span></a><a href="/tags/nginx/" class="badge rounded post-taxonomy" title="nginx">
+            nginx<span class="badge badge-sm text-white bg-accent ms-1">6</span></a><a href="/tags/%E8%BF%90%E7%BB%B4/" class="badge rounded post-taxonomy" title="运维">
+            运维<span class="badge badge-sm text-white bg-accent ms-1">6</span></a><a href="/tags/ci_cd/" class="badge rounded post-taxonomy" title="CI_CD">
+            CI_CD<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/interview/" class="badge rounded post-taxonomy" title="interview">
+            interview<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/jmx/" class="badge rounded post-taxonomy" title="jmx">
+            jmx<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/%E5%88%86%E5%B8%83%E5%BC%8F%E4%BA%8B%E5%8A%A1/" class="badge rounded post-taxonomy" title="分布式事务">
+            分布式事务<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/%E5%88%86%E5%B8%83%E5%BC%8F%E7%AE%97%E6%B3%95/" class="badge rounded post-taxonomy" title="分布式算法">
+            分布式算法<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/%E6%94%B6%E8%97%8F%E5%A4%B9/" class="badge rounded post-taxonomy" title="收藏夹">
+            收藏夹<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/%E9%AB%98%E5%B9%B6%E5%8F%91/" class="badge rounded post-taxonomy" title="高并发">
+            高并发<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/openssl/" class="badge rounded post-taxonomy" title="openssl">
+            openssl<span class="badge badge-sm text-white bg-accent ms-1">4</span></a><a href="/tags/tls/" class="badge rounded post-taxonomy" title="tls">
+            tls<span class="badge badge-sm text-white bg-accent ms-1">4</span></a><a href="/tags/visualvm/" class="badge rounded post-taxonomy" title="visualvm">
+            visualvm<span class="badge badge-sm text-white bg-accent ms-1">4</span></a><a href="/tags/%E6%97%A5%E5%BF%97/" class="badge rounded post-taxonomy" title="日志">
+            日志<span class="badge badge-sm text-white bg-accent ms-1">4</span></a><a href="/tags/arts/" class="badge rounded post-taxonomy" title="arts">
+            arts<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/arts-r/" class="badge rounded post-taxonomy" title="arts-r">
+            arts-r<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/classloader/" class="badge rounded post-taxonomy" title="ClassLoader">
+            ClassLoader<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/container/" class="badge rounded post-taxonomy" title="container">
+            container<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/jenkins/" class="badge rounded post-taxonomy" title="Jenkins">
+            Jenkins<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/namespace/" class="badge rounded post-taxonomy" title="namespace">
+            namespace<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/scheduling/" class="badge rounded post-taxonomy" title="scheduling">
+            scheduling<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/thread/" class="badge rounded post-taxonomy" title="thread">
+            thread<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/%E5%88%86%E5%B8%83%E5%BC%8F%E6%9E%B6%E6%9E%84/" class="badge rounded post-taxonomy" title="分布式架构">
+            分布式架构<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/grafana/" class="badge rounded post-taxonomy" title="grafana">
+            grafana<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/jdbc/" class="badge rounded post-taxonomy" title="JDBC">
+            JDBC<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/jmeter/" class="badge rounded post-taxonomy" title="jmeter">
+            jmeter<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/%E6%95%B0%E6%8D%AE%E5%BA%93%E6%97%B6%E5%8C%BA%E9%82%A3%E4%BA%9B%E4%BA%8B%E5%84%BF/" class="badge rounded post-taxonomy" title="数据库时区那些事儿">
+            数据库时区那些事儿<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/%E7%9B%91%E6%8E%A7/" class="badge rounded post-taxonomy" title="监控">
+            监控<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/%E9%99%90%E6%B5%81/" class="badge rounded post-taxonomy" title="限流">
+            限流<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/acloud/" class="badge rounded post-taxonomy" title="acloud">
+            acloud<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/akka/" class="badge rounded post-taxonomy" title="Akka">
+            Akka<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/alertmanager/" class="badge rounded post-taxonomy" title="alertmanager">
+            alertmanager<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/bash/" class="badge rounded post-taxonomy" title="bash">
+            bash<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/chrome/" class="badge rounded post-taxonomy" title="chrome">
+            chrome<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/coredns/" class="badge rounded post-taxonomy" title="coredns">
+            coredns<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/elasticsearch/" class="badge rounded post-taxonomy" title="elasticsearch">
+            elasticsearch<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/etcd/" class="badge rounded post-taxonomy" title="etcd">
+            etcd<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/fluentd/" class="badge rounded post-taxonomy" title="fluentd">
+            fluentd<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/harbor/" class="badge rounded post-taxonomy" title="harbor">
+            harbor<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/helm/" class="badge rounded post-taxonomy" title="helm">
+            helm<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/hystrix/" class="badge rounded post-taxonomy" title="hystrix">
+            hystrix<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/io/" class="badge rounded post-taxonomy" title="io">
+            io<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/jdpa/" class="badge rounded post-taxonomy" title="jdpa">
+            jdpa<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/jwt/" class="badge rounded post-taxonomy" title="jwt">
+            jwt<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/kafka/" class="badge rounded post-taxonomy" title="kafka">
+            kafka<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/kibana/" class="badge rounded post-taxonomy" title="kibana">
+            kibana<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/mq/" class="badge rounded post-taxonomy" title="MQ">
+            MQ<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/nfs/" class="badge rounded post-taxonomy" title="nfs">
+            nfs<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/oauth/" class="badge rounded post-taxonomy" title="oauth">
+            oauth<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/oracle/" class="badge rounded post-taxonomy" title="Oracle">
+            Oracle<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/reactor/" class="badge rounded post-taxonomy" title="reactor">
+            reactor<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/spring-boot/" class="badge rounded post-taxonomy" title="spring-boot">
+            spring-boot<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/spring-cloud/" class="badge rounded post-taxonomy" title="Spring Cloud">
+            Spring Cloud<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/ssl/" class="badge rounded post-taxonomy" title="ssl">
+            ssl<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/systemtap/" class="badge rounded post-taxonomy" title="systemtap">
+            systemtap<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/tiller/" class="badge rounded post-taxonomy" title="tiller">
+            tiller<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/vtable/" class="badge rounded post-taxonomy" title="vtable">
+            vtable<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/%E6%95%B0%E7%A0%81/" class="badge rounded post-taxonomy" title="数码">
+            数码<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/%E6%B6%88%E6%81%AF%E9%98%9F%E5%88%97/" class="badge rounded post-taxonomy" title="消息队列">
+            消息队列<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/%E6%B7%B1%E4%BF%A1%E6%9C%8D/" class="badge rounded post-taxonomy" title="深信服">
+            深信服<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/%E7%BC%93%E5%AD%98/" class="badge rounded post-taxonomy" title="缓存">
+            缓存<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/%E8%99%9A%E6%8B%9F%E5%8C%96/" class="badge rounded post-taxonomy" title="虚拟化">
+            虚拟化<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/%E8%B0%83%E7%94%A8%E9%93%BE%E8%BF%BD%E8%B8%AA/" class="badge rounded post-taxonomy" title="调用链追踪">
+            调用链追踪<span class="badge badge-sm text-white bg-accent ms-1">1</span></a></div>
+      </div>
+    </section>
+    
+  </div>
+</aside>
+</div>
+    </main><footer class="footer mt-auto py-3 text-center container"><nav class="social-links nav justify-content-center mb-2"><a class="nav-link social-link" target="_blank" href="https://github.com/chanjarster" title="GitHub" rel="noopener noreferrer">
+        <i class="fa-fw fa-2x fab fa-github"></i>
+      </a></nav>
+<div class="copyright mb-2">
+  Copyright © 2010-2023 Daniel Qian. All Rights Reserved.
+</div>
+<div class="powered-by mb-2">
+  Powered by <a href="https://gohugo.io" target="_blank" rel="noopener noreferrer">Hugo</a> and the <a href="https://github.com/razonyang/hugo-theme-bootstrap" target="_blank" rel="noopener noreferrer">Bootstrap</a> theme.
+</div>
+<a href="https://www.netlify.com" target="_blank" rel="noopener noreferrer">
+    <img src="https://www.netlify.com/img/global/badges/netlify-color-accent.svg" alt="Deploys by Netlify" width="114" height="51" />
+</a>
+</footer>
+<script src="/js/main.2cdce25f280f570596c88888d6af930fe5e15ea030005291dad293defbb231d3.js" integrity="sha256-LNziXygPVwWWyIiI1q&#43;TD&#43;XhXqAwAFKR2tKT3vuyMdM=" crossorigin="anonymous" defer></script><script src="/js/icons.min.8ddcaafc364ff0296c2209c5495287f0de039b852da9b24847f94c198b7639b6.js" integrity="sha256-jdyq/DZP8ClsIgnFSVKH8N4Dm4UtqbJIR/lMGYt2ObY=" crossorigin="anonymous" defer></script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('\/service-worker.js').then(function(reg) {
+      console.log('Successfully registered service worker', reg);
+    }).catch(function(err) {
+      console.warn('Error whilst registering service worker', err);
+    });
+  });
+}
+</script><script src="/js/viewer.min.652118a9fbf3403cdfde4026209f97ace22f9e334f0b45a33431a221b3db46a8.js" integrity="sha256-ZSEYqfvzQDzf3kAmIJ&#43;XrOIvnjNPC0WjNDGiIbPbRqg=" crossorigin="anonymous" defer></script>
+</body>
+</html>
