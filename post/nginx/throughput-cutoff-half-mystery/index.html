@@ -1,0 +1,1741 @@
+<!doctype html><html lang="zh-cn" data-palette="blue"
+  >
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Nginx 反向代理吞吐量砍半之谜 - 颇忒脱的技术博客</title><link rel="apple-touch-icon" href="/images/icons/icon-180x180.png" sizes="180x180">
+<link rel="icon" href="/images/icons/icon-32x32.png" sizes="32x32" type="image/png">
+<link rel="icon" href="/images/icons/icon-16x16.png" sizes="16x16" type="image/png">
+<link rel="icon" href="/images/icons/favicon.ico">
+<link rel="manifest" href="/manifest.json">
+<meta name="keywords" content="" />
+<meta name="description" content="" /><meta name="robots" content="index, follow" /><meta itemprop="name" content="Nginx 反向代理吞吐量砍半之谜">
+<meta itemprop="description" content=""><meta itemprop="datePublished" content="2023-02-22T15:02:45+08:00" />
+<meta itemprop="dateModified" content="2023-02-22T15:02:45+08:00" />
+<meta itemprop="wordCount" content="4591">
+<meta itemprop="keywords" content="nginx,troubleshooting,linux," /><meta property="og:title" content="Nginx 反向代理吞吐量砍半之谜" />
+<meta property="og:description" content="" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="/post/nginx/throughput-cutoff-half-mystery/" /><meta property="article:section" content="post" />
+<meta property="article:published_time" content="2023-02-22T15:02:45+08:00" />
+<meta property="article:modified_time" content="2023-02-22T15:02:45+08:00" /><meta property="og:site_name" content="颇忒脱的技术博客" />
+
+<meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="Nginx 反向代理吞吐量砍半之谜"/>
+<meta name="twitter:description" content=""/>
+<meta property="og:image" content="/images/avatar.jpg"/>
+  <meta name="twitter:image" content="/images/avatar.jpg"/><link rel="stylesheet" href="/css/main.min.507afbe6e4670fa3e961a0b35816b5daeb36029866fd6bd7b9d7871fcf88faa5.css" integrity="sha256-UHr75uRnD6PpYaCzWBa12us2Aphm/WvXudeHH8&#43;I&#43;qU=" crossorigin="anonymous"><link rel="stylesheet" href="/css/viewer.min.3d228794bcedbbfa0412beb8fbc1ec6973202945e42af7004f742a4d7bd620ab.css" integrity="sha256-PSKHlLztu/oEEr64&#43;8HsaXMgKUXkKvcAT3QqTXvWIKs=" crossorigin="anonymous"></head>
+  <body><script>const items=['mode','palette'];items.forEach(function(a){const b=localStorage.getItem('hbs-'+a);b&&document.body.parentElement.setAttribute('data-'+a,b)})</script><header><nav class="navbar top-app-bar top-app-bar-expand-lg fixed-top">
+  <div class="container">
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent"
+      aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <i class="fas fa-bars"></i>
+    </button><a class="navbar-brand flex-grow-1 flex-lg-grow-0 text-center text-lg-start mx-auto me-lg-3" href="/"><img class="logo" alt="Logo" src="/images/avatar.jpg" loading="lazy"
+   width="455" height="455"
+   />
+颇忒脱的技术博客
+    </a>
+    
+    <button class="navbar-settings" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvasSettings"
+  aria-controls="offcanvasSettings" aria-label="Toggle settings">
+  <i class="fas fa-ellipsis-v"></i>
+</button>
+
+<div class="offcanvas offcanvas-end surface h-100" tabindex="-1" id="offcanvasSettings" aria-labelledby="offcanvasSettings">
+  <div class="offcanvas-header">
+    <h3 class="offcanvas-title">设置</h3>
+    <button type="button" class="btn btn-sm btn-outline-primary" data-bs-dismiss="offcanvas" aria-label="Close">
+      <i class="fas fa-times"></i>
+    </button>
+  </div>
+  <div class="offcanvas-body d-flex flex-column">
+
+<section class="setting">
+  <form class="row">
+    <div class="col-auto">
+      <label><i class="fas fa-fw fa-adjust"></i> 模式</label>
+    </div>
+    <div class="col-auto ms-auto">
+      <div class="form-check form-switch">
+        <input class="form-check-input" type="checkbox" id="modeSwitcher">
+      </div>
+    </div>
+  </form>
+</section>
+
+<section class="setting">
+  <form class="font-size-switcher-form row">
+    <div class="col-auto">
+      <label for="fontSize" class="form-label"><i class="fas fa-fw fa-font"></i> 字体大小</label>
+    </div>
+    <div class="col-auto ms-auto">
+      <input type="range" class="form-range" min="-2" max="2" id="fontSize">
+    </div>
+  </form>
+</section>
+
+
+<section class="setting palettes">
+  <form class="row">
+    <div class="col-auto">
+      <label><i class="fas fa-fw fa-palette"></i> 配色</label>
+    </div>
+    <div class="col-auto ms-auto">
+      <a id="btnPalette" class="btn btn-sm btn-outline-primary" role="button" aria-label="palettePicker">
+        <i class="fas fa-eye-dropper"></i>
+      </a>
+    </div>
+  </form>
+  <div class="mt-2 d-flex justify-content-between visually-hidden" id="palettePicker"><button type="button" id="palette-blue" aria-label="蓝色"
+        class="btn btn-sm w-100 palette" data-palette="blue">
+      </button><button type="button" id="palette-blue-gray" aria-label="蓝灰色"
+        class="btn btn-sm w-100 palette" data-palette="blue-gray">
+      </button><button type="button" id="palette-brown" aria-label="棕色"
+        class="btn btn-sm w-100 palette" data-palette="brown">
+      </button><button type="button" id="palette-cyan" aria-label="青色"
+        class="btn btn-sm w-100 palette" data-palette="cyan">
+      </button><button type="button" id="palette-green" aria-label="绿色"
+        class="btn btn-sm w-100 palette" data-palette="green">
+      </button><button type="button" id="palette-indigo" aria-label="靛青色"
+        class="btn btn-sm w-100 palette" data-palette="indigo">
+      </button><button type="button" id="palette-orange" aria-label="橙色"
+        class="btn btn-sm w-100 palette" data-palette="orange">
+      </button><button type="button" id="palette-pink" aria-label="粉色"
+        class="btn btn-sm w-100 palette" data-palette="pink">
+      </button><button type="button" id="palette-purple" aria-label="紫色"
+        class="btn btn-sm w-100 palette" data-palette="purple">
+      </button><button type="button" id="palette-red" aria-label="红色"
+        class="btn btn-sm w-100 palette" data-palette="red">
+      </button><button type="button" id="palette-teal" aria-label="蓝绿色"
+        class="btn btn-sm w-100 palette" data-palette="teal">
+      </button><button type="button" id="palette-yellow" aria-label="黄色"
+        class="btn btn-sm w-100 palette" data-palette="yellow">
+      </button></div>
+</section>
+<section class="setting actions d-flex justify-content-around mt-auto overflow-auto">
+  <a role="button" class="action action-go-back" href="javascript: window.history.back();">
+    <span class="action-icon"><i class="fas fa-2x fa-arrow-left"></i></span> 返回
+  </a>
+  <a role="button" class="action action-reload-page">
+    <span class="action-icon"><i class="fas fa-2x fa-redo-alt"></i></span> 刷新
+  </a>
+  <a role="button" class="action action-copy-url">
+    <span class="action-icon"><i class="fas fa-2x fa-link"></i></span> 复制链接
+  </a></section>
+
+</div>
+</div>
+
+    <div class="collapse navbar-collapse" tabindex="-1" id="navbarSupportedContent" aria-labelledby="navbarSupportedContent">
+      <form class="search-bar my-1" action="/search">
+  <div class="input-group input-group-sm">
+    <span class="btn btn-search disabled position-absolute left-0"><i class="fas fa-fw fa-search"></i></span>
+    <input class="form-control rounded-pill" name="q" type="search" aria-label="Search">
+  </div>
+</form>
+      <ul class="navbar-nav ms-auto"><li class="nav-item">
+          <a class="nav-link" href="/series/">
+            <i class="fas fa-fw fa-columns"></i>专栏
+          </a>
+        </li><li class="nav-item dropdown">
+          <a class="nav-link" id="navbarDropdownIndex" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+            <i class="fas fa-fw fa-chevron-circle-down"></i>快速索引
+          </a>
+          <ul class="dropdown-menu" aria-labelledby="navbarDropdownIndex"><li>
+              <a class="dropdown-item"
+                href="/tags/go">
+                Go
+              </a>
+            </li><li>
+              <a class="dropdown-item"
+                href="/tags/gc">
+                GC
+              </a>
+            </li><li>
+              <a class="dropdown-item"
+                href="/tags/kernel">
+                Kernel
+              </a>
+            </li><li>
+              <a class="dropdown-item"
+                href="/tags/cheatsheet">
+                Cheatsheet
+              </a>
+            </li><li>
+              <a class="dropdown-item"
+                href="/tags/troubleshooting">
+                排障实战记录
+              </a>
+            </li></ul>
+        </li><li class="nav-item">
+          <a class="nav-link" href="/tags/">
+            <i class="fas fa-fw fa-tags"></i>标签
+          </a>
+        </li><li class="nav-item">
+          <a class="nav-link" href="/archives/">
+            <i class="fas fa-fw fa-file-archive"></i>归档
+          </a>
+        </li></ul>
+    </div>
+  </div>
+</nav>
+</header>
+<main role="main" class="container">
+      <div class="row content">
+<div class="col-lg-8">
+  <div class="container"><nav class="row card component" aria-label="breadcrumb">
+  <div class="card-body">
+    <ol class="breadcrumb "><li class="breadcrumb-item"><a href="/">主页</a></li><li class="breadcrumb-item"><a href="/post/">文章</a></li><li class="breadcrumb-item active">Nginx 反向代理吞吐量砍半之谜</li></ol>
+  </div>
+</nav><div class="post-panel-wrapper">
+  <div class="d-flex flex-column component rounded post-panel">
+    
+    <a class="action action-panel-toggler" role="button" title="Panel toggler">
+      <i class="fas fa-fw fa-chevron-circle-down"></i>
+    </a>
+    <a id="sidebarToggler" class="action d-none d-lg-block" role="button" title="Sidebar toggler">
+  <i class="fas fa-fw fa-expand-alt" data-fa-transform="rotate-45"></i>
+</a>
+
+    
+
+    
+    <a class="action" href="#post-copyright" role="button" aria-label="Copyright" title="Copyright">
+  <i class="fas fa-fw fa-copyright"></i>
+</a>
+    <a class="action" href="#post-comments" role="button" aria-label="Comments" title="Comments">
+  <i class="fas fa-fw fa-comments"></i>
+</a>
+    <a class="action" href="#postTOC" aria-controls="Table of contents" role="button" title="Table of contents">
+  <i class="fas fa-fw fa-list-alt"></i>
+</a>
+    
+  </div>
+</div>
+<article class="row card component mb-4 post">
+  <div class="card-header ">
+    <h1 class="card-title post-title">Nginx 反向代理吞吐量砍半之谜
+</h1>
+  </div>
+  <div class="card-body"><div class="post-meta">
+  <span class="post-date" title="创建于 2023-02-22 15:02:45 &#43;0800 CST。">
+    2023-02-22
+  </span><span class="post-reading-time">
+    10 分钟阅读
+  </span><span class="post-taxonomies"><a href="/tags/nginx/" class="badge post-taxonomy">nginx</a><a href="/tags/troubleshooting/" class="badge post-taxonomy">troubleshooting</a><a href="/tags/linux/" class="badge post-taxonomy">linux</a></span>
+</div>
+<div class="post-content mb-3"><h2 id="现象">现象<a class="anchor ms-1" href="#现象"><i class="fas fa-link"></i></a></h2>
+<p>一日闲来无事对 Nginx 作为反向代理的性能做测试，发现相比直压，经过 Nginx 这么一转手，吞吐量减半，延迟加倍。</p>
+<p>基本环境情况：</p>
+<ul>
+<li>拓扑：<code>Wrk --&gt; Nginx --&gt; Tomcat</code></li>
+<li>三者是部署在同一个物理服务器上的 3 个虚拟机</li>
+<li>三者都是 4c 4g配置</li>
+<li>三者操作系统相同，都是 Anolis Linux 8.6</li>
+<li>三者之间的带宽实用 iperf3 测试过，可达 18Gbits/s</li>
+</ul>
+<p>软件版本：</p>
+<ul>
+<li><a href="https://github.com/wg/wrk" target="_blank" rel="noopener noreferrer">wrk</a> master 最新版</li>
+<li>Nginx 1.23.3</li>
+<li>Tomcat 8.5.85，配置了 <code>-Xms2G -Xmx2G</code> 去除了垃圾收集的影响</li>
+<li>测试的是 Tomcat 下的 <code>/docs/config/filter.html</code> 地址，这个地址响应大小在 ~91K，而且这个地址本身吞吐量也不高</li>
+</ul>
+<p>测试脚本：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell">./wrk -c <span class="m">500</span> -t <span class="m">4</span> -d 1m --latency  http://&lt;tomcat-ip&gt;:8080/docs/config/filter.html
+./wrk -c <span class="m">500</span> -t <span class="m">4</span> -d 1m --latency  http://&lt;nginx-ip&gt;:8080/docs/config/filter.html
+</code></pre></td></tr></table>
+</div>
+</div><p>nginx 配置：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span><span class="lnt">46
+</span><span class="lnt">47
+</span><span class="lnt">48
+</span><span class="lnt">49
+</span><span class="lnt">50
+</span><span class="lnt">51
+</span><span class="lnt">52
+</span><span class="lnt">53
+</span><span class="lnt">54
+</span><span class="lnt">55
+</span><span class="lnt">56
+</span><span class="lnt">57
+</span><span class="lnt">58
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback">user  nginx;
+worker_processes  4;
+worker_cpu_affinity 0001 0010 0100 1000;
+
+worker_rlimit_nofile 30000;
+
+error_log  /var/log/nginx/error.log notice;
+pid        /var/run/nginx.pid;
+
+events {
+    use epoll;
+    multi_accept on;
+    worker_connections  7500;
+}
+
+http {
+    include       /etc/nginx/mime.types;
+    default_type  application/octet-stream;
+
+    log_format  main  &#39;$remote_addr - $remote_user [$time_local] &#34;$request&#34; &#39;
+                      &#39;$status $body_bytes_sent &#34;$http_referer&#34; &#39;
+                      &#39;&#34;$http_user_agent&#34; &#34;$http_x_forwarded_for&#34;&#39;;
+
+    access_log  /var/log/nginx/access.log  main;
+
+    sendfile        on;
+    #tcp_nopush     on;
+
+    keepalive_timeout  65;
+    keepalive_requests 1000;
+
+    proxy_connect_timeout 15s;
+    proxy_read_timeout 10s;
+
+    proxy_send_timeout 10s;
+    proxy_buffering on;
+
+    upstream tomcat_server {
+        server &lt;tomcat-ip&gt;:8080 max_fails=20;
+        keepalive 1000;
+    }
+    
+    server {
+        listen       8080 reuseport;
+        server_name  localhost;
+
+        location / {
+            proxy_set_header Host $host;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_set_header X-Forwarded-Port $server_port;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_pass http://tomcat_server;
+            proxy_http_version 1.1;
+            proxy_set_header Connection &#34;&#34;;
+            proxy_read_timeout 900s;
+        }
+    }
+}
+</code></pre></td></tr></table>
+</div>
+</div><p>直压 Tomcat：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell">  <span class="m">4</span> threads and <span class="m">500</span> connections
+  Thread Stats   Avg      Stdev     Max   +/- Stdev
+    Latency    61.10ms  104.69ms 964.53ms   86.61%
+    Req/Sec     6.36k     1.15k    9.96k    73.61%
+  Latency Distribution
+     50%   13.71ms
+     75%   43.46ms
+     90%  213.47ms
+     99%  465.04ms
+  <span class="m">1491946</span> requests in 1.00m, 129.60GB <span class="nb">read</span>
+Requests/sec:  24822.44
+Transfer/sec:      2.16GB
+</code></pre></td></tr></table>
+</div>
+</div><p>压 Nginx：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell">  <span class="m">4</span> threads and <span class="m">500</span> connections
+  Thread Stats   Avg      Stdev     Max   +/- Stdev
+    Latency    43.34ms   45.88ms   1.11s    97.63%
+    Req/Sec     3.23k   463.18     4.62k    76.46%
+  Latency Distribution
+     50%   37.20ms
+     75%   46.17ms
+     90%   57.18ms
+     99%  232.57ms
+  <span class="m">764342</span> requests in 1.00m, 66.43GB <span class="nb">read</span>
+Requests/sec:  12722.92
+Transfer/sec:      1.11GB
+</code></pre></td></tr></table>
+</div>
+</div><p>对比一下性能指标：</p>
+<table>
+<thead>
+<tr>
+<th style="text-align:center"></th>
+<th style="text-align:center">基准值</th>
+<th style="text-align:center">未优化</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:center">50%</td>
+<td style="text-align:center">13.71ms</td>
+<td style="text-align:center">37.20ms   (+ 171%)</td>
+</tr>
+<tr>
+<td style="text-align:center">75%</td>
+<td style="text-align:center">43.46ms</td>
+<td style="text-align:center">46.17ms   (+ 6.2%)</td>
+</tr>
+<tr>
+<td style="text-align:center">90%</td>
+<td style="text-align:center">213.47ms</td>
+<td style="text-align:center">57.18ms   (- 73.2%)</td>
+</tr>
+<tr>
+<td style="text-align:center">99%</td>
+<td style="text-align:center">465.04ms</td>
+<td style="text-align:center">232.57ms  (- 49.9%)</td>
+</tr>
+<tr>
+<td style="text-align:center">Avg</td>
+<td style="text-align:center">61.10ms</td>
+<td style="text-align:center">43.34ms   (- 29%)</td>
+</tr>
+<tr>
+<td style="text-align:center">Max</td>
+<td style="text-align:center">964.53ms</td>
+<td style="text-align:center">1.11s     (+ 15%)</td>
+</tr>
+<tr>
+<td style="text-align:center">RPS</td>
+<td style="text-align:center">24822.44</td>
+<td style="text-align:center">12722.92  (- 48.7%)</td>
+</tr>
+</tbody>
+</table>
+<h2 id="排查过程">排查过程<a class="anchor ms-1" href="#排查过程"><i class="fas fa-link"></i></a></h2>
+<p>压测期间 Nginx 的 CPU 表现：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback">$ vmstat 1
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+ 5  0   7424 1977308   2044 1698108    0    0     0     0 73333  642 15 84  0  0  0
+ 4  0   7424 1975424   2044 1699728    0    0     0     0 65583  733 15 85  0  0  0
+ 5  0   7424 1965804   2044 1700800    0    0     0     0 53537 1013 12 60 29  0  0
+ 5  0   7424 1978396   2044 1702180    0    0     0     0 72517  626 16 84  0  0  0
+ 9  0   7424 1979584   2044 1703756    0    0     0     0 71537 1031 16 83  0  0  0
+ 5  0   7424 1978852   2044 1705108    0    0     0     0 71340 1281 16 83  1  0  0
+ 5  0   7424 1977956   2044 1706696    0    0     0     0 70989  693 15 85  0  0  0
+ 2  0   7424 1966884   2044 1708136    0    0     0     0 70589  672 15 85  0  0  0
+ 6  0   7424 1953472   2044 1709608    0    0     0     0 72448  630 17 83  0  0  0
+ 5  0   7424 1960272   2044 1710964    0    0     0 41920 72081  668 16 84  0  0  0
+ 6  0   7424 1959320   2044 1712124    0    0     0     0 71234  705 16 82  2  0  0
+10  0   7424 1970128   2044 1713612    0    0     0     0 70968 1173 17 82  0  0  0
+ 4  0   7424 1949780   2044 1714608    0    0     0     0 69815 1120 17 83  0  0  0
+ 6  0   7424 1945680   2044 1716060    0    0     0     0 70618  789 16 83  0  0  0
+</code></pre></td></tr></table>
+</div>
+</div><p>可以看到 CPU 是用足的，但是 sy （系统调用）比较高，有 80% 左右。</p>
+<p>用 strace 统计 30s 内单个 nginx 进程的系统调用：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell">$ timeout <span class="m">30</span> strace -c -p <span class="k">$(</span>pgrep -nx nginx<span class="k">)</span>
+% <span class="nb">time</span>     seconds  usecs/call     calls    errors syscall
+------ ----------- ----------- --------- --------- ----------------
+ 53.49    4.035007          <span class="m">11</span>    <span class="m">365710</span>           writev
+ 30.32    2.287248           <span class="m">7</span>    <span class="m">305123</span>           readv
+  7.61    0.574073           <span class="m">9</span>     <span class="m">60984</span>           recvfrom
+  4.57    0.344557          <span class="m">11</span>     <span class="m">30471</span>           write
+  1.46    0.110045           <span class="m">3</span>     <span class="m">30516</span>           getsockopt
+  1.36    0.102238           <span class="m">3</span>     <span class="m">30879</span>           ioctl
+  0.85    0.064290          <span class="m">95</span>       <span class="m">674</span>           epoll_wait
+  0.11    0.008300          <span class="m">29</span>       <span class="m">286</span>           close
+  0.07    0.004944          <span class="m">14</span>       <span class="m">337</span>       <span class="m">337</span> connect
+  0.05    0.003852           <span class="m">7</span>       <span class="m">514</span>           epoll_ctl
+  0.05    0.003714          <span class="m">11</span>       <span class="m">337</span>           socket
+  0.03    0.002279           <span class="m">3</span>       <span class="m">674</span>           clock_gettime
+  0.02    0.001784           <span class="m">2</span>       <span class="m">674</span>           gettimeofday
+  0.01    0.000838           <span class="m">7</span>       <span class="m">116</span>        <span class="m">26</span> accept4
+  0.00    0.000330           <span class="m">4</span>        <span class="m">78</span>           setsockopt
+  0.00    0.000313           <span class="m">3</span>        <span class="m">87</span>           getsockname
+------ ----------- ----------- --------- --------- ----------------
+100.00    7.543812           <span class="m">9</span>    <span class="m">827460</span>       <span class="m">363</span> total
+</code></pre></td></tr></table>
+</div>
+</div><p>可以看到 readv 和 writev 有 30.5w 次和 36.5w 次调用。</p>
+<p><code>man 2 readv</code> 可以直到这两个系统调用是干什么的，简而言之就是和 TCP 读写有关（因为 socket 也是 fd）：</p>
+<blockquote>
+<p>The readv() system call reads iovcnt buffers from the file associated with the file descriptor fd into the buffers described by iov (&ldquo;scatter input&rdquo;).</p>
+<p>The writev() system call writes iovcnt buffers of data described by iov to the file associated with the file descriptor fd (&ldquo;gather output&rdquo;).</p>
+</blockquote>
+<p>接着再用 strace 详细采集一下 readv,writev 的系统调用都做了些啥：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell">$ timeout <span class="m">30</span> strace -e <span class="nv">trace</span><span class="o">=</span>readv,writev -p <span class="k">$(</span>pgrep -nx nginx<span class="k">)</span> -o output.unopt.txt
+</code></pre></td></tr></table>
+</div>
+</div><p>查看 output.unopt.txt，每行最后面的 <code>=</code> 指的是读 / 写的字节数：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback">...
+readv(85, [{iov_base=&#34;ST /rest/resources/addResource H&#34;..., iov_len=4096}], 1) = 4096
+...
+writev(47, [{iov_base=&#34;rg&lt;/code&gt;.\n        &lt;strong&gt;Defau&#34;..., iov_len=4096}, {iov_base=&#34;e&amp;gt;true&amp;lt;/param-value&amp;gt;\n  &#34;..., iov_len=4096}], 2) = 8192
+</code></pre></td></tr></table>
+</div>
+</div><p>统计下 readv 每次读的字节数，绝大多数 readv 一次只读 4k，最多一次读 36k（36864 字节）：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell">$ grep <span class="s1">&#39;readv&#39;</span> output.unopt.txt <span class="p">|</span> awk <span class="s1">&#39;BEGIN{FS=&#34; = &#34;}; {print $2}&#39;</span> <span class="p">|</span> sort <span class="p">|</span> uniq -c <span class="p">|</span> sort -rn <span class="p">|</span> head
+ <span class="m">144120</span> <span class="m">4096</span>
+  <span class="m">18007</span> <span class="m">36864</span>
+  <span class="m">17796</span> <span class="m">19540</span>
+    <span class="m">205</span> <span class="m">19559</span>
+    <span class="m">196</span> <span class="m">0</span>
+      <span class="m">9</span> <span class="m">3895</span>
+      <span class="m">3</span> <span class="m">1843</span>
+      <span class="m">3</span> <span class="m">17697</span>
+      <span class="m">2</span> <span class="m">6113</span>
+      <span class="m">2</span> <span class="m">395</span>
+$ grep <span class="s1">&#39;readv&#39;</span> output.unopt.txt <span class="p">|</span> awk <span class="s1">&#39;BEGIN{FS=&#34; = &#34;}; {print $2}&#39;</span> <span class="p">|</span> sort -rn <span class="p">|</span> head -1
+<span class="m">36864</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>统计下 writev 写的字节数，发现绝大多数 writev 一次只写 8k，最多一次写 35.08k（35924 字节）：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell">$ grep <span class="s1">&#39;writev&#39;</span> output.unopt.txt <span class="p">|</span> awk <span class="s1">&#39;BEGIN{FS=&#34; = &#34;}; {print $2}&#39;</span> <span class="p">|</span> sort <span class="p">|</span> uniq -c <span class="p">|</span> sort -rn <span class="p">|</span> head
+ <span class="m">126115</span> <span class="m">8192</span>
+  <span class="m">36032</span> <span class="m">4096</span>
+  <span class="m">18028</span> <span class="m">143</span>
+  <span class="m">17811</span> <span class="m">8238</span>
+  <span class="m">17797</span> <span class="m">19540</span>
+    <span class="m">205</span> <span class="m">8219</span>
+    <span class="m">205</span> <span class="m">19559</span>
+      <span class="m">5</span> <span class="m">3156</span>
+      <span class="m">3</span> <span class="m">35924</span>
+      <span class="m">3</span> <span class="m">15444</span>
+
+$ grep <span class="s1">&#39;writev&#39;</span> output.unopt.txt <span class="p">|</span> awk <span class="s1">&#39;BEGIN{FS=&#34; = &#34;}; {print $2}&#39;</span> <span class="p">|</span> sort -rn <span class="p">|</span> head -1
+<span class="m">35924</span>
+</code></pre></td></tr></table>
+</div>
+</div><h2 id="第一次优化">第一次优化<a class="anchor ms-1" href="#第一次优化"><i class="fas fa-link"></i></a></h2>
+<p>nginx 关于代理缓冲的参数有 <a href="https://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_buffers" target="_blank" rel="noopener noreferrer"><code>proxy_buffers</code></a> 和 <a href="https://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_buffer_size" target="_blank" rel="noopener noreferrer"><code>proxy_buffer_size</code></a> ，他们的默认值是 <code>proxy_buffer_size 4k|8k</code> 和 <code>proxy_buffers 8 4k|8k</code>。</p>
+<p>因为当前平台内存页大小是 4K（通过 <code>getconf PAGE_SIZE</code> 可以得到），因此实际上是：<code>proxy_buffer_size 4k</code> 和 <code>proxy_buffers 8 4k</code>，正好是 36k，和 <code>readv</code> 的结果不谋而合。</p>
+<p><code>proxy_buffer_size</code> 是读取 upstream 单个响应的第一个部分的响应头的缓冲区大小，通常这个部分会包含响应头，如果响应头比较少也会包含响应体，甚至于整个响应。</p>
+<p><code>proxy_buffers</code> 则是读取 upstream 完整响应的缓冲区，默认值总尺寸是 32k。</p>
+<p>因为压测 URL 的响应尺寸在 ~91K 左右，那么我们放大一下 <code>proxy_buffers</code>，看看有没有效果：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback">http {
+    proxy_buffers 128 4k;
+}
+</code></pre></td></tr></table>
+</div>
+</div><p>压一把，吞吐量提升了，从 1.2w 提升到了 1.4w</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell">  <span class="m">4</span> threads and <span class="m">500</span> connections
+  Thread Stats   Avg      Stdev     Max   +/- Stdev
+    Latency    39.12ms   48.03ms   1.11s    97.22%
+    Req/Sec     3.68k   510.09     5.00k    76.49%
+  Latency Distribution
+     50%   32.05ms
+     75%   40.66ms
+     90%   53.17ms
+     99%  226.92ms
+  <span class="m">871572</span> requests in 1.00m, 75.75GB <span class="nb">read</span>
+Requests/sec:  14510.78
+Transfer/sec:      1.26GB
+</code></pre></td></tr></table>
+</div>
+</div><p>对比一下性能指标：</p>
+<table>
+<thead>
+<tr>
+<th style="text-align:center"></th>
+<th style="text-align:center">基准值</th>
+<th style="text-align:center">未优化</th>
+<th style="text-align:center">第一次优化</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:center">50%</td>
+<td style="text-align:center">13.71ms</td>
+<td style="text-align:center">37.20ms  (+ 171%)</td>
+<td style="text-align:center">32.05ms  (+ 133%)</td>
+</tr>
+<tr>
+<td style="text-align:center">75%</td>
+<td style="text-align:center">43.46ms</td>
+<td style="text-align:center">46.17ms  (+ 6.2%)</td>
+<td style="text-align:center">40.66ms  (- 0.64%)</td>
+</tr>
+<tr>
+<td style="text-align:center">90%</td>
+<td style="text-align:center">213.47ms</td>
+<td style="text-align:center">57.18ms  (- 73.2%)</td>
+<td style="text-align:center">53.17ms  (- 75.0%)</td>
+</tr>
+<tr>
+<td style="text-align:center">99%</td>
+<td style="text-align:center">465.04ms</td>
+<td style="text-align:center">232.57ms (- 49.9%)</td>
+<td style="text-align:center">226.92ms (- 50.2%)</td>
+</tr>
+<tr>
+<td style="text-align:center">Avg</td>
+<td style="text-align:center">61.10ms</td>
+<td style="text-align:center">43.34ms  (- 29%)</td>
+<td style="text-align:center">39.12ms  (- 35.9%)</td>
+</tr>
+<tr>
+<td style="text-align:center">Max</td>
+<td style="text-align:center">964.53ms</td>
+<td style="text-align:center">1.11s    (+ 15%)</td>
+<td style="text-align:center">1.11s    (+ 15%)</td>
+</tr>
+<tr>
+<td style="text-align:center">RPS</td>
+<td style="text-align:center">24822.44</td>
+<td style="text-align:center">12722.92 (- 48.7%)</td>
+<td style="text-align:center">14510.78 (- 41.5%)</td>
+</tr>
+</tbody>
+</table>
+<p>吞吐量略微提升。</p>
+<p>统计一下 readv,writev 的调用次数：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell">$ timeout <span class="m">30</span> strace -c -p <span class="k">$(</span>pgrep -nx nginx<span class="k">)</span>
+% <span class="nb">time</span>     seconds  usecs/call     calls    errors syscall
+------ ----------- ----------- --------- --------- ----------------
+ 53.19    3.534995           <span class="m">5</span>    <span class="m">691405</span>           readv
+ 28.61    1.901240          <span class="m">23</span>     <span class="m">81985</span>           writev
+  8.56    0.569164           <span class="m">8</span>     <span class="m">63561</span>           recvfrom
+  4.88    0.324340          <span class="m">10</span>     <span class="m">31742</span>           write
+  1.72    0.114049           <span class="m">3</span>     <span class="m">31820</span>           getsockopt
+  1.67    0.111064           <span class="m">3</span>     <span class="m">32146</span>           ioctl
+  0.99    0.065817         <span class="m">119</span>       <span class="m">553</span>           epoll_wait
+  0.10    0.006479          <span class="m">22</span>       <span class="m">282</span>           close
+  0.07    0.004570          <span class="m">12</span>       <span class="m">364</span>       <span class="m">364</span> connect
+  0.06    0.003871          <span class="m">10</span>       <span class="m">364</span>           socket
+  0.05    0.003311           <span class="m">5</span>       <span class="m">580</span>           epoll_ctl
+  0.02    0.001509          <span class="m">11</span>       <span class="m">136</span>           brk
+  0.02    0.001504          <span class="m">11</span>       <span class="m">130</span>        <span class="m">22</span> accept4
+  0.02    0.001466           <span class="m">2</span>       <span class="m">553</span>           gettimeofday
+  0.02    0.001312           <span class="m">2</span>       <span class="m">553</span>           clock_gettime
+  0.01    0.000512           <span class="m">4</span>       <span class="m">108</span>           setsockopt
+  0.01    0.000375           <span class="m">3</span>       <span class="m">108</span>           getsockname
+------ ----------- ----------- --------- --------- ----------------
+100.00    6.645578           <span class="m">7</span>    <span class="m">936390</span>       <span class="m">386</span> total
+</code></pre></td></tr></table>
+</div>
+</div><p>目前可以看到效果显著：</p>
+<table>
+<thead>
+<tr>
+<th style="text-align:center">syscall</th>
+<th style="text-align:center">未优化</th>
+<th style="text-align:center">第一次优化</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:center">readv</td>
+<td style="text-align:center">305123 (2.28s)</td>
+<td style="text-align:center">691405 (3.53s)</td>
+</tr>
+<tr>
+<td style="text-align:center">writev</td>
+<td style="text-align:center">365710 (4.03s)</td>
+<td style="text-align:center">81985  (1.90s)</td>
+</tr>
+<tr>
+<td style="text-align:center">recvfrom</td>
+<td style="text-align:center">60984  (0.57s)</td>
+<td style="text-align:center">63561  (0.56s)</td>
+</tr>
+<tr>
+<td style="text-align:center">总耗时</td>
+<td style="text-align:center">7.54s</td>
+<td style="text-align:center">6.64s</td>
+</tr>
+</tbody>
+</table>
+<p>采集一下 readv,writev 的实际调用参数：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell">$ timeout <span class="m">30</span> strace -e <span class="nv">trace</span><span class="o">=</span>readv,writev -p <span class="k">$(</span>pgrep -nx nginx<span class="k">)</span> -o output.opt1.txt
+
+$ grep <span class="s1">&#39;readv&#39;</span> output.opt1.txt <span class="p">|</span> awk <span class="s1">&#39;BEGIN{FS=&#34; = &#34;}; {print $2}&#39;</span> <span class="p">|</span> sort <span class="p">|</span> uniq -c <span class="p">|</span> sort -rn <span class="p">|</span> head
+ <span class="m">482455</span> <span class="m">4096</span>
+  <span class="m">22416</span> <span class="m">3156</span>
+    <span class="m">226</span> <span class="m">3175</span>
+    <span class="m">222</span> <span class="m">0</span>
+     <span class="m">79</span> <span class="m">7252</span>
+     <span class="m">71</span> <span class="m">11348</span>
+     <span class="m">68</span> <span class="m">15444</span>
+     <span class="m">48</span> <span class="m">19540</span>
+     <span class="m">33</span> <span class="m">23636</span>
+     <span class="m">29</span> <span class="m">27732</span>
+
+$ grep <span class="s1">&#39;readv&#39;</span> output.opt1.txt <span class="p">|</span> awk <span class="s1">&#39;BEGIN{FS=&#34; = &#34;}; {print $2}&#39;</span> <span class="p">|</span> sort -rn <span class="p">|</span> head -1
+<span class="m">48179</span>
+
+$ grep <span class="s1">&#39;writev&#39;</span> output.opt1.txt <span class="p">|</span> awk <span class="s1">&#39;BEGIN{FS=&#34; = &#34;}; {print $2}&#39;</span> <span class="p">|</span> sort <span class="p">|</span> uniq -c <span class="p">|</span> sort -rn <span class="p">|</span> head
+  <span class="m">23152</span> <span class="m">143</span>
+  <span class="m">22520</span> <span class="m">93314</span>
+   <span class="m">4308</span> <span class="m">8192</span>
+    <span class="m">546</span> <span class="m">8238</span>
+    <span class="m">254</span> <span class="m">4096</span>
+     <span class="m">94</span> <span class="m">3156</span>
+     <span class="m">83</span> <span class="m">7252</span>
+     <span class="m">77</span> <span class="m">11348</span>
+     <span class="m">70</span> <span class="m">15444</span>
+     <span class="m">53</span> <span class="m">19540</span>
+
+$ grep <span class="s1">&#39;writev&#39;</span> output.opt1.txt <span class="p">|</span> awk <span class="s1">&#39;BEGIN{FS=&#34; = &#34;}; {print $2}&#39;</span> <span class="p">|</span> sort -rn <span class="p">|</span> head -1
+<span class="m">93314</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>目前可以看到：</p>
+<ul>
+<li>readv 每次读的字节数，绝大多数一次只读 4k，最多一次读 ~47k（48179字节）。</li>
+<li>writev 每次写的字节数，绝大多数一次写 143 字节和 ~91k（93314字节），最多一次写 ~91k（93314字节）。</li>
+</ul>
+<p>readv 怎么会数量激增，看看 strace 的可以看到这个：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell">readv<span class="o">(</span>420, <span class="o">[{</span><span class="nv">iov_base</span><span class="o">=</span><span class="s2">&#34;nitialisation parameters&lt;/a&gt;&lt;/li&#34;</span>..., <span class="nv">iov_len</span><span class="o">=</span>4096<span class="o">}]</span>, 1<span class="o">)</span> <span class="o">=</span> <span class="m">4096</span>
+readv<span class="o">(</span>420, <span class="o">[{</span><span class="nv">iov_base</span><span class="o">=</span><span class="s2">&#34;e_&#39;x-forwarded-for&#39;\&#34;&gt;Basic confi&#34;</span>..., <span class="nv">iov_len</span><span class="o">=</span>4096<span class="o">}]</span>, 1<span class="o">)</span> <span class="o">=</span> <span class="m">4096</span>
+readv<span class="o">(</span>420, <span class="o">[{</span><span class="nv">iov_base</span><span class="o">=</span><span class="s2">&#34;_Class_Name\&#34;&gt;Filter Class Name&lt;/&#34;</span>..., <span class="nv">iov_len</span><span class="o">=</span>4096<span class="o">}]</span>, 1<span class="o">)</span> <span class="o">=</span> <span class="m">4096</span>
+readv<span class="o">(</span>420, <span class="o">[{</span><span class="nv">iov_base</span><span class="o">=</span><span class="s2">&#34;rg&lt;/code&gt;.\n        &lt;strong&gt;Defau&#34;</span>..., <span class="nv">iov_len</span><span class="o">=</span>4096<span class="o">}]</span>, 1<span class="o">)</span> <span class="o">=</span> <span class="m">4096</span>
+readv<span class="o">(</span>420, <span class="o">[{</span><span class="nv">iov_base</span><span class="o">=</span><span class="s2">&#34;e&amp;gt;true&amp;lt;/param-value&amp;gt;\n  &#34;</span>..., <span class="nv">iov_len</span><span class="o">=</span>4096<span class="o">}]</span>, 1<span class="o">)</span> <span class="o">=</span> <span class="m">4096</span>
+readv<span class="o">(</span>420, <span class="o">[{</span><span class="nv">iov_base</span><span class="o">=</span><span class="s2">&#34; &lt;p&gt;The number of previously iss&#34;</span>..., <span class="nv">iov_len</span><span class="o">=</span>4096<span class="o">}]</span>, 1<span class="o">)</span> <span class="o">=</span> <span class="m">4096</span>
+readv<span class="o">(</span>420, <span class="o">[{</span><span class="nv">iov_base</span><span class="o">=</span><span class="s2">&#34;ST /rest/resources/addResource H&#34;</span>..., <span class="nv">iov_len</span><span class="o">=</span>4096<span class="o">}]</span>, 1<span class="o">)</span> <span class="o">=</span> <span class="m">4096</span>
+readv<span class="o">(</span>420, <span class="o">[{</span><span class="nv">iov_base</span><span class="o">=</span><span class="s2">&#34;ocument&#39;s\n    validity and persi&#34;</span>..., <span class="nv">iov_len</span><span class="o">=</span>4096<span class="o">}]</span>, 1<span class="o">)</span> <span class="o">=</span> <span class="m">4096</span>
+readv<span class="o">(</span>420, <span class="o">[{</span><span class="nv">iov_base</span><span class="o">=</span><span class="s2">&#34;m&amp;gt;\n &amp;lt;param-name&amp;gt;Expires&#34;</span>..., <span class="nv">iov_len</span><span class="o">=</span>4096<span class="o">}]</span>, 1<span class="o">)</span> <span class="o">=</span> <span class="m">4096</span>
+readv<span class="o">(</span>420, <span class="o">[{</span><span class="nv">iov_base</span><span class="o">=</span><span class="s2">&#34;useful to ease usage of &lt;code&gt;Ex&#34;</span>..., <span class="nv">iov_len</span><span class="o">=</span>4096<span class="o">}]</span>, 1<span class="o">)</span> <span class="o">=</span> <span class="m">4096</span>
+readv<span class="o">(</span>420, <span class="o">[{</span><span class="nv">iov_base</span><span class="o">=</span><span class="s2">&#34;\n         &lt;div class=\&#34;codeBox\&#34;&gt;&lt;&#34;</span>..., <span class="nv">iov_len</span><span class="o">=</span>4096<span class="o">}]</span>, 1<span class="o">)</span> <span class="o">=</span> <span class="m">4096</span>
+readv<span class="o">(</span>420, <span class="o">[{</span><span class="nv">iov_base</span><span class="o">=</span><span class="s2">&#34;ation parameters.&lt;/p&gt;\n\n  &lt;/div&gt;&lt;&#34;</span>..., <span class="nv">iov_len</span><span class="o">=</span>4096<span class="o">}]</span>, 1<span class="o">)</span> <span class="o">=</span> <span class="m">4096</span>
+readv<span class="o">(</span>420, <span class="o">[{</span><span class="nv">iov_base</span><span class="o">=</span><span class="s2">&#34;rotectionEnabled&lt;/code&gt;&lt;/td&gt;&lt;td&gt;&#34;</span>..., <span class="nv">iov_len</span><span class="o">=</span>4096<span class="o">}]</span>, 1<span class="o">)</span> <span class="o">=</span> <span class="m">4096</span>
+readv<span class="o">(</span>420, <span class="o">[{</span><span class="nv">iov_base</span><span class="o">=</span><span class="s2">&#34;\n        &amp;lt;param-value&amp;gt;127\\&#34;</span>..., <span class="nv">iov_len</span><span class="o">=</span>4096<span class="o">}]</span>, 1<span class="o">)</span> <span class="o">=</span> <span class="m">4096</span>
+readv<span class="o">(</span>420, <span class="o">[{</span><span class="nv">iov_base</span><span class="o">=</span><span class="s2">&#34;i&gt;&lt;code&gt;Order&lt;/code&gt; will always&#34;</span>..., <span class="nv">iov_len</span><span class="o">=</span>4096<span class="o">}]</span>, 1<span class="o">)</span> <span class="o">=</span> <span class="m">4096</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>可以看到每次从 upstream 读取响应的时候，只利用了一个 buffer (4K)，而且分了好几次读取。</p>
+<p>writev 的 143 字节是怎么回事呢，看看，原来是转发请求到 upstream 的时候发生的动作：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell">writev<span class="o">(</span>516, <span class="o">[{</span><span class="nv">iov_base</span><span class="o">=</span><span class="s2">&#34;GET /docs/config/filter.html HTT&#34;</span>..., <span class="nv">iov_len</span><span class="o">=</span>143<span class="o">}]</span>, 1<span class="o">)</span> <span class="o">=</span> <span class="m">143</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>writev 的 ~91k（93314字节）也看看，发现是把 upstream 的响应返回给 client 时发生的，这个倒是一口气全部写出去的：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell">writev<span class="o">(</span>53, <span class="o">[</span>
+    <span class="o">{</span><span class="nv">iov_base</span><span class="o">=</span><span class="s2">&#34;HTTP/1.1 200 \r\nServer: nginx/1.2&#34;</span>..., <span class="nv">iov_len</span><span class="o">=</span>247<span class="o">}</span>, 
+    <span class="o">{</span><span class="nv">iov_base</span><span class="o">=</span><span class="s2">&#34;&lt;!DOCTYPE html SYSTEM \&#34;about:leg&#34;</span>..., <span class="nv">iov_len</span><span class="o">=</span>3895<span class="o">}</span>, 
+    <span class="o">{</span><span class="nv">iov_base</span><span class="o">=</span><span class="s2">&#34;nitialisation parameters&lt;/a&gt;&lt;/li&#34;</span>..., <span class="nv">iov_len</span><span class="o">=</span>4096<span class="o">}</span>,
+    ...
+    <span class="o">]</span>,
+    1<span class="o">)</span>  <span class="o">=</span> <span class="m">93314</span>
+</code></pre></td></tr></table>
+</div>
+</div><h2 id="第二次优化">第二次优化<a class="anchor ms-1" href="#第二次优化"><i class="fas fa-link"></i></a></h2>
+<p>那么到现在问题很明确了，readv 一次读取的数据量太小，导致分了很多次读，形成了比较多的系统调用，那么再优化 <code>proxy_buffers</code>，总容量不变，减少 buffer 数量，扩充单个 buffer 的尺寸：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback">http {
+    proxy_buffers 4 128k;
+}
+</code></pre></td></tr></table>
+</div>
+</div><p>压一把看看：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback">  4 threads and 500 connections
+  Thread Stats   Avg      Stdev     Max   +/- Stdev
+    Latency    42.06ms   55.45ms   1.14s    93.33%
+    Req/Sec     3.91k   578.27     5.73k    78.55%
+  Latency Distribution
+     50%   28.55ms
+     75%   40.53ms
+     90%   68.06ms
+     99%  286.52ms
+  924858 requests in 1.00m, 80.38GB read
+  Non-2xx or 3xx responses: 1
+Requests/sec:  15390.49
+Transfer/sec:      1.34GB
+</code></pre></td></tr></table>
+</div>
+</div><p>对比一下性能指标：</p>
+<table>
+<thead>
+<tr>
+<th style="text-align:center"></th>
+<th style="text-align:center">基准值</th>
+<th style="text-align:center">未优化</th>
+<th style="text-align:center">第一次优化</th>
+<th style="text-align:center">第二次优化</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:center">50%</td>
+<td style="text-align:center">13.71ms</td>
+<td style="text-align:center">37.20ms  (+ 171%)</td>
+<td style="text-align:center">32.05ms  (+ 133%)</td>
+<td style="text-align:center">28.55ms  (+ 108%)</td>
+</tr>
+<tr>
+<td style="text-align:center">75%</td>
+<td style="text-align:center">43.46ms</td>
+<td style="text-align:center">46.17ms  (+ 6.2%)</td>
+<td style="text-align:center">40.66ms  (- 0.64%)</td>
+<td style="text-align:center">40.53ms  (- 0.67%)</td>
+</tr>
+<tr>
+<td style="text-align:center">90%</td>
+<td style="text-align:center">213.47ms</td>
+<td style="text-align:center">57.18ms  (- 73.2%)</td>
+<td style="text-align:center">53.17ms  (- 75.0%)</td>
+<td style="text-align:center">68.06ms  (- 68.1%)</td>
+</tr>
+<tr>
+<td style="text-align:center">99%</td>
+<td style="text-align:center">465.04ms</td>
+<td style="text-align:center">232.57ms (- 49.9%)</td>
+<td style="text-align:center">226.92ms (- 50.2%)</td>
+<td style="text-align:center">286.52ms (- 38.3%)</td>
+</tr>
+<tr>
+<td style="text-align:center">Avg</td>
+<td style="text-align:center">61.10ms</td>
+<td style="text-align:center">43.34ms  (- 29%)</td>
+<td style="text-align:center">39.12ms  (- 35.9%)</td>
+<td style="text-align:center">42.06ms  (- 31.1%)</td>
+</tr>
+<tr>
+<td style="text-align:center">Max</td>
+<td style="text-align:center">964.53ms</td>
+<td style="text-align:center">1.11s    (+ 15%)</td>
+<td style="text-align:center">1.11s    (+ 15%)</td>
+<td style="text-align:center">1.14s    (+ 18.1%)</td>
+</tr>
+<tr>
+<td style="text-align:center">RPS</td>
+<td style="text-align:center">24822.44</td>
+<td style="text-align:center">12722.92 (- 48.7%)</td>
+<td style="text-align:center">14510.78 (- 41.5%)</td>
+<td style="text-align:center">15390.49 (- 37.9%)</td>
+</tr>
+</tbody>
+</table>
+<p>吞吐量比之前有所提升。</p>
+<p>看看系统调用次数：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell">$ timeout <span class="m">30</span> strace -c -p <span class="k">$(</span>pgrep -nx nginx<span class="k">)</span>
+% <span class="nb">time</span>     seconds  usecs/call     calls    errors syscall
+------ ----------- ----------- --------- --------- ----------------
+ 36.25    3.749784          <span class="m">29</span>    <span class="m">126213</span>           writev
+ 35.87    3.710298          <span class="m">52</span>     <span class="m">70403</span>           readv
+ 15.03    1.554814          <span class="m">13</span>    <span class="m">115917</span>           recvfrom
+  5.49    0.567726           <span class="m">9</span>     <span class="m">57932</span>           write
+  2.30    0.237950           <span class="m">4</span>     <span class="m">57974</span>           getsockopt
+  2.13    0.220522           <span class="m">3</span>     <span class="m">58524</span>           ioctl
+  1.83    0.188874         <span class="m">165</span>      <span class="m">1144</span>           epoll_wait
+  0.67    0.069087          <span class="m">20</span>      <span class="m">3314</span>           brk
+  0.14    0.014583          <span class="m">25</span>       <span class="m">572</span>           close
+  0.10    0.010315          <span class="m">17</span>       <span class="m">585</span>       <span class="m">585</span> connect
+  0.07    0.007178          <span class="m">12</span>       <span class="m">585</span>           socket
+  0.05    0.004685           <span class="m">6</span>       <span class="m">719</span>           epoll_ctl
+  0.03    0.003239           <span class="m">2</span>      <span class="m">1144</span>           clock_gettime
+  0.03    0.003082           <span class="m">2</span>      <span class="m">1144</span>           gettimeofday
+  0.01    0.001498          <span class="m">13</span>       <span class="m">110</span>        <span class="m">42</span> accept4
+  0.00    0.000284           <span class="m">4</span>        <span class="m">66</span>           setsockopt
+  0.00    0.000173           <span class="m">2</span>        <span class="m">66</span>           getsockname
+------ ----------- ----------- --------- --------- ----------------
+100.00   10.344092          <span class="m">20</span>    <span class="m">496412</span>       <span class="m">627</span> total
+</code></pre></td></tr></table>
+</div>
+</div><p>目前可以看到：</p>
+<table>
+<thead>
+<tr>
+<th style="text-align:center">syscall</th>
+<th style="text-align:center">未优化</th>
+<th style="text-align:center">第一次优化</th>
+<th style="text-align:center">第二次优化</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:center">readv</td>
+<td style="text-align:center">305123 (2.28s)</td>
+<td style="text-align:center">691405 (3.53s)</td>
+<td style="text-align:center">70403 （3.71s)</td>
+</tr>
+<tr>
+<td style="text-align:center">writev</td>
+<td style="text-align:center">365710 (4.03s)</td>
+<td style="text-align:center">81985  (1.90s)</td>
+<td style="text-align:center">126213 (3.74s)</td>
+</tr>
+<tr>
+<td style="text-align:center">recvfrom</td>
+<td style="text-align:center">60984  (0.57s)</td>
+<td style="text-align:center">63561  (0.56s)</td>
+<td style="text-align:center">115917 (1.55s)</td>
+</tr>
+<tr>
+<td style="text-align:center">总耗时</td>
+<td style="text-align:center">7.54s</td>
+<td style="text-align:center">6.64s</td>
+<td style="text-align:center">10.34s</td>
+</tr>
+</tbody>
+</table>
+<p>可以看见，第二次优化效果显著，但是 recvfrom 的调用次数有较大的增加。</p>
+<p>采集一下系统调用的详细信息看看：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback">$ timeout 30 strace -e trace=readv,writev,recvfrom -p $(pgrep -nx nginx) -o output.opt2.txt
+
+$ grep &#39;readv&#39; output.opt2.txt | awk &#39;BEGIN{FS=&#34; = &#34;}; {print $2}&#39; | sort | uniq -c | sort -rn | head
+  39932 89172
+    783 3895
+    416 0
+    412 89191
+    304 1843
+    301 395
+    298 4739
+    297 87329
+    292 88777
+    290 84433
+
+$ grep &#39;readv&#39; output.opt2.txt | awk &#39;BEGIN{FS=&#34; = &#34;}; {print $2}&#39; | sort -rn | head -1
+89191
+
+$ grep &#39;writev&#39; output.opt2.txt | awk &#39;BEGIN{FS=&#34; = &#34;}; {print $2}&#39; | sort | uniq -c | sort -rn | head
+  45971 143
+  40343 93314
+   5561 89172
+   5561 4142
+     24 89191
+     24 4123
+
+$ grep &#39;writev&#39; output.opt2.txt | awk &#39;BEGIN{FS=&#34; = &#34;}; {print $2}&#39; | sort -rn | head -1
+93314
+
+$ grep &#39;recvfrom&#39; output.opt2.txt | awk &#39;BEGIN{FS=&#34; = &#34;}; {print $2}&#39; | sort | uniq -c | sort -rn | head
+  45971 67
+  45137 4096
+    754 201
+      9 220
+
+$ grep &#39;recvfrom&#39; output.opt2.txt | awk &#39;BEGIN{FS=&#34; = &#34;}; {print $2}&#39; | sort -rn | head -1
+4096
+</code></pre></td></tr></table>
+</div>
+</div><p>目前可以看到：</p>
+<ul>
+<li>readv 每次读的字节数，绝大多数一次只读 ~87k（89172字节），说明我们的配置起到了作用。</li>
+<li>writev 每次写的字节数，和之前一样，绝大多数一次写 143 字节和 ~91k（93314字节），最多一次写 ~91k（93314字节）。</li>
+<li>recvfrom 没次读的字节数，绝大多数是 67 字节 和 4k（4096字节）</li>
+</ul>
+<p>再看看 readv 的系统调用详情，可以发现读取 upstream 的响应时就读了 1 次，每次都是使用 128k buffer 读的：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback">readv(250, [{iov_base=&#34;nitialisation parameters&lt;/a&gt;&lt;/li&#34;..., iov_len=131072}], 1) = 89172
+readv(159, [{iov_base=&#34;nitialisation parameters&lt;/a&gt;&lt;/li&#34;..., iov_len=131072}], 1) = 89172
+</code></pre></td></tr></table>
+</div>
+</div><p>看看 recvfrom 的系统调用详情：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback">recvfrom(105, &#34;GET /docs/config/filter.html HTT&#34;..., 1024, 0, NULL, NULL) = 67
+recvfrom(159, &#34;GET /docs/config/filter.html HTT&#34;..., 1024, 0, NULL, NULL) = 67
+recvfrom(264, &#34;HTTP/1.1 200 \r\nAccept-Ranges: by&#34;..., 4096, 0, NULL, NULL) = 4096
+recvfrom(226, &#34;HTTP/1.1 200 \r\nAccept-Ranges: by&#34;..., 4096, 0, NULL, NULL) = 4096
+</code></pre></td></tr></table>
+</div>
+</div><p>可以发现：</p>
+<ul>
+<li>读取 67 字节的是来自 client（wrk） 的请求，用的是 1024 的 buf，具体参数参考（<code>man 2 recvfrom</code>）</li>
+<li>读取 4096 字节的是来自 upstream 的响应，用的是 4096 的 buffer</li>
+</ul>
+<p>实际上这两个缓冲区的大小分别由 <a href="https://nginx.org/en/docs/http/ngx_http_core_module.html#client_header_buffer_size" target="_blank" rel="noopener noreferrer"><code>client_header_buffer_size 1k</code></a> 和 <a href="https://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_buffer_size" target="_blank" rel="noopener noreferrer"><code>proxy_buffer_size 4k</code></a>，调整这两个参数可以影响 recvfrom 的调用。
+本人对此这个做过实验，确认的确如此，有兴趣的同学可以自行实验。</p>
+<h2 id="第三次优化">第三次优化<a class="anchor ms-1" href="#第三次优化"><i class="fas fa-link"></i></a></h2>
+<p>应该还有优化空间。</p>
+<p>压测的时候用 pidstat 观察一下：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell">$ pidstat -u -w -G nginx <span class="m">1</span> <span class="m">30</span>
+...
+平均时间:   UID       PID    %usr %system  %guest   %wait    %CPU   CPU  Command
+平均时间:   <span class="m">990</span>   <span class="m">4038174</span>   15.52   75.77    0.00    4.92   91.29     -  nginx
+平均时间:   <span class="m">990</span>   <span class="m">4038175</span>   15.39   74.14    0.00    5.98   89.53     -  nginx
+平均时间:   <span class="m">990</span>   <span class="m">4038176</span>   15.15   70.92    0.00    8.18   86.08     -  nginx
+平均时间:   <span class="m">990</span>   <span class="m">4038177</span>   15.39   73.55    0.00    7.28   88.93     -  nginx
+
+平均时间:   UID       PID   cswch/s nvcswch/s  Command
+平均时间:   <span class="m">990</span>   <span class="m">4038174</span>     80.72     54.50  nginx
+平均时间:   <span class="m">990</span>   <span class="m">4038175</span>    127.95     53.94  nginx
+平均时间:   <span class="m">990</span>   <span class="m">4038176</span>    154.34     54.57  nginx
+平均时间:   <span class="m">990</span>   <span class="m">4038177</span>     94.08     48.75  nginx
+</code></pre></td></tr></table>
+</div>
+</div><p>可以看到 CPU 占用率是比较高的，其中系统调用是占的比较多，自愿上下文切换和非资源上下文切换在正常数值内。</p>
+<p>那么利用 <a href="https://github.com/openresty/openresty-systemtap-toolkit" target="_blank" rel="noopener noreferrer">openresty-systemtap-toolkit</a> 来采集一下 CPU 火焰图：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell">$ /root/openresty-systemtap-toolkit/sample-bt -p <span class="k">$(</span>pgrep -nx nginx<span class="k">)</span> -t <span class="m">30</span> -u -k -a <span class="s1">&#39;-D MAXMAPENTRIES=100000&#39;</span> &gt; openresty-oncpu.bt <span class="se">\
+</span><span class="se"></span><span class="o">&amp;&amp;</span> /root/FlameGraph/stackcollapse-stap.pl openresty-oncpu.bt &gt; openresty-oncpu.cbt <span class="se">\
+</span><span class="se"></span><span class="o">&amp;&amp;</span> /root/FlameGraph/flamegraph.pl --title<span class="o">=</span><span class="s2">&#34;Openresty On-CPU Time Flame Graph (user/kernel)&#34;</span> &lt; openresty-oncpu.cbt &gt; /usr/share/nginx/html/openresty-oncpu.svg
+</code></pre></td></tr></table>
+</div>
+</div><blockquote>
+<p>openresty-systemap-toolkit 依赖于 SystemTap，安装的坑在<a href="../../linux/stap-kernel-debug-mismatch">这篇文章里有写</a>。</p>
+</blockquote>
+<p>火焰图如下：</p>
+<p><img class="img-fluid" alt="" src="/post/nginx/throughput-cutoff-half-mystery/openresty-oncpu.svg" loading="lazy"
+  
+   />
+
+</p>
+<p>这里还看不清，点击<a href="openresty-oncpu.svg?s=tcp">此处进入交互界面</a>，可以发现 <code>tcp_</code> 收发相关的系统调用占了绝大部分。</p>
+<p>用 bcc netqtop 看一下网卡队列：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell">$ /usr/share/bcc/tools/netqtop -n ens18 -t
+TX
+ QueueID    avg_size   <span class="o">[</span>0, 64<span class="o">)</span>    <span class="o">[</span>64, 512<span class="o">)</span>  <span class="o">[</span>512, 2K<span class="o">)</span>  <span class="o">[</span>2K, 16K<span class="o">)</span>  <span class="o">[</span>16K, 64K<span class="o">)</span> BPS        PPS
+ <span class="m">0</span>          16.8K      <span class="m">0</span>          12.01K     <span class="m">94</span>         1.07K      7.68K      350.16M    20.84K
+ <span class="m">1</span>          16.8K      <span class="m">0</span>          13.91K     <span class="m">248</span>        1.05K      9.03K      406.93M    24.23K
+ <span class="m">2</span>          16.67K     <span class="m">0</span>          13.95K     <span class="m">124</span>        <span class="m">867</span>        8.6K       391.95M    23.52K
+ <span class="m">3</span>          16.22K     <span class="m">0</span>          12.21K     <span class="m">118</span>        1.04K      7.4K       336.94M    20.78K
+ Total      16.63K     <span class="m">0</span>          52.07K     <span class="m">584</span>        4.01K      32.71K     1485.89M   89.36K
+
+RX
+ QueueID    avg_size   <span class="o">[</span>0, 64<span class="o">)</span>    <span class="o">[</span>64, 512<span class="o">)</span>  <span class="o">[</span>512, 2K<span class="o">)</span>  <span class="o">[</span>2K, 16K<span class="o">)</span>  <span class="o">[</span>16K, 64K<span class="o">)</span> BPS        PPS
+ <span class="m">0</span>          8.48K      26.14K     34.26K     5.23K      82.44K     25.28K     1462.63M   172.58K
+ <span class="m">1</span>          <span class="m">0</span>          <span class="m">0</span>          <span class="m">0</span>          <span class="m">0</span>          <span class="m">0</span>          <span class="m">0</span>          0.0        0.0
+ <span class="m">2</span>          <span class="m">0</span>          <span class="m">0</span>          <span class="m">0</span>          <span class="m">0</span>          <span class="m">0</span>          <span class="m">0</span>          0.0        0.0
+ <span class="m">3</span>          <span class="m">0</span>          <span class="m">0</span>          <span class="m">0</span>          <span class="m">0</span>          <span class="m">0</span>          <span class="m">0</span>          0.0        0.0
+ Total      8.48K      26.14K     34.26K     5.23K      82.44K     25.28K     1462.63M   172.57K
+-----------------------------------------------------------------------------------------------
+</code></pre></td></tr></table>
+</div>
+</div><p>可以发现 TX 的4个队列在工作，RX 只有一个队列在工作，不平衡。
+但是经过调查发现是 virtio 网卡驱动的问题，它会把所有 RX 队列都归到一个上面，详情见<a href="https://github.com/iovisor/bcc/blob/master/tools/netqtop.c#L105" target="_blank" rel="noopener noreferrer">这里</a>。</p>
+<p>看一下网卡到底有几个队列：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span><span class="lnt">9
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell">ethtool -S ens18 <span class="p">|</span>  grep -i queue
+    rx_queue_0_...: 
+    rx_queue_1_...:
+    rx_queue_2_...: 
+    rx_queue_3_...:
+    tx_queue_0_...: 
+    tx_queue_1_...:
+    tx_queue_2_...: 
+    tx_queue_3_...:
+</code></pre></td></tr></table>
+</div>
+</div><p>可以看到有 4 个 TX 队列，4 个 RX 队列，再用 <code>ethtool</code> 看看：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell">ethtool --show-channels ens18
+Channel parameters <span class="k">for</span> ens18:
+Pre-set maximums:
+RX:	        <span class="m">0</span>
+TX:	        <span class="m">0</span>
+Other:	    <span class="m">0</span>
+Combined:	<span class="m">4</span>
+Current hardware settings:
+RX:	        <span class="m">0</span>
+TX:	        <span class="m">0</span>
+Other:	    <span class="m">0</span>
+Combined:   <span class="m">4</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>可以发现 RX 和 TX 队列是 Combined 即共用的，也说明不了什么问题。</p>
+<h2 id="坑">坑<a class="anchor ms-1" href="#坑"><i class="fas fa-link"></i></a></h2>
+<p>后来又测了几次，居然吞吐量可以达到 <code>Requests/sec:  20891.36</code> 了，这么算起来性能损失在 15.8%。</p>
+<p>而配置什么都没有修改。</p>
+<p>那么说明问题出在外部，要么是虚拟化平台的问题，要么是物理机的问题。</p>
+<p>问题排查就此告一段落。</p></div></div>
+  <div class="card-footer"><div class="post-navs d-flex justify-content-evenly"><div class="post-nav post-prev">
+    <i class="fas fa-fw fa-chevron-left"></i>
+    <a href="/post/network/few-cores-cause-net-throughput/">虚拟化平台网络资源分配不当导致网络吐量下降
+</a>
+  </div></div></div>
+</article><div class="post-copyright mb-3 row card component" id="post-copyright">
+    <div class="card-header">
+        <h2 class="card-title">版权</h2>
+    </div>
+    <div class="card-body"><a class="d-flex align-items-center flex-column" target="_blank" rel="license noopener noreferrer" href="https://creativecommons.org/licenses/by-nc-nd/4.0/deed.zh">
+  <span><i class="fab fa-fw fa-2x fa-creative-commons"></i><i class="fab fa-fw fa-2x fa-creative-commons-by"></i><i class="fab fa-fw fa-2x fa-creative-commons-nc"></i><i class="fab fa-fw fa-2x fa-creative-commons-nd"></i></span>
+  CC BY-NC-ND 4.0 
+</a>
+
+
+    </div>
+</div><section class="related-posts row card component">
+    <div class="card-header">
+      <h2 class="card-title">相关文章</h2>
+    </div>
+    <div class="card-body">
+      <ul class="post-list"><li>
+          <a href="/post/network/few-cores-cause-net-throughput/">虚拟化平台网络资源分配不当导致网络吐量下降
+</a>
+          <span class="float-end post-date">2023-02-22
+</span>
+        </li><li>
+          <a href="/post/network/soft-irq-unbalance/">NET_RX 软中断不平衡问题
+</a>
+          <span class="float-end post-date">2023-02-08
+</span>
+        </li><li>
+          <a href="/post/nginx/a-lot-of-time-wait/">Nginx 造成 Upstream 服务器大量 TIME_WAIT 连接
+</a>
+          <span class="float-end post-date">2023-02-01
+</span>
+        </li><li>
+          <a href="/post/bash-long-var-corrupt/">Bash 长变量值损坏问题排查
+</a>
+          <span class="float-end post-date">2022-02-16
+</span>
+        </li><li>
+          <a href="/post/linux/too-many-time-wait-troubleshooting/">压测时大量TIME_WAIT问题排查
+</a>
+          <span class="float-end post-date">2021-09-07
+</span>
+        </li></ul>
+    </div>
+  </section><div class="card component row post-comments" id="post-comments">
+  <div class="card-header">
+    <h2 class="card-title">评论</h2>
+  </div>
+  <div class="card-body"></div>
+</div></div>
+</div><aside class="col-lg-4 sidebar d-flex">
+  <div class="container d-flex flex-column">
+    
+    <section class="card row text-center profile component">
+  <div class="card-body">
+    <div class="col-12 d-flex align-items-center justify-content-center"><img class="profile-avatar rounded-circle" alt="颇忒脱" src="/images/avatar.jpg" loading="lazy"
+   width="455" height="455"
+   />
+</div>
+    <div class="col-12 profile-meta"><div class="profile-name">颇忒脱</div><nav class="social-links nav justify-content-center"><a class="nav-link social-link" target="_blank" href="https://github.com/chanjarster" title="GitHub" rel="noopener noreferrer">
+        <i class="fa-fw fa-2x fab fa-github"></i>
+      </a></nav>
+</div>
+  </div>
+</section>
+  <div class="post-toc row mb-4 card component" id="postTOC">
+  <div class="card-header">
+    <h2 class="card-title">目录</h2>
+  </div>
+  <div class="card-body">
+    <nav id="TableOfContents">
+  <ul>
+    <li><a href="#现象">现象</a></li>
+    <li><a href="#排查过程">排查过程</a></li>
+    <li><a href="#第一次优化">第一次优化</a></li>
+    <li><a href="#第二次优化">第二次优化</a></li>
+    <li><a href="#第三次优化">第三次优化</a></li>
+    <li><a href="#坑">坑</a></li>
+  </ul>
+</nav>
+  </div>
+</div><section class="featured-posts row card component">
+    <div class="card-header">
+      <h2 class="card-title">精选文章</h2>
+    </div>
+    <div class="card-body">
+      <ul class="post-list"><li>
+          <a href="/post/linux/namespace/index-page/">Linux Namespace系列
+</a>
+        </li><li>
+          <a href="/post/network/index-page/">Networking系列
+</a>
+        </li><li>
+          <a href="/post/mysql/index-page/">MySQL系列
+</a>
+        </li><li>
+          <a href="/post/concurrent-programming/index-page/">并发编程系列
+</a>
+        </li><li>
+          <a href="/post/jvm/index-page/">JVM系列
+</a>
+        </li></ul>
+    </div>
+  </section><section class="recent-posts row card component">
+  <div class="card-header">
+    <h2 class="card-title">最近文章</h2>
+  </div>
+  <div class="card-body">
+    <ul class="post-list"><li>
+        <a href="/post/nginx/throughput-cutoff-half-mystery/">Nginx 反向代理吞吐量砍半之谜
+</a>
+      </li><li>
+        <a href="/post/network/few-cores-cause-net-throughput/">虚拟化平台网络资源分配不当导致网络吐量下降
+</a>
+      </li><li>
+        <a href="/post/linux/stap-kernel-debug-mismatch/">内核版本不匹配导致 Systemtap 不可用问题的解决办法
+</a>
+      </li><li>
+        <a href="/post/network/soft-irq-unbalance/">NET_RX 软中断不平衡问题
+</a>
+      </li><li>
+        <a href="/post/jmeter/analyze-connect-time/">JMeter 分析 Connect Time
+</a>
+      </li></ul>
+  </div>
+</section><section class="tags-taxonomies row card component">
+      <div class="card-header">
+        <h2 class="card-title">
+          <a href="/tags">标签</a>
+        </h2>
+      </div>
+      <div class="card-body">
+        <div class="py-2"><a href="/tags/arts-a/" class="badge rounded post-taxonomy" title="ARTS-A">
+            ARTS-A<span class="badge badge-sm text-white bg-accent ms-1">125</span></a><a href="/tags/k8s/" class="badge rounded post-taxonomy" title="k8s">
+            k8s<span class="badge badge-sm text-white bg-accent ms-1">47</span></a><a href="/tags/jvm/" class="badge rounded post-taxonomy" title="jvm">
+            jvm<span class="badge badge-sm text-white bg-accent ms-1">39</span></a><a href="/tags/troubleshooting/" class="badge rounded post-taxonomy" title="troubleshooting">
+            troubleshooting<span class="badge badge-sm text-white bg-accent ms-1">33</span></a><a href="/tags/docker/" class="badge rounded post-taxonomy" title="docker">
+            docker<span class="badge badge-sm text-white bg-accent ms-1">26</span></a><a href="/tags/mysql/" class="badge rounded post-taxonomy" title="mysql">
+            mysql<span class="badge badge-sm text-white bg-accent ms-1">22</span></a><a href="/tags/cheatsheet/" class="badge rounded post-taxonomy" title="cheatsheet">
+            cheatsheet<span class="badge badge-sm text-white bg-accent ms-1">21</span></a><a href="/tags/network/" class="badge rounded post-taxonomy" title="network">
+            network<span class="badge badge-sm text-white bg-accent ms-1">21</span></a><a href="/tags/%E5%B9%B6%E5%8F%91%E7%BC%96%E7%A8%8B/" class="badge rounded post-taxonomy" title="并发编程">
+            并发编程<span class="badge badge-sm text-white bg-accent ms-1">20</span></a><a href="/tags/kernel/" class="badge rounded post-taxonomy" title="kernel">
+            kernel<span class="badge badge-sm text-white bg-accent ms-1">18</span></a><a href="/tags/linux/" class="badge rounded post-taxonomy" title="linux">
+            linux<span class="badge badge-sm text-white bg-accent ms-1">17</span></a><a href="/tags/java/" class="badge rounded post-taxonomy" title="java">
+            java<span class="badge badge-sm text-white bg-accent ms-1">16</span></a><a href="/tags/%E6%80%A7%E8%83%BD%E8%B0%83%E4%BC%98/" class="badge rounded post-taxonomy" title="性能调优">
+            性能调优<span class="badge badge-sm text-white bg-accent ms-1">11</span></a><a href="/tags/prometheus/" class="badge rounded post-taxonomy" title="prometheus">
+            prometheus<span class="badge badge-sm text-white bg-accent ms-1">10</span></a><a href="/tags/%E5%BE%AE%E6%9C%8D%E5%8A%A1/" class="badge rounded post-taxonomy" title="微服务">
+            微服务<span class="badge badge-sm text-white bg-accent ms-1">10</span></a><a href="/tags/go/" class="badge rounded post-taxonomy" title="go">
+            go<span class="badge badge-sm text-white bg-accent ms-1">9</span></a><a href="/tags/redis/" class="badge rounded post-taxonomy" title="redis">
+            redis<span class="badge badge-sm text-white bg-accent ms-1">8</span></a><a href="/tags/debug/" class="badge rounded post-taxonomy" title="debug">
+            debug<span class="badge badge-sm text-white bg-accent ms-1">7</span></a><a href="/tags/gc/" class="badge rounded post-taxonomy" title="gc">
+            gc<span class="badge badge-sm text-white bg-accent ms-1">7</span></a><a href="/tags/nginx/" class="badge rounded post-taxonomy" title="nginx">
+            nginx<span class="badge badge-sm text-white bg-accent ms-1">7</span></a><a href="/tags/rancher/" class="badge rounded post-taxonomy" title="rancher">
+            rancher<span class="badge badge-sm text-white bg-accent ms-1">7</span></a><a href="/tags/ingress/" class="badge rounded post-taxonomy" title="ingress">
+            ingress<span class="badge badge-sm text-white bg-accent ms-1">6</span></a><a href="/tags/%E8%BF%90%E7%BB%B4/" class="badge rounded post-taxonomy" title="运维">
+            运维<span class="badge badge-sm text-white bg-accent ms-1">6</span></a><a href="/tags/ci_cd/" class="badge rounded post-taxonomy" title="CI_CD">
+            CI_CD<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/interview/" class="badge rounded post-taxonomy" title="interview">
+            interview<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/jmx/" class="badge rounded post-taxonomy" title="jmx">
+            jmx<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/%E5%88%86%E5%B8%83%E5%BC%8F%E4%BA%8B%E5%8A%A1/" class="badge rounded post-taxonomy" title="分布式事务">
+            分布式事务<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/%E5%88%86%E5%B8%83%E5%BC%8F%E7%AE%97%E6%B3%95/" class="badge rounded post-taxonomy" title="分布式算法">
+            分布式算法<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/%E6%94%B6%E8%97%8F%E5%A4%B9/" class="badge rounded post-taxonomy" title="收藏夹">
+            收藏夹<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/%E9%AB%98%E5%B9%B6%E5%8F%91/" class="badge rounded post-taxonomy" title="高并发">
+            高并发<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/openssl/" class="badge rounded post-taxonomy" title="openssl">
+            openssl<span class="badge badge-sm text-white bg-accent ms-1">4</span></a><a href="/tags/tls/" class="badge rounded post-taxonomy" title="tls">
+            tls<span class="badge badge-sm text-white bg-accent ms-1">4</span></a><a href="/tags/visualvm/" class="badge rounded post-taxonomy" title="visualvm">
+            visualvm<span class="badge badge-sm text-white bg-accent ms-1">4</span></a><a href="/tags/%E6%97%A5%E5%BF%97/" class="badge rounded post-taxonomy" title="日志">
+            日志<span class="badge badge-sm text-white bg-accent ms-1">4</span></a><a href="/tags/arts/" class="badge rounded post-taxonomy" title="arts">
+            arts<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/arts-r/" class="badge rounded post-taxonomy" title="arts-r">
+            arts-r<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/classloader/" class="badge rounded post-taxonomy" title="ClassLoader">
+            ClassLoader<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/container/" class="badge rounded post-taxonomy" title="container">
+            container<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/jenkins/" class="badge rounded post-taxonomy" title="Jenkins">
+            Jenkins<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/namespace/" class="badge rounded post-taxonomy" title="namespace">
+            namespace<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/scheduling/" class="badge rounded post-taxonomy" title="scheduling">
+            scheduling<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/thread/" class="badge rounded post-taxonomy" title="thread">
+            thread<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/%E5%88%86%E5%B8%83%E5%BC%8F%E6%9E%B6%E6%9E%84/" class="badge rounded post-taxonomy" title="分布式架构">
+            分布式架构<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/grafana/" class="badge rounded post-taxonomy" title="grafana">
+            grafana<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/jdbc/" class="badge rounded post-taxonomy" title="JDBC">
+            JDBC<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/jmeter/" class="badge rounded post-taxonomy" title="jmeter">
+            jmeter<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/%E6%95%B0%E6%8D%AE%E5%BA%93%E6%97%B6%E5%8C%BA%E9%82%A3%E4%BA%9B%E4%BA%8B%E5%84%BF/" class="badge rounded post-taxonomy" title="数据库时区那些事儿">
+            数据库时区那些事儿<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/%E7%9B%91%E6%8E%A7/" class="badge rounded post-taxonomy" title="监控">
+            监控<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/%E9%99%90%E6%B5%81/" class="badge rounded post-taxonomy" title="限流">
+            限流<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/acloud/" class="badge rounded post-taxonomy" title="acloud">
+            acloud<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/akka/" class="badge rounded post-taxonomy" title="Akka">
+            Akka<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/alertmanager/" class="badge rounded post-taxonomy" title="alertmanager">
+            alertmanager<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/bash/" class="badge rounded post-taxonomy" title="bash">
+            bash<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/chrome/" class="badge rounded post-taxonomy" title="chrome">
+            chrome<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/coredns/" class="badge rounded post-taxonomy" title="coredns">
+            coredns<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/elasticsearch/" class="badge rounded post-taxonomy" title="elasticsearch">
+            elasticsearch<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/etcd/" class="badge rounded post-taxonomy" title="etcd">
+            etcd<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/fluentd/" class="badge rounded post-taxonomy" title="fluentd">
+            fluentd<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/harbor/" class="badge rounded post-taxonomy" title="harbor">
+            harbor<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/helm/" class="badge rounded post-taxonomy" title="helm">
+            helm<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/hystrix/" class="badge rounded post-taxonomy" title="hystrix">
+            hystrix<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/io/" class="badge rounded post-taxonomy" title="io">
+            io<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/jdpa/" class="badge rounded post-taxonomy" title="jdpa">
+            jdpa<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/jwt/" class="badge rounded post-taxonomy" title="jwt">
+            jwt<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/kafka/" class="badge rounded post-taxonomy" title="kafka">
+            kafka<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/kibana/" class="badge rounded post-taxonomy" title="kibana">
+            kibana<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/mq/" class="badge rounded post-taxonomy" title="MQ">
+            MQ<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/nfs/" class="badge rounded post-taxonomy" title="nfs">
+            nfs<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/oauth/" class="badge rounded post-taxonomy" title="oauth">
+            oauth<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/oracle/" class="badge rounded post-taxonomy" title="Oracle">
+            Oracle<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/reactor/" class="badge rounded post-taxonomy" title="reactor">
+            reactor<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/spring-boot/" class="badge rounded post-taxonomy" title="spring-boot">
+            spring-boot<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/spring-cloud/" class="badge rounded post-taxonomy" title="Spring Cloud">
+            Spring Cloud<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/ssl/" class="badge rounded post-taxonomy" title="ssl">
+            ssl<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/systemtap/" class="badge rounded post-taxonomy" title="systemtap">
+            systemtap<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/tiller/" class="badge rounded post-taxonomy" title="tiller">
+            tiller<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/vtable/" class="badge rounded post-taxonomy" title="vtable">
+            vtable<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/%E6%95%B0%E7%A0%81/" class="badge rounded post-taxonomy" title="数码">
+            数码<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/%E6%B6%88%E6%81%AF%E9%98%9F%E5%88%97/" class="badge rounded post-taxonomy" title="消息队列">
+            消息队列<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/%E6%B7%B1%E4%BF%A1%E6%9C%8D/" class="badge rounded post-taxonomy" title="深信服">
+            深信服<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/%E7%BC%93%E5%AD%98/" class="badge rounded post-taxonomy" title="缓存">
+            缓存<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/%E8%99%9A%E6%8B%9F%E5%8C%96/" class="badge rounded post-taxonomy" title="虚拟化">
+            虚拟化<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/%E8%B0%83%E7%94%A8%E9%93%BE%E8%BF%BD%E8%B8%AA/" class="badge rounded post-taxonomy" title="调用链追踪">
+            调用链追踪<span class="badge badge-sm text-white bg-accent ms-1">1</span></a></div>
+      </div>
+    </section>
+    
+  </div>
+</aside>
+</div>
+    </main><footer class="footer mt-auto py-3 text-center container"><nav class="social-links nav justify-content-center mb-2"><a class="nav-link social-link" target="_blank" href="https://github.com/chanjarster" title="GitHub" rel="noopener noreferrer">
+        <i class="fa-fw fa-2x fab fa-github"></i>
+      </a></nav>
+<div class="copyright mb-2">
+  Copyright © 2010-2023 Daniel Qian. All Rights Reserved.
+</div>
+<div class="powered-by mb-2">
+  Powered by <a href="https://gohugo.io" target="_blank" rel="noopener noreferrer">Hugo</a> and the <a href="https://github.com/razonyang/hugo-theme-bootstrap" target="_blank" rel="noopener noreferrer">Bootstrap</a> theme.
+</div>
+<a href="https://www.netlify.com" target="_blank" rel="noopener noreferrer">
+    <img src="https://www.netlify.com/img/global/badges/netlify-color-accent.svg" alt="Deploys by Netlify" width="114" height="51" />
+</a>
+</footer>
+<script src="/js/main.2cdce25f280f570596c88888d6af930fe5e15ea030005291dad293defbb231d3.js" integrity="sha256-LNziXygPVwWWyIiI1q&#43;TD&#43;XhXqAwAFKR2tKT3vuyMdM=" crossorigin="anonymous" defer></script><script src="/js/icons.min.8ddcaafc364ff0296c2209c5495287f0de039b852da9b24847f94c198b7639b6.js" integrity="sha256-jdyq/DZP8ClsIgnFSVKH8N4Dm4UtqbJIR/lMGYt2ObY=" crossorigin="anonymous" defer></script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('\/service-worker.js').then(function(reg) {
+      console.log('Successfully registered service worker', reg);
+    }).catch(function(err) {
+      console.warn('Error whilst registering service worker', err);
+    });
+  });
+}
+</script><script src="/js/viewer.min.652118a9fbf3403cdfde4026209f97ace22f9e334f0b45a33431a221b3db46a8.js" integrity="sha256-ZSEYqfvzQDzf3kAmIJ&#43;XrOIvnjNPC0WjNDGiIbPbRqg=" crossorigin="anonymous" defer></script>
+</body>
+</html>
