@@ -12,7 +12,7 @@
 <meta name="description" content="" /><meta name="robots" content="index, follow" /><meta itemprop="name" content="X.509、PKCS文件格式介绍">
 <meta itemprop="description" content=""><meta itemprop="datePublished" content="2019-04-27T20:55:20+08:00" />
 <meta itemprop="dateModified" content="2019-04-27T20:55:20+08:00" />
-<meta itemprop="wordCount" content="2956">
+<meta itemprop="wordCount" content="2980">
 <meta itemprop="keywords" content="java,tls,openssl," /><meta property="og:title" content="X.509、PKCS文件格式介绍" />
 <meta property="og:description" content="" />
 <meta property="og:type" content="article" />
@@ -331,7 +331,7 @@ BASE64Encoded
 <pre tabindex="0" class="chroma"><code><span class="lnt">1
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">openssl genrsa -out key.pem
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell">openssl genrsa -out key.pem
 </code></pre></td></tr></table>
 </div>
 </div><p>查看一下文件内容，可以看到label是<code>RSA PRIVATE KEY</code>：</p>
@@ -353,7 +353,16 @@ BASE64Encoded
 <pre tabindex="0" class="chroma"><code><span class="lnt">1
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">openssl rsa -in key.pem -outform der -out key.der
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell">openssl rsa -in key.pem -outform der -out key.der
+</code></pre></td></tr></table>
+</div>
+</div><p>如果是 x509 PEM 转换成 DER 格式，则是：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell">openssl x509 -in cert.pem -outform der -out cert.der
 </code></pre></td></tr></table>
 </div>
 </div><p>如果你这个时候看一下文件内容会发现都是二进制。然后我们把DER文件的内容Base64一下，会看到内容和PEM文件一样（忽略头尾和换行）：</p>
@@ -362,7 +371,7 @@ BASE64Encoded
 <pre tabindex="0" class="chroma"><code><span class="lnt">1
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">base64 -i key.der -o key.der.base64
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell">base64 -i key.der -o key.der.base64
 </code></pre></td></tr></table>
 </div>
 </div><h2 id="证书密码学key格式">证书、密码学Key格式<a class="anchor ms-1" href="#证书密码学key格式"><i class="fas fa-link"></i></a></h2>
@@ -410,7 +419,7 @@ BASE64Encoded
 </span><span class="lnt">8
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">openssl pkcs12 -export <span class="se">\
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell">openssl pkcs12 -export <span class="se">\
 </span><span class="se"></span>  -in &lt;cert&gt; <span class="se">\
 </span><span class="se"></span>  -inkey &lt;private-key&gt; <span class="se">\
 </span><span class="se"></span>  -name my-cert <span class="se">\
@@ -515,7 +524,7 @@ BASE64Encoded
 <pre tabindex="0" class="chroma"><code><span class="lnt">1
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">openssl genrsa -out private-key.p1.pem <span class="m">2048</span>
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell">openssl genrsa -out private-key.p1.pem <span class="m">2048</span>
 </code></pre></td></tr></table>
 </div>
 </div><h3 id="转换">转换<a class="anchor ms-1" href="#转换"><i class="fas fa-link"></i></a></h3>
@@ -525,7 +534,7 @@ BASE64Encoded
 <pre tabindex="0" class="chroma"><code><span class="lnt">1
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">openssl pkcs8 -topk8 -in private-key.p1.pem -out private-key.p8.pem -nocrypt
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell">openssl pkcs8 -topk8 -in private-key.p1.pem -out private-key.p8.pem -nocrypt
 </code></pre></td></tr></table>
 </div>
 </div><p><strong>PKCS #1 -&gt; Encrypted PKCS #8</strong></p>
@@ -534,7 +543,7 @@ BASE64Encoded
 <pre tabindex="0" class="chroma"><code><span class="lnt">1
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">openssl pkcs8 -topk8 -in private-key.p1.pem -out private-key.p8.pem
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell">openssl pkcs8 -topk8 -in private-key.p1.pem -out private-key.p8.pem
 </code></pre></td></tr></table>
 </div>
 </div><p>过程中会让你输入密码，你至少得输入4位，所以PKCS #8相比PKCS #1更安全。</p>
@@ -544,7 +553,7 @@ BASE64Encoded
 <pre tabindex="0" class="chroma"><code><span class="lnt">1
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">openssl rsa -in private-key.p8.pem -out private-key.p1.pem
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell">openssl rsa -in private-key.p8.pem -out private-key.p1.pem
 </code></pre></td></tr></table>
 </div>
 </div><p>如果这个PKCS #8是加密的，那么你得输入密码。</p>
@@ -554,7 +563,7 @@ BASE64Encoded
 <pre tabindex="0" class="chroma"><code><span class="lnt">1
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">openssl pkcs8 -topk8 -in private-key.p8.nocrypt.pem -out private-key.p8.crypt.pem
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell">openssl pkcs8 -topk8 -in private-key.p8.nocrypt.pem -out private-key.p8.crypt.pem
 </code></pre></td></tr></table>
 </div>
 </div><p>过程中会让你输入密码，你至少得输入4位。</p>
@@ -564,7 +573,7 @@ BASE64Encoded
 <pre tabindex="0" class="chroma"><code><span class="lnt">1
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">openssl pkcs8 -topk8 -in private-key.p8.crypt.pem -out private-key.p8.nocrypt.pem -nocrypt
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell">openssl pkcs8 -topk8 -in private-key.p8.crypt.pem -out private-key.p8.nocrypt.pem -nocrypt
 </code></pre></td></tr></table>
 </div>
 </div><p>过程中会要求你输入Private Key密码。</p>
@@ -577,7 +586,7 @@ BASE64Encoded
 <pre tabindex="0" class="chroma"><code><span class="lnt">1
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">openssl rsa -in private-key.pem -pubout -out public-key.x509.pem
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell">openssl rsa -in private-key.pem -pubout -out public-key.x509.pem
 </code></pre></td></tr></table>
 </div>
 </div><p><strong>提取PKCS #1格式RSA Public Key</strong></p>
@@ -586,7 +595,7 @@ BASE64Encoded
 <pre tabindex="0" class="chroma"><code><span class="lnt">1
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">openssl rsa -in private-key.pem -out public-key.p1.pem -RSAPublicKey_out
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell">openssl rsa -in private-key.pem -out public-key.p1.pem -RSAPublicKey_out
 </code></pre></td></tr></table>
 </div>
 </div><h3 id="从x509证书提取">从X.509证书提取<a class="anchor ms-1" href="#从x509证书提取"><i class="fas fa-link"></i></a></h3>
@@ -595,7 +604,7 @@ BASE64Encoded
 <pre tabindex="0" class="chroma"><code><span class="lnt">1
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">openssl x509 -in cert.pem -pubkey -noout &gt; public-key.x509.pem
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell">openssl x509 -in cert.pem -pubkey -noout &gt; public-key.x509.pem
 </code></pre></td></tr></table>
 </div>
 </div><h3 id="转换-1">转换<a class="anchor ms-1" href="#转换-1"><i class="fas fa-link"></i></a></h3>
@@ -605,7 +614,7 @@ BASE64Encoded
 <pre tabindex="0" class="chroma"><code><span class="lnt">1
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">openssl rsa -pubin -in public-key.x509.pem -RSAPublicKey_out -out public-key.p1.pem
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell">openssl rsa -pubin -in public-key.x509.pem -RSAPublicKey_out -out public-key.p1.pem
 </code></pre></td></tr></table>
 </div>
 </div><p><strong>PKCS #1 RSA Public Key -&gt; X.509 RSA Public Key</strong></p>
@@ -614,7 +623,7 @@ BASE64Encoded
 <pre tabindex="0" class="chroma"><code><span class="lnt">1
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">openssl rsa -RSAPublicKey_in -in public-key.p1.pem -pubout -out public-key.x509.pem
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell">openssl rsa -RSAPublicKey_in -in public-key.p1.pem -pubout -out public-key.x509.pem
 </code></pre></td></tr></table>
 </div>
 </div><h2 id="参考资料">参考资料<a class="anchor ms-1" href="#参考资料"><i class="fas fa-link"></i></a></h2>

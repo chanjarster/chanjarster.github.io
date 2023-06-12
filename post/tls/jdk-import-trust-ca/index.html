@@ -12,7 +12,7 @@
 <meta name="description" content="" /><meta name="robots" content="index, follow" /><meta itemprop="name" content="给 JDK 添加信任 CA 的方法">
 <meta itemprop="description" content=""><meta itemprop="datePublished" content="2023-06-12T09:55:20+08:00" />
 <meta itemprop="dateModified" content="2023-06-12T09:55:20+08:00" />
-<meta itemprop="wordCount" content="321">
+<meta itemprop="wordCount" content="433">
 <meta itemprop="keywords" content="java,tls,openssl," /><meta property="og:title" content="给 JDK 添加信任 CA 的方法" />
 <meta property="og:description" content="" />
 <meta property="og:type" content="article" />
@@ -206,7 +206,9 @@
     <a class="action" href="#post-comments" role="button" aria-label="Comments" title="Comments">
   <i class="fas fa-fw fa-comments"></i>
 </a>
-    
+    <a class="action" href="#postTOC" aria-controls="Table of contents" role="button" title="Table of contents">
+  <i class="fas fa-fw fa-list-alt"></i>
+</a>
     
   </div>
 </div>
@@ -300,7 +302,8 @@ AAoACxGV2lZFA4gKn2fQ1XmxqI1AbQ3CekD6819kR5LLU7m7Wc5P/dAVUwHY3+vZ
 EOF
 </code></pre></td></tr></table>
 </div>
-</div><p>执行下列命令把 CA 证书导入进 JDK 的 cacerts（注意下面 <code>-alias</code> 参数，这个是给证书取个别名）：</p>
+</div><h2 id="如果你安装的是-jdk">如果你安装的是 JDK<a class="anchor ms-1" href="#如果你安装的是-jdk"><i class="fas fa-link"></i></a></h2>
+<p>执行下列命令把 CA 证书导入进 JDK 的 cacerts：</p>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre tabindex="0" class="chroma"><code><span class="lnt">1
@@ -319,7 +322,8 @@ EOF
 </span><span class="se"></span>  -file cfcaevroot-ca.pem
 </code></pre></td></tr></table>
 </div>
-</div><p>执行下列命令确认证书已经导入（如果没有结果则说明没有导入）：</p>
+</div><p>注意上面 <code>-alias</code> 参数，这个是给证书取个别名；<code>-file</code> 参数，指定的是 CA 证书的路径。</p>
+<p>执行下列命令确认证书已经导入（如果没有结果则说明没有导入）：</p>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre tabindex="0" class="chroma"><code><span class="lnt">1
@@ -331,10 +335,45 @@ EOF
 <pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell">keytool -list <span class="se">\
 </span><span class="se"></span>  -keystore <span class="nv">$JAVA_HOME</span>/jre/lib/security/cacerts <span class="se">\
 </span><span class="se"></span>  -storepass changeit <span class="se">\
-</span><span class="se"></span>  <span class="p">|</span> grep -C1 -i cfca
+</span><span class="se"></span>  <span class="p">|</span> grep -C1 -i cfcaevroot
 </code></pre></td></tr></table>
 </div>
-</div><p>然后重启 Java 程序。</p></div></div>
+</div><h2 id="如果你安装的是-jre">如果你安装的是 JRE<a class="anchor ms-1" href="#如果你安装的是-jre"><i class="fas fa-link"></i></a></h2>
+<p>注意 <code>-keystore</code> 参数的区别：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell">keytool -import <span class="se">\
+</span><span class="se"></span>  -alias cfcaevroot <span class="se">\
+</span><span class="se"></span>  -keystore <span class="nv">$JAVA_HOME</span>/lib/security/cacerts <span class="se">\
+</span><span class="se"></span>  -storepass changeit <span class="se">\
+</span><span class="se"></span>  -noprompt <span class="se">\
+</span><span class="se"></span>  -file cfcaevroot-ca.pem
+</code></pre></td></tr></table>
+</div>
+</div><p>执行下列命令确认证书已经导入（如果没有结果则说明没有导入）：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell">keytool -list <span class="se">\
+</span><span class="se"></span>  -keystore <span class="nv">$JAVA_HOME</span>/lib/security/cacerts <span class="se">\
+</span><span class="se"></span>  -storepass changeit <span class="se">\
+</span><span class="se"></span>  <span class="p">|</span> grep -C1 -i cfcaevroot
+</code></pre></td></tr></table>
+</div>
+</div><h2 id="最后重启-java-程序">最后重启 Java 程序<a class="anchor ms-1" href="#最后重启-java-程序"><i class="fas fa-link"></i></a></h2></div></div>
   <div class="card-footer"><div class="post-navs d-flex justify-content-evenly"><div class="post-nav post-prev">
     <i class="fas fa-fw fa-chevron-left"></i>
     <a href="/post/k8s/inspect-etcd/">查询 K8s Etcd 数据的方法
@@ -404,7 +443,20 @@ EOF
 </div>
   </div>
 </section>
-  <section class="featured-posts row card component">
+  <div class="post-toc row mb-4 card component" id="postTOC">
+  <div class="card-header">
+    <h2 class="card-title">目录</h2>
+  </div>
+  <div class="card-body">
+    <nav id="TableOfContents">
+  <ul>
+    <li><a href="#如果你安装的是-jdk">如果你安装的是 JDK</a></li>
+    <li><a href="#如果你安装的是-jre">如果你安装的是 JRE</a></li>
+    <li><a href="#最后重启-java-程序">最后重启 Java 程序</a></li>
+  </ul>
+</nav>
+  </div>
+</div><section class="featured-posts row card component">
     <div class="card-header">
       <h2 class="card-title">精选文章</h2>
     </div>
