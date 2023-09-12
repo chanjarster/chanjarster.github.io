@@ -12,7 +12,7 @@
 <meta name="description" content="阻止 iPhone 用户切换到华为用户的最大障碍就是 iCloud 上的照片无法导出。" /><meta name="robots" content="index, follow" /><meta itemprop="name" content="批量导出 iCloud 照片到本地">
 <meta itemprop="description" content="阻止 iPhone 用户切换到华为用户的最大障碍就是 iCloud 上的照片无法导出。"><meta itemprop="datePublished" content="2023-09-01T14:20:58+08:00" />
 <meta itemprop="dateModified" content="2023-09-01T14:20:58+08:00" />
-<meta itemprop="wordCount" content="507">
+<meta itemprop="wordCount" content="1816">
 <meta itemprop="keywords" content="iphone,华为,苹果,ios," /><meta property="og:title" content="批量导出 iCloud 照片到本地" />
 <meta property="og:description" content="阻止 iPhone 用户切换到华为用户的最大障碍就是 iCloud 上的照片无法导出。" />
 <meta property="og:type" content="article" />
@@ -221,7 +221,7 @@
   <span class="post-date" title="创建于 2023-09-01 14:20:58 &#43;0800 CST。">
     2023-09-01
   </span><span class="post-reading-time">
-    2 分钟阅读
+    4 分钟阅读
   </span><span class="post-taxonomies"><a href="/tags/iphone/" class="badge post-taxonomy">iphone</a><a href="/tags/%E5%8D%8E%E4%B8%BA/" class="badge post-taxonomy">华为</a><a href="/tags/%E8%8B%B9%E6%9E%9C/" class="badge post-taxonomy">苹果</a><a href="/tags/ios/" class="badge post-taxonomy">ios</a></span>
 </div>
 <div class="post-content mb-3"><p>阻止 iPhone 用户切换到华为用户的最大障碍就是 iCloud 上的照片无法导出。</p>
@@ -229,6 +229,9 @@
 <p>8月29日，华为 Mate60 Pro正式开售。</p>
 </blockquote>
 <p>本文讲解怎么在 OS X 上使用 <a href="https://github.com/boredazfcuk/docker-icloudpd/blob/master/CONFIGURATION.md" target="_blank" rel="noopener noreferrer">boredazfcuk/icloudpd</a> 把 iCloud 的照片全部导出，再配合 <a href="../transfer-iphone-sms-to-huawei/">迁移iPhone手机短信到华为手机</a>，可以让你无痛切换到华为手机。</p>
+<blockquote>
+<p>再次注意，本文是在 Mac 上试验的，Linux 也许可以直接用，Windows 我就不知道了。</p>
+</blockquote>
 <h2 id="步骤">步骤<a class="anchor ms-1" href="#步骤"><i class="fas fa-link"></i></a></h2>
 <ol>
 <li>先随便进入到一个目录，新建 icloud 目录</li>
@@ -283,14 +286,87 @@ docker run -it <span class="se">\
 </span><span class="se"></span>   --restart<span class="o">=</span>always <span class="se">\
 </span><span class="se"></span>   --env <span class="nv">TZ</span><span class="o">=</span>Asia/Shanghai <span class="se">\
 </span><span class="se"></span>   --volume icloudpd_config:/config <span class="se">\
-</span><span class="se"></span>   --volume <span class="k">$(</span><span class="nb">pwd</span><span class="k">)</span>/icloud:/home/qianjia/iCloud <span class="se">\
+</span><span class="se"></span>   --volume <span class="k">$(</span><span class="nb">pwd</span><span class="k">)</span>/icloud:/home/user/iCloud <span class="se">\
 </span><span class="se"></span>   boredazfcuk/icloudpd <span class="se">\
 </span><span class="se"></span>   /bin/sh
 </code></pre></td></tr></table>
 </div>
 </div><ol start="3">
-<li>创建配置文件，注意 <code>apple_id</code> 参数，这个需要你自己填写</li>
+<li>注意观察 <code>/home/user/iCloud</code> 这个目录的权限，
+因为这个目录的卷是 host 上的目录
+（注意上面的 <code>--volume $(pwd)/icloud:/home/user/iCloud</code> 参数)：</li>
 </ol>
+<p>比如下面得到 <code>/home/user/iCloud</code> 目录所属用户的 <code>uid</code> 是 501、所属用户组是 <code>dialout</code>。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell">$ ls -l /home/user
+total <span class="m">4</span>
+drwx------ <span class="m">1</span> <span class="m">501</span> dialout <span class="m">480</span> Sep <span class="m">11</span> 13:41 iCloud
+</code></pre></td></tr></table>
+</div>
+</div><p>接下来你要定好 <code>uid</code>、<code>用户名</code>、<code>gid</code>、<code>用户组名</code> 这4个参数：</p>
+<ul>
+<li>如果直接看到了 <code>uid</code>，说明用户不存在，那<code>用户名</code>可以定死为 <code>tmp_user</code>。</li>
+<li>如果直接看到了 <code>gid</code>，说明用户组不存在，那么<code>用户组名</code>可以定死为 <code>tmp_group</code>。</li>
+<li>如果看到了<code>用户名</code>，那么 <code>uid</code> 通过下面脚本得到，即使用容器系统原有的用户，下面的 <code>501</code> 就是 <code>uid</code>：</li>
+</ul>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell">$ cat /etc/passwd <span class="p">|</span> grep 用户名
+用户名: x:501:20::/home/somebody:/bin/ash
+</code></pre></td></tr></table>
+</div>
+</div><ul>
+<li>如果看到了<code>用户组名</code>，那么 <code>gid</code> 通过下面脚本得到，即使用容器系统原有的用户组，下面的 <code>20</code> 就是 <code>gid</code>：</li>
+</ul>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell">$ cat /etc/group <span class="p">|</span> grep 用户组名
+用户组名: x:20:root
+</code></pre></td></tr></table>
+</div>
+</div><p>把结果填写在这张表里：</p>
+<table>
+<thead>
+<tr>
+<th style="text-align:center">user</th>
+<th style="text-align:center">uid</th>
+<th style="text-align:center">group</th>
+<th style="text-align:center">gid</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:center"></td>
+<td style="text-align:center"></td>
+<td style="text-align:center"></td>
+<td style="text-align:center"></td>
+</tr>
+</tbody>
+</table>
+<ol start="4">
+<li>创建脚本配置文件，你需要填写的部分是：</li>
+</ol>
+<ul>
+<li><code>apple_id</code>，这个是你的 apple 账号的名称，比如手机号或者邮箱号，自行在手机的设置界面里查看</li>
+<li><code>uesr</code>，填写之前确定的 <code>用户名</code></li>
+<li><code>user_id</code>，填写之前确定的<code>uid</code></li>
+<li><code>group</code>，填写之前确定的 <code>用户组名</code></li>
+<li><code>group_id</code>，填写之前确定的 <code>gid</code></li>
+</ul>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre tabindex="0" class="chroma"><code><span class="lnt"> 1
@@ -305,23 +381,43 @@ docker run -it <span class="se">\
 </span><span class="lnt">10
 </span><span class="lnt">11
 </span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
 </span></code></pre></td>
 <td class="lntd">
 <pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell">cat <span class="s">&lt;&lt;EOF &gt; /config/icloudpd.conf
 </span><span class="s">download_path=/home/user/iCloud
-</span><span class="s">user=user
 </span><span class="s">apple_id=
+</span><span class="s">user=user
+</span><span class="s">user_id=501
+</span><span class="s">group=dialout
+</span><span class="s">group_id=20
 </span><span class="s">TZ=Asia/Shanghai
 </span><span class="s">icloud_china=True
 </span><span class="s">auth_china=True
 </span><span class="s">authentication_type=2FA
-</span><span class="s">convert_heic_to_jpeg=True
 </span><span class="s">jpeg_quality=100
 </span><span class="s">delete_accompanying=False
+</span><span class="s">convert_heic_to_jpeg=False
 </span><span class="s">EOF</span>
 </code></pre></td></tr></table>
 </div>
-</div><ol start="4">
+</div><p>有两个参数可以调整：</p>
+<ul>
+<li><code>convert_heic_to_jpeg=True/False</code>，是否把 HEIC 格式的照片转换一份为 JPEG 格式，
+<ul>
+<li>我的华为 Mate60 Pro 支持 HEIC 格式照片，所以就无须转换了。</li>
+</ul>
+</li>
+<li><code>photo_album</code>，指定下载哪个相册
+<ul>
+<li>这个参数不提供就是下载所有照片，下载的照片的文件夹结构是 <code>年/月/日</code>，而不是相名。</li>
+<li>如果要下载相册，则必须是这种格式的 <code>photo_album=&quot;相册1,相册2,相册名称带 空格 3&quot;</code></li>
+</ul>
+</li>
+</ul>
+<ol start="5">
 <li>初始化 iCloud cookie，这一步可能会失败，那就 <code>rm -rf /config/*</code> 然后重复此步骤</li>
 </ol>
 <div class="highlight"><div class="chroma">
@@ -332,7 +428,7 @@ docker run -it <span class="se">\
 <pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell">sync-icloud.sh --Initialise
 </code></pre></td></tr></table>
 </div>
-</div><p>程序运行会出现以下提示，按照提示输入</p>
+</div><p>程序运行会出现以下提示，按照提示输入，注意这是一个模拟登陆的过程，有可能会让你输入两次验证码，照输就是：</p>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre tabindex="0" class="chroma"><code><span class="lnt">1
@@ -360,24 +456,122 @@ Code validation result: True
 2023-09-01 14:23:18 INFO     Container initialisation complete
 </code></pre></td></tr></table>
 </div>
-</div><ol start="5">
+</div><ol start="6">
 <li>下载 iCloud 照片</li>
 </ol>
+<p>先给 <code>home/user/iCloud</code> 目录建一个文件，否则脚本不会用户组名照片：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell">touch /home/user/iCloud/.mounted
+</code></pre></td></tr></table>
+</div>
+</div><p>然后开始下载，过程很漫长，我8千张照片下载了10个小时：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell">sync-icloud.sh
+</code></pre></td></tr></table>
+</div>
+</div><ol start="7">
+<li>整理目录结构</li>
+</ol>
+<p>因为下载的照片目录结构是按照年月日分级的：</p>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre tabindex="0" class="chroma"><code><span class="lnt">1
 </span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span><span class="lnt">9
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell">touch /home/user/iCloud/.mounted
-sync-icloud.sh
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell">.
+├── <span class="m">2021</span>
+└── <span class="m">2022</span>
+    ├── <span class="m">09</span>
+    │   ├── <span class="m">11</span>
+    │   └── <span class="m">12</span>
+    └── <span class="m">10</span>
+        ├── <span class="m">01</span>
+        └── <span class="m">28</span>
 </code></pre></td></tr></table>
 </div>
-</div><ol start="6">
-<li>使用华为手机助手，把导出的照片导入到华为手机。</li>
+</div><p>想办法扁平化一些，比如就按照年份来。</p>
+<p>那就先按照年份创建一套新目录，比如：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell">mkdir -p flat/2021 flat/2022
+</code></pre></td></tr></table>
+</div>
+</div><p>按照年份把一个一个照片复制过去：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="nb">export</span> <span class="nv">yr</span><span class="o">=</span>2021<span class="p">;</span> find <span class="nv">$yr</span> -type f -not -name <span class="s1">&#39;.DS_Store&#39;</span> <span class="p">|</span> xargs -n1 -I<span class="o">{}</span> cp <span class="o">{}</span> flat/<span class="nv">$yr</span>/
+</code></pre></td></tr></table>
+</div>
+</div><p>之后所有文件都在 <code>flat</code> 目录下，且目录结构如下：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell">flat
+  ├── <span class="m">2019</span>
+  ├── <span class="m">2021</span>
+  ├── <span class="m">2022</span>
+  └── <span class="m">2023</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>注意，不过这样做有风险，因为 iCloud 上的照片可能重名，会导致丢失文件，通过下面命令检查一下扁平化前后文件数量是否一致：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="c1"># 扁平化之前的文件数量</span>
+<span class="nb">export</span> <span class="nv">yr</span><span class="o">=</span>2021<span class="p">;</span> find <span class="nv">$yr</span> -type f -not -name <span class="s1">&#39;.DS_Store&#39;</span> <span class="p">|</span> wc -l
+<span class="c1"># 扁平化之后的文件数量</span>
+<span class="nb">export</span> <span class="nv">yr</span><span class="o">=</span>2021<span class="p">;</span> find flat/<span class="nv">$yr</span> -type f -not -name <span class="s1">&#39;.DS_Store&#39;</span> <span class="p">|</span> wc -l
+</code></pre></td></tr></table>
+</div>
+</div><ol start="8">
+<li>使用在 Mac 上安装华为手机助手，把导出的照片上传到华为手机上的 <code>Pictures</code> 目录，有 4 个坑：</li>
 </ol>
-<h2 id="清理">清理<a class="anchor ms-1" href="#清理"><i class="fas fa-link"></i></a></h2>
-<p>如果你想重新来过，则可以：</p>
+<ul>
+<li>Mac 上的华为手机助手无法直接上传目录</li>
+<li>Mac 上的华为手机助手照片传了千把张之后，就再也无法传上去了，提示失败</li>
+<li>你得找一个真 USB 3.2/3.1 的数据线，否则传输速度很慢（也许是 USB 2.0 的速度，我8千张照片+视频传了5个小时）</li>
+<li>你可以通过网络上传，毕竟比 USB 2.0 的速度快多了，但是：
+<ul>
+<li>在华为手机上开启 华为分享-共享至电脑，然后 Mac 打开 Finder - 网络，通过 SMB 协议访问华为手机是不行的</li>
+<li>但是，在 Mac 上 系统偏好设置 - 共享 -  文件共享 - 选项 - 使用 SMB 共享，然后华为手机 文件管理 - 网络邻居 访问 Mac 是可以的</li>
+</ul>
+</li>
+</ul>
+<h2 id="如何清理">如何清理<a class="anchor ms-1" href="#如何清理"><i class="fas fa-link"></i></a></h2>
+<p>如果你想重新来过，在宿主机上执行以下命令：</p>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre tabindex="0" class="chroma"><code><span class="lnt">1
@@ -468,7 +662,7 @@ rm -rf icloud/*
     <nav id="TableOfContents">
   <ul>
     <li><a href="#步骤">步骤</a></li>
-    <li><a href="#清理">清理</a></li>
+    <li><a href="#如何清理">如何清理</a></li>
   </ul>
 </nav>
   </div>
