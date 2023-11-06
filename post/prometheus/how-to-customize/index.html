@@ -1,0 +1,705 @@
+<!doctype html><html lang="zh-cn" data-palette="blue"
+  >
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>如何定制 Prometheus 项目 - 颇忒脱的技术博客</title><link rel="apple-touch-icon" href="/images/icons/icon-180x180.png" sizes="180x180">
+<link rel="icon" href="/images/icons/icon-32x32.png" sizes="32x32" type="image/png">
+<link rel="icon" href="/images/icons/icon-16x16.png" sizes="16x16" type="image/png">
+<link rel="icon" href="/images/icons/favicon.ico">
+<link rel="manifest" href="/manifest.json">
+<meta name="keywords" content="" />
+<meta name="description" content="" /><meta name="robots" content="index, follow" /><meta itemprop="name" content="如何定制 Prometheus 项目">
+<meta itemprop="description" content=""><meta itemprop="datePublished" content="2023-11-06T09:42:05+08:00" />
+<meta itemprop="dateModified" content="2023-11-06T09:42:05+08:00" />
+<meta itemprop="wordCount" content="2104">
+<meta itemprop="keywords" content="prometheus," /><meta property="og:title" content="如何定制 Prometheus 项目" />
+<meta property="og:description" content="" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="/post/prometheus/how-to-customize/" /><meta property="article:section" content="post" />
+<meta property="article:published_time" content="2023-11-06T09:42:05+08:00" />
+<meta property="article:modified_time" content="2023-11-06T09:42:05+08:00" /><meta property="og:site_name" content="颇忒脱的技术博客" />
+
+<meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="如何定制 Prometheus 项目"/>
+<meta name="twitter:description" content=""/>
+<meta property="og:image" content="/images/avatar.jpg"/>
+  <meta name="twitter:image" content="/images/avatar.jpg"/><link rel="stylesheet" href="/css/main.min.507afbe6e4670fa3e961a0b35816b5daeb36029866fd6bd7b9d7871fcf88faa5.css" integrity="sha256-UHr75uRnD6PpYaCzWBa12us2Aphm/WvXudeHH8&#43;I&#43;qU=" crossorigin="anonymous"><link rel="stylesheet" href="/css/viewer.min.3d228794bcedbbfa0412beb8fbc1ec6973202945e42af7004f742a4d7bd620ab.css" integrity="sha256-PSKHlLztu/oEEr64&#43;8HsaXMgKUXkKvcAT3QqTXvWIKs=" crossorigin="anonymous"></head>
+  <body><script>const items=['mode','palette'];items.forEach(function(a){const b=localStorage.getItem('hbs-'+a);b&&document.body.parentElement.setAttribute('data-'+a,b)})</script><header><nav class="navbar top-app-bar top-app-bar-expand-lg fixed-top">
+  <div class="container">
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent"
+      aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <i class="fas fa-bars"></i>
+    </button><a class="navbar-brand flex-grow-1 flex-lg-grow-0 text-center text-lg-start mx-auto me-lg-3" href="/"><img class="logo" alt="Logo" src="/images/avatar.jpg" loading="lazy"
+   width="455" height="455"
+   />
+颇忒脱的技术博客
+    </a>
+    
+    <button class="navbar-settings" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvasSettings"
+  aria-controls="offcanvasSettings" aria-label="Toggle settings">
+  <i class="fas fa-ellipsis-v"></i>
+</button>
+
+<div class="offcanvas offcanvas-end surface h-100" tabindex="-1" id="offcanvasSettings" aria-labelledby="offcanvasSettings">
+  <div class="offcanvas-header">
+    <h3 class="offcanvas-title">设置</h3>
+    <button type="button" class="btn btn-sm btn-outline-primary" data-bs-dismiss="offcanvas" aria-label="Close">
+      <i class="fas fa-times"></i>
+    </button>
+  </div>
+  <div class="offcanvas-body d-flex flex-column">
+
+<section class="setting">
+  <form class="row">
+    <div class="col-auto">
+      <label><i class="fas fa-fw fa-adjust"></i> 模式</label>
+    </div>
+    <div class="col-auto ms-auto">
+      <div class="form-check form-switch">
+        <input class="form-check-input" type="checkbox" id="modeSwitcher">
+      </div>
+    </div>
+  </form>
+</section>
+
+<section class="setting">
+  <form class="font-size-switcher-form row">
+    <div class="col-auto">
+      <label for="fontSize" class="form-label"><i class="fas fa-fw fa-font"></i> 字体大小</label>
+    </div>
+    <div class="col-auto ms-auto">
+      <input type="range" class="form-range" min="-2" max="2" id="fontSize">
+    </div>
+  </form>
+</section>
+
+
+<section class="setting palettes">
+  <form class="row">
+    <div class="col-auto">
+      <label><i class="fas fa-fw fa-palette"></i> 配色</label>
+    </div>
+    <div class="col-auto ms-auto">
+      <a id="btnPalette" class="btn btn-sm btn-outline-primary" role="button" aria-label="palettePicker">
+        <i class="fas fa-eye-dropper"></i>
+      </a>
+    </div>
+  </form>
+  <div class="mt-2 d-flex justify-content-between visually-hidden" id="palettePicker"><button type="button" id="palette-blue" aria-label="蓝色"
+        class="btn btn-sm w-100 palette" data-palette="blue">
+      </button><button type="button" id="palette-blue-gray" aria-label="蓝灰色"
+        class="btn btn-sm w-100 palette" data-palette="blue-gray">
+      </button><button type="button" id="palette-brown" aria-label="棕色"
+        class="btn btn-sm w-100 palette" data-palette="brown">
+      </button><button type="button" id="palette-cyan" aria-label="青色"
+        class="btn btn-sm w-100 palette" data-palette="cyan">
+      </button><button type="button" id="palette-green" aria-label="绿色"
+        class="btn btn-sm w-100 palette" data-palette="green">
+      </button><button type="button" id="palette-indigo" aria-label="靛青色"
+        class="btn btn-sm w-100 palette" data-palette="indigo">
+      </button><button type="button" id="palette-orange" aria-label="橙色"
+        class="btn btn-sm w-100 palette" data-palette="orange">
+      </button><button type="button" id="palette-pink" aria-label="粉色"
+        class="btn btn-sm w-100 palette" data-palette="pink">
+      </button><button type="button" id="palette-purple" aria-label="紫色"
+        class="btn btn-sm w-100 palette" data-palette="purple">
+      </button><button type="button" id="palette-red" aria-label="红色"
+        class="btn btn-sm w-100 palette" data-palette="red">
+      </button><button type="button" id="palette-teal" aria-label="蓝绿色"
+        class="btn btn-sm w-100 palette" data-palette="teal">
+      </button><button type="button" id="palette-yellow" aria-label="黄色"
+        class="btn btn-sm w-100 palette" data-palette="yellow">
+      </button></div>
+</section>
+<section class="setting actions d-flex justify-content-around mt-auto overflow-auto">
+  <a role="button" class="action action-go-back" href="javascript: window.history.back();">
+    <span class="action-icon"><i class="fas fa-2x fa-arrow-left"></i></span> 返回
+  </a>
+  <a role="button" class="action action-reload-page">
+    <span class="action-icon"><i class="fas fa-2x fa-redo-alt"></i></span> 刷新
+  </a>
+  <a role="button" class="action action-copy-url">
+    <span class="action-icon"><i class="fas fa-2x fa-link"></i></span> 复制链接
+  </a></section>
+
+</div>
+</div>
+
+    <div class="collapse navbar-collapse" tabindex="-1" id="navbarSupportedContent" aria-labelledby="navbarSupportedContent">
+      <form class="search-bar my-1" action="/search">
+  <div class="input-group input-group-sm">
+    <span class="btn btn-search disabled position-absolute left-0"><i class="fas fa-fw fa-search"></i></span>
+    <input class="form-control rounded-pill" name="q" type="search" aria-label="Search">
+  </div>
+</form>
+      <ul class="navbar-nav ms-auto"><li class="nav-item">
+          <a class="nav-link" href="/series/">
+            <i class="fas fa-fw fa-columns"></i>专栏
+          </a>
+        </li><li class="nav-item dropdown">
+          <a class="nav-link" id="navbarDropdownIndex" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+            <i class="fas fa-fw fa-chevron-circle-down"></i>快速索引
+          </a>
+          <ul class="dropdown-menu" aria-labelledby="navbarDropdownIndex"><li>
+              <a class="dropdown-item"
+                href="/tags/go">
+                Go
+              </a>
+            </li><li>
+              <a class="dropdown-item"
+                href="/tags/gc">
+                GC
+              </a>
+            </li><li>
+              <a class="dropdown-item"
+                href="/tags/kernel">
+                Kernel
+              </a>
+            </li><li>
+              <a class="dropdown-item"
+                href="/tags/cheatsheet">
+                Cheatsheet
+              </a>
+            </li><li>
+              <a class="dropdown-item"
+                href="/tags/troubleshooting">
+                排障实战记录
+              </a>
+            </li></ul>
+        </li><li class="nav-item">
+          <a class="nav-link" href="/tags/">
+            <i class="fas fa-fw fa-tags"></i>标签
+          </a>
+        </li><li class="nav-item">
+          <a class="nav-link" href="/archives/">
+            <i class="fas fa-fw fa-file-archive"></i>归档
+          </a>
+        </li></ul>
+    </div>
+  </div>
+</nav>
+</header>
+<main role="main" class="container">
+      <div class="row content">
+<div class="col-lg-8">
+  <div class="container"><nav class="row card component" aria-label="breadcrumb">
+  <div class="card-body">
+    <ol class="breadcrumb "><li class="breadcrumb-item"><a href="/">主页</a></li><li class="breadcrumb-item"><a href="/post/">文章</a></li><li class="breadcrumb-item active">如何定制 Prometheus 项目</li></ol>
+  </div>
+</nav><div class="post-panel-wrapper">
+  <div class="d-flex flex-column component rounded post-panel">
+    
+    <a class="action action-panel-toggler" role="button" title="Panel toggler">
+      <i class="fas fa-fw fa-chevron-circle-down"></i>
+    </a>
+    <a id="sidebarToggler" class="action d-none d-lg-block" role="button" title="Sidebar toggler">
+  <i class="fas fa-fw fa-expand-alt" data-fa-transform="rotate-45"></i>
+</a>
+
+    
+
+    
+    <a class="action" href="#post-copyright" role="button" aria-label="Copyright" title="Copyright">
+  <i class="fas fa-fw fa-copyright"></i>
+</a>
+    <a class="action" href="#post-comments" role="button" aria-label="Comments" title="Comments">
+  <i class="fas fa-fw fa-comments"></i>
+</a>
+    <a class="action" href="#postTOC" aria-controls="Table of contents" role="button" title="Table of contents">
+  <i class="fas fa-fw fa-list-alt"></i>
+</a>
+    
+  </div>
+</div>
+<article class="row card component mb-4 post">
+  <div class="card-header ">
+    <h1 class="card-title post-title">如何定制 Prometheus 项目
+</h1>
+  </div>
+  <div class="card-body"><div class="post-meta">
+  <span class="post-date" title="创建于 2023-11-06 09:42:05 &#43;0800 CST。">
+    2023-11-06
+  </span><span class="post-reading-time">
+    5 分钟阅读
+  </span><span class="post-taxonomies"><a href="/tags/prometheus/" class="badge post-taxonomy">prometheus</a></span>
+</div>
+<div class="post-content mb-3"><p>本文介绍怎么基于 Prometheus 做二次开发，以及怎么利用 github action 和 circle ci 发布镜像。</p>
+<p>涉及到的项目有 <a href="https://github.com/prometheus/prometheus" target="_blank" rel="noopener noreferrer">prometheus/pometheus</a> 和 <a href="https://github.com/prometheus/blackbox_exporter" target="_blank" rel="noopener noreferrer">prometheus/blackbox_exporter</a>，其余项目可举一反三。</p>
+<h2 id="先导知识">先导知识<a class="anchor ms-1" href="#先导知识"><i class="fas fa-link"></i></a></h2>
+<p>Prometheus 的官方项目使用了两种 CI 平台：</p>
+<ul>
+<li>Github Actions，配套可复用的配置库 <a href="https://github.com/prometheus/promci" target="_blank" rel="noopener noreferrer">prometheus/promci</a></li>
+<li>配套 和 CircleCI，配套可复用配置库 <a href="https://github.com/prometheus/circleci" target="_blank" rel="noopener noreferrer">prometheus/circleci</a></li>
+</ul>
+<p>如果需要个性化 CI 配置，可从上述配置库中理解运作原理。</p>
+<p>构建工具：</p>
+<ul>
+<li><a href="https://github.com/prometheus/promu" target="_blank" rel="noopener noreferrer">prometheus/promu</a>，它可以来构建各平台二进制、构建各平台 Docker 镜像、源码打包、更新 Github Release 信息等。</li>
+</ul>
+<h2 id="准备工作">准备工作<a class="anchor ms-1" href="#准备工作"><i class="fas fa-link"></i></a></h2>
+<h3 id="准备github-token">准备Github Token<a class="anchor ms-1" href="#准备github-token"><i class="fas fa-link"></i></a></h3>
+<p>1）到你的个人设置页的 “Developer Settings - Personal access tokens - Fine-grained tokens”（<a href="https://github.com/settings/tokens?type=beta" target="_blank" rel="noopener noreferrer">点击此处</a>进入）：</p>
+<img src="gh-token-02.jpg" style="zoom:50%" />
+<p>2）点击 “Generate new token”</p>
+<img src="gh-token-03.jpg" style="zoom:50%" />
+<p>3）设置好 Token 的名字，过期日期，在 “Repository access” 部分选择 “Only select repositories”。</p>
+<img src="gh-token-04.jpg" style="zoom:50%" />
+<p>3.1）如果在这一步还没有 fork 好仓库没关系，事后可以通过点击 Token</p>
+<img src="gh-token-05.jpg" style="zoom:50%" />
+<p>进入 Token 详情页面，点击 “Edit” 按钮配置仓库：</p>
+<img src="gh-token-06.jpg" style="zoom:50%" />
+<p>4）设置 “Permissions - Repository permissions”：</p>
+<img src="gh-token-07.jpg" style="zoom:50%" />
+<p>设置这么几个权限（也许没必要这么多，但我就是这么设置的）：</p>
+<ul>
+<li>Actions, Read-only</li>
+<li>Commit statuses, Read-only</li>
+<li>Contents, Read and write</li>
+<li>Metadata, Read-only</li>
+<li>Pull requests, Read-only</li>
+<li>Secrets, Read-only</li>
+<li>Variables, Read-only</li>
+</ul>
+<p>同样的，这些权限也可以事后修改。</p>
+<p>5）最后生成 Token，把 Token 复制下来妥善保存，这个后面要用到：</p>
+<img src="gh-token-08.jpg" style="zoom:50%" />
+<h3 id="注册-docker-hub-账号">注册 Docker hub 账号<a class="anchor ms-1" href="#注册-docker-hub-账号"><i class="fas fa-link"></i></a></h3>
+<p>到 <a href="https://hub.docker.com" target="_blank" rel="noopener noreferrer">Docker hub</a> 上注册账号，因为之后你要将镜像推送到这个账号下面。</p>
+<h3 id="注册-circleci-账号">注册 CircleCI 账号<a class="anchor ms-1" href="#注册-circleci-账号"><i class="fas fa-link"></i></a></h3>
+<p>1）到 <a href="https://circleci.com/signup/" target="_blank" rel="noopener noreferrer">https://circleci.com/signup/</a> 注册 CircleCI 账号。</p>
+<img src="circleci-01.jpg" style="zoom:50%" />
+<p>2）开通对 Github 账号对访问权限。</p>
+<p>登陆 CircleCI，进入 <a href="https://app.circleci.com/settings/user" target="_blank" rel="noopener noreferrer">https://app.circleci.com/settings/user</a> ，在 “Account Integrations” 里对 GitHub 点击 Connect，然后按照提示操作</p>
+<blockquote>
+<p>这里具体步骤就不展开了，可以参考<a href="https://circleci.com/docs/github-integration/" target="_blank" rel="noopener noreferrer">文档</a></p>
+</blockquote>
+<p>只要你正确地在 Github 上给 CircleCI 授予了权限，那么在 Github <a href="https://github.com/settings/applications" target="_blank" rel="noopener noreferrer">Settings - Applications</a> 里可以看到：</p>
+<img src="circleci-02.jpg" style="zoom:50%" />
+<p>而在 CircleCI 里就可以看到：</p>
+<img src="circleci-03.jpg" style="zoom:50%" />
+<h2 id="配置项目的-ci">配置项目的 CI<a class="anchor ms-1" href="#配置项目的-ci"><i class="fas fa-link"></i></a></h2>
+<h3 id="prometheus">Prometheus<a class="anchor ms-1" href="#prometheus"><i class="fas fa-link"></i></a></h3>
+<blockquote>
+<p>官方 Prometheus 项目使用的是 Github Actions CI 平台。</p>
+</blockquote>
+<p>1）把 <a href="https://github.com/prometheus/prometheus" target="_blank" rel="noopener noreferrer">prometheus/pometheus</a> fork 到自己的仓库里。</p>
+<p>2）根据下文的 “分支开发规范” 切出一个分支</p>
+<p>在该分支中修改 <code>.github/workflows/ci.yml</code> ，修改 <code>publish_main</code> 部分</p>
+<p>把 <code>needs</code> 里的 <code>test_windows</code> 去掉，在 <code>steps</code> 的 <code>with</code> 里添加 <code>docker_hub_organization</code>：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-yaml" data-lang="yaml"><span class="w">  </span><span class="nt">publish_main</span><span class="p">:</span><span class="w">
+</span><span class="w">    </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">Publish main branch artifacts</span><span class="w">
+</span><span class="w">    </span><span class="nt">runs-on</span><span class="p">:</span><span class="w"> </span><span class="l">ubuntu-latest</span><span class="w">
+</span><span class="w">    </span><span class="nt">needs</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="l">test_ui, test_go, test_windows, golangci, codeql, build_all]</span><span class="w">
+</span><span class="w">    </span><span class="nt">if</span><span class="p">:</span><span class="w"> </span><span class="l">github.event_name == &#39;push&#39; &amp;&amp; github.event.ref == &#39;refs/heads/main&#39;</span><span class="w">
+</span><span class="w">    </span><span class="nt">steps</span><span class="p">:</span><span class="w">
+</span><span class="w">      </span>- <span class="nt">uses</span><span class="p">:</span><span class="w"> </span><span class="l">actions/checkout@v3</span><span class="w">
+</span><span class="w">      </span>- <span class="nt">uses</span><span class="p">:</span><span class="w"> </span><span class="l">prometheus/promci@v0.1.0</span><span class="w">
+</span><span class="w">      </span>- <span class="nt">uses</span><span class="p">:</span><span class="w"> </span><span class="l">./.github/promci/actions/publish_main</span><span class="w">
+</span><span class="w">        </span><span class="nt">with</span><span class="p">:</span><span class="w">
+</span><span class="w">          </span><span class="nt">docker_hub_login</span><span class="p">:</span><span class="w"> </span><span class="l">${{ secrets.docker_hub_login }}</span><span class="w">
+</span><span class="w">          </span><span class="nt">docker_hub_password</span><span class="p">:</span><span class="w"> </span><span class="l">${{ secrets.docker_hub_password }}</span><span class="w">
+</span><span class="w">          </span><span class="nt">quay_io_login</span><span class="p">:</span><span class="w"> </span><span class="l">${{ secrets.quay_io_login }}</span><span class="w">
+</span><span class="w">          </span><span class="nt">quay_io_password</span><span class="p">:</span><span class="w"> </span><span class="l">${{ secrets.quay_io_password }}</span><span class="w">
+</span><span class="w">          </span><span class="nt">docker_hub_organization</span><span class="p">:</span><span class="w"> </span><span class="l">docker hub 用户名</span><span class="w">
+</span></code></pre></td></tr></table>
+</div>
+</div><p>同样的套路修改 <code>publish_release</code>。</p>
+<p>3）进入仓库，点击 “Actions” 页签，点击 “启用 Action”，如下图：</p>
+<img src="gh-action-01.jpg" style="zoom:50%" />
+<p>4）进入项目的 “Settings - Secrets and variables - Actions” 页面，点击 “New repository secret”</p>
+<img src="gh-action-02.jpg" style="zoom:30%" />
+<p>新建以下几个仓库密钥：</p>
+<ul>
+<li><code>DOCKER_HUB_LOGIN</code>，Docker hub 的账号</li>
+<li><code>DOCKER_HUB_PASSWORD</code>，Docker hub 的密码</li>
+<li><code>PROMBOT_GITHUB_TOKEN</code>，之前生成的 Github Token</li>
+</ul>
+<p>5）如此，当你对二次开发项目提交代码的时候，就会触发 Github Action。</p>
+<h3 id="blackbox-exporter">Blackbox Exporter<a class="anchor ms-1" href="#blackbox-exporter"><i class="fas fa-link"></i></a></h3>
+<blockquote>
+<p>官方 Blackbox Exporter 项目使用的是 CircleCI 平台。</p>
+</blockquote>
+<p>1）把 <a href="https://github.com/prometheus/blackbox_exporter" target="_blank" rel="noopener noreferrer">prometheus/blackbox_exporter</a> fork 到自己的仓库里。</p>
+<p>2）根据下文的 “分支开发规范” 切出一个分支</p>
+<p>在该分支中修改 <code>.circleci/config.yml</code>，对 <code>prometheus/publish_release</code> 部分添加以下内容：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-yaml" data-lang="yaml"><span class="nn">...</span><span class="w">
+</span><span class="w"></span>- <span class="nt">prometheus/publish_release</span><span class="p">:</span><span class="w">
+</span><span class="w">    </span><span class="nt">docker_hub_organization</span><span class="p">:</span><span class="w"> </span><span class="l">docker hub 用户名</span><span class="w">
+</span><span class="w">    </span><span class="nt">quay_io_organization</span><span class="p">:</span><span class="w"> </span><span class="s2">&#34;&#34;</span><span class="w">
+</span><span class="w">    </span><span class="l">...</span><span class="w">
+</span></code></pre></td></tr></table>
+</div>
+</div><p>3）进入 CircleCI 的 Dashboard 页面（<a href="https://app.circleci.com/dashboard" target="_blank" rel="noopener noreferrer">点此进入</a>） ，进入 “Projects” 页面，对 blackbox_exporter 项目点击 “Set Up Project”：</p>
+<img src="circleci-build-01.jpg" style="zoom:30%" />
+<p>如图配置好之后，点击 “Set Up Project”：</p>
+<img src="circleci-build-02.jpg" style="zoom:50%" />
+<p>4）配置环境变量。</p>
+<p>还是在 “Projects” 页面，点击 blackbox_exporter 右边的 三个圆点，点击 “Project Settings”：</p>
+<img src="circleci-build-03.jpg" style="zoom:50%" />
+<p>进入 “Environment Variables” 页面，配置环境变量：</p>
+<img src="circleci-build-04.jpg" style="zoom:50%" />
+<p>要配置以下变量：</p>
+<ul>
+<li><code>DOCKER_LOGIN</code>，Docker hub 账号</li>
+<li><code>DOCKER_PASSWORD</code>，Docker hub 密码</li>
+<li><code>DOCKER_REPO</code>，Docker hub 账号</li>
+<li><code>GITHUB_TOKEN</code>，之前创建的 Github Token</li>
+</ul>
+<h2 id="开发规范">开发规范<a class="anchor ms-1" href="#开发规范"><i class="fas fa-link"></i></a></h2>
+<h3 id="和上游保持同步">和上游保持同步<a class="anchor ms-1" href="#和上游保持同步"><i class="fas fa-link"></i></a></h3>
+<p>随时和上游仓库保持一致，可以通过 Github 的 Sync fork 功能做到：</p>
+<img src="code-01.jpg" style="zoom:50%" />
+<h3 id="不要动上游分支">不要动上游分支<a class="anchor ms-1" href="#不要动上游分支"><i class="fas fa-link"></i></a></h3>
+<p>上游仓库的分支在你的 Fork 仓库里有一个副本，所以<strong>千万不要去修改官方的任何分支</strong>，如果你修改了，Sync fork 就会出问题。</p>
+<h3 id="分支开发规范">分支开发规范<a class="anchor ms-1" href="#分支开发规范"><i class="fas fa-link"></i></a></h3>
+<p>因官方的 Tag 肯定都是稳定的且发布的版本，所以从官方 Tag 做二次开发是一个比较安全的选择。</p>
+<p>比如下面这个命令就是从官方的 <code>v2.47.0</code> Tag 切出了一个 <code>mod/v2.47.0</code> 分支：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell">git checkout -b mod/v2.47.0 v2.47.0
+</code></pre></td></tr></table>
+</div>
+</div><p>然后定下二次开发的版本号，比如<code>v2.47.0-mod.1</code> 代表基于官方 <code>v2.47.0</code> 的第一个 <code>mod</code> 版本。</p>
+<p>然后注意这么几点：</p>
+<ul>
+<li>对应修改项目中的 <code>VERSION</code> 文件，设置为你的二次开发版本号</li>
+<li>编写项目中的 <code>CHANGELOG.md</code> 文件 ，添加上对应的变更说明（版本和 <code>VERSION</code> 保持一致），格式正确则参照官方的写法，比如：
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback">## 0.24.0-mod.1 / 2023-05-16
+
+* [CHANGE] provide a custom mod version
+</code></pre></td></tr></table>
+</div>
+</div></li>
+<li>打 Git Tag 时，版本号和 <code>VERSION</code> 保持一致</li>
+</ul>
+<p>如果有一个没有正确完成，那么 Github Action / CircleCI 就无法正常工作，导致版本发布失败。</p>
+<p>如果你正确做到了，那么 Github 仓库的 Release 里就会有你的二次开发版本，比如：</p>
+<img src="result-01.jpg" style="zoom:50%" />
+<p>而你的 Docker hub 账户下也会有二次开发版本的镜像，比如：</p>
+<img src="result-02.jpg" style="zoom:50%" />
+<h3 id="跟随上游升级">跟随上游升级<a class="anchor ms-1" href="#跟随上游升级"><i class="fas fa-link"></i></a></h3>
+<p>上游发布了新版本（Tag），那么你就得和前面的一样，切出一个新的二开 <code>mod/**</code> 分支，然后把之前二开分支的提交弄到新的二开 <code>mod/**</code> 分支上。</p>
+<p>方法一：通过 <code>git cherry-pick</code></p>
+<ol>
+<li>在 <code>mod/v0.2.0</code> 上执行 <code>git cherry-pick &lt;commit&gt;</code>，把 <code>mod/v0.1.0</code> 的 commit 一个个弄过来。</li>
+</ol>
+<p>方法二：通过 <code>git rebase</code></p>
+<ol>
+<li>从官方新 Tag（假设 <code>v0.2.0</code>） 切出一个临时分支，比如 <code>git checkout -b tmp/v0.2.0 v0.2.0</code></li>
+<li>从 <code>mod/v0.1.0</code> 上切出一个 <code>mod/v0.2.0</code> 分支</li>
+<li>在 <code>mod/v0.2.0</code> 分支上执行 <code>git rebase tmp/v0.2.0</code></li>
+</ol>
+<p>当然如果存在代码冲突则需要自行解决。</p></div></div>
+  <div class="card-footer"><div class="post-navs d-flex justify-content-evenly"><div class="post-nav post-prev">
+    <i class="fas fa-fw fa-chevron-left"></i>
+    <a href="/post/k8s/ubuntu-cgroup-enable/">Ubuntu 20.04/22.04 Cgroup 没有启用导致的问题
+</a>
+  </div></div></div>
+</article><div class="post-copyright mb-3 row card component" id="post-copyright">
+    <div class="card-header">
+        <h2 class="card-title">版权</h2>
+    </div>
+    <div class="card-body"><a class="d-flex align-items-center flex-column" target="_blank" rel="license noopener noreferrer" href="https://creativecommons.org/licenses/by-nc-nd/4.0/deed.zh">
+  <span><i class="fab fa-fw fa-2x fa-creative-commons"></i><i class="fab fa-fw fa-2x fa-creative-commons-by"></i><i class="fab fa-fw fa-2x fa-creative-commons-nc"></i><i class="fab fa-fw fa-2x fa-creative-commons-nd"></i></span>
+  CC BY-NC-ND 4.0 
+</a>
+
+
+    </div>
+</div><section class="related-posts row card component">
+    <div class="card-header">
+      <h2 class="card-title">相关文章</h2>
+    </div>
+    <div class="card-body">
+      <ul class="post-list"><li>
+          <a href="/post/prometheus/events-metrics-design/">Prometheus 事件发生次数类指标设计的考量
+</a>
+          <span class="float-end post-date">2023-05-04
+</span>
+        </li><li>
+          <a href="/post/prometheus/jmx-exporter-rule/">JMX Exporter 规则编写教程
+</a>
+          <span class="float-end post-date">2023-04-16
+</span>
+        </li><li>
+          <a href="/post/prometheus/cluster-arch-compare/">Prometheus 集群架构方案对比分析
+</a>
+          <span class="float-end post-date">2023-01-06
+</span>
+        </li><li>
+          <a href="/post/prometheus/p8s-alerting-rule-logic/">Prometheus告警逻辑分析
+</a>
+          <span class="float-end post-date">2021-02-26
+</span>
+        </li><li>
+          <a href="/post/k8s/rancher-p8s-connect/">连接Rancher中的Prometheus的方法
+</a>
+          <span class="float-end post-date">2021-01-06
+</span>
+        </li></ul>
+    </div>
+  </section><div class="card component row post-comments" id="post-comments">
+  <div class="card-header">
+    <h2 class="card-title">评论</h2>
+  </div>
+  <div class="card-body"></div>
+</div></div>
+</div><aside class="col-lg-4 sidebar d-flex">
+  <div class="container d-flex flex-column">
+    
+    <section class="card row text-center profile component">
+  <div class="card-body">
+    <div class="col-12 d-flex align-items-center justify-content-center"><img class="profile-avatar rounded-circle" alt="颇忒脱" src="/images/avatar.jpg" loading="lazy"
+   width="455" height="455"
+   />
+</div>
+    <div class="col-12 profile-meta"><div class="profile-name">颇忒脱</div><nav class="social-links nav justify-content-center"><a class="nav-link social-link" target="_blank" href="https://github.com/chanjarster" title="GitHub" rel="noopener noreferrer">
+        <i class="fa-fw fa-2x fab fa-github"></i>
+      </a></nav>
+</div>
+  </div>
+</section>
+  <div class="post-toc row mb-4 card component" id="postTOC">
+  <div class="card-header">
+    <h2 class="card-title">目录</h2>
+  </div>
+  <div class="card-body">
+    <nav id="TableOfContents">
+  <ul>
+    <li><a href="#先导知识">先导知识</a></li>
+    <li><a href="#准备工作">准备工作</a>
+      <ul>
+        <li><a href="#准备github-token">准备Github Token</a></li>
+        <li><a href="#注册-docker-hub-账号">注册 Docker hub 账号</a></li>
+        <li><a href="#注册-circleci-账号">注册 CircleCI 账号</a></li>
+      </ul>
+    </li>
+    <li><a href="#配置项目的-ci">配置项目的 CI</a>
+      <ul>
+        <li><a href="#prometheus">Prometheus</a></li>
+        <li><a href="#blackbox-exporter">Blackbox Exporter</a></li>
+      </ul>
+    </li>
+    <li><a href="#开发规范">开发规范</a>
+      <ul>
+        <li><a href="#和上游保持同步">和上游保持同步</a></li>
+        <li><a href="#不要动上游分支">不要动上游分支</a></li>
+        <li><a href="#分支开发规范">分支开发规范</a></li>
+        <li><a href="#跟随上游升级">跟随上游升级</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+  </div>
+</div><section class="featured-posts row card component">
+    <div class="card-header">
+      <h2 class="card-title">精选文章</h2>
+    </div>
+    <div class="card-body">
+      <ul class="post-list"><li>
+          <a href="/post/linux/namespace/index-page/">Linux Namespace系列
+</a>
+        </li><li>
+          <a href="/post/network/index-page/">Networking系列
+</a>
+        </li><li>
+          <a href="/post/mysql/index-page/">MySQL系列
+</a>
+        </li><li>
+          <a href="/post/concurrent-programming/index-page/">并发编程系列
+</a>
+        </li><li>
+          <a href="/post/jvm/index-page/">JVM系列
+</a>
+        </li></ul>
+    </div>
+  </section><section class="recent-posts row card component">
+  <div class="card-header">
+    <h2 class="card-title">最近文章</h2>
+  </div>
+  <div class="card-body">
+    <ul class="post-list"><li>
+        <a href="/post/prometheus/how-to-customize/">如何定制 Prometheus 项目
+</a>
+      </li><li>
+        <a href="/post/k8s/ubuntu-cgroup-enable/">Ubuntu 20.04/22.04 Cgroup 没有启用导致的问题
+</a>
+      </li><li>
+        <a href="/post/iphone-to-huawei/export-iphone-ringtones-music/">怎么导出iPhone的铃声、录音、音乐
+</a>
+      </li><li>
+        <a href="/post/iphone-to-huawei/download-icloud-photos/">批量导出 ICloud 照片到本地
+</a>
+      </li><li>
+        <a href="/post/rancher/kube-apiserver-profiling/">Rancher 给 Kube-Apiserver 开启 Pprof
+</a>
+      </li></ul>
+  </div>
+</section><section class="tags-taxonomies row card component">
+      <div class="card-header">
+        <h2 class="card-title">
+          <a href="/tags">标签</a>
+        </h2>
+      </div>
+      <div class="card-body">
+        <div class="py-2"><a href="/tags/arts-a/" class="badge rounded post-taxonomy" title="ARTS-A">
+            ARTS-A<span class="badge badge-sm text-white bg-accent ms-1">125</span></a><a href="/tags/k8s/" class="badge rounded post-taxonomy" title="k8s">
+            k8s<span class="badge badge-sm text-white bg-accent ms-1">51</span></a><a href="/tags/troubleshooting/" class="badge rounded post-taxonomy" title="troubleshooting">
+            troubleshooting<span class="badge badge-sm text-white bg-accent ms-1">40</span></a><a href="/tags/jvm/" class="badge rounded post-taxonomy" title="jvm">
+            jvm<span class="badge badge-sm text-white bg-accent ms-1">39</span></a><a href="/tags/docker/" class="badge rounded post-taxonomy" title="docker">
+            docker<span class="badge badge-sm text-white bg-accent ms-1">29</span></a><a href="/tags/mysql/" class="badge rounded post-taxonomy" title="mysql">
+            mysql<span class="badge badge-sm text-white bg-accent ms-1">24</span></a><a href="/tags/network/" class="badge rounded post-taxonomy" title="network">
+            network<span class="badge badge-sm text-white bg-accent ms-1">22</span></a><a href="/tags/cheatsheet/" class="badge rounded post-taxonomy" title="cheatsheet">
+            cheatsheet<span class="badge badge-sm text-white bg-accent ms-1">21</span></a><a href="/tags/%E5%B9%B6%E5%8F%91%E7%BC%96%E7%A8%8B/" class="badge rounded post-taxonomy" title="并发编程">
+            并发编程<span class="badge badge-sm text-white bg-accent ms-1">20</span></a><a href="/tags/kernel/" class="badge rounded post-taxonomy" title="kernel">
+            kernel<span class="badge badge-sm text-white bg-accent ms-1">19</span></a><a href="/tags/linux/" class="badge rounded post-taxonomy" title="linux">
+            linux<span class="badge badge-sm text-white bg-accent ms-1">19</span></a><a href="/tags/java/" class="badge rounded post-taxonomy" title="java">
+            java<span class="badge badge-sm text-white bg-accent ms-1">18</span></a><a href="/tags/prometheus/" class="badge rounded post-taxonomy" title="prometheus">
+            prometheus<span class="badge badge-sm text-white bg-accent ms-1">13</span></a><a href="/tags/%E6%80%A7%E8%83%BD%E8%B0%83%E4%BC%98/" class="badge rounded post-taxonomy" title="性能调优">
+            性能调优<span class="badge badge-sm text-white bg-accent ms-1">11</span></a><a href="/tags/go/" class="badge rounded post-taxonomy" title="go">
+            go<span class="badge badge-sm text-white bg-accent ms-1">10</span></a><a href="/tags/%E5%BE%AE%E6%9C%8D%E5%8A%A1/" class="badge rounded post-taxonomy" title="微服务">
+            微服务<span class="badge badge-sm text-white bg-accent ms-1">10</span></a><a href="/tags/rancher/" class="badge rounded post-taxonomy" title="rancher">
+            rancher<span class="badge badge-sm text-white bg-accent ms-1">9</span></a><a href="/tags/redis/" class="badge rounded post-taxonomy" title="redis">
+            redis<span class="badge badge-sm text-white bg-accent ms-1">8</span></a><a href="/tags/debug/" class="badge rounded post-taxonomy" title="debug">
+            debug<span class="badge badge-sm text-white bg-accent ms-1">7</span></a><a href="/tags/gc/" class="badge rounded post-taxonomy" title="gc">
+            gc<span class="badge badge-sm text-white bg-accent ms-1">7</span></a><a href="/tags/nginx/" class="badge rounded post-taxonomy" title="nginx">
+            nginx<span class="badge badge-sm text-white bg-accent ms-1">7</span></a><a href="/tags/ingress/" class="badge rounded post-taxonomy" title="ingress">
+            ingress<span class="badge badge-sm text-white bg-accent ms-1">6</span></a><a href="/tags/%E8%BF%90%E7%BB%B4/" class="badge rounded post-taxonomy" title="运维">
+            运维<span class="badge badge-sm text-white bg-accent ms-1">6</span></a><a href="/tags/ci_cd/" class="badge rounded post-taxonomy" title="CI_CD">
+            CI_CD<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/interview/" class="badge rounded post-taxonomy" title="interview">
+            interview<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/jmx/" class="badge rounded post-taxonomy" title="jmx">
+            jmx<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/openssl/" class="badge rounded post-taxonomy" title="openssl">
+            openssl<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/tls/" class="badge rounded post-taxonomy" title="tls">
+            tls<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/%E5%88%86%E5%B8%83%E5%BC%8F%E4%BA%8B%E5%8A%A1/" class="badge rounded post-taxonomy" title="分布式事务">
+            分布式事务<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/%E5%88%86%E5%B8%83%E5%BC%8F%E7%AE%97%E6%B3%95/" class="badge rounded post-taxonomy" title="分布式算法">
+            分布式算法<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/%E6%94%B6%E8%97%8F%E5%A4%B9/" class="badge rounded post-taxonomy" title="收藏夹">
+            收藏夹<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/%E9%AB%98%E5%B9%B6%E5%8F%91/" class="badge rounded post-taxonomy" title="高并发">
+            高并发<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/visualvm/" class="badge rounded post-taxonomy" title="visualvm">
+            visualvm<span class="badge badge-sm text-white bg-accent ms-1">4</span></a><a href="/tags/%E6%97%A5%E5%BF%97/" class="badge rounded post-taxonomy" title="日志">
+            日志<span class="badge badge-sm text-white bg-accent ms-1">4</span></a><a href="/tags/arts/" class="badge rounded post-taxonomy" title="arts">
+            arts<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/arts-r/" class="badge rounded post-taxonomy" title="arts-r">
+            arts-r<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/classloader/" class="badge rounded post-taxonomy" title="ClassLoader">
+            ClassLoader<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/container/" class="badge rounded post-taxonomy" title="container">
+            container<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/ios/" class="badge rounded post-taxonomy" title="ios">
+            ios<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/iphone/" class="badge rounded post-taxonomy" title="iphone">
+            iphone<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/jenkins/" class="badge rounded post-taxonomy" title="Jenkins">
+            Jenkins<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/namespace/" class="badge rounded post-taxonomy" title="namespace">
+            namespace<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/scheduling/" class="badge rounded post-taxonomy" title="scheduling">
+            scheduling<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/thread/" class="badge rounded post-taxonomy" title="thread">
+            thread<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/%E5%88%86%E5%B8%83%E5%BC%8F%E6%9E%B6%E6%9E%84/" class="badge rounded post-taxonomy" title="分布式架构">
+            分布式架构<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/%E5%8D%8E%E4%B8%BA/" class="badge rounded post-taxonomy" title="华为">
+            华为<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/%E8%8B%B9%E6%9E%9C/" class="badge rounded post-taxonomy" title="苹果">
+            苹果<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/bash/" class="badge rounded post-taxonomy" title="bash">
+            bash<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/etcd/" class="badge rounded post-taxonomy" title="etcd">
+            etcd<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/grafana/" class="badge rounded post-taxonomy" title="grafana">
+            grafana<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/jdbc/" class="badge rounded post-taxonomy" title="JDBC">
+            JDBC<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/jmeter/" class="badge rounded post-taxonomy" title="jmeter">
+            jmeter<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/%E6%95%B0%E6%8D%AE%E5%BA%93%E6%97%B6%E5%8C%BA%E9%82%A3%E4%BA%9B%E4%BA%8B%E5%84%BF/" class="badge rounded post-taxonomy" title="数据库时区那些事儿">
+            数据库时区那些事儿<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/%E7%9B%91%E6%8E%A7/" class="badge rounded post-taxonomy" title="监控">
+            监控<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/%E9%99%90%E6%B5%81/" class="badge rounded post-taxonomy" title="限流">
+            限流<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/acloud/" class="badge rounded post-taxonomy" title="acloud">
+            acloud<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/akka/" class="badge rounded post-taxonomy" title="Akka">
+            Akka<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/alertmanager/" class="badge rounded post-taxonomy" title="alertmanager">
+            alertmanager<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/chrome/" class="badge rounded post-taxonomy" title="chrome">
+            chrome<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/coredns/" class="badge rounded post-taxonomy" title="coredns">
+            coredns<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/elasticsearch/" class="badge rounded post-taxonomy" title="elasticsearch">
+            elasticsearch<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/fluentd/" class="badge rounded post-taxonomy" title="fluentd">
+            fluentd<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/harbor/" class="badge rounded post-taxonomy" title="harbor">
+            harbor<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/helm/" class="badge rounded post-taxonomy" title="helm">
+            helm<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/hystrix/" class="badge rounded post-taxonomy" title="hystrix">
+            hystrix<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/io/" class="badge rounded post-taxonomy" title="io">
+            io<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/jdpa/" class="badge rounded post-taxonomy" title="jdpa">
+            jdpa<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/jwt/" class="badge rounded post-taxonomy" title="jwt">
+            jwt<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/kafka/" class="badge rounded post-taxonomy" title="kafka">
+            kafka<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/kibana/" class="badge rounded post-taxonomy" title="kibana">
+            kibana<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/mq/" class="badge rounded post-taxonomy" title="MQ">
+            MQ<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/nfs/" class="badge rounded post-taxonomy" title="nfs">
+            nfs<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/oauth/" class="badge rounded post-taxonomy" title="oauth">
+            oauth<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/oracle/" class="badge rounded post-taxonomy" title="Oracle">
+            Oracle<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/pprof/" class="badge rounded post-taxonomy" title="pprof">
+            pprof<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/reactor/" class="badge rounded post-taxonomy" title="reactor">
+            reactor<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/spring-boot/" class="badge rounded post-taxonomy" title="spring-boot">
+            spring-boot<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/spring-cloud/" class="badge rounded post-taxonomy" title="Spring Cloud">
+            Spring Cloud<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/ssl/" class="badge rounded post-taxonomy" title="ssl">
+            ssl<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/systemtap/" class="badge rounded post-taxonomy" title="systemtap">
+            systemtap<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/tiller/" class="badge rounded post-taxonomy" title="tiller">
+            tiller<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/ubuntu/" class="badge rounded post-taxonomy" title="ubuntu">
+            ubuntu<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/vtable/" class="badge rounded post-taxonomy" title="vtable">
+            vtable<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/%E6%B6%88%E6%81%AF%E9%98%9F%E5%88%97/" class="badge rounded post-taxonomy" title="消息队列">
+            消息队列<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/%E6%B7%B1%E4%BF%A1%E6%9C%8D/" class="badge rounded post-taxonomy" title="深信服">
+            深信服<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/%E7%BC%93%E5%AD%98/" class="badge rounded post-taxonomy" title="缓存">
+            缓存<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/%E8%99%9A%E6%8B%9F%E5%8C%96/" class="badge rounded post-taxonomy" title="虚拟化">
+            虚拟化<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/%E8%B0%83%E7%94%A8%E9%93%BE%E8%BF%BD%E8%B8%AA/" class="badge rounded post-taxonomy" title="调用链追踪">
+            调用链追踪<span class="badge badge-sm text-white bg-accent ms-1">1</span></a></div>
+      </div>
+    </section>
+    
+  </div>
+</aside>
+</div>
+    </main><footer class="footer mt-auto py-3 text-center container"><nav class="social-links nav justify-content-center mb-2"><a class="nav-link social-link" target="_blank" href="https://github.com/chanjarster" title="GitHub" rel="noopener noreferrer">
+        <i class="fa-fw fa-2x fab fa-github"></i>
+      </a></nav>
+<div class="copyright mb-2">
+  Copyright © 2010-2023 Daniel Qian. All Rights Reserved.
+</div>
+<div class="powered-by mb-2">
+  Powered by <a href="https://gohugo.io" target="_blank" rel="noopener noreferrer">Hugo</a> and the <a href="https://github.com/razonyang/hugo-theme-bootstrap" target="_blank" rel="noopener noreferrer">Bootstrap</a> theme.
+</div>
+<a href="https://www.netlify.com" target="_blank" rel="noopener noreferrer">
+    <img src="https://www.netlify.com/img/global/badges/netlify-color-accent.svg" alt="Deploys by Netlify" width="114" height="51" />
+</a>
+</footer>
+<script src="/js/main.2cdce25f280f570596c88888d6af930fe5e15ea030005291dad293defbb231d3.js" integrity="sha256-LNziXygPVwWWyIiI1q&#43;TD&#43;XhXqAwAFKR2tKT3vuyMdM=" crossorigin="anonymous" defer></script><script src="/js/icons.min.8ddcaafc364ff0296c2209c5495287f0de039b852da9b24847f94c198b7639b6.js" integrity="sha256-jdyq/DZP8ClsIgnFSVKH8N4Dm4UtqbJIR/lMGYt2ObY=" crossorigin="anonymous" defer></script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('\/service-worker.js').then(function(reg) {
+      console.log('Successfully registered service worker', reg);
+    }).catch(function(err) {
+      console.warn('Error whilst registering service worker', err);
+    });
+  });
+}
+</script><script src="/js/viewer.min.652118a9fbf3403cdfde4026209f97ace22f9e334f0b45a33431a221b3db46a8.js" integrity="sha256-ZSEYqfvzQDzf3kAmIJ&#43;XrOIvnjNPC0WjNDGiIbPbRqg=" crossorigin="anonymous" defer></script>
+</body>
+</html>
