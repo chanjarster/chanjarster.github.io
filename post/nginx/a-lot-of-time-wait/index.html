@@ -18,14 +18,14 @@
 <meta property="og:type" content="article" />
 <meta property="og:url" content="/post/nginx/a-lot-of-time-wait/" /><meta property="article:section" content="post" />
 <meta property="article:published_time" content="2023-02-01T11:02:45+08:00" />
-<meta property="article:modified_time" content="2023-02-01T11:02:45+08:00" /><meta property="og:site_name" content="颇忒脱的技术博客" />
+<meta property="article:modified_time" content="2023-02-01T11:02:45+08:00" />
 
 <meta name="twitter:card" content="summary"/>
 <meta name="twitter:title" content="Nginx 造成 Upstream 服务器大量 TIME_WAIT 连接"/>
 <meta name="twitter:description" content=""/>
 <meta property="og:image" content="/images/avatar.jpg"/>
-  <meta name="twitter:image" content="/images/avatar.jpg"/><link rel="stylesheet" href="/css/main.min.507afbe6e4670fa3e961a0b35816b5daeb36029866fd6bd7b9d7871fcf88faa5.css" integrity="sha256-UHr75uRnD6PpYaCzWBa12us2Aphm/WvXudeHH8&#43;I&#43;qU=" crossorigin="anonymous"><link rel="stylesheet" href="/css/viewer.min.3d228794bcedbbfa0412beb8fbc1ec6973202945e42af7004f742a4d7bd620ab.css" integrity="sha256-PSKHlLztu/oEEr64&#43;8HsaXMgKUXkKvcAT3QqTXvWIKs=" crossorigin="anonymous"></head>
-  <body><script>const items=['mode','palette'];items.forEach(function(a){const b=localStorage.getItem('hbs-'+a);b&&document.body.parentElement.setAttribute('data-'+a,b)})</script><header><nav class="navbar top-app-bar top-app-bar-expand-lg fixed-top">
+  <meta name="twitter:image" content="/images/avatar.jpg"/><link rel="stylesheet" href="/css/main.min.24196952817c68c8b90d8fa573d560fa62766baa0622bdc0e862255f4a4d1307.css" integrity="sha256-JBlpUoF8aMi5DY&#43;lc9Vg&#43;mJ2a6oGIr3A6GIlX0pNEwc=" crossorigin="anonymous"><link rel="stylesheet" href="/css/viewer.min.3d228794bcedbbfa0412beb8fbc1ec6973202945e42af7004f742a4d7bd620ab.css" integrity="sha256-PSKHlLztu/oEEr64&#43;8HsaXMgKUXkKvcAT3QqTXvWIKs=" crossorigin="anonymous"></head>
+  <body><script>const items=["mode","palette"];items.forEach(function(e){const t=localStorage.getItem("hbs-"+e);t&&document.body.parentElement.setAttribute("data-"+e,t)})</script><header><nav class="navbar top-app-bar top-app-bar-expand-lg fixed-top">
   <div class="container">
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent"
       aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
@@ -230,8 +230,8 @@
 <pre tabindex="0" class="chroma"><code><span class="lnt">1
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback">[JMeter] -&gt; [ Nginx ] ----&gt; [ Web Server ]
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">[JMeter] -&gt; [ Nginx ] ----&gt; [ Web Server ]
+</span></span></code></pre></td></tr></table>
 </div>
 </div><h2 id="现象">现象<a class="anchor ms-1" href="#现象"><i class="fas fa-link"></i></a></h2>
 <p>在压力测试期间，在 Web Server 服务器存在大量来自 Nginx 的 <code>TIME_WAIT</code> 连接：</p>
@@ -242,10 +242,10 @@
 </span><span class="lnt">3
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell">$ netstat -antpl <span class="p">|</span> awk <span class="s1">&#39;{print $5, $6}&#39;</span> <span class="p">|</span> sed <span class="s1">&#39;s/:[[:print:]]* /\t/g&#39;</span> <span class="p">|</span> sort <span class="p">|</span> uniq -c <span class="p">|</span> sort -rn
-  <span class="m">30020</span> TIME_WAIT &lt;nginx-ip&gt;
-     ...
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">$ netstat -antpl <span class="p">|</span> awk <span class="s1">&#39;{print $5, $6}&#39;</span> <span class="p">|</span> sed <span class="s1">&#39;s/:[[:print:]]* /\t/g&#39;</span> <span class="p">|</span> sort <span class="p">|</span> uniq -c <span class="p">|</span> sort -rn
+</span></span><span class="line"><span class="cl">  <span class="m">30020</span> TIME_WAIT &lt;nginx-ip&gt;
+</span></span><span class="line"><span class="cl">     ...
+</span></span></code></pre></td></tr></table>
 </div>
 </div><p><code>TIME_WAIT</code> 是在 TCP 协议 4 次挥手过程中的中间状态，过一段时间都会消失。</p>
 <h2 id="分析">分析<a class="anchor ms-1" href="#分析"><i class="fas fa-link"></i></a></h2>
@@ -285,32 +285,32 @@
 </span><span class="lnt">25
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback">upstream web_server {
-    server &lt;ip1&gt;:8080 max_fails=20;
-    keepalive 500;
-}
-
-map $http_upgrade $connection_upgrade {
-    default Upgrade;
-    &#39;&#39;      close;
-}
-
-server {
-    listen 80;
-    location / {
-        proxy_set_header Host $host;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_set_header X-Forwarded-Port $server_port;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_pass http://web_server;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection $connection_upgrade;
-        proxy_read_timeout 900s;
-        proxy_buffering off;
-    }
-}
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">upstream web_server {
+</span></span><span class="line"><span class="cl">    server &lt;ip1&gt;:8080 max_fails=20;
+</span></span><span class="line"><span class="cl">    keepalive 500;
+</span></span><span class="line"><span class="cl">}
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">map $http_upgrade $connection_upgrade {
+</span></span><span class="line"><span class="cl">    default Upgrade;
+</span></span><span class="line"><span class="cl">    &#39;&#39;      close;
+</span></span><span class="line"><span class="cl">}
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">server {
+</span></span><span class="line"><span class="cl">    listen 80;
+</span></span><span class="line"><span class="cl">    location / {
+</span></span><span class="line"><span class="cl">        proxy_set_header Host $host;
+</span></span><span class="line"><span class="cl">        proxy_set_header X-Forwarded-Proto $scheme;
+</span></span><span class="line"><span class="cl">        proxy_set_header X-Forwarded-Port $server_port;
+</span></span><span class="line"><span class="cl">        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+</span></span><span class="line"><span class="cl">        proxy_pass http://web_server;
+</span></span><span class="line"><span class="cl">        proxy_http_version 1.1;
+</span></span><span class="line"><span class="cl">        proxy_set_header Upgrade $http_upgrade;
+</span></span><span class="line"><span class="cl">        proxy_set_header Connection $connection_upgrade;
+</span></span><span class="line"><span class="cl">        proxy_read_timeout 900s;
+</span></span><span class="line"><span class="cl">        proxy_buffering off;
+</span></span><span class="line"><span class="cl">    }
+</span></span><span class="line"><span class="cl">}
+</span></span></code></pre></td></tr></table>
 </div>
 </div><p>可以看到，已经配置了 <a href="https://nginx.org/en/docs/http/ngx_http_upstream_module.html#keepalive" target="_blank" rel="noopener noreferrer">keepalive</a> 指令，但是看上去没有生效。</p>
 <p>不过查看 <a href="https://nginx.org/en/docs/http/ngx_http_upstream_module.html#keepalive" target="_blank" rel="noopener noreferrer">keepalive</a> 指令的文档发现，它需要配合把 <code>Connection</code> 请求头设置为 <code>&quot;&quot;</code> 才可以使用：</p>
@@ -332,21 +332,21 @@ server {
 </span><span class="lnt">14
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback">upstream http_backend {
-    ...
-    keepalive 16;
-}
-
-server {
-    ...
-    location /http/ {
-        ...
-        proxy_http_version 1.1;
-        proxy_set_header Connection &#34;&#34;;
-        ...
-    }
-}
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">upstream http_backend {
+</span></span><span class="line"><span class="cl">    ...
+</span></span><span class="line"><span class="cl">    keepalive 16;
+</span></span><span class="line"><span class="cl">}
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">server {
+</span></span><span class="line"><span class="cl">    ...
+</span></span><span class="line"><span class="cl">    location /http/ {
+</span></span><span class="line"><span class="cl">        ...
+</span></span><span class="line"><span class="cl">        proxy_http_version 1.1;
+</span></span><span class="line"><span class="cl">        proxy_set_header Connection &#34;&#34;;
+</span></span><span class="line"><span class="cl">        ...
+</span></span><span class="line"><span class="cl">    }
+</span></span><span class="line"><span class="cl">}
+</span></span></code></pre></td></tr></table>
 </div>
 </div><p>而实际上的 <code>Connection</code> 是这样的：</p>
 <div class="highlight"><div class="chroma">
@@ -366,20 +366,20 @@ server {
 </span><span class="lnt">13
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback">map $http_upgrade $connection_upgrade {
-    default Upgrade;
-    &#39;&#39;      close;
-}
-
-server {
-    listen 80;
-    location / {
-        ...
-        proxy_set_header Connection $connection_upgrade;
-        ...
-    }
-}
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">map $http_upgrade $connection_upgrade {
+</span></span><span class="line"><span class="cl">    default Upgrade;
+</span></span><span class="line"><span class="cl">    &#39;&#39;      close;
+</span></span><span class="line"><span class="cl">}
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">server {
+</span></span><span class="line"><span class="cl">    listen 80;
+</span></span><span class="line"><span class="cl">    location / {
+</span></span><span class="line"><span class="cl">        ...
+</span></span><span class="line"><span class="cl">        proxy_set_header Connection $connection_upgrade;
+</span></span><span class="line"><span class="cl">        ...
+</span></span><span class="line"><span class="cl">    }
+</span></span><span class="line"><span class="cl">}
+</span></span></code></pre></td></tr></table>
 </div>
 </div><p>为什么这样配置呢？这是抄了 Nginx 关于代理 Websocket 的一篇<a href="http://nginx.org/en/docs/http/websocket.html" target="_blank" rel="noopener noreferrer">官方博客</a>。</p>
 <p>根据上面的配置这个 <code>Connection</code> 实际上的值是 <code>close</code>，所以才会每次请求都会断开连接，然后新的请求又创建连接，然后导致大连 <code>TIME_WAIT</code> 的 TCP 连接。</p>
@@ -393,11 +393,11 @@ server {
 </span><span class="lnt">4
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback">map $http_upgrade $connection_upgrade {
-    default Upgrade;
-    &#39;&#39;      &#39;&#39;;
-}
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">map $http_upgrade $connection_upgrade {
+</span></span><span class="line"><span class="cl">    default Upgrade;
+</span></span><span class="line"><span class="cl">    &#39;&#39;      &#39;&#39;;
+</span></span><span class="line"><span class="cl">}
+</span></span></code></pre></td></tr></table>
 </div>
 </div></div></div>
   <div class="card-footer"><div class="post-navs d-flex justify-content-evenly"><div class="post-nav post-prev">
@@ -515,6 +515,9 @@ server {
   </div>
   <div class="card-body">
     <ul class="post-list"><li>
+        <a href="/post/mysql/charset-intro/">MySQL - 字符集简介
+</a>
+      </li><li>
         <a href="/post/prometheus/how-to-customize/">如何定制 Prometheus 项目
 </a>
       </li><li>
@@ -525,9 +528,6 @@ server {
 </a>
       </li><li>
         <a href="/post/iphone-to-huawei/download-icloud-photos/">批量导出 ICloud 照片到本地
-</a>
-      </li><li>
-        <a href="/post/rancher/kube-apiserver-profiling/">Rancher 给 Kube-Apiserver 开启 Pprof
 </a>
       </li></ul>
   </div>
@@ -544,7 +544,7 @@ server {
             troubleshooting<span class="badge badge-sm text-white bg-accent ms-1">40</span></a><a href="/tags/jvm/" class="badge rounded post-taxonomy" title="jvm">
             jvm<span class="badge badge-sm text-white bg-accent ms-1">39</span></a><a href="/tags/docker/" class="badge rounded post-taxonomy" title="docker">
             docker<span class="badge badge-sm text-white bg-accent ms-1">29</span></a><a href="/tags/mysql/" class="badge rounded post-taxonomy" title="mysql">
-            mysql<span class="badge badge-sm text-white bg-accent ms-1">24</span></a><a href="/tags/network/" class="badge rounded post-taxonomy" title="network">
+            mysql<span class="badge badge-sm text-white bg-accent ms-1">25</span></a><a href="/tags/network/" class="badge rounded post-taxonomy" title="network">
             network<span class="badge badge-sm text-white bg-accent ms-1">22</span></a><a href="/tags/cheatsheet/" class="badge rounded post-taxonomy" title="cheatsheet">
             cheatsheet<span class="badge badge-sm text-white bg-accent ms-1">21</span></a><a href="/tags/%E5%B9%B6%E5%8F%91%E7%BC%96%E7%A8%8B/" class="badge rounded post-taxonomy" title="并发编程">
             并发编程<span class="badge badge-sm text-white bg-accent ms-1">20</span></a><a href="/tags/kernel/" class="badge rounded post-taxonomy" title="kernel">
@@ -646,7 +646,7 @@ server {
     <img src="https://www.netlify.com/img/global/badges/netlify-color-accent.svg" alt="Deploys by Netlify" width="114" height="51" />
 </a>
 </footer>
-<script src="/js/main.2cdce25f280f570596c88888d6af930fe5e15ea030005291dad293defbb231d3.js" integrity="sha256-LNziXygPVwWWyIiI1q&#43;TD&#43;XhXqAwAFKR2tKT3vuyMdM=" crossorigin="anonymous" defer></script><script src="/js/icons.min.8ddcaafc364ff0296c2209c5495287f0de039b852da9b24847f94c198b7639b6.js" integrity="sha256-jdyq/DZP8ClsIgnFSVKH8N4Dm4UtqbJIR/lMGYt2ObY=" crossorigin="anonymous" defer></script>
+<script src="/js/main.2cdce25f280f570596c88888d6af930fe5e15ea030005291dad293defbb231d3.js" integrity="sha256-LNziXygPVwWWyIiI1q&#43;TD&#43;XhXqAwAFKR2tKT3vuyMdM=" crossorigin="anonymous" defer></script><script src="/js/icons.min.7b1f27dfde35467d03350938b2e41dbffd06347009b97ab913edfaca01a07814.js" integrity="sha256-ex8n3941Rn0DNQk4suQdv/0GNHAJuXq5E&#43;36ygGgeBQ=" crossorigin="anonymous" defer></script>
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
@@ -657,6 +657,6 @@ if ('serviceWorker' in navigator) {
     });
   });
 }
-</script><script src="/js/viewer.min.652118a9fbf3403cdfde4026209f97ace22f9e334f0b45a33431a221b3db46a8.js" integrity="sha256-ZSEYqfvzQDzf3kAmIJ&#43;XrOIvnjNPC0WjNDGiIbPbRqg=" crossorigin="anonymous" defer></script>
+</script><script src="/js/viewer.min.1ec1fa5aa3a66267222a44fe1cd51856ad4a92be48ede579fb36d70a6d4c28e9.js" integrity="sha256-HsH6WqOmYmciKkT&#43;HNUYVq1Kkr5I7eV5&#43;zbXCm1MKOk=" crossorigin="anonymous" defer></script>
 </body>
 </html>

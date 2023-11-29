@@ -18,14 +18,14 @@
 <meta property="og:type" content="article" />
 <meta property="og:url" content="/post/nginx/throughput-cutoff-half-mystery/" /><meta property="article:section" content="post" />
 <meta property="article:published_time" content="2023-02-22T15:02:45+08:00" />
-<meta property="article:modified_time" content="2023-02-22T15:02:45+08:00" /><meta property="og:site_name" content="颇忒脱的技术博客" />
+<meta property="article:modified_time" content="2023-02-22T15:02:45+08:00" />
 
 <meta name="twitter:card" content="summary"/>
 <meta name="twitter:title" content="Nginx 反向代理吞吐量砍半之谜"/>
 <meta name="twitter:description" content=""/>
 <meta property="og:image" content="/images/avatar.jpg"/>
-  <meta name="twitter:image" content="/images/avatar.jpg"/><link rel="stylesheet" href="/css/main.min.507afbe6e4670fa3e961a0b35816b5daeb36029866fd6bd7b9d7871fcf88faa5.css" integrity="sha256-UHr75uRnD6PpYaCzWBa12us2Aphm/WvXudeHH8&#43;I&#43;qU=" crossorigin="anonymous"><link rel="stylesheet" href="/css/viewer.min.3d228794bcedbbfa0412beb8fbc1ec6973202945e42af7004f742a4d7bd620ab.css" integrity="sha256-PSKHlLztu/oEEr64&#43;8HsaXMgKUXkKvcAT3QqTXvWIKs=" crossorigin="anonymous"></head>
-  <body><script>const items=['mode','palette'];items.forEach(function(a){const b=localStorage.getItem('hbs-'+a);b&&document.body.parentElement.setAttribute('data-'+a,b)})</script><header><nav class="navbar top-app-bar top-app-bar-expand-lg fixed-top">
+  <meta name="twitter:image" content="/images/avatar.jpg"/><link rel="stylesheet" href="/css/main.min.24196952817c68c8b90d8fa573d560fa62766baa0622bdc0e862255f4a4d1307.css" integrity="sha256-JBlpUoF8aMi5DY&#43;lc9Vg&#43;mJ2a6oGIr3A6GIlX0pNEwc=" crossorigin="anonymous"><link rel="stylesheet" href="/css/viewer.min.3d228794bcedbbfa0412beb8fbc1ec6973202945e42af7004f742a4d7bd620ab.css" integrity="sha256-PSKHlLztu/oEEr64&#43;8HsaXMgKUXkKvcAT3QqTXvWIKs=" crossorigin="anonymous"></head>
+  <body><script>const items=["mode","palette"];items.forEach(function(e){const t=localStorage.getItem("hbs-"+e);t&&document.body.parentElement.setAttribute("data-"+e,t)})</script><header><nav class="navbar top-app-bar top-app-bar-expand-lg fixed-top">
   <div class="container">
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent"
       aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
@@ -248,9 +248,9 @@
 </span><span class="lnt">2
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell">./wrk -c <span class="m">500</span> -t <span class="m">4</span> -d 1m --latency  http://&lt;tomcat-ip&gt;:8080/docs/config/filter.html
-./wrk -c <span class="m">500</span> -t <span class="m">4</span> -d 1m --latency  http://&lt;nginx-ip&gt;:8080/docs/config/filter.html
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">./wrk -c <span class="m">500</span> -t <span class="m">4</span> -d 1m --latency  http://&lt;tomcat-ip&gt;:8080/docs/config/filter.html
+</span></span><span class="line"><span class="cl">./wrk -c <span class="m">500</span> -t <span class="m">4</span> -d 1m --latency  http://&lt;nginx-ip&gt;:8080/docs/config/filter.html
+</span></span></code></pre></td></tr></table>
 </div>
 </div><p>nginx 配置：</p>
 <div class="highlight"><div class="chroma">
@@ -315,65 +315,65 @@
 </span><span class="lnt">58
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback">user  nginx;
-worker_processes  4;
-worker_cpu_affinity 0001 0010 0100 1000;
-
-worker_rlimit_nofile 30000;
-
-error_log  /var/log/nginx/error.log notice;
-pid        /var/run/nginx.pid;
-
-events {
-    use epoll;
-    multi_accept on;
-    worker_connections  7500;
-}
-
-http {
-    include       /etc/nginx/mime.types;
-    default_type  application/octet-stream;
-
-    log_format  main  &#39;$remote_addr - $remote_user [$time_local] &#34;$request&#34; &#39;
-                      &#39;$status $body_bytes_sent &#34;$http_referer&#34; &#39;
-                      &#39;&#34;$http_user_agent&#34; &#34;$http_x_forwarded_for&#34;&#39;;
-
-    access_log  /var/log/nginx/access.log  main;
-
-    sendfile        on;
-    #tcp_nopush     on;
-
-    keepalive_timeout  65;
-    keepalive_requests 1000;
-
-    proxy_connect_timeout 15s;
-    proxy_read_timeout 10s;
-
-    proxy_send_timeout 10s;
-    proxy_buffering on;
-
-    upstream tomcat_server {
-        server &lt;tomcat-ip&gt;:8080 max_fails=20;
-        keepalive 1000;
-    }
-    
-    server {
-        listen       8080 reuseport;
-        server_name  localhost;
-
-        location / {
-            proxy_set_header Host $host;
-            proxy_set_header X-Forwarded-Proto $scheme;
-            proxy_set_header X-Forwarded-Port $server_port;
-            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-            proxy_pass http://tomcat_server;
-            proxy_http_version 1.1;
-            proxy_set_header Connection &#34;&#34;;
-            proxy_read_timeout 900s;
-        }
-    }
-}
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-gdscript3" data-lang="gdscript3"><span class="line"><span class="cl"><span class="n">user</span>  <span class="n">nginx</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="n">worker_processes</span>  <span class="mi">4</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="n">worker_cpu_affinity</span> <span class="mi">0001</span> <span class="mi">0010</span> <span class="mi">0100</span> <span class="mi">1000</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">worker_rlimit_nofile</span> <span class="mi">30000</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">error_log</span>  <span class="o">/</span><span class="k">var</span><span class="o">/</span><span class="nb">log</span><span class="o">/</span><span class="n">nginx</span><span class="o">/</span><span class="n">error</span><span class="o">.</span><span class="n">log</span> <span class="n">notice</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="n">pid</span>        <span class="o">/</span><span class="k">var</span><span class="o">/</span><span class="n">run</span><span class="o">/</span><span class="n">nginx</span><span class="o">.</span><span class="n">pid</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">events</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="n">use</span> <span class="n">epoll</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="n">multi_accept</span> <span class="n">on</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="n">worker_connections</span>  <span class="mi">7500</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">http</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="n">include</span>       <span class="o">/</span><span class="n">etc</span><span class="o">/</span><span class="n">nginx</span><span class="o">/</span><span class="n">mime</span><span class="o">.</span><span class="n">types</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="n">default_type</span>  <span class="n">application</span><span class="o">/</span><span class="n">octet</span><span class="o">-</span><span class="n">stream</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="n">log_format</span>  <span class="n">main</span>  <span class="s1">&#39;$remote_addr - $remote_user [$time_local] &#34;$request&#34; &#39;</span>
+</span></span><span class="line"><span class="cl">                      <span class="s1">&#39;$status $body_bytes_sent &#34;$http_referer&#34; &#39;</span>
+</span></span><span class="line"><span class="cl">                      <span class="s1">&#39;&#34;$http_user_agent&#34; &#34;$http_x_forwarded_for&#34;&#39;</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="n">access_log</span>  <span class="o">/</span><span class="k">var</span><span class="o">/</span><span class="nb">log</span><span class="o">/</span><span class="n">nginx</span><span class="o">/</span><span class="n">access</span><span class="o">.</span><span class="n">log</span>  <span class="n">main</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="n">sendfile</span>        <span class="n">on</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="c1">#tcp_nopush     on;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="n">keepalive_timeout</span>  <span class="mi">65</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="n">keepalive_requests</span> <span class="mi">1000</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="n">proxy_connect_timeout</span> <span class="mi">15</span><span class="n">s</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="n">proxy_read_timeout</span> <span class="mi">10</span><span class="n">s</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="n">proxy_send_timeout</span> <span class="mi">10</span><span class="n">s</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="n">proxy_buffering</span> <span class="n">on</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="n">upstream</span> <span class="n">tomcat_server</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="n">server</span> <span class="o">&lt;</span><span class="n">tomcat</span><span class="o">-</span><span class="n">ip</span><span class="o">&gt;</span><span class="p">:</span><span class="mi">8080</span> <span class="n">max_fails</span><span class="o">=</span><span class="mi">20</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">        <span class="n">keepalive</span> <span class="mi">1000</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl">    
+</span></span><span class="line"><span class="cl">    <span class="n">server</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="n">listen</span>       <span class="mi">8080</span> <span class="n">reuseport</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">        <span class="n">server_name</span>  <span class="n">localhost</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">        <span class="n">location</span> <span class="o">/</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">            <span class="n">proxy_set_header</span> <span class="n">Host</span> <span class="o">$</span><span class="n">host</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">            <span class="n">proxy_set_header</span> <span class="n">X</span><span class="o">-</span><span class="n">Forwarded</span><span class="o">-</span><span class="n">Proto</span> <span class="o">$</span><span class="n">scheme</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">            <span class="n">proxy_set_header</span> <span class="n">X</span><span class="o">-</span><span class="n">Forwarded</span><span class="o">-</span><span class="n">Port</span> <span class="o">$</span><span class="n">server_port</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">            <span class="n">proxy_set_header</span> <span class="n">X</span><span class="o">-</span><span class="n">Forwarded</span><span class="o">-</span><span class="n">For</span> <span class="o">$</span><span class="n">proxy_add_x_forwarded_for</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">            <span class="n">proxy_pass</span> <span class="n">http</span><span class="p">:</span><span class="o">//</span><span class="n">tomcat_server</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">            <span class="n">proxy_http_version</span> <span class="mf">1.1</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">            <span class="n">proxy_set_header</span> <span class="n">Connection</span> <span class="s2">&#34;&#34;</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">            <span class="n">proxy_read_timeout</span> <span class="mi">900</span><span class="n">s</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">        <span class="p">}</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
 </div>
 </div><p>直压 Tomcat：</p>
 <div class="highlight"><div class="chroma">
@@ -392,19 +392,19 @@ http {
 </span><span class="lnt">12
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell">  <span class="m">4</span> threads and <span class="m">500</span> connections
-  Thread Stats   Avg      Stdev     Max   +/- Stdev
-    Latency    61.10ms  104.69ms 964.53ms   86.61%
-    Req/Sec     6.36k     1.15k    9.96k    73.61%
-  Latency Distribution
-     50%   13.71ms
-     75%   43.46ms
-     90%  213.47ms
-     99%  465.04ms
-  <span class="m">1491946</span> requests in 1.00m, 129.60GB <span class="nb">read</span>
-Requests/sec:  24822.44
-Transfer/sec:      2.16GB
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">  <span class="m">4</span> threads and <span class="m">500</span> connections
+</span></span><span class="line"><span class="cl">  Thread Stats   Avg      Stdev     Max   +/- Stdev
+</span></span><span class="line"><span class="cl">    Latency    61.10ms  104.69ms 964.53ms   86.61%
+</span></span><span class="line"><span class="cl">    Req/Sec     6.36k     1.15k    9.96k    73.61%
+</span></span><span class="line"><span class="cl">  Latency Distribution
+</span></span><span class="line"><span class="cl">     50%   13.71ms
+</span></span><span class="line"><span class="cl">     75%   43.46ms
+</span></span><span class="line"><span class="cl">     90%  213.47ms
+</span></span><span class="line"><span class="cl">     99%  465.04ms
+</span></span><span class="line"><span class="cl">  <span class="m">1491946</span> requests in 1.00m, 129.60GB <span class="nb">read</span>
+</span></span><span class="line"><span class="cl">Requests/sec:  24822.44
+</span></span><span class="line"><span class="cl">Transfer/sec:      2.16GB
+</span></span></code></pre></td></tr></table>
 </div>
 </div><p>压 Nginx：</p>
 <div class="highlight"><div class="chroma">
@@ -423,19 +423,19 @@ Transfer/sec:      2.16GB
 </span><span class="lnt">12
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell">  <span class="m">4</span> threads and <span class="m">500</span> connections
-  Thread Stats   Avg      Stdev     Max   +/- Stdev
-    Latency    43.34ms   45.88ms   1.11s    97.63%
-    Req/Sec     3.23k   463.18     4.62k    76.46%
-  Latency Distribution
-     50%   37.20ms
-     75%   46.17ms
-     90%   57.18ms
-     99%  232.57ms
-  <span class="m">764342</span> requests in 1.00m, 66.43GB <span class="nb">read</span>
-Requests/sec:  12722.92
-Transfer/sec:      1.11GB
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">  <span class="m">4</span> threads and <span class="m">500</span> connections
+</span></span><span class="line"><span class="cl">  Thread Stats   Avg      Stdev     Max   +/- Stdev
+</span></span><span class="line"><span class="cl">    Latency    43.34ms   45.88ms   1.11s    97.63%
+</span></span><span class="line"><span class="cl">    Req/Sec     3.23k   463.18     4.62k    76.46%
+</span></span><span class="line"><span class="cl">  Latency Distribution
+</span></span><span class="line"><span class="cl">     50%   37.20ms
+</span></span><span class="line"><span class="cl">     75%   46.17ms
+</span></span><span class="line"><span class="cl">     90%   57.18ms
+</span></span><span class="line"><span class="cl">     99%  232.57ms
+</span></span><span class="line"><span class="cl">  <span class="m">764342</span> requests in 1.00m, 66.43GB <span class="nb">read</span>
+</span></span><span class="line"><span class="cl">Requests/sec:  12722.92
+</span></span><span class="line"><span class="cl">Transfer/sec:      1.11GB
+</span></span></code></pre></td></tr></table>
 </div>
 </div><p>对比一下性能指标：</p>
 <table>
@@ -507,24 +507,24 @@ Transfer/sec:      1.11GB
 </span><span class="lnt">17
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback">$ vmstat 1
-procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
- r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
- 5  0   7424 1977308   2044 1698108    0    0     0     0 73333  642 15 84  0  0  0
- 4  0   7424 1975424   2044 1699728    0    0     0     0 65583  733 15 85  0  0  0
- 5  0   7424 1965804   2044 1700800    0    0     0     0 53537 1013 12 60 29  0  0
- 5  0   7424 1978396   2044 1702180    0    0     0     0 72517  626 16 84  0  0  0
- 9  0   7424 1979584   2044 1703756    0    0     0     0 71537 1031 16 83  0  0  0
- 5  0   7424 1978852   2044 1705108    0    0     0     0 71340 1281 16 83  1  0  0
- 5  0   7424 1977956   2044 1706696    0    0     0     0 70989  693 15 85  0  0  0
- 2  0   7424 1966884   2044 1708136    0    0     0     0 70589  672 15 85  0  0  0
- 6  0   7424 1953472   2044 1709608    0    0     0     0 72448  630 17 83  0  0  0
- 5  0   7424 1960272   2044 1710964    0    0     0 41920 72081  668 16 84  0  0  0
- 6  0   7424 1959320   2044 1712124    0    0     0     0 71234  705 16 82  2  0  0
-10  0   7424 1970128   2044 1713612    0    0     0     0 70968 1173 17 82  0  0  0
- 4  0   7424 1949780   2044 1714608    0    0     0     0 69815 1120 17 83  0  0  0
- 6  0   7424 1945680   2044 1716060    0    0     0     0 70618  789 16 83  0  0  0
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ vmstat 1
+</span></span><span class="line"><span class="cl">procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+</span></span><span class="line"><span class="cl"> r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+</span></span><span class="line"><span class="cl"> 5  0   7424 1977308   2044 1698108    0    0     0     0 73333  642 15 84  0  0  0
+</span></span><span class="line"><span class="cl"> 4  0   7424 1975424   2044 1699728    0    0     0     0 65583  733 15 85  0  0  0
+</span></span><span class="line"><span class="cl"> 5  0   7424 1965804   2044 1700800    0    0     0     0 53537 1013 12 60 29  0  0
+</span></span><span class="line"><span class="cl"> 5  0   7424 1978396   2044 1702180    0    0     0     0 72517  626 16 84  0  0  0
+</span></span><span class="line"><span class="cl"> 9  0   7424 1979584   2044 1703756    0    0     0     0 71537 1031 16 83  0  0  0
+</span></span><span class="line"><span class="cl"> 5  0   7424 1978852   2044 1705108    0    0     0     0 71340 1281 16 83  1  0  0
+</span></span><span class="line"><span class="cl"> 5  0   7424 1977956   2044 1706696    0    0     0     0 70989  693 15 85  0  0  0
+</span></span><span class="line"><span class="cl"> 2  0   7424 1966884   2044 1708136    0    0     0     0 70589  672 15 85  0  0  0
+</span></span><span class="line"><span class="cl"> 6  0   7424 1953472   2044 1709608    0    0     0     0 72448  630 17 83  0  0  0
+</span></span><span class="line"><span class="cl"> 5  0   7424 1960272   2044 1710964    0    0     0 41920 72081  668 16 84  0  0  0
+</span></span><span class="line"><span class="cl"> 6  0   7424 1959320   2044 1712124    0    0     0     0 71234  705 16 82  2  0  0
+</span></span><span class="line"><span class="cl">10  0   7424 1970128   2044 1713612    0    0     0     0 70968 1173 17 82  0  0  0
+</span></span><span class="line"><span class="cl"> 4  0   7424 1949780   2044 1714608    0    0     0     0 69815 1120 17 83  0  0  0
+</span></span><span class="line"><span class="cl"> 6  0   7424 1945680   2044 1716060    0    0     0     0 70618  789 16 83  0  0  0
+</span></span></code></pre></td></tr></table>
 </div>
 </div><p>可以看到 CPU 是用足的，但是 sy （系统调用）比较高，有 80% 左右。</p>
 <p>用 strace 统计 30s 内单个 nginx 进程的系统调用：</p>
@@ -553,28 +553,28 @@ procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
 </span><span class="lnt">21
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell">$ timeout <span class="m">30</span> strace -c -p <span class="k">$(</span>pgrep -nx nginx<span class="k">)</span>
-% <span class="nb">time</span>     seconds  usecs/call     calls    errors syscall
------- ----------- ----------- --------- --------- ----------------
- 53.49    4.035007          <span class="m">11</span>    <span class="m">365710</span>           writev
- 30.32    2.287248           <span class="m">7</span>    <span class="m">305123</span>           readv
-  7.61    0.574073           <span class="m">9</span>     <span class="m">60984</span>           recvfrom
-  4.57    0.344557          <span class="m">11</span>     <span class="m">30471</span>           write
-  1.46    0.110045           <span class="m">3</span>     <span class="m">30516</span>           getsockopt
-  1.36    0.102238           <span class="m">3</span>     <span class="m">30879</span>           ioctl
-  0.85    0.064290          <span class="m">95</span>       <span class="m">674</span>           epoll_wait
-  0.11    0.008300          <span class="m">29</span>       <span class="m">286</span>           close
-  0.07    0.004944          <span class="m">14</span>       <span class="m">337</span>       <span class="m">337</span> connect
-  0.05    0.003852           <span class="m">7</span>       <span class="m">514</span>           epoll_ctl
-  0.05    0.003714          <span class="m">11</span>       <span class="m">337</span>           socket
-  0.03    0.002279           <span class="m">3</span>       <span class="m">674</span>           clock_gettime
-  0.02    0.001784           <span class="m">2</span>       <span class="m">674</span>           gettimeofday
-  0.01    0.000838           <span class="m">7</span>       <span class="m">116</span>        <span class="m">26</span> accept4
-  0.00    0.000330           <span class="m">4</span>        <span class="m">78</span>           setsockopt
-  0.00    0.000313           <span class="m">3</span>        <span class="m">87</span>           getsockname
------- ----------- ----------- --------- --------- ----------------
-100.00    7.543812           <span class="m">9</span>    <span class="m">827460</span>       <span class="m">363</span> total
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">$ timeout <span class="m">30</span> strace -c -p <span class="k">$(</span>pgrep -nx nginx<span class="k">)</span>
+</span></span><span class="line"><span class="cl">% <span class="nb">time</span>     seconds  usecs/call     calls    errors syscall
+</span></span><span class="line"><span class="cl">------ ----------- ----------- --------- --------- ----------------
+</span></span><span class="line"><span class="cl"> 53.49    4.035007          <span class="m">11</span>    <span class="m">365710</span>           writev
+</span></span><span class="line"><span class="cl"> 30.32    2.287248           <span class="m">7</span>    <span class="m">305123</span>           readv
+</span></span><span class="line"><span class="cl">  7.61    0.574073           <span class="m">9</span>     <span class="m">60984</span>           recvfrom
+</span></span><span class="line"><span class="cl">  4.57    0.344557          <span class="m">11</span>     <span class="m">30471</span>           write
+</span></span><span class="line"><span class="cl">  1.46    0.110045           <span class="m">3</span>     <span class="m">30516</span>           getsockopt
+</span></span><span class="line"><span class="cl">  1.36    0.102238           <span class="m">3</span>     <span class="m">30879</span>           ioctl
+</span></span><span class="line"><span class="cl">  0.85    0.064290          <span class="m">95</span>       <span class="m">674</span>           epoll_wait
+</span></span><span class="line"><span class="cl">  0.11    0.008300          <span class="m">29</span>       <span class="m">286</span>           close
+</span></span><span class="line"><span class="cl">  0.07    0.004944          <span class="m">14</span>       <span class="m">337</span>       <span class="m">337</span> connect
+</span></span><span class="line"><span class="cl">  0.05    0.003852           <span class="m">7</span>       <span class="m">514</span>           epoll_ctl
+</span></span><span class="line"><span class="cl">  0.05    0.003714          <span class="m">11</span>       <span class="m">337</span>           socket
+</span></span><span class="line"><span class="cl">  0.03    0.002279           <span class="m">3</span>       <span class="m">674</span>           clock_gettime
+</span></span><span class="line"><span class="cl">  0.02    0.001784           <span class="m">2</span>       <span class="m">674</span>           gettimeofday
+</span></span><span class="line"><span class="cl">  0.01    0.000838           <span class="m">7</span>       <span class="m">116</span>        <span class="m">26</span> accept4
+</span></span><span class="line"><span class="cl">  0.00    0.000330           <span class="m">4</span>        <span class="m">78</span>           setsockopt
+</span></span><span class="line"><span class="cl">  0.00    0.000313           <span class="m">3</span>        <span class="m">87</span>           getsockname
+</span></span><span class="line"><span class="cl">------ ----------- ----------- --------- --------- ----------------
+</span></span><span class="line"><span class="cl">100.00    7.543812           <span class="m">9</span>    <span class="m">827460</span>       <span class="m">363</span> total
+</span></span></code></pre></td></tr></table>
 </div>
 </div><p>可以看到 readv 和 writev 有 30.5w 次和 36.5w 次调用。</p>
 <p><code>man 2 readv</code> 可以直到这两个系统调用是干什么的，简而言之就是和 TCP 读写有关（因为 socket 也是 fd）：</p>
@@ -588,8 +588,8 @@ procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
 <pre tabindex="0" class="chroma"><code><span class="lnt">1
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell">$ timeout <span class="m">30</span> strace -e <span class="nv">trace</span><span class="o">=</span>readv,writev -p <span class="k">$(</span>pgrep -nx nginx<span class="k">)</span> -o output.unopt.txt
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">$ timeout <span class="m">30</span> strace -e <span class="nv">trace</span><span class="o">=</span>readv,writev -p <span class="k">$(</span>pgrep -nx nginx<span class="k">)</span> -o output.unopt.txt
+</span></span></code></pre></td></tr></table>
 </div>
 </div><p>查看 output.unopt.txt，每行最后面的 <code>=</code> 指的是读 / 写的字节数：</p>
 <div class="highlight"><div class="chroma">
@@ -600,11 +600,11 @@ procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
 </span><span class="lnt">4
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback">...
-readv(85, [{iov_base=&#34;ST /rest/resources/addResource H&#34;..., iov_len=4096}], 1) = 4096
-...
-writev(47, [{iov_base=&#34;rg&lt;/code&gt;.\n        &lt;strong&gt;Defau&#34;..., iov_len=4096}, {iov_base=&#34;e&amp;gt;true&amp;lt;/param-value&amp;gt;\n  &#34;..., iov_len=4096}], 2) = 8192
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">...
+</span></span><span class="line"><span class="cl">readv(85, [{iov_base=&#34;ST /rest/resources/addResource H&#34;..., iov_len=4096}], 1) = 4096
+</span></span><span class="line"><span class="cl">...
+</span></span><span class="line"><span class="cl">writev(47, [{iov_base=&#34;rg&lt;/code&gt;.\n        &lt;strong&gt;Defau&#34;..., iov_len=4096}, {iov_base=&#34;e&amp;gt;true&amp;lt;/param-value&amp;gt;\n  &#34;..., iov_len=4096}], 2) = 8192
+</span></span></code></pre></td></tr></table>
 </div>
 </div><p>统计下 readv 每次读的字节数，绝大多数 readv 一次只读 4k，最多一次读 36k（36864 字节）：</p>
 <div class="highlight"><div class="chroma">
@@ -624,20 +624,20 @@ writev(47, [{iov_base=&#34;rg&lt;/code&gt;.\n        &lt;strong&gt;Defau&#34;...
 </span><span class="lnt">13
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell">$ grep <span class="s1">&#39;readv&#39;</span> output.unopt.txt <span class="p">|</span> awk <span class="s1">&#39;BEGIN{FS=&#34; = &#34;}; {print $2}&#39;</span> <span class="p">|</span> sort <span class="p">|</span> uniq -c <span class="p">|</span> sort -rn <span class="p">|</span> head
- <span class="m">144120</span> <span class="m">4096</span>
-  <span class="m">18007</span> <span class="m">36864</span>
-  <span class="m">17796</span> <span class="m">19540</span>
-    <span class="m">205</span> <span class="m">19559</span>
-    <span class="m">196</span> <span class="m">0</span>
-      <span class="m">9</span> <span class="m">3895</span>
-      <span class="m">3</span> <span class="m">1843</span>
-      <span class="m">3</span> <span class="m">17697</span>
-      <span class="m">2</span> <span class="m">6113</span>
-      <span class="m">2</span> <span class="m">395</span>
-$ grep <span class="s1">&#39;readv&#39;</span> output.unopt.txt <span class="p">|</span> awk <span class="s1">&#39;BEGIN{FS=&#34; = &#34;}; {print $2}&#39;</span> <span class="p">|</span> sort -rn <span class="p">|</span> head -1
-<span class="m">36864</span>
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">$ grep <span class="s1">&#39;readv&#39;</span> output.unopt.txt <span class="p">|</span> awk <span class="s1">&#39;BEGIN{FS=&#34; = &#34;}; {print $2}&#39;</span> <span class="p">|</span> sort <span class="p">|</span> uniq -c <span class="p">|</span> sort -rn <span class="p">|</span> head
+</span></span><span class="line"><span class="cl"> <span class="m">144120</span> <span class="m">4096</span>
+</span></span><span class="line"><span class="cl">  <span class="m">18007</span> <span class="m">36864</span>
+</span></span><span class="line"><span class="cl">  <span class="m">17796</span> <span class="m">19540</span>
+</span></span><span class="line"><span class="cl">    <span class="m">205</span> <span class="m">19559</span>
+</span></span><span class="line"><span class="cl">    <span class="m">196</span> <span class="m">0</span>
+</span></span><span class="line"><span class="cl">      <span class="m">9</span> <span class="m">3895</span>
+</span></span><span class="line"><span class="cl">      <span class="m">3</span> <span class="m">1843</span>
+</span></span><span class="line"><span class="cl">      <span class="m">3</span> <span class="m">17697</span>
+</span></span><span class="line"><span class="cl">      <span class="m">2</span> <span class="m">6113</span>
+</span></span><span class="line"><span class="cl">      <span class="m">2</span> <span class="m">395</span>
+</span></span><span class="line"><span class="cl">$ grep <span class="s1">&#39;readv&#39;</span> output.unopt.txt <span class="p">|</span> awk <span class="s1">&#39;BEGIN{FS=&#34; = &#34;}; {print $2}&#39;</span> <span class="p">|</span> sort -rn <span class="p">|</span> head -1
+</span></span><span class="line"><span class="cl"><span class="m">36864</span>
+</span></span></code></pre></td></tr></table>
 </div>
 </div><p>统计下 writev 写的字节数，发现绝大多数 writev 一次只写 8k，最多一次写 35.08k（35924 字节）：</p>
 <div class="highlight"><div class="chroma">
@@ -658,21 +658,21 @@ $ grep <span class="s1">&#39;readv&#39;</span> output.unopt.txt <span class="p">
 </span><span class="lnt">14
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell">$ grep <span class="s1">&#39;writev&#39;</span> output.unopt.txt <span class="p">|</span> awk <span class="s1">&#39;BEGIN{FS=&#34; = &#34;}; {print $2}&#39;</span> <span class="p">|</span> sort <span class="p">|</span> uniq -c <span class="p">|</span> sort -rn <span class="p">|</span> head
- <span class="m">126115</span> <span class="m">8192</span>
-  <span class="m">36032</span> <span class="m">4096</span>
-  <span class="m">18028</span> <span class="m">143</span>
-  <span class="m">17811</span> <span class="m">8238</span>
-  <span class="m">17797</span> <span class="m">19540</span>
-    <span class="m">205</span> <span class="m">8219</span>
-    <span class="m">205</span> <span class="m">19559</span>
-      <span class="m">5</span> <span class="m">3156</span>
-      <span class="m">3</span> <span class="m">35924</span>
-      <span class="m">3</span> <span class="m">15444</span>
-
-$ grep <span class="s1">&#39;writev&#39;</span> output.unopt.txt <span class="p">|</span> awk <span class="s1">&#39;BEGIN{FS=&#34; = &#34;}; {print $2}&#39;</span> <span class="p">|</span> sort -rn <span class="p">|</span> head -1
-<span class="m">35924</span>
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">$ grep <span class="s1">&#39;writev&#39;</span> output.unopt.txt <span class="p">|</span> awk <span class="s1">&#39;BEGIN{FS=&#34; = &#34;}; {print $2}&#39;</span> <span class="p">|</span> sort <span class="p">|</span> uniq -c <span class="p">|</span> sort -rn <span class="p">|</span> head
+</span></span><span class="line"><span class="cl"> <span class="m">126115</span> <span class="m">8192</span>
+</span></span><span class="line"><span class="cl">  <span class="m">36032</span> <span class="m">4096</span>
+</span></span><span class="line"><span class="cl">  <span class="m">18028</span> <span class="m">143</span>
+</span></span><span class="line"><span class="cl">  <span class="m">17811</span> <span class="m">8238</span>
+</span></span><span class="line"><span class="cl">  <span class="m">17797</span> <span class="m">19540</span>
+</span></span><span class="line"><span class="cl">    <span class="m">205</span> <span class="m">8219</span>
+</span></span><span class="line"><span class="cl">    <span class="m">205</span> <span class="m">19559</span>
+</span></span><span class="line"><span class="cl">      <span class="m">5</span> <span class="m">3156</span>
+</span></span><span class="line"><span class="cl">      <span class="m">3</span> <span class="m">35924</span>
+</span></span><span class="line"><span class="cl">      <span class="m">3</span> <span class="m">15444</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">$ grep <span class="s1">&#39;writev&#39;</span> output.unopt.txt <span class="p">|</span> awk <span class="s1">&#39;BEGIN{FS=&#34; = &#34;}; {print $2}&#39;</span> <span class="p">|</span> sort -rn <span class="p">|</span> head -1
+</span></span><span class="line"><span class="cl"><span class="m">35924</span>
+</span></span></code></pre></td></tr></table>
 </div>
 </div><h2 id="第一次优化">第一次优化<a class="anchor ms-1" href="#第一次优化"><i class="fas fa-link"></i></a></h2>
 <p>nginx 关于代理缓冲的参数有 <a href="https://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_buffers" target="_blank" rel="noopener noreferrer"><code>proxy_buffers</code></a> 和 <a href="https://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_buffer_size" target="_blank" rel="noopener noreferrer"><code>proxy_buffer_size</code></a> ，他们的默认值是 <code>proxy_buffer_size 4k|8k</code> 和 <code>proxy_buffers 8 4k|8k</code>。</p>
@@ -687,10 +687,10 @@ $ grep <span class="s1">&#39;writev&#39;</span> output.unopt.txt <span class="p"
 </span><span class="lnt">3
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback">http {
-    proxy_buffers 128 4k;
-}
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">http {
+</span></span><span class="line"><span class="cl">    proxy_buffers 128 4k;
+</span></span><span class="line"><span class="cl">}
+</span></span></code></pre></td></tr></table>
 </div>
 </div><p>压一把，吞吐量提升了，从 1.2w 提升到了 1.4w</p>
 <div class="highlight"><div class="chroma">
@@ -709,19 +709,19 @@ $ grep <span class="s1">&#39;writev&#39;</span> output.unopt.txt <span class="p"
 </span><span class="lnt">12
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell">  <span class="m">4</span> threads and <span class="m">500</span> connections
-  Thread Stats   Avg      Stdev     Max   +/- Stdev
-    Latency    39.12ms   48.03ms   1.11s    97.22%
-    Req/Sec     3.68k   510.09     5.00k    76.49%
-  Latency Distribution
-     50%   32.05ms
-     75%   40.66ms
-     90%   53.17ms
-     99%  226.92ms
-  <span class="m">871572</span> requests in 1.00m, 75.75GB <span class="nb">read</span>
-Requests/sec:  14510.78
-Transfer/sec:      1.26GB
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">  <span class="m">4</span> threads and <span class="m">500</span> connections
+</span></span><span class="line"><span class="cl">  Thread Stats   Avg      Stdev     Max   +/- Stdev
+</span></span><span class="line"><span class="cl">    Latency    39.12ms   48.03ms   1.11s    97.22%
+</span></span><span class="line"><span class="cl">    Req/Sec     3.68k   510.09     5.00k    76.49%
+</span></span><span class="line"><span class="cl">  Latency Distribution
+</span></span><span class="line"><span class="cl">     50%   32.05ms
+</span></span><span class="line"><span class="cl">     75%   40.66ms
+</span></span><span class="line"><span class="cl">     90%   53.17ms
+</span></span><span class="line"><span class="cl">     99%  226.92ms
+</span></span><span class="line"><span class="cl">  <span class="m">871572</span> requests in 1.00m, 75.75GB <span class="nb">read</span>
+</span></span><span class="line"><span class="cl">Requests/sec:  14510.78
+</span></span><span class="line"><span class="cl">Transfer/sec:      1.26GB
+</span></span></code></pre></td></tr></table>
 </div>
 </div><p>对比一下性能指标：</p>
 <table>
@@ -806,29 +806,29 @@ Transfer/sec:      1.26GB
 </span><span class="lnt">22
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell">$ timeout <span class="m">30</span> strace -c -p <span class="k">$(</span>pgrep -nx nginx<span class="k">)</span>
-% <span class="nb">time</span>     seconds  usecs/call     calls    errors syscall
------- ----------- ----------- --------- --------- ----------------
- 53.19    3.534995           <span class="m">5</span>    <span class="m">691405</span>           readv
- 28.61    1.901240          <span class="m">23</span>     <span class="m">81985</span>           writev
-  8.56    0.569164           <span class="m">8</span>     <span class="m">63561</span>           recvfrom
-  4.88    0.324340          <span class="m">10</span>     <span class="m">31742</span>           write
-  1.72    0.114049           <span class="m">3</span>     <span class="m">31820</span>           getsockopt
-  1.67    0.111064           <span class="m">3</span>     <span class="m">32146</span>           ioctl
-  0.99    0.065817         <span class="m">119</span>       <span class="m">553</span>           epoll_wait
-  0.10    0.006479          <span class="m">22</span>       <span class="m">282</span>           close
-  0.07    0.004570          <span class="m">12</span>       <span class="m">364</span>       <span class="m">364</span> connect
-  0.06    0.003871          <span class="m">10</span>       <span class="m">364</span>           socket
-  0.05    0.003311           <span class="m">5</span>       <span class="m">580</span>           epoll_ctl
-  0.02    0.001509          <span class="m">11</span>       <span class="m">136</span>           brk
-  0.02    0.001504          <span class="m">11</span>       <span class="m">130</span>        <span class="m">22</span> accept4
-  0.02    0.001466           <span class="m">2</span>       <span class="m">553</span>           gettimeofday
-  0.02    0.001312           <span class="m">2</span>       <span class="m">553</span>           clock_gettime
-  0.01    0.000512           <span class="m">4</span>       <span class="m">108</span>           setsockopt
-  0.01    0.000375           <span class="m">3</span>       <span class="m">108</span>           getsockname
------- ----------- ----------- --------- --------- ----------------
-100.00    6.645578           <span class="m">7</span>    <span class="m">936390</span>       <span class="m">386</span> total
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">$ timeout <span class="m">30</span> strace -c -p <span class="k">$(</span>pgrep -nx nginx<span class="k">)</span>
+</span></span><span class="line"><span class="cl">% <span class="nb">time</span>     seconds  usecs/call     calls    errors syscall
+</span></span><span class="line"><span class="cl">------ ----------- ----------- --------- --------- ----------------
+</span></span><span class="line"><span class="cl"> 53.19    3.534995           <span class="m">5</span>    <span class="m">691405</span>           readv
+</span></span><span class="line"><span class="cl"> 28.61    1.901240          <span class="m">23</span>     <span class="m">81985</span>           writev
+</span></span><span class="line"><span class="cl">  8.56    0.569164           <span class="m">8</span>     <span class="m">63561</span>           recvfrom
+</span></span><span class="line"><span class="cl">  4.88    0.324340          <span class="m">10</span>     <span class="m">31742</span>           write
+</span></span><span class="line"><span class="cl">  1.72    0.114049           <span class="m">3</span>     <span class="m">31820</span>           getsockopt
+</span></span><span class="line"><span class="cl">  1.67    0.111064           <span class="m">3</span>     <span class="m">32146</span>           ioctl
+</span></span><span class="line"><span class="cl">  0.99    0.065817         <span class="m">119</span>       <span class="m">553</span>           epoll_wait
+</span></span><span class="line"><span class="cl">  0.10    0.006479          <span class="m">22</span>       <span class="m">282</span>           close
+</span></span><span class="line"><span class="cl">  0.07    0.004570          <span class="m">12</span>       <span class="m">364</span>       <span class="m">364</span> connect
+</span></span><span class="line"><span class="cl">  0.06    0.003871          <span class="m">10</span>       <span class="m">364</span>           socket
+</span></span><span class="line"><span class="cl">  0.05    0.003311           <span class="m">5</span>       <span class="m">580</span>           epoll_ctl
+</span></span><span class="line"><span class="cl">  0.02    0.001509          <span class="m">11</span>       <span class="m">136</span>           brk
+</span></span><span class="line"><span class="cl">  0.02    0.001504          <span class="m">11</span>       <span class="m">130</span>        <span class="m">22</span> accept4
+</span></span><span class="line"><span class="cl">  0.02    0.001466           <span class="m">2</span>       <span class="m">553</span>           gettimeofday
+</span></span><span class="line"><span class="cl">  0.02    0.001312           <span class="m">2</span>       <span class="m">553</span>           clock_gettime
+</span></span><span class="line"><span class="cl">  0.01    0.000512           <span class="m">4</span>       <span class="m">108</span>           setsockopt
+</span></span><span class="line"><span class="cl">  0.01    0.000375           <span class="m">3</span>       <span class="m">108</span>           getsockname
+</span></span><span class="line"><span class="cl">------ ----------- ----------- --------- --------- ----------------
+</span></span><span class="line"><span class="cl">100.00    6.645578           <span class="m">7</span>    <span class="m">936390</span>       <span class="m">386</span> total
+</span></span></code></pre></td></tr></table>
 </div>
 </div><p>目前可以看到效果显著：</p>
 <table>
@@ -898,38 +898,38 @@ Transfer/sec:      1.26GB
 </span><span class="lnt">31
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell">$ timeout <span class="m">30</span> strace -e <span class="nv">trace</span><span class="o">=</span>readv,writev -p <span class="k">$(</span>pgrep -nx nginx<span class="k">)</span> -o output.opt1.txt
-
-$ grep <span class="s1">&#39;readv&#39;</span> output.opt1.txt <span class="p">|</span> awk <span class="s1">&#39;BEGIN{FS=&#34; = &#34;}; {print $2}&#39;</span> <span class="p">|</span> sort <span class="p">|</span> uniq -c <span class="p">|</span> sort -rn <span class="p">|</span> head
- <span class="m">482455</span> <span class="m">4096</span>
-  <span class="m">22416</span> <span class="m">3156</span>
-    <span class="m">226</span> <span class="m">3175</span>
-    <span class="m">222</span> <span class="m">0</span>
-     <span class="m">79</span> <span class="m">7252</span>
-     <span class="m">71</span> <span class="m">11348</span>
-     <span class="m">68</span> <span class="m">15444</span>
-     <span class="m">48</span> <span class="m">19540</span>
-     <span class="m">33</span> <span class="m">23636</span>
-     <span class="m">29</span> <span class="m">27732</span>
-
-$ grep <span class="s1">&#39;readv&#39;</span> output.opt1.txt <span class="p">|</span> awk <span class="s1">&#39;BEGIN{FS=&#34; = &#34;}; {print $2}&#39;</span> <span class="p">|</span> sort -rn <span class="p">|</span> head -1
-<span class="m">48179</span>
-
-$ grep <span class="s1">&#39;writev&#39;</span> output.opt1.txt <span class="p">|</span> awk <span class="s1">&#39;BEGIN{FS=&#34; = &#34;}; {print $2}&#39;</span> <span class="p">|</span> sort <span class="p">|</span> uniq -c <span class="p">|</span> sort -rn <span class="p">|</span> head
-  <span class="m">23152</span> <span class="m">143</span>
-  <span class="m">22520</span> <span class="m">93314</span>
-   <span class="m">4308</span> <span class="m">8192</span>
-    <span class="m">546</span> <span class="m">8238</span>
-    <span class="m">254</span> <span class="m">4096</span>
-     <span class="m">94</span> <span class="m">3156</span>
-     <span class="m">83</span> <span class="m">7252</span>
-     <span class="m">77</span> <span class="m">11348</span>
-     <span class="m">70</span> <span class="m">15444</span>
-     <span class="m">53</span> <span class="m">19540</span>
-
-$ grep <span class="s1">&#39;writev&#39;</span> output.opt1.txt <span class="p">|</span> awk <span class="s1">&#39;BEGIN{FS=&#34; = &#34;}; {print $2}&#39;</span> <span class="p">|</span> sort -rn <span class="p">|</span> head -1
-<span class="m">93314</span>
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">$ timeout <span class="m">30</span> strace -e <span class="nv">trace</span><span class="o">=</span>readv,writev -p <span class="k">$(</span>pgrep -nx nginx<span class="k">)</span> -o output.opt1.txt
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">$ grep <span class="s1">&#39;readv&#39;</span> output.opt1.txt <span class="p">|</span> awk <span class="s1">&#39;BEGIN{FS=&#34; = &#34;}; {print $2}&#39;</span> <span class="p">|</span> sort <span class="p">|</span> uniq -c <span class="p">|</span> sort -rn <span class="p">|</span> head
+</span></span><span class="line"><span class="cl"> <span class="m">482455</span> <span class="m">4096</span>
+</span></span><span class="line"><span class="cl">  <span class="m">22416</span> <span class="m">3156</span>
+</span></span><span class="line"><span class="cl">    <span class="m">226</span> <span class="m">3175</span>
+</span></span><span class="line"><span class="cl">    <span class="m">222</span> <span class="m">0</span>
+</span></span><span class="line"><span class="cl">     <span class="m">79</span> <span class="m">7252</span>
+</span></span><span class="line"><span class="cl">     <span class="m">71</span> <span class="m">11348</span>
+</span></span><span class="line"><span class="cl">     <span class="m">68</span> <span class="m">15444</span>
+</span></span><span class="line"><span class="cl">     <span class="m">48</span> <span class="m">19540</span>
+</span></span><span class="line"><span class="cl">     <span class="m">33</span> <span class="m">23636</span>
+</span></span><span class="line"><span class="cl">     <span class="m">29</span> <span class="m">27732</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">$ grep <span class="s1">&#39;readv&#39;</span> output.opt1.txt <span class="p">|</span> awk <span class="s1">&#39;BEGIN{FS=&#34; = &#34;}; {print $2}&#39;</span> <span class="p">|</span> sort -rn <span class="p">|</span> head -1
+</span></span><span class="line"><span class="cl"><span class="m">48179</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">$ grep <span class="s1">&#39;writev&#39;</span> output.opt1.txt <span class="p">|</span> awk <span class="s1">&#39;BEGIN{FS=&#34; = &#34;}; {print $2}&#39;</span> <span class="p">|</span> sort <span class="p">|</span> uniq -c <span class="p">|</span> sort -rn <span class="p">|</span> head
+</span></span><span class="line"><span class="cl">  <span class="m">23152</span> <span class="m">143</span>
+</span></span><span class="line"><span class="cl">  <span class="m">22520</span> <span class="m">93314</span>
+</span></span><span class="line"><span class="cl">   <span class="m">4308</span> <span class="m">8192</span>
+</span></span><span class="line"><span class="cl">    <span class="m">546</span> <span class="m">8238</span>
+</span></span><span class="line"><span class="cl">    <span class="m">254</span> <span class="m">4096</span>
+</span></span><span class="line"><span class="cl">     <span class="m">94</span> <span class="m">3156</span>
+</span></span><span class="line"><span class="cl">     <span class="m">83</span> <span class="m">7252</span>
+</span></span><span class="line"><span class="cl">     <span class="m">77</span> <span class="m">11348</span>
+</span></span><span class="line"><span class="cl">     <span class="m">70</span> <span class="m">15444</span>
+</span></span><span class="line"><span class="cl">     <span class="m">53</span> <span class="m">19540</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">$ grep <span class="s1">&#39;writev&#39;</span> output.opt1.txt <span class="p">|</span> awk <span class="s1">&#39;BEGIN{FS=&#34; = &#34;}; {print $2}&#39;</span> <span class="p">|</span> sort -rn <span class="p">|</span> head -1
+</span></span><span class="line"><span class="cl"><span class="m">93314</span>
+</span></span></code></pre></td></tr></table>
 </div>
 </div><p>目前可以看到：</p>
 <ul>
@@ -956,22 +956,22 @@ $ grep <span class="s1">&#39;writev&#39;</span> output.opt1.txt <span class="p">
 </span><span class="lnt">15
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell">readv<span class="o">(</span>420, <span class="o">[{</span><span class="nv">iov_base</span><span class="o">=</span><span class="s2">&#34;nitialisation parameters&lt;/a&gt;&lt;/li&#34;</span>..., <span class="nv">iov_len</span><span class="o">=</span>4096<span class="o">}]</span>, 1<span class="o">)</span> <span class="o">=</span> <span class="m">4096</span>
-readv<span class="o">(</span>420, <span class="o">[{</span><span class="nv">iov_base</span><span class="o">=</span><span class="s2">&#34;e_&#39;x-forwarded-for&#39;\&#34;&gt;Basic confi&#34;</span>..., <span class="nv">iov_len</span><span class="o">=</span>4096<span class="o">}]</span>, 1<span class="o">)</span> <span class="o">=</span> <span class="m">4096</span>
-readv<span class="o">(</span>420, <span class="o">[{</span><span class="nv">iov_base</span><span class="o">=</span><span class="s2">&#34;_Class_Name\&#34;&gt;Filter Class Name&lt;/&#34;</span>..., <span class="nv">iov_len</span><span class="o">=</span>4096<span class="o">}]</span>, 1<span class="o">)</span> <span class="o">=</span> <span class="m">4096</span>
-readv<span class="o">(</span>420, <span class="o">[{</span><span class="nv">iov_base</span><span class="o">=</span><span class="s2">&#34;rg&lt;/code&gt;.\n        &lt;strong&gt;Defau&#34;</span>..., <span class="nv">iov_len</span><span class="o">=</span>4096<span class="o">}]</span>, 1<span class="o">)</span> <span class="o">=</span> <span class="m">4096</span>
-readv<span class="o">(</span>420, <span class="o">[{</span><span class="nv">iov_base</span><span class="o">=</span><span class="s2">&#34;e&amp;gt;true&amp;lt;/param-value&amp;gt;\n  &#34;</span>..., <span class="nv">iov_len</span><span class="o">=</span>4096<span class="o">}]</span>, 1<span class="o">)</span> <span class="o">=</span> <span class="m">4096</span>
-readv<span class="o">(</span>420, <span class="o">[{</span><span class="nv">iov_base</span><span class="o">=</span><span class="s2">&#34; &lt;p&gt;The number of previously iss&#34;</span>..., <span class="nv">iov_len</span><span class="o">=</span>4096<span class="o">}]</span>, 1<span class="o">)</span> <span class="o">=</span> <span class="m">4096</span>
-readv<span class="o">(</span>420, <span class="o">[{</span><span class="nv">iov_base</span><span class="o">=</span><span class="s2">&#34;ST /rest/resources/addResource H&#34;</span>..., <span class="nv">iov_len</span><span class="o">=</span>4096<span class="o">}]</span>, 1<span class="o">)</span> <span class="o">=</span> <span class="m">4096</span>
-readv<span class="o">(</span>420, <span class="o">[{</span><span class="nv">iov_base</span><span class="o">=</span><span class="s2">&#34;ocument&#39;s\n    validity and persi&#34;</span>..., <span class="nv">iov_len</span><span class="o">=</span>4096<span class="o">}]</span>, 1<span class="o">)</span> <span class="o">=</span> <span class="m">4096</span>
-readv<span class="o">(</span>420, <span class="o">[{</span><span class="nv">iov_base</span><span class="o">=</span><span class="s2">&#34;m&amp;gt;\n &amp;lt;param-name&amp;gt;Expires&#34;</span>..., <span class="nv">iov_len</span><span class="o">=</span>4096<span class="o">}]</span>, 1<span class="o">)</span> <span class="o">=</span> <span class="m">4096</span>
-readv<span class="o">(</span>420, <span class="o">[{</span><span class="nv">iov_base</span><span class="o">=</span><span class="s2">&#34;useful to ease usage of &lt;code&gt;Ex&#34;</span>..., <span class="nv">iov_len</span><span class="o">=</span>4096<span class="o">}]</span>, 1<span class="o">)</span> <span class="o">=</span> <span class="m">4096</span>
-readv<span class="o">(</span>420, <span class="o">[{</span><span class="nv">iov_base</span><span class="o">=</span><span class="s2">&#34;\n         &lt;div class=\&#34;codeBox\&#34;&gt;&lt;&#34;</span>..., <span class="nv">iov_len</span><span class="o">=</span>4096<span class="o">}]</span>, 1<span class="o">)</span> <span class="o">=</span> <span class="m">4096</span>
-readv<span class="o">(</span>420, <span class="o">[{</span><span class="nv">iov_base</span><span class="o">=</span><span class="s2">&#34;ation parameters.&lt;/p&gt;\n\n  &lt;/div&gt;&lt;&#34;</span>..., <span class="nv">iov_len</span><span class="o">=</span>4096<span class="o">}]</span>, 1<span class="o">)</span> <span class="o">=</span> <span class="m">4096</span>
-readv<span class="o">(</span>420, <span class="o">[{</span><span class="nv">iov_base</span><span class="o">=</span><span class="s2">&#34;rotectionEnabled&lt;/code&gt;&lt;/td&gt;&lt;td&gt;&#34;</span>..., <span class="nv">iov_len</span><span class="o">=</span>4096<span class="o">}]</span>, 1<span class="o">)</span> <span class="o">=</span> <span class="m">4096</span>
-readv<span class="o">(</span>420, <span class="o">[{</span><span class="nv">iov_base</span><span class="o">=</span><span class="s2">&#34;\n        &amp;lt;param-value&amp;gt;127\\&#34;</span>..., <span class="nv">iov_len</span><span class="o">=</span>4096<span class="o">}]</span>, 1<span class="o">)</span> <span class="o">=</span> <span class="m">4096</span>
-readv<span class="o">(</span>420, <span class="o">[{</span><span class="nv">iov_base</span><span class="o">=</span><span class="s2">&#34;i&gt;&lt;code&gt;Order&lt;/code&gt; will always&#34;</span>..., <span class="nv">iov_len</span><span class="o">=</span>4096<span class="o">}]</span>, 1<span class="o">)</span> <span class="o">=</span> <span class="m">4096</span>
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">readv<span class="o">(</span>420, <span class="o">[{</span><span class="nv">iov_base</span><span class="o">=</span><span class="s2">&#34;nitialisation parameters&lt;/a&gt;&lt;/li&#34;</span>..., <span class="nv">iov_len</span><span class="o">=</span>4096<span class="o">}]</span>, 1<span class="o">)</span> <span class="o">=</span> <span class="m">4096</span>
+</span></span><span class="line"><span class="cl">readv<span class="o">(</span>420, <span class="o">[{</span><span class="nv">iov_base</span><span class="o">=</span><span class="s2">&#34;e_&#39;x-forwarded-for&#39;\&#34;&gt;Basic confi&#34;</span>..., <span class="nv">iov_len</span><span class="o">=</span>4096<span class="o">}]</span>, 1<span class="o">)</span> <span class="o">=</span> <span class="m">4096</span>
+</span></span><span class="line"><span class="cl">readv<span class="o">(</span>420, <span class="o">[{</span><span class="nv">iov_base</span><span class="o">=</span><span class="s2">&#34;_Class_Name\&#34;&gt;Filter Class Name&lt;/&#34;</span>..., <span class="nv">iov_len</span><span class="o">=</span>4096<span class="o">}]</span>, 1<span class="o">)</span> <span class="o">=</span> <span class="m">4096</span>
+</span></span><span class="line"><span class="cl">readv<span class="o">(</span>420, <span class="o">[{</span><span class="nv">iov_base</span><span class="o">=</span><span class="s2">&#34;rg&lt;/code&gt;.\n        &lt;strong&gt;Defau&#34;</span>..., <span class="nv">iov_len</span><span class="o">=</span>4096<span class="o">}]</span>, 1<span class="o">)</span> <span class="o">=</span> <span class="m">4096</span>
+</span></span><span class="line"><span class="cl">readv<span class="o">(</span>420, <span class="o">[{</span><span class="nv">iov_base</span><span class="o">=</span><span class="s2">&#34;e&amp;gt;true&amp;lt;/param-value&amp;gt;\n  &#34;</span>..., <span class="nv">iov_len</span><span class="o">=</span>4096<span class="o">}]</span>, 1<span class="o">)</span> <span class="o">=</span> <span class="m">4096</span>
+</span></span><span class="line"><span class="cl">readv<span class="o">(</span>420, <span class="o">[{</span><span class="nv">iov_base</span><span class="o">=</span><span class="s2">&#34; &lt;p&gt;The number of previously iss&#34;</span>..., <span class="nv">iov_len</span><span class="o">=</span>4096<span class="o">}]</span>, 1<span class="o">)</span> <span class="o">=</span> <span class="m">4096</span>
+</span></span><span class="line"><span class="cl">readv<span class="o">(</span>420, <span class="o">[{</span><span class="nv">iov_base</span><span class="o">=</span><span class="s2">&#34;ST /rest/resources/addResource H&#34;</span>..., <span class="nv">iov_len</span><span class="o">=</span>4096<span class="o">}]</span>, 1<span class="o">)</span> <span class="o">=</span> <span class="m">4096</span>
+</span></span><span class="line"><span class="cl">readv<span class="o">(</span>420, <span class="o">[{</span><span class="nv">iov_base</span><span class="o">=</span><span class="s2">&#34;ocument&#39;s\n    validity and persi&#34;</span>..., <span class="nv">iov_len</span><span class="o">=</span>4096<span class="o">}]</span>, 1<span class="o">)</span> <span class="o">=</span> <span class="m">4096</span>
+</span></span><span class="line"><span class="cl">readv<span class="o">(</span>420, <span class="o">[{</span><span class="nv">iov_base</span><span class="o">=</span><span class="s2">&#34;m&amp;gt;\n &amp;lt;param-name&amp;gt;Expires&#34;</span>..., <span class="nv">iov_len</span><span class="o">=</span>4096<span class="o">}]</span>, 1<span class="o">)</span> <span class="o">=</span> <span class="m">4096</span>
+</span></span><span class="line"><span class="cl">readv<span class="o">(</span>420, <span class="o">[{</span><span class="nv">iov_base</span><span class="o">=</span><span class="s2">&#34;useful to ease usage of &lt;code&gt;Ex&#34;</span>..., <span class="nv">iov_len</span><span class="o">=</span>4096<span class="o">}]</span>, 1<span class="o">)</span> <span class="o">=</span> <span class="m">4096</span>
+</span></span><span class="line"><span class="cl">readv<span class="o">(</span>420, <span class="o">[{</span><span class="nv">iov_base</span><span class="o">=</span><span class="s2">&#34;\n         &lt;div class=\&#34;codeBox\&#34;&gt;&lt;&#34;</span>..., <span class="nv">iov_len</span><span class="o">=</span>4096<span class="o">}]</span>, 1<span class="o">)</span> <span class="o">=</span> <span class="m">4096</span>
+</span></span><span class="line"><span class="cl">readv<span class="o">(</span>420, <span class="o">[{</span><span class="nv">iov_base</span><span class="o">=</span><span class="s2">&#34;ation parameters.&lt;/p&gt;\n\n  &lt;/div&gt;&lt;&#34;</span>..., <span class="nv">iov_len</span><span class="o">=</span>4096<span class="o">}]</span>, 1<span class="o">)</span> <span class="o">=</span> <span class="m">4096</span>
+</span></span><span class="line"><span class="cl">readv<span class="o">(</span>420, <span class="o">[{</span><span class="nv">iov_base</span><span class="o">=</span><span class="s2">&#34;rotectionEnabled&lt;/code&gt;&lt;/td&gt;&lt;td&gt;&#34;</span>..., <span class="nv">iov_len</span><span class="o">=</span>4096<span class="o">}]</span>, 1<span class="o">)</span> <span class="o">=</span> <span class="m">4096</span>
+</span></span><span class="line"><span class="cl">readv<span class="o">(</span>420, <span class="o">[{</span><span class="nv">iov_base</span><span class="o">=</span><span class="s2">&#34;\n        &amp;lt;param-value&amp;gt;127\\&#34;</span>..., <span class="nv">iov_len</span><span class="o">=</span>4096<span class="o">}]</span>, 1<span class="o">)</span> <span class="o">=</span> <span class="m">4096</span>
+</span></span><span class="line"><span class="cl">readv<span class="o">(</span>420, <span class="o">[{</span><span class="nv">iov_base</span><span class="o">=</span><span class="s2">&#34;i&gt;&lt;code&gt;Order&lt;/code&gt; will always&#34;</span>..., <span class="nv">iov_len</span><span class="o">=</span>4096<span class="o">}]</span>, 1<span class="o">)</span> <span class="o">=</span> <span class="m">4096</span>
+</span></span></code></pre></td></tr></table>
 </div>
 </div><p>可以看到每次从 upstream 读取响应的时候，只利用了一个 buffer (4K)，而且分了好几次读取。</p>
 <p>writev 的 143 字节是怎么回事呢，看看，原来是转发请求到 upstream 的时候发生的动作：</p>
@@ -980,8 +980,8 @@ readv<span class="o">(</span>420, <span class="o">[{</span><span class="nv">iov_
 <pre tabindex="0" class="chroma"><code><span class="lnt">1
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell">writev<span class="o">(</span>516, <span class="o">[{</span><span class="nv">iov_base</span><span class="o">=</span><span class="s2">&#34;GET /docs/config/filter.html HTT&#34;</span>..., <span class="nv">iov_len</span><span class="o">=</span>143<span class="o">}]</span>, 1<span class="o">)</span> <span class="o">=</span> <span class="m">143</span>
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">writev<span class="o">(</span>516, <span class="o">[{</span><span class="nv">iov_base</span><span class="o">=</span><span class="s2">&#34;GET /docs/config/filter.html HTT&#34;</span>..., <span class="nv">iov_len</span><span class="o">=</span>143<span class="o">}]</span>, 1<span class="o">)</span> <span class="o">=</span> <span class="m">143</span>
+</span></span></code></pre></td></tr></table>
 </div>
 </div><p>writev 的 ~91k（93314字节）也看看，发现是把 upstream 的响应返回给 client 时发生的，这个倒是一口气全部写出去的：</p>
 <div class="highlight"><div class="chroma">
@@ -995,14 +995,14 @@ readv<span class="o">(</span>420, <span class="o">[{</span><span class="nv">iov_
 </span><span class="lnt">7
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell">writev<span class="o">(</span>53, <span class="o">[</span>
-    <span class="o">{</span><span class="nv">iov_base</span><span class="o">=</span><span class="s2">&#34;HTTP/1.1 200 \r\nServer: nginx/1.2&#34;</span>..., <span class="nv">iov_len</span><span class="o">=</span>247<span class="o">}</span>, 
-    <span class="o">{</span><span class="nv">iov_base</span><span class="o">=</span><span class="s2">&#34;&lt;!DOCTYPE html SYSTEM \&#34;about:leg&#34;</span>..., <span class="nv">iov_len</span><span class="o">=</span>3895<span class="o">}</span>, 
-    <span class="o">{</span><span class="nv">iov_base</span><span class="o">=</span><span class="s2">&#34;nitialisation parameters&lt;/a&gt;&lt;/li&#34;</span>..., <span class="nv">iov_len</span><span class="o">=</span>4096<span class="o">}</span>,
-    ...
-    <span class="o">]</span>,
-    1<span class="o">)</span>  <span class="o">=</span> <span class="m">93314</span>
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">writev<span class="o">(</span>53, <span class="o">[</span>
+</span></span><span class="line"><span class="cl">    <span class="o">{</span><span class="nv">iov_base</span><span class="o">=</span><span class="s2">&#34;HTTP/1.1 200 \r\nServer: nginx/1.2&#34;</span>..., <span class="nv">iov_len</span><span class="o">=</span>247<span class="o">}</span>, 
+</span></span><span class="line"><span class="cl">    <span class="o">{</span><span class="nv">iov_base</span><span class="o">=</span><span class="s2">&#34;&lt;!DOCTYPE html SYSTEM \&#34;about:leg&#34;</span>..., <span class="nv">iov_len</span><span class="o">=</span>3895<span class="o">}</span>, 
+</span></span><span class="line"><span class="cl">    <span class="o">{</span><span class="nv">iov_base</span><span class="o">=</span><span class="s2">&#34;nitialisation parameters&lt;/a&gt;&lt;/li&#34;</span>..., <span class="nv">iov_len</span><span class="o">=</span>4096<span class="o">}</span>,
+</span></span><span class="line"><span class="cl">    ...
+</span></span><span class="line"><span class="cl">    <span class="o">]</span>,
+</span></span><span class="line"><span class="cl">    1<span class="o">)</span>  <span class="o">=</span> <span class="m">93314</span>
+</span></span></code></pre></td></tr></table>
 </div>
 </div><h2 id="第二次优化">第二次优化<a class="anchor ms-1" href="#第二次优化"><i class="fas fa-link"></i></a></h2>
 <p>那么到现在问题很明确了，readv 一次读取的数据量太小，导致分了很多次读，形成了比较多的系统调用，那么再优化 <code>proxy_buffers</code>，总容量不变，减少 buffer 数量，扩充单个 buffer 的尺寸：</p>
@@ -1013,10 +1013,10 @@ readv<span class="o">(</span>420, <span class="o">[{</span><span class="nv">iov_
 </span><span class="lnt">3
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback">http {
-    proxy_buffers 4 128k;
-}
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">http {
+</span></span><span class="line"><span class="cl">    proxy_buffers 4 128k;
+</span></span><span class="line"><span class="cl">}
+</span></span></code></pre></td></tr></table>
 </div>
 </div><p>压一把看看：</p>
 <div class="highlight"><div class="chroma">
@@ -1036,20 +1036,20 @@ readv<span class="o">(</span>420, <span class="o">[{</span><span class="nv">iov_
 </span><span class="lnt">13
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback">  4 threads and 500 connections
-  Thread Stats   Avg      Stdev     Max   +/- Stdev
-    Latency    42.06ms   55.45ms   1.14s    93.33%
-    Req/Sec     3.91k   578.27     5.73k    78.55%
-  Latency Distribution
-     50%   28.55ms
-     75%   40.53ms
-     90%   68.06ms
-     99%  286.52ms
-  924858 requests in 1.00m, 80.38GB read
-  Non-2xx or 3xx responses: 1
-Requests/sec:  15390.49
-Transfer/sec:      1.34GB
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">  4 threads and 500 connections
+</span></span><span class="line"><span class="cl">  Thread Stats   Avg      Stdev     Max   +/- Stdev
+</span></span><span class="line"><span class="cl">    Latency    42.06ms   55.45ms   1.14s    93.33%
+</span></span><span class="line"><span class="cl">    Req/Sec     3.91k   578.27     5.73k    78.55%
+</span></span><span class="line"><span class="cl">  Latency Distribution
+</span></span><span class="line"><span class="cl">     50%   28.55ms
+</span></span><span class="line"><span class="cl">     75%   40.53ms
+</span></span><span class="line"><span class="cl">     90%   68.06ms
+</span></span><span class="line"><span class="cl">     99%  286.52ms
+</span></span><span class="line"><span class="cl">  924858 requests in 1.00m, 80.38GB read
+</span></span><span class="line"><span class="cl">  Non-2xx or 3xx responses: 1
+</span></span><span class="line"><span class="cl">Requests/sec:  15390.49
+</span></span><span class="line"><span class="cl">Transfer/sec:      1.34GB
+</span></span></code></pre></td></tr></table>
 </div>
 </div><p>对比一下性能指标：</p>
 <table>
@@ -1142,29 +1142,29 @@ Transfer/sec:      1.34GB
 </span><span class="lnt">22
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell">$ timeout <span class="m">30</span> strace -c -p <span class="k">$(</span>pgrep -nx nginx<span class="k">)</span>
-% <span class="nb">time</span>     seconds  usecs/call     calls    errors syscall
------- ----------- ----------- --------- --------- ----------------
- 36.25    3.749784          <span class="m">29</span>    <span class="m">126213</span>           writev
- 35.87    3.710298          <span class="m">52</span>     <span class="m">70403</span>           readv
- 15.03    1.554814          <span class="m">13</span>    <span class="m">115917</span>           recvfrom
-  5.49    0.567726           <span class="m">9</span>     <span class="m">57932</span>           write
-  2.30    0.237950           <span class="m">4</span>     <span class="m">57974</span>           getsockopt
-  2.13    0.220522           <span class="m">3</span>     <span class="m">58524</span>           ioctl
-  1.83    0.188874         <span class="m">165</span>      <span class="m">1144</span>           epoll_wait
-  0.67    0.069087          <span class="m">20</span>      <span class="m">3314</span>           brk
-  0.14    0.014583          <span class="m">25</span>       <span class="m">572</span>           close
-  0.10    0.010315          <span class="m">17</span>       <span class="m">585</span>       <span class="m">585</span> connect
-  0.07    0.007178          <span class="m">12</span>       <span class="m">585</span>           socket
-  0.05    0.004685           <span class="m">6</span>       <span class="m">719</span>           epoll_ctl
-  0.03    0.003239           <span class="m">2</span>      <span class="m">1144</span>           clock_gettime
-  0.03    0.003082           <span class="m">2</span>      <span class="m">1144</span>           gettimeofday
-  0.01    0.001498          <span class="m">13</span>       <span class="m">110</span>        <span class="m">42</span> accept4
-  0.00    0.000284           <span class="m">4</span>        <span class="m">66</span>           setsockopt
-  0.00    0.000173           <span class="m">2</span>        <span class="m">66</span>           getsockname
------- ----------- ----------- --------- --------- ----------------
-100.00   10.344092          <span class="m">20</span>    <span class="m">496412</span>       <span class="m">627</span> total
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">$ timeout <span class="m">30</span> strace -c -p <span class="k">$(</span>pgrep -nx nginx<span class="k">)</span>
+</span></span><span class="line"><span class="cl">% <span class="nb">time</span>     seconds  usecs/call     calls    errors syscall
+</span></span><span class="line"><span class="cl">------ ----------- ----------- --------- --------- ----------------
+</span></span><span class="line"><span class="cl"> 36.25    3.749784          <span class="m">29</span>    <span class="m">126213</span>           writev
+</span></span><span class="line"><span class="cl"> 35.87    3.710298          <span class="m">52</span>     <span class="m">70403</span>           readv
+</span></span><span class="line"><span class="cl"> 15.03    1.554814          <span class="m">13</span>    <span class="m">115917</span>           recvfrom
+</span></span><span class="line"><span class="cl">  5.49    0.567726           <span class="m">9</span>     <span class="m">57932</span>           write
+</span></span><span class="line"><span class="cl">  2.30    0.237950           <span class="m">4</span>     <span class="m">57974</span>           getsockopt
+</span></span><span class="line"><span class="cl">  2.13    0.220522           <span class="m">3</span>     <span class="m">58524</span>           ioctl
+</span></span><span class="line"><span class="cl">  1.83    0.188874         <span class="m">165</span>      <span class="m">1144</span>           epoll_wait
+</span></span><span class="line"><span class="cl">  0.67    0.069087          <span class="m">20</span>      <span class="m">3314</span>           brk
+</span></span><span class="line"><span class="cl">  0.14    0.014583          <span class="m">25</span>       <span class="m">572</span>           close
+</span></span><span class="line"><span class="cl">  0.10    0.010315          <span class="m">17</span>       <span class="m">585</span>       <span class="m">585</span> connect
+</span></span><span class="line"><span class="cl">  0.07    0.007178          <span class="m">12</span>       <span class="m">585</span>           socket
+</span></span><span class="line"><span class="cl">  0.05    0.004685           <span class="m">6</span>       <span class="m">719</span>           epoll_ctl
+</span></span><span class="line"><span class="cl">  0.03    0.003239           <span class="m">2</span>      <span class="m">1144</span>           clock_gettime
+</span></span><span class="line"><span class="cl">  0.03    0.003082           <span class="m">2</span>      <span class="m">1144</span>           gettimeofday
+</span></span><span class="line"><span class="cl">  0.01    0.001498          <span class="m">13</span>       <span class="m">110</span>        <span class="m">42</span> accept4
+</span></span><span class="line"><span class="cl">  0.00    0.000284           <span class="m">4</span>        <span class="m">66</span>           setsockopt
+</span></span><span class="line"><span class="cl">  0.00    0.000173           <span class="m">2</span>        <span class="m">66</span>           getsockname
+</span></span><span class="line"><span class="cl">------ ----------- ----------- --------- --------- ----------------
+</span></span><span class="line"><span class="cl">100.00   10.344092          <span class="m">20</span>    <span class="m">496412</span>       <span class="m">627</span> total
+</span></span></code></pre></td></tr></table>
 </div>
 </div><p>目前可以看到：</p>
 <table>
@@ -1245,43 +1245,43 @@ Transfer/sec:      1.34GB
 </span><span class="lnt">36
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback">$ timeout 30 strace -e trace=readv,writev,recvfrom -p $(pgrep -nx nginx) -o output.opt2.txt
-
-$ grep &#39;readv&#39; output.opt2.txt | awk &#39;BEGIN{FS=&#34; = &#34;}; {print $2}&#39; | sort | uniq -c | sort -rn | head
-  39932 89172
-    783 3895
-    416 0
-    412 89191
-    304 1843
-    301 395
-    298 4739
-    297 87329
-    292 88777
-    290 84433
-
-$ grep &#39;readv&#39; output.opt2.txt | awk &#39;BEGIN{FS=&#34; = &#34;}; {print $2}&#39; | sort -rn | head -1
-89191
-
-$ grep &#39;writev&#39; output.opt2.txt | awk &#39;BEGIN{FS=&#34; = &#34;}; {print $2}&#39; | sort | uniq -c | sort -rn | head
-  45971 143
-  40343 93314
-   5561 89172
-   5561 4142
-     24 89191
-     24 4123
-
-$ grep &#39;writev&#39; output.opt2.txt | awk &#39;BEGIN{FS=&#34; = &#34;}; {print $2}&#39; | sort -rn | head -1
-93314
-
-$ grep &#39;recvfrom&#39; output.opt2.txt | awk &#39;BEGIN{FS=&#34; = &#34;}; {print $2}&#39; | sort | uniq -c | sort -rn | head
-  45971 67
-  45137 4096
-    754 201
-      9 220
-
-$ grep &#39;recvfrom&#39; output.opt2.txt | awk &#39;BEGIN{FS=&#34; = &#34;}; {print $2}&#39; | sort -rn | head -1
-4096
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ timeout 30 strace -e trace=readv,writev,recvfrom -p $(pgrep -nx nginx) -o output.opt2.txt
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">$ grep &#39;readv&#39; output.opt2.txt | awk &#39;BEGIN{FS=&#34; = &#34;}; {print $2}&#39; | sort | uniq -c | sort -rn | head
+</span></span><span class="line"><span class="cl">  39932 89172
+</span></span><span class="line"><span class="cl">    783 3895
+</span></span><span class="line"><span class="cl">    416 0
+</span></span><span class="line"><span class="cl">    412 89191
+</span></span><span class="line"><span class="cl">    304 1843
+</span></span><span class="line"><span class="cl">    301 395
+</span></span><span class="line"><span class="cl">    298 4739
+</span></span><span class="line"><span class="cl">    297 87329
+</span></span><span class="line"><span class="cl">    292 88777
+</span></span><span class="line"><span class="cl">    290 84433
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">$ grep &#39;readv&#39; output.opt2.txt | awk &#39;BEGIN{FS=&#34; = &#34;}; {print $2}&#39; | sort -rn | head -1
+</span></span><span class="line"><span class="cl">89191
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">$ grep &#39;writev&#39; output.opt2.txt | awk &#39;BEGIN{FS=&#34; = &#34;}; {print $2}&#39; | sort | uniq -c | sort -rn | head
+</span></span><span class="line"><span class="cl">  45971 143
+</span></span><span class="line"><span class="cl">  40343 93314
+</span></span><span class="line"><span class="cl">   5561 89172
+</span></span><span class="line"><span class="cl">   5561 4142
+</span></span><span class="line"><span class="cl">     24 89191
+</span></span><span class="line"><span class="cl">     24 4123
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">$ grep &#39;writev&#39; output.opt2.txt | awk &#39;BEGIN{FS=&#34; = &#34;}; {print $2}&#39; | sort -rn | head -1
+</span></span><span class="line"><span class="cl">93314
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">$ grep &#39;recvfrom&#39; output.opt2.txt | awk &#39;BEGIN{FS=&#34; = &#34;}; {print $2}&#39; | sort | uniq -c | sort -rn | head
+</span></span><span class="line"><span class="cl">  45971 67
+</span></span><span class="line"><span class="cl">  45137 4096
+</span></span><span class="line"><span class="cl">    754 201
+</span></span><span class="line"><span class="cl">      9 220
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">$ grep &#39;recvfrom&#39; output.opt2.txt | awk &#39;BEGIN{FS=&#34; = &#34;}; {print $2}&#39; | sort -rn | head -1
+</span></span><span class="line"><span class="cl">4096
+</span></span></code></pre></td></tr></table>
 </div>
 </div><p>目前可以看到：</p>
 <ul>
@@ -1296,9 +1296,9 @@ $ grep &#39;recvfrom&#39; output.opt2.txt | awk &#39;BEGIN{FS=&#34; = &#34;}; {p
 </span><span class="lnt">2
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback">readv(250, [{iov_base=&#34;nitialisation parameters&lt;/a&gt;&lt;/li&#34;..., iov_len=131072}], 1) = 89172
-readv(159, [{iov_base=&#34;nitialisation parameters&lt;/a&gt;&lt;/li&#34;..., iov_len=131072}], 1) = 89172
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">readv(250, [{iov_base=&#34;nitialisation parameters&lt;/a&gt;&lt;/li&#34;..., iov_len=131072}], 1) = 89172
+</span></span><span class="line"><span class="cl">readv(159, [{iov_base=&#34;nitialisation parameters&lt;/a&gt;&lt;/li&#34;..., iov_len=131072}], 1) = 89172
+</span></span></code></pre></td></tr></table>
 </div>
 </div><p>看看 recvfrom 的系统调用详情：</p>
 <div class="highlight"><div class="chroma">
@@ -1309,11 +1309,11 @@ readv(159, [{iov_base=&#34;nitialisation parameters&lt;/a&gt;&lt;/li&#34;..., io
 </span><span class="lnt">4
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback">recvfrom(105, &#34;GET /docs/config/filter.html HTT&#34;..., 1024, 0, NULL, NULL) = 67
-recvfrom(159, &#34;GET /docs/config/filter.html HTT&#34;..., 1024, 0, NULL, NULL) = 67
-recvfrom(264, &#34;HTTP/1.1 200 \r\nAccept-Ranges: by&#34;..., 4096, 0, NULL, NULL) = 4096
-recvfrom(226, &#34;HTTP/1.1 200 \r\nAccept-Ranges: by&#34;..., 4096, 0, NULL, NULL) = 4096
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">recvfrom(105, &#34;GET /docs/config/filter.html HTT&#34;..., 1024, 0, NULL, NULL) = 67
+</span></span><span class="line"><span class="cl">recvfrom(159, &#34;GET /docs/config/filter.html HTT&#34;..., 1024, 0, NULL, NULL) = 67
+</span></span><span class="line"><span class="cl">recvfrom(264, &#34;HTTP/1.1 200 \r\nAccept-Ranges: by&#34;..., 4096, 0, NULL, NULL) = 4096
+</span></span><span class="line"><span class="cl">recvfrom(226, &#34;HTTP/1.1 200 \r\nAccept-Ranges: by&#34;..., 4096, 0, NULL, NULL) = 4096
+</span></span></code></pre></td></tr></table>
 </div>
 </div><p>可以发现：</p>
 <ul>
@@ -1342,20 +1342,20 @@ recvfrom(226, &#34;HTTP/1.1 200 \r\nAccept-Ranges: by&#34;..., 4096, 0, NULL, NU
 </span><span class="lnt">13
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell">$ pidstat -u -w -G nginx <span class="m">1</span> <span class="m">30</span>
-...
-平均时间:   UID       PID    %usr %system  %guest   %wait    %CPU   CPU  Command
-平均时间:   <span class="m">990</span>   <span class="m">4038174</span>   15.52   75.77    0.00    4.92   91.29     -  nginx
-平均时间:   <span class="m">990</span>   <span class="m">4038175</span>   15.39   74.14    0.00    5.98   89.53     -  nginx
-平均时间:   <span class="m">990</span>   <span class="m">4038176</span>   15.15   70.92    0.00    8.18   86.08     -  nginx
-平均时间:   <span class="m">990</span>   <span class="m">4038177</span>   15.39   73.55    0.00    7.28   88.93     -  nginx
-
-平均时间:   UID       PID   cswch/s nvcswch/s  Command
-平均时间:   <span class="m">990</span>   <span class="m">4038174</span>     80.72     54.50  nginx
-平均时间:   <span class="m">990</span>   <span class="m">4038175</span>    127.95     53.94  nginx
-平均时间:   <span class="m">990</span>   <span class="m">4038176</span>    154.34     54.57  nginx
-平均时间:   <span class="m">990</span>   <span class="m">4038177</span>     94.08     48.75  nginx
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">$ pidstat -u -w -G nginx <span class="m">1</span> <span class="m">30</span>
+</span></span><span class="line"><span class="cl">...
+</span></span><span class="line"><span class="cl">平均时间:   UID       PID    %usr %system  %guest   %wait    %CPU   CPU  Command
+</span></span><span class="line"><span class="cl">平均时间:   <span class="m">990</span>   <span class="m">4038174</span>   15.52   75.77    0.00    4.92   91.29     -  nginx
+</span></span><span class="line"><span class="cl">平均时间:   <span class="m">990</span>   <span class="m">4038175</span>   15.39   74.14    0.00    5.98   89.53     -  nginx
+</span></span><span class="line"><span class="cl">平均时间:   <span class="m">990</span>   <span class="m">4038176</span>   15.15   70.92    0.00    8.18   86.08     -  nginx
+</span></span><span class="line"><span class="cl">平均时间:   <span class="m">990</span>   <span class="m">4038177</span>   15.39   73.55    0.00    7.28   88.93     -  nginx
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">平均时间:   UID       PID   cswch/s nvcswch/s  Command
+</span></span><span class="line"><span class="cl">平均时间:   <span class="m">990</span>   <span class="m">4038174</span>     80.72     54.50  nginx
+</span></span><span class="line"><span class="cl">平均时间:   <span class="m">990</span>   <span class="m">4038175</span>    127.95     53.94  nginx
+</span></span><span class="line"><span class="cl">平均时间:   <span class="m">990</span>   <span class="m">4038176</span>    154.34     54.57  nginx
+</span></span><span class="line"><span class="cl">平均时间:   <span class="m">990</span>   <span class="m">4038177</span>     94.08     48.75  nginx
+</span></span></code></pre></td></tr></table>
 </div>
 </div><p>可以看到 CPU 占用率是比较高的，其中系统调用是占的比较多，自愿上下文切换和非资源上下文切换在正常数值内。</p>
 <p>那么利用 <a href="https://github.com/openresty/openresty-systemtap-toolkit" target="_blank" rel="noopener noreferrer">openresty-systemtap-toolkit</a> 来采集一下 CPU 火焰图：</p>
@@ -1366,10 +1366,10 @@ recvfrom(226, &#34;HTTP/1.1 200 \r\nAccept-Ranges: by&#34;..., 4096, 0, NULL, NU
 </span><span class="lnt">3
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell">$ /root/openresty-systemtap-toolkit/sample-bt -p <span class="k">$(</span>pgrep -nx nginx<span class="k">)</span> -t <span class="m">30</span> -u -k -a <span class="s1">&#39;-D MAXMAPENTRIES=100000&#39;</span> &gt; openresty-oncpu.bt <span class="se">\
-</span><span class="se"></span><span class="o">&amp;&amp;</span> /root/FlameGraph/stackcollapse-stap.pl openresty-oncpu.bt &gt; openresty-oncpu.cbt <span class="se">\
-</span><span class="se"></span><span class="o">&amp;&amp;</span> /root/FlameGraph/flamegraph.pl --title<span class="o">=</span><span class="s2">&#34;Openresty On-CPU Time Flame Graph (user/kernel)&#34;</span> &lt; openresty-oncpu.cbt &gt; /usr/share/nginx/html/openresty-oncpu.svg
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">$ /root/openresty-systemtap-toolkit/sample-bt -p <span class="k">$(</span>pgrep -nx nginx<span class="k">)</span> -t <span class="m">30</span> -u -k -a <span class="s1">&#39;-D MAXMAPENTRIES=100000&#39;</span> &gt; openresty-oncpu.bt <span class="se">\
+</span></span></span><span class="line"><span class="cl"><span class="se"></span><span class="o">&amp;&amp;</span> /root/FlameGraph/stackcollapse-stap.pl openresty-oncpu.bt &gt; openresty-oncpu.cbt <span class="se">\
+</span></span></span><span class="line"><span class="cl"><span class="se"></span><span class="o">&amp;&amp;</span> /root/FlameGraph/flamegraph.pl --title<span class="o">=</span><span class="s2">&#34;Openresty On-CPU Time Flame Graph (user/kernel)&#34;</span> &lt; openresty-oncpu.cbt &gt; /usr/share/nginx/html/openresty-oncpu.svg
+</span></span></code></pre></td></tr></table>
 </div>
 </div><blockquote>
 <p>openresty-systemap-toolkit 依赖于 SystemTap，安装的坑在<a href="../../linux/stap-kernel-debug-mismatch">这篇文章里有写</a>。</p>
@@ -1403,24 +1403,24 @@ recvfrom(226, &#34;HTTP/1.1 200 \r\nAccept-Ranges: by&#34;..., 4096, 0, NULL, NU
 </span><span class="lnt">17
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell">$ /usr/share/bcc/tools/netqtop -n ens18 -t
-TX
- QueueID    avg_size   <span class="o">[</span>0, 64<span class="o">)</span>    <span class="o">[</span>64, 512<span class="o">)</span>  <span class="o">[</span>512, 2K<span class="o">)</span>  <span class="o">[</span>2K, 16K<span class="o">)</span>  <span class="o">[</span>16K, 64K<span class="o">)</span> BPS        PPS
- <span class="m">0</span>          16.8K      <span class="m">0</span>          12.01K     <span class="m">94</span>         1.07K      7.68K      350.16M    20.84K
- <span class="m">1</span>          16.8K      <span class="m">0</span>          13.91K     <span class="m">248</span>        1.05K      9.03K      406.93M    24.23K
- <span class="m">2</span>          16.67K     <span class="m">0</span>          13.95K     <span class="m">124</span>        <span class="m">867</span>        8.6K       391.95M    23.52K
- <span class="m">3</span>          16.22K     <span class="m">0</span>          12.21K     <span class="m">118</span>        1.04K      7.4K       336.94M    20.78K
- Total      16.63K     <span class="m">0</span>          52.07K     <span class="m">584</span>        4.01K      32.71K     1485.89M   89.36K
-
-RX
- QueueID    avg_size   <span class="o">[</span>0, 64<span class="o">)</span>    <span class="o">[</span>64, 512<span class="o">)</span>  <span class="o">[</span>512, 2K<span class="o">)</span>  <span class="o">[</span>2K, 16K<span class="o">)</span>  <span class="o">[</span>16K, 64K<span class="o">)</span> BPS        PPS
- <span class="m">0</span>          8.48K      26.14K     34.26K     5.23K      82.44K     25.28K     1462.63M   172.58K
- <span class="m">1</span>          <span class="m">0</span>          <span class="m">0</span>          <span class="m">0</span>          <span class="m">0</span>          <span class="m">0</span>          <span class="m">0</span>          0.0        0.0
- <span class="m">2</span>          <span class="m">0</span>          <span class="m">0</span>          <span class="m">0</span>          <span class="m">0</span>          <span class="m">0</span>          <span class="m">0</span>          0.0        0.0
- <span class="m">3</span>          <span class="m">0</span>          <span class="m">0</span>          <span class="m">0</span>          <span class="m">0</span>          <span class="m">0</span>          <span class="m">0</span>          0.0        0.0
- Total      8.48K      26.14K     34.26K     5.23K      82.44K     25.28K     1462.63M   172.57K
------------------------------------------------------------------------------------------------
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">$ /usr/share/bcc/tools/netqtop -n ens18 -t
+</span></span><span class="line"><span class="cl">TX
+</span></span><span class="line"><span class="cl"> QueueID    avg_size   <span class="o">[</span>0, 64<span class="o">)</span>    <span class="o">[</span>64, 512<span class="o">)</span>  <span class="o">[</span>512, 2K<span class="o">)</span>  <span class="o">[</span>2K, 16K<span class="o">)</span>  <span class="o">[</span>16K, 64K<span class="o">)</span> BPS        PPS
+</span></span><span class="line"><span class="cl"> <span class="m">0</span>          16.8K      <span class="m">0</span>          12.01K     <span class="m">94</span>         1.07K      7.68K      350.16M    20.84K
+</span></span><span class="line"><span class="cl"> <span class="m">1</span>          16.8K      <span class="m">0</span>          13.91K     <span class="m">248</span>        1.05K      9.03K      406.93M    24.23K
+</span></span><span class="line"><span class="cl"> <span class="m">2</span>          16.67K     <span class="m">0</span>          13.95K     <span class="m">124</span>        <span class="m">867</span>        8.6K       391.95M    23.52K
+</span></span><span class="line"><span class="cl"> <span class="m">3</span>          16.22K     <span class="m">0</span>          12.21K     <span class="m">118</span>        1.04K      7.4K       336.94M    20.78K
+</span></span><span class="line"><span class="cl"> Total      16.63K     <span class="m">0</span>          52.07K     <span class="m">584</span>        4.01K      32.71K     1485.89M   89.36K
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">RX
+</span></span><span class="line"><span class="cl"> QueueID    avg_size   <span class="o">[</span>0, 64<span class="o">)</span>    <span class="o">[</span>64, 512<span class="o">)</span>  <span class="o">[</span>512, 2K<span class="o">)</span>  <span class="o">[</span>2K, 16K<span class="o">)</span>  <span class="o">[</span>16K, 64K<span class="o">)</span> BPS        PPS
+</span></span><span class="line"><span class="cl"> <span class="m">0</span>          8.48K      26.14K     34.26K     5.23K      82.44K     25.28K     1462.63M   172.58K
+</span></span><span class="line"><span class="cl"> <span class="m">1</span>          <span class="m">0</span>          <span class="m">0</span>          <span class="m">0</span>          <span class="m">0</span>          <span class="m">0</span>          <span class="m">0</span>          0.0        0.0
+</span></span><span class="line"><span class="cl"> <span class="m">2</span>          <span class="m">0</span>          <span class="m">0</span>          <span class="m">0</span>          <span class="m">0</span>          <span class="m">0</span>          <span class="m">0</span>          0.0        0.0
+</span></span><span class="line"><span class="cl"> <span class="m">3</span>          <span class="m">0</span>          <span class="m">0</span>          <span class="m">0</span>          <span class="m">0</span>          <span class="m">0</span>          <span class="m">0</span>          0.0        0.0
+</span></span><span class="line"><span class="cl"> Total      8.48K      26.14K     34.26K     5.23K      82.44K     25.28K     1462.63M   172.57K
+</span></span><span class="line"><span class="cl">-----------------------------------------------------------------------------------------------
+</span></span></code></pre></td></tr></table>
 </div>
 </div><p>可以发现 TX 的4个队列在工作，RX 只有一个队列在工作，不平衡。
 但是经过调查发现是 virtio 网卡驱动的问题，它会把所有 RX 队列都归到一个上面，详情见<a href="https://github.com/iovisor/bcc/blob/master/tools/netqtop.c#L105" target="_blank" rel="noopener noreferrer">这里</a>。</p>
@@ -1438,16 +1438,16 @@ RX
 </span><span class="lnt">9
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell">ethtool -S ens18 <span class="p">|</span>  grep -i queue
-    rx_queue_0_...: 
-    rx_queue_1_...:
-    rx_queue_2_...: 
-    rx_queue_3_...:
-    tx_queue_0_...: 
-    tx_queue_1_...:
-    tx_queue_2_...: 
-    tx_queue_3_...:
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">ethtool -S ens18 <span class="p">|</span>  grep -i queue
+</span></span><span class="line"><span class="cl">    rx_queue_0_...: 
+</span></span><span class="line"><span class="cl">    rx_queue_1_...:
+</span></span><span class="line"><span class="cl">    rx_queue_2_...: 
+</span></span><span class="line"><span class="cl">    rx_queue_3_...:
+</span></span><span class="line"><span class="cl">    tx_queue_0_...: 
+</span></span><span class="line"><span class="cl">    tx_queue_1_...:
+</span></span><span class="line"><span class="cl">    tx_queue_2_...: 
+</span></span><span class="line"><span class="cl">    tx_queue_3_...:
+</span></span></code></pre></td></tr></table>
 </div>
 </div><p>可以看到有 4 个 TX 队列，4 个 RX 队列，再用 <code>ethtool</code> 看看：</p>
 <div class="highlight"><div class="chroma">
@@ -1466,19 +1466,19 @@ RX
 </span><span class="lnt">12
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell">ethtool --show-channels ens18
-Channel parameters <span class="k">for</span> ens18:
-Pre-set maximums:
-RX:	        <span class="m">0</span>
-TX:	        <span class="m">0</span>
-Other:	    <span class="m">0</span>
-Combined:	<span class="m">4</span>
-Current hardware settings:
-RX:	        <span class="m">0</span>
-TX:	        <span class="m">0</span>
-Other:	    <span class="m">0</span>
-Combined:   <span class="m">4</span>
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">ethtool --show-channels ens18
+</span></span><span class="line"><span class="cl">Channel parameters <span class="k">for</span> ens18:
+</span></span><span class="line"><span class="cl">Pre-set maximums:
+</span></span><span class="line"><span class="cl">RX:	        <span class="m">0</span>
+</span></span><span class="line"><span class="cl">TX:	        <span class="m">0</span>
+</span></span><span class="line"><span class="cl">Other:	    <span class="m">0</span>
+</span></span><span class="line"><span class="cl">Combined:	<span class="m">4</span>
+</span></span><span class="line"><span class="cl">Current hardware settings:
+</span></span><span class="line"><span class="cl">RX:	        <span class="m">0</span>
+</span></span><span class="line"><span class="cl">TX:	        <span class="m">0</span>
+</span></span><span class="line"><span class="cl">Other:	    <span class="m">0</span>
+</span></span><span class="line"><span class="cl">Combined:   <span class="m">4</span>
+</span></span></code></pre></td></tr></table>
 </div>
 </div><p>可以发现 RX 和 TX 队列是 Combined 即共用的，也说明不了什么问题。</p>
 <h2 id="坑">坑<a class="anchor ms-1" href="#坑"><i class="fas fa-link"></i></a></h2>
@@ -1510,29 +1510,29 @@ Combined:   <span class="m">4</span>
 </span><span class="lnt">22
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell">procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
- r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
- <span class="m">5</span>  <span class="m">0</span>   <span class="m">6200</span> <span class="m">380732</span>   <span class="m">1280</span> <span class="m">3274324</span>    <span class="m">0</span>    <span class="m">0</span>     <span class="m">0</span>     <span class="m">0</span> <span class="m">33561</span> <span class="m">2501</span> <span class="m">10</span> <span class="m">50</span> <span class="m">40</span>  <span class="m">0</span>  <span class="m">0</span>
- <span class="m">9</span>  <span class="m">0</span>   <span class="m">6200</span> <span class="m">349612</span>   <span class="m">1280</span> <span class="m">3279556</span>    <span class="m">0</span>    <span class="m">0</span>     <span class="m">0</span>  <span class="m">2275</span> <span class="m">59441</span> <span class="m">1660</span> <span class="m">16</span> <span class="m">82</span>  <span class="m">2</span>  <span class="m">0</span>  <span class="m">0</span>
- <span class="m">4</span>  <span class="m">0</span>   <span class="m">6200</span> <span class="m">368204</span>   <span class="m">1280</span> <span class="m">3284836</span>    <span class="m">0</span>    <span class="m">0</span>     <span class="m">0</span>     <span class="m">5</span> <span class="m">58715</span> <span class="m">2134</span> <span class="m">16</span> <span class="m">81</span>  <span class="m">3</span>  <span class="m">0</span>  <span class="m">0</span>
- <span class="m">5</span>  <span class="m">0</span>   <span class="m">6200</span> <span class="m">371488</span>   <span class="m">1280</span> <span class="m">3289468</span>    <span class="m">0</span>    <span class="m">0</span>     <span class="m">0</span>    <span class="m">13</span> <span class="m">54830</span> <span class="m">1599</span> <span class="m">15</span> <span class="m">75</span> <span class="m">10</span>  <span class="m">0</span>  <span class="m">0</span>
- <span class="m">6</span>  <span class="m">0</span>   <span class="m">6200</span> <span class="m">357684</span>   <span class="m">1280</span> <span class="m">3294816</span>    <span class="m">0</span>    <span class="m">0</span>     <span class="m">0</span>     <span class="m">0</span> <span class="m">59379</span> <span class="m">2157</span> <span class="m">17</span> <span class="m">81</span>  <span class="m">2</span>  <span class="m">0</span>  <span class="m">0</span>
- <span class="m">6</span>  <span class="m">0</span>   <span class="m">6200</span> <span class="m">354924</span>   <span class="m">1280</span> <span class="m">3299972</span>    <span class="m">0</span>    <span class="m">0</span>     <span class="m">0</span>     <span class="m">0</span> <span class="m">59001</span> <span class="m">1677</span> <span class="m">17</span> <span class="m">81</span>  <span class="m">2</span>  <span class="m">0</span>  <span class="m">0</span>
-<span class="m">10</span>  <span class="m">0</span>   <span class="m">6200</span> <span class="m">359032</span>   <span class="m">1280</span> <span class="m">3304804</span>    <span class="m">0</span>    <span class="m">0</span>     <span class="m">0</span>     <span class="m">0</span> <span class="m">60432</span> <span class="m">2165</span> <span class="m">17</span> <span class="m">80</span>  <span class="m">3</span>  <span class="m">0</span>  <span class="m">0</span>
- <span class="m">6</span>  <span class="m">0</span>   <span class="m">6200</span> <span class="m">335520</span>   <span class="m">1280</span> <span class="m">3309564</span>    <span class="m">0</span>    <span class="m">0</span>     <span class="m">0</span>     <span class="m">0</span> <span class="m">53159</span> <span class="m">1683</span> <span class="m">15</span> <span class="m">74</span> <span class="m">11</span>  <span class="m">0</span>  <span class="m">0</span>
- <span class="m">6</span>  <span class="m">0</span>   <span class="m">6200</span> <span class="m">342820</span>   <span class="m">1280</span> <span class="m">3314876</span>    <span class="m">0</span>    <span class="m">0</span>     <span class="m">0</span>     <span class="m">0</span> <span class="m">60558</span> <span class="m">1521</span> <span class="m">17</span> <span class="m">82</span>  <span class="m">1</span>  <span class="m">0</span>  <span class="m">0</span>
- <span class="m">4</span>  <span class="m">0</span>   <span class="m">6200</span> <span class="m">329528</span>   <span class="m">1280</span> <span class="m">3319996</span>    <span class="m">0</span>    <span class="m">0</span>     <span class="m">0</span>     <span class="m">0</span> <span class="m">57417</span> <span class="m">1976</span> <span class="m">16</span> <span class="m">81</span>  <span class="m">2</span>  <span class="m">0</span>  <span class="m">0</span>
-<span class="m">10</span>  <span class="m">0</span>   <span class="m">6200</span> <span class="m">348536</span>   <span class="m">1280</span> <span class="m">3325440</span>    <span class="m">0</span>    <span class="m">0</span>     <span class="m">0</span>     <span class="m">0</span> <span class="m">60811</span> <span class="m">2299</span> <span class="m">16</span> <span class="m">80</span>  <span class="m">4</span>  <span class="m">0</span>  <span class="m">0</span>
- <span class="m">5</span>  <span class="m">0</span>   <span class="m">6200</span> <span class="m">314668</span>   <span class="m">1280</span> <span class="m">3330652</span>    <span class="m">0</span>    <span class="m">0</span>     <span class="m">0</span> <span class="m">17367</span> <span class="m">61782</span> <span class="m">1985</span> <span class="m">17</span> <span class="m">81</span>  <span class="m">2</span>  <span class="m">0</span>  <span class="m">0</span>
- <span class="m">4</span>  <span class="m">0</span>   <span class="m">6200</span> <span class="m">329772</span>   <span class="m">1280</span> <span class="m">3335264</span>    <span class="m">0</span>    <span class="m">0</span>     <span class="m">0</span>    <span class="m">29</span> <span class="m">53842</span> <span class="m">1498</span> <span class="m">15</span> <span class="m">75</span> <span class="m">10</span>  <span class="m">0</span>  <span class="m">0</span>
- <span class="m">6</span>  <span class="m">0</span>   <span class="m">6200</span> <span class="m">327940</span>   <span class="m">1280</span> <span class="m">3340432</span>    <span class="m">0</span>    <span class="m">0</span>     <span class="m">0</span>     <span class="m">0</span> <span class="m">62743</span> <span class="m">2704</span> <span class="m">17</span> <span class="m">80</span>  <span class="m">3</span>  <span class="m">0</span>  <span class="m">0</span>
- <span class="m">5</span>  <span class="m">0</span>   <span class="m">6200</span> <span class="m">299228</span>   <span class="m">1280</span> <span class="m">3345844</span>    <span class="m">0</span>    <span class="m">0</span>     <span class="m">0</span>    <span class="m">13</span> <span class="m">56948</span> <span class="m">2376</span> <span class="m">16</span> <span class="m">81</span>  <span class="m">3</span>  <span class="m">0</span>  <span class="m">0</span>
- <span class="m">6</span>  <span class="m">0</span>   <span class="m">6200</span> <span class="m">298944</span>   <span class="m">1280</span> <span class="m">3350860</span>    <span class="m">0</span>    <span class="m">0</span>     <span class="m">0</span>     <span class="m">0</span> <span class="m">60960</span> <span class="m">1778</span> <span class="m">17</span> <span class="m">81</span>  <span class="m">2</span>  <span class="m">0</span>  <span class="m">0</span>
- <span class="m">7</span>  <span class="m">0</span>   <span class="m">6200</span> <span class="m">280948</span>   <span class="m">1280</span> <span class="m">3355664</span>    <span class="m">0</span>    <span class="m">0</span>     <span class="m">0</span>     <span class="m">0</span> <span class="m">53903</span> <span class="m">2091</span> <span class="m">15</span> <span class="m">74</span> <span class="m">12</span>  <span class="m">0</span>  <span class="m">0</span>
- <span class="m">7</span>  <span class="m">0</span>   <span class="m">6200</span> <span class="m">294628</span>   <span class="m">1280</span> <span class="m">3360996</span>    <span class="m">0</span>    <span class="m">0</span>     <span class="m">0</span>     <span class="m">0</span> <span class="m">57029</span> <span class="m">1866</span> <span class="m">17</span> <span class="m">82</span>  <span class="m">1</span>  <span class="m">0</span>  <span class="m">0</span>
- <span class="m">3</span>  <span class="m">0</span>   <span class="m">6200</span> <span class="m">307808</span>   <span class="m">1280</span> <span class="m">3366352</span>    <span class="m">0</span>    <span class="m">0</span>     <span class="m">0</span>     <span class="m">0</span> <span class="m">59706</span> <span class="m">2799</span> <span class="m">17</span> <span class="m">80</span>  <span class="m">3</span>  <span class="m">0</span>  <span class="m">0</span>
-<span class="m">12</span>  <span class="m">0</span>   <span class="m">6200</span> <span class="m">265816</span>   <span class="m">1280</span> <span class="m">3371172</span>    <span class="m">0</span>    <span class="m">0</span>     <span class="m">0</span>     <span class="m">0</span> <span class="m">59362</span> <span class="m">2407</span> <span class="m">17</span> <span class="m">80</span>  <span class="m">3</span>  <span class="m">0</span>  <span class="m">0</span>
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+</span></span><span class="line"><span class="cl"> r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+</span></span><span class="line"><span class="cl"> <span class="m">5</span>  <span class="m">0</span>   <span class="m">6200</span> <span class="m">380732</span>   <span class="m">1280</span> <span class="m">3274324</span>    <span class="m">0</span>    <span class="m">0</span>     <span class="m">0</span>     <span class="m">0</span> <span class="m">33561</span> <span class="m">2501</span> <span class="m">10</span> <span class="m">50</span> <span class="m">40</span>  <span class="m">0</span>  <span class="m">0</span>
+</span></span><span class="line"><span class="cl"> <span class="m">9</span>  <span class="m">0</span>   <span class="m">6200</span> <span class="m">349612</span>   <span class="m">1280</span> <span class="m">3279556</span>    <span class="m">0</span>    <span class="m">0</span>     <span class="m">0</span>  <span class="m">2275</span> <span class="m">59441</span> <span class="m">1660</span> <span class="m">16</span> <span class="m">82</span>  <span class="m">2</span>  <span class="m">0</span>  <span class="m">0</span>
+</span></span><span class="line"><span class="cl"> <span class="m">4</span>  <span class="m">0</span>   <span class="m">6200</span> <span class="m">368204</span>   <span class="m">1280</span> <span class="m">3284836</span>    <span class="m">0</span>    <span class="m">0</span>     <span class="m">0</span>     <span class="m">5</span> <span class="m">58715</span> <span class="m">2134</span> <span class="m">16</span> <span class="m">81</span>  <span class="m">3</span>  <span class="m">0</span>  <span class="m">0</span>
+</span></span><span class="line"><span class="cl"> <span class="m">5</span>  <span class="m">0</span>   <span class="m">6200</span> <span class="m">371488</span>   <span class="m">1280</span> <span class="m">3289468</span>    <span class="m">0</span>    <span class="m">0</span>     <span class="m">0</span>    <span class="m">13</span> <span class="m">54830</span> <span class="m">1599</span> <span class="m">15</span> <span class="m">75</span> <span class="m">10</span>  <span class="m">0</span>  <span class="m">0</span>
+</span></span><span class="line"><span class="cl"> <span class="m">6</span>  <span class="m">0</span>   <span class="m">6200</span> <span class="m">357684</span>   <span class="m">1280</span> <span class="m">3294816</span>    <span class="m">0</span>    <span class="m">0</span>     <span class="m">0</span>     <span class="m">0</span> <span class="m">59379</span> <span class="m">2157</span> <span class="m">17</span> <span class="m">81</span>  <span class="m">2</span>  <span class="m">0</span>  <span class="m">0</span>
+</span></span><span class="line"><span class="cl"> <span class="m">6</span>  <span class="m">0</span>   <span class="m">6200</span> <span class="m">354924</span>   <span class="m">1280</span> <span class="m">3299972</span>    <span class="m">0</span>    <span class="m">0</span>     <span class="m">0</span>     <span class="m">0</span> <span class="m">59001</span> <span class="m">1677</span> <span class="m">17</span> <span class="m">81</span>  <span class="m">2</span>  <span class="m">0</span>  <span class="m">0</span>
+</span></span><span class="line"><span class="cl"><span class="m">10</span>  <span class="m">0</span>   <span class="m">6200</span> <span class="m">359032</span>   <span class="m">1280</span> <span class="m">3304804</span>    <span class="m">0</span>    <span class="m">0</span>     <span class="m">0</span>     <span class="m">0</span> <span class="m">60432</span> <span class="m">2165</span> <span class="m">17</span> <span class="m">80</span>  <span class="m">3</span>  <span class="m">0</span>  <span class="m">0</span>
+</span></span><span class="line"><span class="cl"> <span class="m">6</span>  <span class="m">0</span>   <span class="m">6200</span> <span class="m">335520</span>   <span class="m">1280</span> <span class="m">3309564</span>    <span class="m">0</span>    <span class="m">0</span>     <span class="m">0</span>     <span class="m">0</span> <span class="m">53159</span> <span class="m">1683</span> <span class="m">15</span> <span class="m">74</span> <span class="m">11</span>  <span class="m">0</span>  <span class="m">0</span>
+</span></span><span class="line"><span class="cl"> <span class="m">6</span>  <span class="m">0</span>   <span class="m">6200</span> <span class="m">342820</span>   <span class="m">1280</span> <span class="m">3314876</span>    <span class="m">0</span>    <span class="m">0</span>     <span class="m">0</span>     <span class="m">0</span> <span class="m">60558</span> <span class="m">1521</span> <span class="m">17</span> <span class="m">82</span>  <span class="m">1</span>  <span class="m">0</span>  <span class="m">0</span>
+</span></span><span class="line"><span class="cl"> <span class="m">4</span>  <span class="m">0</span>   <span class="m">6200</span> <span class="m">329528</span>   <span class="m">1280</span> <span class="m">3319996</span>    <span class="m">0</span>    <span class="m">0</span>     <span class="m">0</span>     <span class="m">0</span> <span class="m">57417</span> <span class="m">1976</span> <span class="m">16</span> <span class="m">81</span>  <span class="m">2</span>  <span class="m">0</span>  <span class="m">0</span>
+</span></span><span class="line"><span class="cl"><span class="m">10</span>  <span class="m">0</span>   <span class="m">6200</span> <span class="m">348536</span>   <span class="m">1280</span> <span class="m">3325440</span>    <span class="m">0</span>    <span class="m">0</span>     <span class="m">0</span>     <span class="m">0</span> <span class="m">60811</span> <span class="m">2299</span> <span class="m">16</span> <span class="m">80</span>  <span class="m">4</span>  <span class="m">0</span>  <span class="m">0</span>
+</span></span><span class="line"><span class="cl"> <span class="m">5</span>  <span class="m">0</span>   <span class="m">6200</span> <span class="m">314668</span>   <span class="m">1280</span> <span class="m">3330652</span>    <span class="m">0</span>    <span class="m">0</span>     <span class="m">0</span> <span class="m">17367</span> <span class="m">61782</span> <span class="m">1985</span> <span class="m">17</span> <span class="m">81</span>  <span class="m">2</span>  <span class="m">0</span>  <span class="m">0</span>
+</span></span><span class="line"><span class="cl"> <span class="m">4</span>  <span class="m">0</span>   <span class="m">6200</span> <span class="m">329772</span>   <span class="m">1280</span> <span class="m">3335264</span>    <span class="m">0</span>    <span class="m">0</span>     <span class="m">0</span>    <span class="m">29</span> <span class="m">53842</span> <span class="m">1498</span> <span class="m">15</span> <span class="m">75</span> <span class="m">10</span>  <span class="m">0</span>  <span class="m">0</span>
+</span></span><span class="line"><span class="cl"> <span class="m">6</span>  <span class="m">0</span>   <span class="m">6200</span> <span class="m">327940</span>   <span class="m">1280</span> <span class="m">3340432</span>    <span class="m">0</span>    <span class="m">0</span>     <span class="m">0</span>     <span class="m">0</span> <span class="m">62743</span> <span class="m">2704</span> <span class="m">17</span> <span class="m">80</span>  <span class="m">3</span>  <span class="m">0</span>  <span class="m">0</span>
+</span></span><span class="line"><span class="cl"> <span class="m">5</span>  <span class="m">0</span>   <span class="m">6200</span> <span class="m">299228</span>   <span class="m">1280</span> <span class="m">3345844</span>    <span class="m">0</span>    <span class="m">0</span>     <span class="m">0</span>    <span class="m">13</span> <span class="m">56948</span> <span class="m">2376</span> <span class="m">16</span> <span class="m">81</span>  <span class="m">3</span>  <span class="m">0</span>  <span class="m">0</span>
+</span></span><span class="line"><span class="cl"> <span class="m">6</span>  <span class="m">0</span>   <span class="m">6200</span> <span class="m">298944</span>   <span class="m">1280</span> <span class="m">3350860</span>    <span class="m">0</span>    <span class="m">0</span>     <span class="m">0</span>     <span class="m">0</span> <span class="m">60960</span> <span class="m">1778</span> <span class="m">17</span> <span class="m">81</span>  <span class="m">2</span>  <span class="m">0</span>  <span class="m">0</span>
+</span></span><span class="line"><span class="cl"> <span class="m">7</span>  <span class="m">0</span>   <span class="m">6200</span> <span class="m">280948</span>   <span class="m">1280</span> <span class="m">3355664</span>    <span class="m">0</span>    <span class="m">0</span>     <span class="m">0</span>     <span class="m">0</span> <span class="m">53903</span> <span class="m">2091</span> <span class="m">15</span> <span class="m">74</span> <span class="m">12</span>  <span class="m">0</span>  <span class="m">0</span>
+</span></span><span class="line"><span class="cl"> <span class="m">7</span>  <span class="m">0</span>   <span class="m">6200</span> <span class="m">294628</span>   <span class="m">1280</span> <span class="m">3360996</span>    <span class="m">0</span>    <span class="m">0</span>     <span class="m">0</span>     <span class="m">0</span> <span class="m">57029</span> <span class="m">1866</span> <span class="m">17</span> <span class="m">82</span>  <span class="m">1</span>  <span class="m">0</span>  <span class="m">0</span>
+</span></span><span class="line"><span class="cl"> <span class="m">3</span>  <span class="m">0</span>   <span class="m">6200</span> <span class="m">307808</span>   <span class="m">1280</span> <span class="m">3366352</span>    <span class="m">0</span>    <span class="m">0</span>     <span class="m">0</span>     <span class="m">0</span> <span class="m">59706</span> <span class="m">2799</span> <span class="m">17</span> <span class="m">80</span>  <span class="m">3</span>  <span class="m">0</span>  <span class="m">0</span>
+</span></span><span class="line"><span class="cl"><span class="m">12</span>  <span class="m">0</span>   <span class="m">6200</span> <span class="m">265816</span>   <span class="m">1280</span> <span class="m">3371172</span>    <span class="m">0</span>    <span class="m">0</span>     <span class="m">0</span>     <span class="m">0</span> <span class="m">59362</span> <span class="m">2407</span> <span class="m">17</span> <span class="m">80</span>  <span class="m">3</span>  <span class="m">0</span>  <span class="m">0</span>
+</span></span></code></pre></td></tr></table>
 </div>
 </div><p>下面是 2.1w 吞吐量时 <code>vmstat 3</code> 采集到的数据：</p>
 <div class="highlight"><div class="chroma">
@@ -1562,30 +1562,30 @@ Combined:   <span class="m">4</span>
 </span><span class="lnt">23
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell">procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
- r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
- <span class="m">7</span>  <span class="m">0</span>   <span class="m">5952</span> <span class="m">164580</span>    <span class="m">884</span> <span class="m">3516472</span>    <span class="m">0</span>    <span class="m">0</span>     <span class="m">0</span>     <span class="m">0</span> <span class="m">69482</span> <span class="m">2751</span> <span class="m">17</span> <span class="m">81</span>  <span class="m">2</span>  <span class="m">0</span>  <span class="m">0</span>
- <span class="m">5</span>  <span class="m">0</span>   <span class="m">5952</span> <span class="m">139616</span>    <span class="m">884</span> <span class="m">3523108</span>    <span class="m">0</span>    <span class="m">0</span>     <span class="m">0</span>    <span class="m">13</span> <span class="m">65379</span> <span class="m">5684</span> <span class="m">14</span> <span class="m">70</span> <span class="m">16</span>  <span class="m">0</span>  <span class="m">0</span>
- <span class="m">3</span>  <span class="m">0</span>   <span class="m">5952</span> <span class="m">152192</span>    <span class="m">884</span> <span class="m">3513580</span>    <span class="m">0</span>    <span class="m">0</span>     <span class="m">0</span>    <span class="m">75</span> <span class="m">69451</span> <span class="m">4367</span> <span class="m">16</span> <span class="m">80</span>  <span class="m">4</span>  <span class="m">0</span>  <span class="m">0</span>
- <span class="m">5</span>  <span class="m">0</span>   <span class="m">5952</span> <span class="m">146492</span>    <span class="m">884</span> <span class="m">3520968</span>    <span class="m">0</span>    <span class="m">0</span>     <span class="m">0</span>     <span class="m">0</span> <span class="m">70361</span> <span class="m">5948</span> <span class="m">15</span> <span class="m">78</span>  <span class="m">7</span>  <span class="m">0</span>  <span class="m">0</span>
- <span class="m">2</span>  <span class="m">0</span>   <span class="m">5952</span> <span class="m">166496</span>    <span class="m">884</span> <span class="m">3515740</span>    <span class="m">0</span>    <span class="m">0</span>     <span class="m">0</span>     <span class="m">0</span> <span class="m">63169</span> <span class="m">4580</span> <span class="m">15</span> <span class="m">70</span> <span class="m">15</span>  <span class="m">0</span>  <span class="m">0</span>
- <span class="m">7</span>  <span class="m">0</span>   <span class="m">5952</span> <span class="m">157008</span>    <span class="m">884</span> <span class="m">3512172</span>    <span class="m">0</span>    <span class="m">0</span>     <span class="m">0</span>     <span class="m">0</span> <span class="m">69768</span> <span class="m">6346</span> <span class="m">15</span> <span class="m">77</span>  <span class="m">8</span>  <span class="m">0</span>  <span class="m">0</span>
- <span class="m">4</span>  <span class="m">0</span>   <span class="m">5952</span> <span class="m">176820</span>    <span class="m">880</span> <span class="m">3494972</span>    <span class="m">0</span>    <span class="m">0</span>     <span class="m">0</span>     <span class="m">0</span> <span class="m">69968</span> <span class="m">3590</span> <span class="m">16</span> <span class="m">80</span>  <span class="m">5</span>  <span class="m">0</span>  <span class="m">0</span>
- <span class="m">8</span>  <span class="m">0</span>   <span class="m">5952</span> <span class="m">150888</span>    <span class="m">880</span> <span class="m">3501996</span>    <span class="m">0</span>    <span class="m">0</span>     <span class="m">0</span>     <span class="m">1</span> <span class="m">69508</span> <span class="m">4486</span> <span class="m">16</span> <span class="m">78</span>  <span class="m">6</span>  <span class="m">0</span>  <span class="m">0</span>
- <span class="m">6</span>  <span class="m">0</span>   <span class="m">5952</span> <span class="m">154504</span>    <span class="m">880</span> <span class="m">3507892</span>    <span class="m">0</span>    <span class="m">0</span>     <span class="m">0</span>     <span class="m">0</span> <span class="m">63143</span> <span class="m">3990</span> <span class="m">15</span> <span class="m">72</span> <span class="m">13</span>  <span class="m">0</span>  <span class="m">0</span>
- <span class="m">6</span>  <span class="m">0</span>   <span class="m">5952</span> <span class="m">147676</span>    <span class="m">880</span> <span class="m">3515340</span>    <span class="m">0</span>    <span class="m">0</span>     <span class="m">0</span>     <span class="m">0</span> <span class="m">70931</span> <span class="m">6194</span> <span class="m">15</span> <span class="m">79</span>  <span class="m">7</span>  <span class="m">0</span>  <span class="m">0</span>
-<span class="m">12</span>  <span class="m">0</span>   <span class="m">5952</span> <span class="m">147828</span>    <span class="m">880</span> <span class="m">3510848</span>    <span class="m">0</span>    <span class="m">0</span>     <span class="m">0</span> <span class="m">26539</span> <span class="m">70144</span> <span class="m">4384</span> <span class="m">16</span> <span class="m">79</span>  <span class="m">5</span>  <span class="m">0</span>  <span class="m">0</span>
- <span class="m">6</span>  <span class="m">0</span>   <span class="m">5952</span> <span class="m">154528</span>    <span class="m">880</span> <span class="m">3518252</span>    <span class="m">0</span>    <span class="m">0</span>     <span class="m">0</span>    <span class="m">13</span> <span class="m">70091</span> <span class="m">4694</span> <span class="m">16</span> <span class="m">79</span>  <span class="m">5</span>  <span class="m">0</span>  <span class="m">0</span>
- <span class="m">7</span>  <span class="m">0</span>   <span class="m">5952</span> <span class="m">157544</span>    <span class="m">880</span> <span class="m">3513860</span>    <span class="m">0</span>    <span class="m">0</span>     <span class="m">0</span>     <span class="m">6</span> <span class="m">62106</span> <span class="m">4454</span> <span class="m">14</span> <span class="m">71</span> <span class="m">15</span>  <span class="m">0</span>  <span class="m">0</span>
- <span class="m">4</span>  <span class="m">0</span>   <span class="m">5952</span> <span class="m">146288</span>    <span class="m">880</span> <span class="m">3520860</span>    <span class="m">0</span>    <span class="m">0</span>     <span class="m">0</span>     <span class="m">0</span> <span class="m">69309</span> <span class="m">3647</span> <span class="m">16</span> <span class="m">80</span>  <span class="m">4</span>  <span class="m">0</span>  <span class="m">0</span>
- <span class="m">6</span>  <span class="m">0</span>   <span class="m">5952</span> <span class="m">150000</span>    <span class="m">880</span> <span class="m">3522208</span>    <span class="m">0</span>    <span class="m">0</span>     <span class="m">0</span>     <span class="m">0</span> <span class="m">72404</span> <span class="m">5198</span> <span class="m">16</span> <span class="m">78</span>  <span class="m">7</span>  <span class="m">0</span>  <span class="m">0</span>
- <span class="m">7</span>  <span class="m">0</span>   <span class="m">5952</span> <span class="m">161044</span>    <span class="m">876</span> <span class="m">3504304</span>    <span class="m">0</span>    <span class="m">0</span>     <span class="m">0</span>     <span class="m">0</span> <span class="m">67280</span> <span class="m">1994</span> <span class="m">16</span> <span class="m">81</span>  <span class="m">2</span>  <span class="m">0</span>  <span class="m">0</span>
- <span class="m">4</span>  <span class="m">0</span>   <span class="m">5952</span> <span class="m">163560</span>    <span class="m">876</span> <span class="m">3510340</span>    <span class="m">0</span>    <span class="m">0</span>     <span class="m">0</span>     <span class="m">0</span> <span class="m">65055</span> <span class="m">2563</span> <span class="m">14</span> <span class="m">73</span> <span class="m">13</span>  <span class="m">0</span>  <span class="m">0</span>
- <span class="m">7</span>  <span class="m">0</span>   <span class="m">5696</span> <span class="m">145280</span>    <span class="m">876</span> <span class="m">3516980</span>   <span class="m">61</span>    <span class="m">0</span>    <span class="m">77</span>     <span class="m">0</span> <span class="m">69434</span> <span class="m">5042</span> <span class="m">17</span> <span class="m">77</span>  <span class="m">5</span>  <span class="m">1</span>  <span class="m">0</span>
- <span class="m">5</span>  <span class="m">0</span>   <span class="m">5696</span> <span class="m">146928</span>    <span class="m">876</span> <span class="m">3524360</span>    <span class="m">0</span>    <span class="m">0</span>     <span class="m">0</span>     <span class="m">0</span> <span class="m">71610</span> <span class="m">5954</span> <span class="m">15</span> <span class="m">77</span>  <span class="m">7</span>  <span class="m">0</span>  <span class="m">0</span>
- <span class="m">1</span>  <span class="m">0</span>   <span class="m">5696</span> <span class="m">158960</span>    <span class="m">876</span> <span class="m">3525224</span>    <span class="m">0</span>    <span class="m">0</span>     <span class="m">0</span>     <span class="m">1</span> <span class="m">7612</span> <span class="m">1255</span>  <span class="m">3</span> <span class="m">10</span> <span class="m">88</span>  <span class="m">0</span>  <span class="m">0</span>
- <span class="m">0</span>  <span class="m">0</span>   <span class="m">5696</span> <span class="m">159256</span>    <span class="m">876</span> <span class="m">3525228</span>    <span class="m">0</span>    <span class="m">0</span>     <span class="m">0</span> <span class="m">18723</span> <span class="m">1228</span>  <span class="m">971</span>  <span class="m">1</span>  <span class="m">2</span> <span class="m">97</span>  <span class="m">0</span>  <span class="m">0</span>
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+</span></span><span class="line"><span class="cl"> r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+</span></span><span class="line"><span class="cl"> <span class="m">7</span>  <span class="m">0</span>   <span class="m">5952</span> <span class="m">164580</span>    <span class="m">884</span> <span class="m">3516472</span>    <span class="m">0</span>    <span class="m">0</span>     <span class="m">0</span>     <span class="m">0</span> <span class="m">69482</span> <span class="m">2751</span> <span class="m">17</span> <span class="m">81</span>  <span class="m">2</span>  <span class="m">0</span>  <span class="m">0</span>
+</span></span><span class="line"><span class="cl"> <span class="m">5</span>  <span class="m">0</span>   <span class="m">5952</span> <span class="m">139616</span>    <span class="m">884</span> <span class="m">3523108</span>    <span class="m">0</span>    <span class="m">0</span>     <span class="m">0</span>    <span class="m">13</span> <span class="m">65379</span> <span class="m">5684</span> <span class="m">14</span> <span class="m">70</span> <span class="m">16</span>  <span class="m">0</span>  <span class="m">0</span>
+</span></span><span class="line"><span class="cl"> <span class="m">3</span>  <span class="m">0</span>   <span class="m">5952</span> <span class="m">152192</span>    <span class="m">884</span> <span class="m">3513580</span>    <span class="m">0</span>    <span class="m">0</span>     <span class="m">0</span>    <span class="m">75</span> <span class="m">69451</span> <span class="m">4367</span> <span class="m">16</span> <span class="m">80</span>  <span class="m">4</span>  <span class="m">0</span>  <span class="m">0</span>
+</span></span><span class="line"><span class="cl"> <span class="m">5</span>  <span class="m">0</span>   <span class="m">5952</span> <span class="m">146492</span>    <span class="m">884</span> <span class="m">3520968</span>    <span class="m">0</span>    <span class="m">0</span>     <span class="m">0</span>     <span class="m">0</span> <span class="m">70361</span> <span class="m">5948</span> <span class="m">15</span> <span class="m">78</span>  <span class="m">7</span>  <span class="m">0</span>  <span class="m">0</span>
+</span></span><span class="line"><span class="cl"> <span class="m">2</span>  <span class="m">0</span>   <span class="m">5952</span> <span class="m">166496</span>    <span class="m">884</span> <span class="m">3515740</span>    <span class="m">0</span>    <span class="m">0</span>     <span class="m">0</span>     <span class="m">0</span> <span class="m">63169</span> <span class="m">4580</span> <span class="m">15</span> <span class="m">70</span> <span class="m">15</span>  <span class="m">0</span>  <span class="m">0</span>
+</span></span><span class="line"><span class="cl"> <span class="m">7</span>  <span class="m">0</span>   <span class="m">5952</span> <span class="m">157008</span>    <span class="m">884</span> <span class="m">3512172</span>    <span class="m">0</span>    <span class="m">0</span>     <span class="m">0</span>     <span class="m">0</span> <span class="m">69768</span> <span class="m">6346</span> <span class="m">15</span> <span class="m">77</span>  <span class="m">8</span>  <span class="m">0</span>  <span class="m">0</span>
+</span></span><span class="line"><span class="cl"> <span class="m">4</span>  <span class="m">0</span>   <span class="m">5952</span> <span class="m">176820</span>    <span class="m">880</span> <span class="m">3494972</span>    <span class="m">0</span>    <span class="m">0</span>     <span class="m">0</span>     <span class="m">0</span> <span class="m">69968</span> <span class="m">3590</span> <span class="m">16</span> <span class="m">80</span>  <span class="m">5</span>  <span class="m">0</span>  <span class="m">0</span>
+</span></span><span class="line"><span class="cl"> <span class="m">8</span>  <span class="m">0</span>   <span class="m">5952</span> <span class="m">150888</span>    <span class="m">880</span> <span class="m">3501996</span>    <span class="m">0</span>    <span class="m">0</span>     <span class="m">0</span>     <span class="m">1</span> <span class="m">69508</span> <span class="m">4486</span> <span class="m">16</span> <span class="m">78</span>  <span class="m">6</span>  <span class="m">0</span>  <span class="m">0</span>
+</span></span><span class="line"><span class="cl"> <span class="m">6</span>  <span class="m">0</span>   <span class="m">5952</span> <span class="m">154504</span>    <span class="m">880</span> <span class="m">3507892</span>    <span class="m">0</span>    <span class="m">0</span>     <span class="m">0</span>     <span class="m">0</span> <span class="m">63143</span> <span class="m">3990</span> <span class="m">15</span> <span class="m">72</span> <span class="m">13</span>  <span class="m">0</span>  <span class="m">0</span>
+</span></span><span class="line"><span class="cl"> <span class="m">6</span>  <span class="m">0</span>   <span class="m">5952</span> <span class="m">147676</span>    <span class="m">880</span> <span class="m">3515340</span>    <span class="m">0</span>    <span class="m">0</span>     <span class="m">0</span>     <span class="m">0</span> <span class="m">70931</span> <span class="m">6194</span> <span class="m">15</span> <span class="m">79</span>  <span class="m">7</span>  <span class="m">0</span>  <span class="m">0</span>
+</span></span><span class="line"><span class="cl"><span class="m">12</span>  <span class="m">0</span>   <span class="m">5952</span> <span class="m">147828</span>    <span class="m">880</span> <span class="m">3510848</span>    <span class="m">0</span>    <span class="m">0</span>     <span class="m">0</span> <span class="m">26539</span> <span class="m">70144</span> <span class="m">4384</span> <span class="m">16</span> <span class="m">79</span>  <span class="m">5</span>  <span class="m">0</span>  <span class="m">0</span>
+</span></span><span class="line"><span class="cl"> <span class="m">6</span>  <span class="m">0</span>   <span class="m">5952</span> <span class="m">154528</span>    <span class="m">880</span> <span class="m">3518252</span>    <span class="m">0</span>    <span class="m">0</span>     <span class="m">0</span>    <span class="m">13</span> <span class="m">70091</span> <span class="m">4694</span> <span class="m">16</span> <span class="m">79</span>  <span class="m">5</span>  <span class="m">0</span>  <span class="m">0</span>
+</span></span><span class="line"><span class="cl"> <span class="m">7</span>  <span class="m">0</span>   <span class="m">5952</span> <span class="m">157544</span>    <span class="m">880</span> <span class="m">3513860</span>    <span class="m">0</span>    <span class="m">0</span>     <span class="m">0</span>     <span class="m">6</span> <span class="m">62106</span> <span class="m">4454</span> <span class="m">14</span> <span class="m">71</span> <span class="m">15</span>  <span class="m">0</span>  <span class="m">0</span>
+</span></span><span class="line"><span class="cl"> <span class="m">4</span>  <span class="m">0</span>   <span class="m">5952</span> <span class="m">146288</span>    <span class="m">880</span> <span class="m">3520860</span>    <span class="m">0</span>    <span class="m">0</span>     <span class="m">0</span>     <span class="m">0</span> <span class="m">69309</span> <span class="m">3647</span> <span class="m">16</span> <span class="m">80</span>  <span class="m">4</span>  <span class="m">0</span>  <span class="m">0</span>
+</span></span><span class="line"><span class="cl"> <span class="m">6</span>  <span class="m">0</span>   <span class="m">5952</span> <span class="m">150000</span>    <span class="m">880</span> <span class="m">3522208</span>    <span class="m">0</span>    <span class="m">0</span>     <span class="m">0</span>     <span class="m">0</span> <span class="m">72404</span> <span class="m">5198</span> <span class="m">16</span> <span class="m">78</span>  <span class="m">7</span>  <span class="m">0</span>  <span class="m">0</span>
+</span></span><span class="line"><span class="cl"> <span class="m">7</span>  <span class="m">0</span>   <span class="m">5952</span> <span class="m">161044</span>    <span class="m">876</span> <span class="m">3504304</span>    <span class="m">0</span>    <span class="m">0</span>     <span class="m">0</span>     <span class="m">0</span> <span class="m">67280</span> <span class="m">1994</span> <span class="m">16</span> <span class="m">81</span>  <span class="m">2</span>  <span class="m">0</span>  <span class="m">0</span>
+</span></span><span class="line"><span class="cl"> <span class="m">4</span>  <span class="m">0</span>   <span class="m">5952</span> <span class="m">163560</span>    <span class="m">876</span> <span class="m">3510340</span>    <span class="m">0</span>    <span class="m">0</span>     <span class="m">0</span>     <span class="m">0</span> <span class="m">65055</span> <span class="m">2563</span> <span class="m">14</span> <span class="m">73</span> <span class="m">13</span>  <span class="m">0</span>  <span class="m">0</span>
+</span></span><span class="line"><span class="cl"> <span class="m">7</span>  <span class="m">0</span>   <span class="m">5696</span> <span class="m">145280</span>    <span class="m">876</span> <span class="m">3516980</span>   <span class="m">61</span>    <span class="m">0</span>    <span class="m">77</span>     <span class="m">0</span> <span class="m">69434</span> <span class="m">5042</span> <span class="m">17</span> <span class="m">77</span>  <span class="m">5</span>  <span class="m">1</span>  <span class="m">0</span>
+</span></span><span class="line"><span class="cl"> <span class="m">5</span>  <span class="m">0</span>   <span class="m">5696</span> <span class="m">146928</span>    <span class="m">876</span> <span class="m">3524360</span>    <span class="m">0</span>    <span class="m">0</span>     <span class="m">0</span>     <span class="m">0</span> <span class="m">71610</span> <span class="m">5954</span> <span class="m">15</span> <span class="m">77</span>  <span class="m">7</span>  <span class="m">0</span>  <span class="m">0</span>
+</span></span><span class="line"><span class="cl"> <span class="m">1</span>  <span class="m">0</span>   <span class="m">5696</span> <span class="m">158960</span>    <span class="m">876</span> <span class="m">3525224</span>    <span class="m">0</span>    <span class="m">0</span>     <span class="m">0</span>     <span class="m">1</span> <span class="m">7612</span> <span class="m">1255</span>  <span class="m">3</span> <span class="m">10</span> <span class="m">88</span>  <span class="m">0</span>  <span class="m">0</span>
+</span></span><span class="line"><span class="cl"> <span class="m">0</span>  <span class="m">0</span>   <span class="m">5696</span> <span class="m">159256</span>    <span class="m">876</span> <span class="m">3525228</span>    <span class="m">0</span>    <span class="m">0</span>     <span class="m">0</span> <span class="m">18723</span> <span class="m">1228</span>  <span class="m">971</span>  <span class="m">1</span>  <span class="m">2</span> <span class="m">97</span>  <span class="m">0</span>  <span class="m">0</span>
+</span></span></code></pre></td></tr></table>
 </div>
 </div><p>可以看到，两次采集存在很明显的差距：</p>
 <ul>
@@ -1711,6 +1711,9 @@ Combined:   <span class="m">4</span>
   </div>
   <div class="card-body">
     <ul class="post-list"><li>
+        <a href="/post/mysql/charset-intro/">MySQL - 字符集简介
+</a>
+      </li><li>
         <a href="/post/prometheus/how-to-customize/">如何定制 Prometheus 项目
 </a>
       </li><li>
@@ -1721,9 +1724,6 @@ Combined:   <span class="m">4</span>
 </a>
       </li><li>
         <a href="/post/iphone-to-huawei/download-icloud-photos/">批量导出 ICloud 照片到本地
-</a>
-      </li><li>
-        <a href="/post/rancher/kube-apiserver-profiling/">Rancher 给 Kube-Apiserver 开启 Pprof
 </a>
       </li></ul>
   </div>
@@ -1740,7 +1740,7 @@ Combined:   <span class="m">4</span>
             troubleshooting<span class="badge badge-sm text-white bg-accent ms-1">40</span></a><a href="/tags/jvm/" class="badge rounded post-taxonomy" title="jvm">
             jvm<span class="badge badge-sm text-white bg-accent ms-1">39</span></a><a href="/tags/docker/" class="badge rounded post-taxonomy" title="docker">
             docker<span class="badge badge-sm text-white bg-accent ms-1">29</span></a><a href="/tags/mysql/" class="badge rounded post-taxonomy" title="mysql">
-            mysql<span class="badge badge-sm text-white bg-accent ms-1">24</span></a><a href="/tags/network/" class="badge rounded post-taxonomy" title="network">
+            mysql<span class="badge badge-sm text-white bg-accent ms-1">25</span></a><a href="/tags/network/" class="badge rounded post-taxonomy" title="network">
             network<span class="badge badge-sm text-white bg-accent ms-1">22</span></a><a href="/tags/cheatsheet/" class="badge rounded post-taxonomy" title="cheatsheet">
             cheatsheet<span class="badge badge-sm text-white bg-accent ms-1">21</span></a><a href="/tags/%E5%B9%B6%E5%8F%91%E7%BC%96%E7%A8%8B/" class="badge rounded post-taxonomy" title="并发编程">
             并发编程<span class="badge badge-sm text-white bg-accent ms-1">20</span></a><a href="/tags/kernel/" class="badge rounded post-taxonomy" title="kernel">
@@ -1842,7 +1842,7 @@ Combined:   <span class="m">4</span>
     <img src="https://www.netlify.com/img/global/badges/netlify-color-accent.svg" alt="Deploys by Netlify" width="114" height="51" />
 </a>
 </footer>
-<script src="/js/main.2cdce25f280f570596c88888d6af930fe5e15ea030005291dad293defbb231d3.js" integrity="sha256-LNziXygPVwWWyIiI1q&#43;TD&#43;XhXqAwAFKR2tKT3vuyMdM=" crossorigin="anonymous" defer></script><script src="/js/icons.min.8ddcaafc364ff0296c2209c5495287f0de039b852da9b24847f94c198b7639b6.js" integrity="sha256-jdyq/DZP8ClsIgnFSVKH8N4Dm4UtqbJIR/lMGYt2ObY=" crossorigin="anonymous" defer></script>
+<script src="/js/main.2cdce25f280f570596c88888d6af930fe5e15ea030005291dad293defbb231d3.js" integrity="sha256-LNziXygPVwWWyIiI1q&#43;TD&#43;XhXqAwAFKR2tKT3vuyMdM=" crossorigin="anonymous" defer></script><script src="/js/icons.min.7b1f27dfde35467d03350938b2e41dbffd06347009b97ab913edfaca01a07814.js" integrity="sha256-ex8n3941Rn0DNQk4suQdv/0GNHAJuXq5E&#43;36ygGgeBQ=" crossorigin="anonymous" defer></script>
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
@@ -1853,6 +1853,6 @@ if ('serviceWorker' in navigator) {
     });
   });
 }
-</script><script src="/js/viewer.min.652118a9fbf3403cdfde4026209f97ace22f9e334f0b45a33431a221b3db46a8.js" integrity="sha256-ZSEYqfvzQDzf3kAmIJ&#43;XrOIvnjNPC0WjNDGiIbPbRqg=" crossorigin="anonymous" defer></script>
+</script><script src="/js/viewer.min.1ec1fa5aa3a66267222a44fe1cd51856ad4a92be48ede579fb36d70a6d4c28e9.js" integrity="sha256-HsH6WqOmYmciKkT&#43;HNUYVq1Kkr5I7eV5&#43;zbXCm1MKOk=" crossorigin="anonymous" defer></script>
 </body>
 </html>

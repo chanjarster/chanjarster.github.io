@@ -18,14 +18,14 @@
 <meta property="og:type" content="article" />
 <meta property="og:url" content="/post/linux/too-many-time-wait-troubleshooting/" /><meta property="article:section" content="post" />
 <meta property="article:published_time" content="2021-09-07T11:42:45+08:00" />
-<meta property="article:modified_time" content="2021-09-07T11:42:45+08:00" /><meta property="og:site_name" content="颇忒脱的技术博客" />
+<meta property="article:modified_time" content="2021-09-07T11:42:45+08:00" />
 
 <meta name="twitter:card" content="summary"/>
 <meta name="twitter:title" content="压测时大量TIME_WAIT问题排查"/>
 <meta name="twitter:description" content=""/>
 <meta property="og:image" content="/images/avatar.jpg"/>
-  <meta name="twitter:image" content="/images/avatar.jpg"/><link rel="stylesheet" href="/css/main.min.507afbe6e4670fa3e961a0b35816b5daeb36029866fd6bd7b9d7871fcf88faa5.css" integrity="sha256-UHr75uRnD6PpYaCzWBa12us2Aphm/WvXudeHH8&#43;I&#43;qU=" crossorigin="anonymous"><link rel="stylesheet" href="/css/viewer.min.3d228794bcedbbfa0412beb8fbc1ec6973202945e42af7004f742a4d7bd620ab.css" integrity="sha256-PSKHlLztu/oEEr64&#43;8HsaXMgKUXkKvcAT3QqTXvWIKs=" crossorigin="anonymous"></head>
-  <body><script>const items=['mode','palette'];items.forEach(function(a){const b=localStorage.getItem('hbs-'+a);b&&document.body.parentElement.setAttribute('data-'+a,b)})</script><header><nav class="navbar top-app-bar top-app-bar-expand-lg fixed-top">
+  <meta name="twitter:image" content="/images/avatar.jpg"/><link rel="stylesheet" href="/css/main.min.24196952817c68c8b90d8fa573d560fa62766baa0622bdc0e862255f4a4d1307.css" integrity="sha256-JBlpUoF8aMi5DY&#43;lc9Vg&#43;mJ2a6oGIr3A6GIlX0pNEwc=" crossorigin="anonymous"><link rel="stylesheet" href="/css/viewer.min.3d228794bcedbbfa0412beb8fbc1ec6973202945e42af7004f742a4d7bd620ab.css" integrity="sha256-PSKHlLztu/oEEr64&#43;8HsaXMgKUXkKvcAT3QqTXvWIKs=" crossorigin="anonymous"></head>
+  <body><script>const items=["mode","palette"];items.forEach(function(e){const t=localStorage.getItem("hbs-"+e);t&&document.body.parentElement.setAttribute("data-"+e,t)})</script><header><nav class="navbar top-app-bar top-app-bar-expand-lg fixed-top">
   <div class="container">
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent"
       aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
@@ -231,8 +231,8 @@
 <pre tabindex="0" class="chroma"><code><span class="lnt">1
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">docker run -d --name tomcat-8080 --network<span class="o">=</span>host tomcat:8.5-alpine
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">docker run -d --name tomcat-8080 --network<span class="o">=</span>host tomcat:8.5-alpine
+</span></span></code></pre></td></tr></table>
 </div>
 </div><p>用wrk做压测，连接数100，压5分钟，注意这里故意访问了一个不存在的地址，这是为了降低Tomcat CPU以及流量：</p>
 <div class="highlight"><div class="chroma">
@@ -240,8 +240,8 @@
 <pre tabindex="0" class="chroma"><code><span class="lnt">1
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">wrk -c <span class="m">100</span> -t <span class="m">2</span> -d <span class="m">300</span> http://192.168.100.12:8080/abc
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">wrk -c <span class="m">100</span> -t <span class="m">2</span> -d <span class="m">300</span> http://192.168.100.12:8080/abc
+</span></span></code></pre></td></tr></table>
 </div>
 </div><p>【服务端侧】Tomcat，netstat得到大量 TIME_WAIT 的连接：</p>
 <div class="highlight"><div class="chroma">
@@ -256,15 +256,15 @@
 </span><span class="lnt">8
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">$ sudo netstat -antpl <span class="p">|</span> grep <span class="s1">&#39;192.168.100.12:8080&#39;</span> <span class="p">|</span> gawk -F<span class="s1">&#39; &#39;</span> <span class="s1">&#39;{ print $6 }&#39;</span> <span class="p">|</span> sort <span class="p">|</span> uniq -c
-     <span class="m">93</span> ESTABLISHED
-  <span class="m">19980</span> TIME_WAIT
-
-$ sudo conntrack -L -o extended <span class="p">|</span> awk <span class="s1">&#39;{print $6 &#34; &#34; $7 &#34; &#34; $8}&#39;</span>  <span class="p">|</span> sort <span class="p">|</span> uniq -c <span class="p">|</span> sort -nr <span class="p">|</span> head -n <span class="m">10</span>
-conntrack v1.4.3 <span class="o">(</span>conntrack-tools<span class="o">)</span>: <span class="m">6566</span> flow entries have been shown.
-   <span class="m">12361</span> TIME_WAIT <span class="nv">src</span><span class="o">=</span>192.168.100.21 <span class="nv">dst</span><span class="o">=</span>192.168.100.12
-   ...
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">$ sudo netstat -antpl <span class="p">|</span> grep <span class="s1">&#39;192.168.100.12:8080&#39;</span> <span class="p">|</span> gawk -F<span class="s1">&#39; &#39;</span> <span class="s1">&#39;{ print $6 }&#39;</span> <span class="p">|</span> sort <span class="p">|</span> uniq -c
+</span></span><span class="line"><span class="cl">     <span class="m">93</span> ESTABLISHED
+</span></span><span class="line"><span class="cl">  <span class="m">19980</span> TIME_WAIT
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">$ sudo conntrack -L -o extended <span class="p">|</span> awk <span class="s1">&#39;{print $6 &#34; &#34; $7 &#34; &#34; $8}&#39;</span>  <span class="p">|</span> sort <span class="p">|</span> uniq -c <span class="p">|</span> sort -nr <span class="p">|</span> head -n <span class="m">10</span>
+</span></span><span class="line"><span class="cl">conntrack v1.4.3 <span class="o">(</span>conntrack-tools<span class="o">)</span>: <span class="m">6566</span> flow entries have been shown.
+</span></span><span class="line"><span class="cl">   <span class="m">12361</span> TIME_WAIT <span class="nv">src</span><span class="o">=</span>192.168.100.21 <span class="nv">dst</span><span class="o">=</span>192.168.100.12
+</span></span><span class="line"><span class="cl">   ...
+</span></span></code></pre></td></tr></table>
 </div>
 </div><p>【客户端侧】wrk，netstat得到TIME_WAIT 连接在4000左右，conntrack的连接在 6400左右：</p>
 <div class="highlight"><div class="chroma">
@@ -280,16 +280,16 @@ conntrack v1.4.3 <span class="o">(</span>conntrack-tools<span class="o">)</span>
 </span><span class="lnt">9
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">$ sudo netstat -antpl <span class="p">|</span> grep <span class="s1">&#39;192.168.100.12:8080&#39;</span> <span class="p">|</span> gawk -F<span class="s1">&#39; &#39;</span> <span class="s1">&#39;{ print $6 }&#39;</span> <span class="p">|</span> sort <span class="p">|</span> uniq -c
-    <span class="m">101</span> ESTABLISHED
-      <span class="m">1</span> SYN_SENT
-  <span class="m">11782</span> TIME_WAIT
-
-$ sudo conntrack -L -o extended <span class="p">|</span> awk <span class="s1">&#39;{print $6 &#34; &#34; $7 &#34; &#34; $8}&#39;</span>  <span class="p">|</span> sort <span class="p">|</span> uniq -c <span class="p">|</span> sort -nr <span class="p">|</span> head -n <span class="m">10</span>
-conntrack v1.4.3 <span class="o">(</span>conntrack-tools<span class="o">)</span>: <span class="m">9972</span> flow entries have been shown.
-   <span class="m">21081</span> TIME_WAIT <span class="nv">src</span><span class="o">=</span>192.168.100.21 <span class="nv">dst</span><span class="o">=</span>192.168.100.12
-   ...
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">$ sudo netstat -antpl <span class="p">|</span> grep <span class="s1">&#39;192.168.100.12:8080&#39;</span> <span class="p">|</span> gawk -F<span class="s1">&#39; &#39;</span> <span class="s1">&#39;{ print $6 }&#39;</span> <span class="p">|</span> sort <span class="p">|</span> uniq -c
+</span></span><span class="line"><span class="cl">    <span class="m">101</span> ESTABLISHED
+</span></span><span class="line"><span class="cl">      <span class="m">1</span> SYN_SENT
+</span></span><span class="line"><span class="cl">  <span class="m">11782</span> TIME_WAIT
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">$ sudo conntrack -L -o extended <span class="p">|</span> awk <span class="s1">&#39;{print $6 &#34; &#34; $7 &#34; &#34; $8}&#39;</span>  <span class="p">|</span> sort <span class="p">|</span> uniq -c <span class="p">|</span> sort -nr <span class="p">|</span> head -n <span class="m">10</span>
+</span></span><span class="line"><span class="cl">conntrack v1.4.3 <span class="o">(</span>conntrack-tools<span class="o">)</span>: <span class="m">9972</span> flow entries have been shown.
+</span></span><span class="line"><span class="cl">   <span class="m">21081</span> TIME_WAIT <span class="nv">src</span><span class="o">=</span>192.168.100.21 <span class="nv">dst</span><span class="o">=</span>192.168.100.12
+</span></span><span class="line"><span class="cl">   ...
+</span></span></code></pre></td></tr></table>
 </div>
 </div><h2 id="分析">分析<a class="anchor ms-1" href="#分析"><i class="fas fa-link"></i></a></h2>
 <p>【客户端侧】wrk连接数才100个就产生了近 12000 个TIME_WAIT连接，极大浪费了本地端口资源。</p>
@@ -303,11 +303,11 @@ conntrack v1.4.3 <span class="o">(</span>conntrack-tools<span class="o">)</span>
 </span><span class="lnt">4
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">$ man netstat
-TIME_WAIT
-    The socket is waiting after close to handle packets 
-    still in the network.
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">$ man netstat
+</span></span><span class="line"><span class="cl">TIME_WAIT
+</span></span><span class="line"><span class="cl">    The socket is waiting after close to handle packets 
+</span></span><span class="line"><span class="cl">    still in the network.
+</span></span></code></pre></td></tr></table>
 </div>
 </div><p>联想到内核tcp相关参数：</p>
 <div class="highlight"><div class="chroma">
@@ -320,13 +320,13 @@ TIME_WAIT
 </span><span class="lnt">6
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">$ man tcp
-
-tcp_tw_reuse <span class="o">(</span>Boolean<span class="p">;</span> default: disabled<span class="p">;</span> since Linux 2.4.19/2.6<span class="o">)</span>
-       Allow to reuse TIME_WAIT sockets <span class="k">for</span> new connections 
-       when it is safe from protocol viewpoint.  It should 
-       not be changed without advice/request of technical experts.
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">$ man tcp
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">tcp_tw_reuse <span class="o">(</span>Boolean<span class="p">;</span> default: disabled<span class="p">;</span> since Linux 2.4.19/2.6<span class="o">)</span>
+</span></span><span class="line"><span class="cl">       Allow to reuse TIME_WAIT sockets <span class="k">for</span> new connections 
+</span></span><span class="line"><span class="cl">       when it is safe from protocol viewpoint.  It should 
+</span></span><span class="line"><span class="cl">       not be changed without advice/request of technical experts.
+</span></span></code></pre></td></tr></table>
 </div>
 </div><h2 id="调整参数">调整参数<a class="anchor ms-1" href="#调整参数"><i class="fas fa-link"></i></a></h2>
 <p>观察 <code>net.ipv4.tcp_tw_reuse</code>内核参数发现没有开启：</p>
@@ -336,9 +336,9 @@ tcp_tw_reuse <span class="o">(</span>Boolean<span class="p">;</span> default: di
 </span><span class="lnt">2
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">$ sysctl net.ipv4.tcp_tw_reuse
-<span class="m">0</span>
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">$ sysctl net.ipv4.tcp_tw_reuse
+</span></span><span class="line"><span class="cl"><span class="m">0</span>
+</span></span></code></pre></td></tr></table>
 </div>
 </div><p>将其打开（如果要永久开启请看<a href="../limits">Linux调整Limits</a>）：</p>
 <div class="highlight"><div class="chroma">
@@ -346,8 +346,8 @@ tcp_tw_reuse <span class="o">(</span>Boolean<span class="p">;</span> default: di
 <pre tabindex="0" class="chroma"><code><span class="lnt">1
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">$ sudo sysctl -w net.ipv4.tcp_tw_reuse<span class="o">=</span><span class="m">1</span>
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">$ sudo sysctl -w net.ipv4.tcp_tw_reuse<span class="o">=</span><span class="m">1</span>
+</span></span></code></pre></td></tr></table>
 </div>
 </div><p>【客户端】wrk TIME_WAIT连接数 7000左右，比之前 12000 好很多：</p>
 <div class="highlight"><div class="chroma">
@@ -358,11 +358,11 @@ tcp_tw_reuse <span class="o">(</span>Boolean<span class="p">;</span> default: di
 </span><span class="lnt">4
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">$ sudo netstat -antpl <span class="p">|</span> grep <span class="s1">&#39;192.168.100.12:8080&#39;</span> <span class="p">|</span> gawk -F<span class="s1">&#39; &#39;</span> <span class="s1">&#39;{ print $6 }&#39;</span> <span class="p">|</span> sort <span class="p">|</span> uniq -c
-      <span class="m">1</span> CLOSING
-     <span class="m">99</span> ESTABLISHED
-   <span class="m">7018</span> TIME_WAIT
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">$ sudo netstat -antpl <span class="p">|</span> grep <span class="s1">&#39;192.168.100.12:8080&#39;</span> <span class="p">|</span> gawk -F<span class="s1">&#39; &#39;</span> <span class="s1">&#39;{ print $6 }&#39;</span> <span class="p">|</span> sort <span class="p">|</span> uniq -c
+</span></span><span class="line"><span class="cl">      <span class="m">1</span> CLOSING
+</span></span><span class="line"><span class="cl">     <span class="m">99</span> ESTABLISHED
+</span></span><span class="line"><span class="cl">   <span class="m">7018</span> TIME_WAIT
+</span></span></code></pre></td></tr></table>
 </div>
 </div><p>【服务端】Tomcat TIME_WAIT连接数 13000左右，比之前的 20000 好很多：</p>
 <div class="highlight"><div class="chroma">
@@ -372,10 +372,10 @@ tcp_tw_reuse <span class="o">(</span>Boolean<span class="p">;</span> default: di
 </span><span class="lnt">3
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">$ sudo netstat -antpl <span class="p">|</span> grep <span class="s1">&#39;192.168.100.12:8080&#39;</span> <span class="p">|</span> gawk -F<span class="s1">&#39; &#39;</span> <span class="s1">&#39;{ print $6 }&#39;</span> <span class="p">|</span> sort <span class="p">|</span> uniq -c
-    <span class="m">103</span> ESTABLISHED
-  <span class="m">13628</span> TIME_WAIT
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">$ sudo netstat -antpl <span class="p">|</span> grep <span class="s1">&#39;192.168.100.12:8080&#39;</span> <span class="p">|</span> gawk -F<span class="s1">&#39; &#39;</span> <span class="s1">&#39;{ print $6 }&#39;</span> <span class="p">|</span> sort <span class="p">|</span> uniq -c
+</span></span><span class="line"><span class="cl">    <span class="m">103</span> ESTABLISHED
+</span></span><span class="line"><span class="cl">  <span class="m">13628</span> TIME_WAIT
+</span></span></code></pre></td></tr></table>
 </div>
 </div><h2 id="扩展">扩展<a class="anchor ms-1" href="#扩展"><i class="fas fa-link"></i></a></h2>
 <p>可以参考<a href="../net-params">常用网络内核参数优化</a>给内核网络参数做一个完整的优化。</p></div></div>
@@ -494,6 +494,9 @@ tcp_tw_reuse <span class="o">(</span>Boolean<span class="p">;</span> default: di
   </div>
   <div class="card-body">
     <ul class="post-list"><li>
+        <a href="/post/mysql/charset-intro/">MySQL - 字符集简介
+</a>
+      </li><li>
         <a href="/post/prometheus/how-to-customize/">如何定制 Prometheus 项目
 </a>
       </li><li>
@@ -504,9 +507,6 @@ tcp_tw_reuse <span class="o">(</span>Boolean<span class="p">;</span> default: di
 </a>
       </li><li>
         <a href="/post/iphone-to-huawei/download-icloud-photos/">批量导出 ICloud 照片到本地
-</a>
-      </li><li>
-        <a href="/post/rancher/kube-apiserver-profiling/">Rancher 给 Kube-Apiserver 开启 Pprof
 </a>
       </li></ul>
   </div>
@@ -523,7 +523,7 @@ tcp_tw_reuse <span class="o">(</span>Boolean<span class="p">;</span> default: di
             troubleshooting<span class="badge badge-sm text-white bg-accent ms-1">40</span></a><a href="/tags/jvm/" class="badge rounded post-taxonomy" title="jvm">
             jvm<span class="badge badge-sm text-white bg-accent ms-1">39</span></a><a href="/tags/docker/" class="badge rounded post-taxonomy" title="docker">
             docker<span class="badge badge-sm text-white bg-accent ms-1">29</span></a><a href="/tags/mysql/" class="badge rounded post-taxonomy" title="mysql">
-            mysql<span class="badge badge-sm text-white bg-accent ms-1">24</span></a><a href="/tags/network/" class="badge rounded post-taxonomy" title="network">
+            mysql<span class="badge badge-sm text-white bg-accent ms-1">25</span></a><a href="/tags/network/" class="badge rounded post-taxonomy" title="network">
             network<span class="badge badge-sm text-white bg-accent ms-1">22</span></a><a href="/tags/cheatsheet/" class="badge rounded post-taxonomy" title="cheatsheet">
             cheatsheet<span class="badge badge-sm text-white bg-accent ms-1">21</span></a><a href="/tags/%E5%B9%B6%E5%8F%91%E7%BC%96%E7%A8%8B/" class="badge rounded post-taxonomy" title="并发编程">
             并发编程<span class="badge badge-sm text-white bg-accent ms-1">20</span></a><a href="/tags/kernel/" class="badge rounded post-taxonomy" title="kernel">
@@ -625,7 +625,7 @@ tcp_tw_reuse <span class="o">(</span>Boolean<span class="p">;</span> default: di
     <img src="https://www.netlify.com/img/global/badges/netlify-color-accent.svg" alt="Deploys by Netlify" width="114" height="51" />
 </a>
 </footer>
-<script src="/js/main.2cdce25f280f570596c88888d6af930fe5e15ea030005291dad293defbb231d3.js" integrity="sha256-LNziXygPVwWWyIiI1q&#43;TD&#43;XhXqAwAFKR2tKT3vuyMdM=" crossorigin="anonymous" defer></script><script src="/js/icons.min.8ddcaafc364ff0296c2209c5495287f0de039b852da9b24847f94c198b7639b6.js" integrity="sha256-jdyq/DZP8ClsIgnFSVKH8N4Dm4UtqbJIR/lMGYt2ObY=" crossorigin="anonymous" defer></script>
+<script src="/js/main.2cdce25f280f570596c88888d6af930fe5e15ea030005291dad293defbb231d3.js" integrity="sha256-LNziXygPVwWWyIiI1q&#43;TD&#43;XhXqAwAFKR2tKT3vuyMdM=" crossorigin="anonymous" defer></script><script src="/js/icons.min.7b1f27dfde35467d03350938b2e41dbffd06347009b97ab913edfaca01a07814.js" integrity="sha256-ex8n3941Rn0DNQk4suQdv/0GNHAJuXq5E&#43;36ygGgeBQ=" crossorigin="anonymous" defer></script>
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
@@ -636,6 +636,6 @@ if ('serviceWorker' in navigator) {
     });
   });
 }
-</script><script src="/js/viewer.min.652118a9fbf3403cdfde4026209f97ace22f9e334f0b45a33431a221b3db46a8.js" integrity="sha256-ZSEYqfvzQDzf3kAmIJ&#43;XrOIvnjNPC0WjNDGiIbPbRqg=" crossorigin="anonymous" defer></script>
+</script><script src="/js/viewer.min.1ec1fa5aa3a66267222a44fe1cd51856ad4a92be48ede579fb36d70a6d4c28e9.js" integrity="sha256-HsH6WqOmYmciKkT&#43;HNUYVq1Kkr5I7eV5&#43;zbXCm1MKOk=" crossorigin="anonymous" defer></script>
 </body>
 </html>

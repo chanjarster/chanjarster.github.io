@@ -18,14 +18,14 @@
 <meta property="og:type" content="article" />
 <meta property="og:url" content="/post/redis/redis-lua-miaosha/" /><meta property="article:section" content="post" />
 <meta property="article:published_time" content="2019-12-03T15:22:23+08:00" />
-<meta property="article:modified_time" content="2019-12-03T15:22:23+08:00" /><meta property="og:site_name" content="颇忒脱的技术博客" />
+<meta property="article:modified_time" content="2019-12-03T15:22:23+08:00" />
 
 <meta name="twitter:card" content="summary"/>
 <meta name="twitter:title" content="Redis解决超卖问题的方案汇总"/>
 <meta name="twitter:description" content=""/>
 <meta property="og:image" content="/images/avatar.jpg"/>
-  <meta name="twitter:image" content="/images/avatar.jpg"/><link rel="stylesheet" href="/css/main.min.507afbe6e4670fa3e961a0b35816b5daeb36029866fd6bd7b9d7871fcf88faa5.css" integrity="sha256-UHr75uRnD6PpYaCzWBa12us2Aphm/WvXudeHH8&#43;I&#43;qU=" crossorigin="anonymous"><link rel="stylesheet" href="/css/viewer.min.3d228794bcedbbfa0412beb8fbc1ec6973202945e42af7004f742a4d7bd620ab.css" integrity="sha256-PSKHlLztu/oEEr64&#43;8HsaXMgKUXkKvcAT3QqTXvWIKs=" crossorigin="anonymous"></head>
-  <body><script>const items=['mode','palette'];items.forEach(function(a){const b=localStorage.getItem('hbs-'+a);b&&document.body.parentElement.setAttribute('data-'+a,b)})</script><header><nav class="navbar top-app-bar top-app-bar-expand-lg fixed-top">
+  <meta name="twitter:image" content="/images/avatar.jpg"/><link rel="stylesheet" href="/css/main.min.24196952817c68c8b90d8fa573d560fa62766baa0622bdc0e862255f4a4d1307.css" integrity="sha256-JBlpUoF8aMi5DY&#43;lc9Vg&#43;mJ2a6oGIr3A6GIlX0pNEwc=" crossorigin="anonymous"><link rel="stylesheet" href="/css/viewer.min.3d228794bcedbbfa0412beb8fbc1ec6973202945e42af7004f742a4d7bd620ab.css" integrity="sha256-PSKHlLztu/oEEr64&#43;8HsaXMgKUXkKvcAT3QqTXvWIKs=" crossorigin="anonymous"></head>
+  <body><script>const items=["mode","palette"];items.forEach(function(e){const t=localStorage.getItem("hbs-"+e);t&&document.body.parentElement.setAttribute("data-"+e,t)})</script><header><nav class="navbar top-app-bar top-app-bar-expand-lg fixed-top">
   <div class="container">
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent"
       aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
@@ -238,15 +238,15 @@
 </span><span class="lnt">8
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="k">do</span> <span class="o">{</span>
-  <span class="nv">oldCount</span> <span class="o">=</span> getCount<span class="o">(</span>itemid<span class="o">)</span>
-  <span class="k">if</span> <span class="o">(</span>oldCount &lt;<span class="o">=</span> 0<span class="o">)</span> <span class="o">{</span>
-    <span class="k">return</span> <span class="nb">false</span>
-  <span class="o">}</span>
-  <span class="nv">newCount</span> <span class="o">=</span> oldCount - 1<span class="p">;</span>
-<span class="o">}</span> <span class="k">while</span> <span class="o">(</span>!compareAndSwap<span class="o">(</span>itemid, newCount, oldCount<span class="o">))</span>
-<span class="k">return</span> <span class="nb">true</span>
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl"><span class="k">do</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">  <span class="nv">oldCount</span> <span class="o">=</span> getCount<span class="o">(</span>itemid<span class="o">)</span>
+</span></span><span class="line"><span class="cl">  <span class="k">if</span> <span class="o">(</span>oldCount &lt;<span class="o">=</span> 0<span class="o">)</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">    <span class="k">return</span> <span class="nb">false</span>
+</span></span><span class="line"><span class="cl">  <span class="o">}</span>
+</span></span><span class="line"><span class="cl">  <span class="nv">newCount</span> <span class="o">=</span> oldCount - 1<span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="o">}</span> <span class="k">while</span> <span class="o">(</span>!compareAndSwap<span class="o">(</span>itemid, newCount, oldCount<span class="o">))</span>
+</span></span><span class="line"><span class="cl"><span class="k">return</span> <span class="nb">true</span>
+</span></span></code></pre></td></tr></table>
 </div>
 </div><p>主要是解决check-then-act的问题，因此真正更新Redis的时候要检查oldCount是否有变化。</p>
 <p>很遗憾，你无法使用Redis的<a href="https://redis.io/topics/transactions#optimistic-locking-using-check-and-set" target="_blank" rel="noopener noreferrer">Optimistic locking using check-and-set</a>来实现<code>compareAndSet</code>，需要使用LUA脚本来：</p>
@@ -266,19 +266,19 @@
 </span><span class="lnt">12
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-lua" data-lang="lua"><span class="c1">-- Usage: EVAL &#34;&lt;this script&gt;&#34; 1 &lt;key&gt; &lt;new-value&gt; &lt;old-value&gt;</span>
-<span class="kd">local</span> <span class="n">key</span> <span class="o">=</span> <span class="n">KEYS</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
-<span class="kd">local</span> <span class="n">newValue</span> <span class="o">=</span> <span class="n">ARGV</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
-<span class="kd">local</span> <span class="n">expectedOldValue</span> <span class="o">=</span> <span class="n">ARGV</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
-
-<span class="kd">local</span> <span class="n">oldValue</span> <span class="o">=</span> <span class="n">redis.call</span><span class="p">(</span><span class="s1">&#39;GET&#39;</span><span class="p">,</span> <span class="n">key</span><span class="p">)</span>
-
-<span class="kr">if</span> <span class="n">oldValue</span> <span class="o">==</span> <span class="n">expectedOldValue</span> <span class="kr">then</span>
-  <span class="n">redis.call</span><span class="p">(</span><span class="s1">&#39;SET&#39;</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">newValue</span><span class="p">)</span>
-  <span class="kr">return</span> <span class="s2">&#34;OK&#34;</span>
-<span class="kr">end</span>
-<span class="kr">return</span> <span class="kc">nil</span>
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-lua" data-lang="lua"><span class="line"><span class="cl"><span class="c1">-- Usage: EVAL &#34;&lt;this script&gt;&#34; 1 &lt;key&gt; &lt;new-value&gt; &lt;old-value&gt;</span>
+</span></span><span class="line"><span class="cl"><span class="kd">local</span> <span class="n">key</span> <span class="o">=</span> <span class="n">KEYS</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+</span></span><span class="line"><span class="cl"><span class="kd">local</span> <span class="n">newValue</span> <span class="o">=</span> <span class="n">ARGV</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+</span></span><span class="line"><span class="cl"><span class="kd">local</span> <span class="n">expectedOldValue</span> <span class="o">=</span> <span class="n">ARGV</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">local</span> <span class="n">oldValue</span> <span class="o">=</span> <span class="n">redis.call</span><span class="p">(</span><span class="s1">&#39;GET&#39;</span><span class="p">,</span> <span class="n">key</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kr">if</span> <span class="n">oldValue</span> <span class="o">==</span> <span class="n">expectedOldValue</span> <span class="kr">then</span>
+</span></span><span class="line"><span class="cl">  <span class="n">redis.call</span><span class="p">(</span><span class="s1">&#39;SET&#39;</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">newValue</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">  <span class="kr">return</span> <span class="s2">&#34;OK&#34;</span>
+</span></span><span class="line"><span class="cl"><span class="kr">end</span>
+</span></span><span class="line"><span class="cl"><span class="kr">return</span> <span class="kc">nil</span>
+</span></span></code></pre></td></tr></table>
 </div>
 </div><p>乐观锁的实现比较复杂，每次更新时都得判断数据是否发生变化，且多了几次查询动作，增加了网络开销。</p>
 <h2 id="利用list">利用List<a class="anchor ms-1" href="#利用list"><i class="fas fa-link"></i></a></h2>
@@ -292,11 +292,11 @@
 </span><span class="lnt">4
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="k">if</span> <span class="o">(</span>nil !<span class="o">=</span> redis.lpop<span class="o">(</span>itemid<span class="o">))</span> <span class="o">{</span>
-  <span class="k">return</span> <span class="nb">true</span>
-<span class="o">}</span>
-<span class="k">return</span> <span class="nb">false</span>
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl"><span class="k">if</span> <span class="o">(</span>nil !<span class="o">=</span> redis.lpop<span class="o">(</span>itemid<span class="o">))</span> <span class="o">{</span>
+</span></span><span class="line"><span class="cl">  <span class="k">return</span> <span class="nb">true</span>
+</span></span><span class="line"><span class="cl"><span class="o">}</span>
+</span></span><span class="line"><span class="cl"><span class="k">return</span> <span class="nb">false</span>
+</span></span></code></pre></td></tr></table>
 </div>
 </div><p>这个方法的缺陷在于浪费了Redis的空间，事先维护List也是一项工作。</p>
 <h2 id="lua脚本">LUA脚本<a class="anchor ms-1" href="#lua脚本"><i class="fas fa-link"></i></a></h2>
@@ -333,35 +333,35 @@
 </span><span class="lnt">28
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-lua" data-lang="lua"><span class="c1">-- Usage: EVAL &#34;&lt;this script&gt;&#34; 1 &lt;good-id&gt; &lt;activity-id&gt; &lt;user-id&gt;</span>
-<span class="c1">-- KEYS [good-id]</span>
-<span class="c1">-- ARGV [activity-id,user-id]</span>
-<span class="c1">-- return -1:库存不足 0:重复购买 1:成功</span>
-
-<span class="kd">local</span> <span class="n">good</span> <span class="o">=</span> <span class="n">KEYS</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
-<span class="kd">local</span> <span class="n">activity</span> <span class="o">=</span> <span class="n">ARGV</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
-<span class="kd">local</span> <span class="n">uid</span> <span class="o">=</span> <span class="n">ARGV</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
-<span class="kd">local</span> <span class="n">gooduids</span> <span class="o">=</span> <span class="n">good</span> <span class="o">..</span> <span class="s1">&#39;:&#39;</span> <span class="o">..</span> <span class="n">activity</span> <span class="o">..</span> <span class="s1">&#39;:uids&#39;</span>
-
-<span class="kd">local</span> <span class="n">isin</span> <span class="o">=</span> <span class="n">redis.call</span><span class="p">(</span><span class="s1">&#39;SISMEMBER&#39;</span><span class="p">,</span> <span class="n">gooduids</span><span class="p">,</span> <span class="n">uid</span><span class="p">)</span>
-
-<span class="kr">if</span> <span class="n">isin</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="kr">then</span>
-  <span class="kr">return</span> <span class="mi">0</span>
-<span class="kr">end</span>
-
-<span class="kd">local</span> <span class="n">goodstock</span> <span class="o">=</span> <span class="n">good</span> <span class="o">..</span> <span class="s1">&#39;:&#39;</span> <span class="o">..</span> <span class="n">activity</span> <span class="o">..</span> <span class="s1">&#39;:stock&#39;</span>
-<span class="kd">local</span> <span class="n">stock</span> <span class="o">=</span> <span class="n">redis.call</span><span class="p">(</span><span class="s1">&#39;GET&#39;</span><span class="p">,</span> <span class="n">goodstock</span><span class="p">)</span>
-
-<span class="kr">if</span> <span class="ow">not</span> <span class="n">stock</span> <span class="ow">or</span> <span class="n">tonumber</span><span class="p">(</span><span class="n">stock</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="mi">0</span> <span class="kr">then</span>
-  <span class="kr">return</span> <span class="o">-</span><span class="mi">1</span>
-<span class="kr">end</span>
-
-<span class="n">redis.call</span><span class="p">(</span><span class="s1">&#39;DECR&#39;</span><span class="p">,</span> <span class="n">goodstock</span><span class="p">)</span>
-<span class="n">redis.call</span><span class="p">(</span><span class="s1">&#39;SADD&#39;</span><span class="p">,</span> <span class="n">gooduids</span><span class="p">,</span> <span class="n">uid</span><span class="p">)</span>
-<span class="kr">return</span> <span class="mi">1</span>
-<span class="c1">-- ————————————————</span>
-<span class="c1">-- 版权声明：本文为CSDN博主「姚仔」的原创文章，遵循 CC 4.0 BY-SA 版权协议，转载请附上原文出处链接及本声明。</span>
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-lua" data-lang="lua"><span class="line"><span class="cl"><span class="c1">-- Usage: EVAL &#34;&lt;this script&gt;&#34; 1 &lt;good-id&gt; &lt;activity-id&gt; &lt;user-id&gt;</span>
+</span></span><span class="line"><span class="cl"><span class="c1">-- KEYS [good-id]</span>
+</span></span><span class="line"><span class="cl"><span class="c1">-- ARGV [activity-id,user-id]</span>
+</span></span><span class="line"><span class="cl"><span class="c1">-- return -1:库存不足 0:重复购买 1:成功</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">local</span> <span class="n">good</span> <span class="o">=</span> <span class="n">KEYS</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+</span></span><span class="line"><span class="cl"><span class="kd">local</span> <span class="n">activity</span> <span class="o">=</span> <span class="n">ARGV</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+</span></span><span class="line"><span class="cl"><span class="kd">local</span> <span class="n">uid</span> <span class="o">=</span> <span class="n">ARGV</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+</span></span><span class="line"><span class="cl"><span class="kd">local</span> <span class="n">gooduids</span> <span class="o">=</span> <span class="n">good</span> <span class="o">..</span> <span class="s1">&#39;:&#39;</span> <span class="o">..</span> <span class="n">activity</span> <span class="o">..</span> <span class="s1">&#39;:uids&#39;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">local</span> <span class="n">isin</span> <span class="o">=</span> <span class="n">redis.call</span><span class="p">(</span><span class="s1">&#39;SISMEMBER&#39;</span><span class="p">,</span> <span class="n">gooduids</span><span class="p">,</span> <span class="n">uid</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kr">if</span> <span class="n">isin</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="kr">then</span>
+</span></span><span class="line"><span class="cl">  <span class="kr">return</span> <span class="mi">0</span>
+</span></span><span class="line"><span class="cl"><span class="kr">end</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">local</span> <span class="n">goodstock</span> <span class="o">=</span> <span class="n">good</span> <span class="o">..</span> <span class="s1">&#39;:&#39;</span> <span class="o">..</span> <span class="n">activity</span> <span class="o">..</span> <span class="s1">&#39;:stock&#39;</span>
+</span></span><span class="line"><span class="cl"><span class="kd">local</span> <span class="n">stock</span> <span class="o">=</span> <span class="n">redis.call</span><span class="p">(</span><span class="s1">&#39;GET&#39;</span><span class="p">,</span> <span class="n">goodstock</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kr">if</span> <span class="ow">not</span> <span class="n">stock</span> <span class="ow">or</span> <span class="n">tonumber</span><span class="p">(</span><span class="n">stock</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="mi">0</span> <span class="kr">then</span>
+</span></span><span class="line"><span class="cl">  <span class="kr">return</span> <span class="o">-</span><span class="mi">1</span>
+</span></span><span class="line"><span class="cl"><span class="kr">end</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">redis.call</span><span class="p">(</span><span class="s1">&#39;DECR&#39;</span><span class="p">,</span> <span class="n">goodstock</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">redis.call</span><span class="p">(</span><span class="s1">&#39;SADD&#39;</span><span class="p">,</span> <span class="n">gooduids</span><span class="p">,</span> <span class="n">uid</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="kr">return</span> <span class="mi">1</span>
+</span></span><span class="line"><span class="cl"><span class="c1">-- ————————————————</span>
+</span></span><span class="line"><span class="cl"><span class="c1">-- 版权声明：本文为CSDN博主「姚仔」的原创文章，遵循 CC 4.0 BY-SA 版权协议，转载请附上原文出处链接及本声明。</span>
+</span></span></code></pre></td></tr></table>
 </div>
 </div><p>LUA脚本来实现业务和用数据库存储过程来实现业务一样，具有灵活性不够、难以维护的问题。如果秒杀业务再复制一点，相信LUA脚本就会变得难以维护。如果秒杀业务需要外部系统的信息，则LUA脚本就不能胜任了。</p></div></div>
   <div class="card-footer"><div class="post-navs d-flex justify-content-evenly"><div class="post-nav post-prev">
@@ -478,6 +478,9 @@
   </div>
   <div class="card-body">
     <ul class="post-list"><li>
+        <a href="/post/mysql/charset-intro/">MySQL - 字符集简介
+</a>
+      </li><li>
         <a href="/post/prometheus/how-to-customize/">如何定制 Prometheus 项目
 </a>
       </li><li>
@@ -488,9 +491,6 @@
 </a>
       </li><li>
         <a href="/post/iphone-to-huawei/download-icloud-photos/">批量导出 ICloud 照片到本地
-</a>
-      </li><li>
-        <a href="/post/rancher/kube-apiserver-profiling/">Rancher 给 Kube-Apiserver 开启 Pprof
 </a>
       </li></ul>
   </div>
@@ -507,7 +507,7 @@
             troubleshooting<span class="badge badge-sm text-white bg-accent ms-1">40</span></a><a href="/tags/jvm/" class="badge rounded post-taxonomy" title="jvm">
             jvm<span class="badge badge-sm text-white bg-accent ms-1">39</span></a><a href="/tags/docker/" class="badge rounded post-taxonomy" title="docker">
             docker<span class="badge badge-sm text-white bg-accent ms-1">29</span></a><a href="/tags/mysql/" class="badge rounded post-taxonomy" title="mysql">
-            mysql<span class="badge badge-sm text-white bg-accent ms-1">24</span></a><a href="/tags/network/" class="badge rounded post-taxonomy" title="network">
+            mysql<span class="badge badge-sm text-white bg-accent ms-1">25</span></a><a href="/tags/network/" class="badge rounded post-taxonomy" title="network">
             network<span class="badge badge-sm text-white bg-accent ms-1">22</span></a><a href="/tags/cheatsheet/" class="badge rounded post-taxonomy" title="cheatsheet">
             cheatsheet<span class="badge badge-sm text-white bg-accent ms-1">21</span></a><a href="/tags/%E5%B9%B6%E5%8F%91%E7%BC%96%E7%A8%8B/" class="badge rounded post-taxonomy" title="并发编程">
             并发编程<span class="badge badge-sm text-white bg-accent ms-1">20</span></a><a href="/tags/kernel/" class="badge rounded post-taxonomy" title="kernel">
@@ -609,7 +609,7 @@
     <img src="https://www.netlify.com/img/global/badges/netlify-color-accent.svg" alt="Deploys by Netlify" width="114" height="51" />
 </a>
 </footer>
-<script src="/js/main.2cdce25f280f570596c88888d6af930fe5e15ea030005291dad293defbb231d3.js" integrity="sha256-LNziXygPVwWWyIiI1q&#43;TD&#43;XhXqAwAFKR2tKT3vuyMdM=" crossorigin="anonymous" defer></script><script src="/js/icons.min.8ddcaafc364ff0296c2209c5495287f0de039b852da9b24847f94c198b7639b6.js" integrity="sha256-jdyq/DZP8ClsIgnFSVKH8N4Dm4UtqbJIR/lMGYt2ObY=" crossorigin="anonymous" defer></script>
+<script src="/js/main.2cdce25f280f570596c88888d6af930fe5e15ea030005291dad293defbb231d3.js" integrity="sha256-LNziXygPVwWWyIiI1q&#43;TD&#43;XhXqAwAFKR2tKT3vuyMdM=" crossorigin="anonymous" defer></script><script src="/js/icons.min.7b1f27dfde35467d03350938b2e41dbffd06347009b97ab913edfaca01a07814.js" integrity="sha256-ex8n3941Rn0DNQk4suQdv/0GNHAJuXq5E&#43;36ygGgeBQ=" crossorigin="anonymous" defer></script>
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
@@ -620,6 +620,6 @@ if ('serviceWorker' in navigator) {
     });
   });
 }
-</script><script src="/js/viewer.min.652118a9fbf3403cdfde4026209f97ace22f9e334f0b45a33431a221b3db46a8.js" integrity="sha256-ZSEYqfvzQDzf3kAmIJ&#43;XrOIvnjNPC0WjNDGiIbPbRqg=" crossorigin="anonymous" defer></script>
+</script><script src="/js/viewer.min.1ec1fa5aa3a66267222a44fe1cd51856ad4a92be48ede579fb36d70a6d4c28e9.js" integrity="sha256-HsH6WqOmYmciKkT&#43;HNUYVq1Kkr5I7eV5&#43;zbXCm1MKOk=" crossorigin="anonymous" defer></script>
 </body>
 </html>

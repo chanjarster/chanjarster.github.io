@@ -12,20 +12,20 @@
 <meta name="description" content="" /><meta name="robots" content="index, follow" /><meta itemprop="name" content="排查Ingress对象status字段不更新的问题">
 <meta itemprop="description" content=""><meta itemprop="datePublished" content="2021-05-14T09:10:20+08:00" />
 <meta itemprop="dateModified" content="2021-05-14T09:10:20+08:00" />
-<meta itemprop="wordCount" content="1827">
+<meta itemprop="wordCount" content="1846">
 <meta itemprop="keywords" content="k8s,ingress,troubleshooting," /><meta property="og:title" content="排查Ingress对象status字段不更新的问题" />
 <meta property="og:description" content="" />
 <meta property="og:type" content="article" />
 <meta property="og:url" content="/post/ingress-status-not-update-troubleshooting/" /><meta property="article:section" content="post" />
 <meta property="article:published_time" content="2021-05-14T09:10:20+08:00" />
-<meta property="article:modified_time" content="2021-05-14T09:10:20+08:00" /><meta property="og:site_name" content="颇忒脱的技术博客" />
+<meta property="article:modified_time" content="2021-05-14T09:10:20+08:00" />
 
 <meta name="twitter:card" content="summary"/>
 <meta name="twitter:title" content="排查Ingress对象status字段不更新的问题"/>
 <meta name="twitter:description" content=""/>
 <meta property="og:image" content="/images/avatar.jpg"/>
-  <meta name="twitter:image" content="/images/avatar.jpg"/><link rel="stylesheet" href="/css/main.min.507afbe6e4670fa3e961a0b35816b5daeb36029866fd6bd7b9d7871fcf88faa5.css" integrity="sha256-UHr75uRnD6PpYaCzWBa12us2Aphm/WvXudeHH8&#43;I&#43;qU=" crossorigin="anonymous"><link rel="stylesheet" href="/css/viewer.min.3d228794bcedbbfa0412beb8fbc1ec6973202945e42af7004f742a4d7bd620ab.css" integrity="sha256-PSKHlLztu/oEEr64&#43;8HsaXMgKUXkKvcAT3QqTXvWIKs=" crossorigin="anonymous"></head>
-  <body><script>const items=['mode','palette'];items.forEach(function(a){const b=localStorage.getItem('hbs-'+a);b&&document.body.parentElement.setAttribute('data-'+a,b)})</script><header><nav class="navbar top-app-bar top-app-bar-expand-lg fixed-top">
+  <meta name="twitter:image" content="/images/avatar.jpg"/><link rel="stylesheet" href="/css/main.min.24196952817c68c8b90d8fa573d560fa62766baa0622bdc0e862255f4a4d1307.css" integrity="sha256-JBlpUoF8aMi5DY&#43;lc9Vg&#43;mJ2a6oGIr3A6GIlX0pNEwc=" crossorigin="anonymous"><link rel="stylesheet" href="/css/viewer.min.3d228794bcedbbfa0412beb8fbc1ec6973202945e42af7004f742a4d7bd620ab.css" integrity="sha256-PSKHlLztu/oEEr64&#43;8HsaXMgKUXkKvcAT3QqTXvWIKs=" crossorigin="anonymous"></head>
+  <body><script>const items=["mode","palette"];items.forEach(function(e){const t=localStorage.getItem("hbs-"+e);t&&document.body.parentElement.setAttribute("data-"+e,t)})</script><header><nav class="navbar top-app-bar top-app-bar-expand-lg fixed-top">
   <div class="container">
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent"
       aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
@@ -280,9 +280,9 @@
 </span><span class="lnt">2
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="nv">TOKEN</span><span class="o">=</span><span class="sb">`</span>cat /var/run/secrets/kubernetes.io/serviceaccount/token<span class="sb">`</span>
-curl -k https://10.43.0.1:443/api --header <span class="s2">&#34;Authorization: Bearer </span><span class="nv">$TOKEN</span><span class="s2">&#34;</span>
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl"><span class="nv">TOKEN</span><span class="o">=</span><span class="sb">`</span>cat /var/run/secrets/kubernetes.io/serviceaccount/token<span class="sb">`</span>
+</span></span><span class="line"><span class="cl">curl -k https://10.43.0.1:443/api --header <span class="s2">&#34;Authorization: Bearer </span><span class="nv">$TOKEN</span><span class="s2">&#34;</span>
+</span></span></code></pre></td></tr></table>
 </div>
 </div><p>发现和API Server的通信是OK的。</p>
 <h2 id="检查ingress-controller的service-account的权限是否足够">检查Ingress Controller的Service Account的权限是否足够<a class="anchor ms-1" href="#检查ingress-controller的service-account的权限是否足够"><i class="fas fa-link"></i></a></h2>
@@ -348,64 +348,64 @@ curl -k https://10.43.0.1:443/api --header <span class="s2">&#34;Authorization: 
 </span><span class="lnt">57
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">&gt; kubectl -n ingress-nginx get sa
-NAME                           SECRETS   AGE
-default                        <span class="m">1</span>         440d
-nginx-ingress-serviceaccount   <span class="m">1</span>         440d
-
-&gt; kubectl -n ingress-nginx get rolebinding
-NAME                              AGE
-clusterrolebinding-2ltlc          440d
-clusterrolebinding-6sk8h          440d
-clusterrolebinding-964mz          440d
-clusterrolebinding-znvvl          440d
-nginx-ingress-role-nisa-binding   440d
-
-&gt; kubectl -n ingress-nginx get rolebinding nginx-ingress-role-nisa-binding
-…
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: Role
-  name: nginx-ingress-role
-subjects:
-- kind: ServiceAccount
-  name: nginx-ingress-serviceaccount
-  namespace: ingress-nginx
-
-&gt; kubectl -n ingress-nginx get role nginx-ingress-role -o yaml
-…
-rules:
-- apiGroups:
-  - <span class="s2">&#34;&#34;</span>
-  resources:
-  - configmaps
-  - pods
-  - secrets
-  - namespaces
-  verbs:
-  - get
-- apiGroups:
-  - <span class="s2">&#34;&#34;</span>
-  resourceNames:
-  - ingress-controller-leader-nginx
-  resources:
-  - configmaps
-  verbs:
-  - get
-  - update
-- apiGroups:
-  - <span class="s2">&#34;&#34;</span>
-  resources:
-  - configmaps
-  verbs:
-  - create
-- apiGroups:
-  - <span class="s2">&#34;&#34;</span>
-  resources:
-  - endpoints
-  verbs:
-  - get
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">&gt; kubectl -n ingress-nginx get sa
+</span></span><span class="line"><span class="cl">NAME                           SECRETS   AGE
+</span></span><span class="line"><span class="cl">default                        <span class="m">1</span>         440d
+</span></span><span class="line"><span class="cl">nginx-ingress-serviceaccount   <span class="m">1</span>         440d
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">&gt; kubectl -n ingress-nginx get rolebinding
+</span></span><span class="line"><span class="cl">NAME                              AGE
+</span></span><span class="line"><span class="cl">clusterrolebinding-2ltlc          440d
+</span></span><span class="line"><span class="cl">clusterrolebinding-6sk8h          440d
+</span></span><span class="line"><span class="cl">clusterrolebinding-964mz          440d
+</span></span><span class="line"><span class="cl">clusterrolebinding-znvvl          440d
+</span></span><span class="line"><span class="cl">nginx-ingress-role-nisa-binding   440d
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">&gt; kubectl -n ingress-nginx get rolebinding nginx-ingress-role-nisa-binding
+</span></span><span class="line"><span class="cl">…
+</span></span><span class="line"><span class="cl">roleRef:
+</span></span><span class="line"><span class="cl">  apiGroup: rbac.authorization.k8s.io
+</span></span><span class="line"><span class="cl">  kind: Role
+</span></span><span class="line"><span class="cl">  name: nginx-ingress-role
+</span></span><span class="line"><span class="cl">subjects:
+</span></span><span class="line"><span class="cl">- kind: ServiceAccount
+</span></span><span class="line"><span class="cl">  name: nginx-ingress-serviceaccount
+</span></span><span class="line"><span class="cl">  namespace: ingress-nginx
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">&gt; kubectl -n ingress-nginx get role nginx-ingress-role -o yaml
+</span></span><span class="line"><span class="cl">…
+</span></span><span class="line"><span class="cl">rules:
+</span></span><span class="line"><span class="cl">- apiGroups:
+</span></span><span class="line"><span class="cl">  - <span class="s2">&#34;&#34;</span>
+</span></span><span class="line"><span class="cl">  resources:
+</span></span><span class="line"><span class="cl">  - configmaps
+</span></span><span class="line"><span class="cl">  - pods
+</span></span><span class="line"><span class="cl">  - secrets
+</span></span><span class="line"><span class="cl">  - namespaces
+</span></span><span class="line"><span class="cl">  verbs:
+</span></span><span class="line"><span class="cl">  - get
+</span></span><span class="line"><span class="cl">- apiGroups:
+</span></span><span class="line"><span class="cl">  - <span class="s2">&#34;&#34;</span>
+</span></span><span class="line"><span class="cl">  resourceNames:
+</span></span><span class="line"><span class="cl">  - ingress-controller-leader-nginx
+</span></span><span class="line"><span class="cl">  resources:
+</span></span><span class="line"><span class="cl">  - configmaps
+</span></span><span class="line"><span class="cl">  verbs:
+</span></span><span class="line"><span class="cl">  - get
+</span></span><span class="line"><span class="cl">  - update
+</span></span><span class="line"><span class="cl">- apiGroups:
+</span></span><span class="line"><span class="cl">  - <span class="s2">&#34;&#34;</span>
+</span></span><span class="line"><span class="cl">  resources:
+</span></span><span class="line"><span class="cl">  - configmaps
+</span></span><span class="line"><span class="cl">  verbs:
+</span></span><span class="line"><span class="cl">  - create
+</span></span><span class="line"><span class="cl">- apiGroups:
+</span></span><span class="line"><span class="cl">  - <span class="s2">&#34;&#34;</span>
+</span></span><span class="line"><span class="cl">  resources:
+</span></span><span class="line"><span class="cl">  - endpoints
+</span></span><span class="line"><span class="cl">  verbs:
+</span></span><span class="line"><span class="cl">  - get
+</span></span></code></pre></td></tr></table>
 </div>
 </div><p>发现权限是足够的，而且和一个正常的集群对比，结果也是一样的。</p>
 <h2 id="再次观察ingress-controller的日志">再次观察ingress controller的日志<a class="anchor ms-1" href="#再次观察ingress-controller的日志"><i class="fas fa-link"></i></a></h2>
@@ -416,8 +416,8 @@ rules:
 <pre tabindex="0" class="chroma"><code><span class="lnt">1
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">I0512 03:52:31.256060 <span class="m">6</span> status.go:86<span class="o">]</span> new  leader elected: nginx-ingress-controller-qxlt8  
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">I0512 03:52:31.256060 <span class="m">6</span> status.go:86<span class="o">]</span> new  leader elected: nginx-ingress-controller-qxlt8  
+</span></span></code></pre></td></tr></table>
 </div>
 </div><p>所有ingress-controller推举leader为 nginx-ingress-controller-qxlt8。</p>
 <p>但是在K8S里根本就不存在名字是这个的Pod。</p>
@@ -458,37 +458,37 @@ rules:
 </span><span class="lnt">30
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">&gt; docker <span class="nb">exec</span> -it etcd etcdctl get / --prefix --keys-only <span class="p">|</span> grep ingress-controller
-
-/registry/configmaps/ingress-nginx/ingress-controller-leader-nginx
-/registry/configmaps/kube-system/rke-ingress-controller
-/registry/controllerrevisions/ingress-nginx/nginx-ingress-controller-544c7854f8
-/registry/controllerrevisions/ingress-nginx/nginx-ingress-controller-668ccb87b6
-/registry/controllerrevisions/ingress-nginx/nginx-ingress-controller-678b59dd78
-/registry/controllerrevisions/ingress-nginx/nginx-ingress-controller-6c4d466577
-/registry/controllerrevisions/ingress-nginx/nginx-ingress-controller-7577d75bc9
-/registry/controllerrevisions/ingress-nginx/nginx-ingress-controller-767b694845
-/registry/controllerrevisions/ingress-nginx/nginx-ingress-controller-779b9c5dc8
-/registry/controllerrevisions/ingress-nginx/nginx-ingress-controller-7854ff6b8d
-/registry/controllerrevisions/ingress-nginx/nginx-ingress-controller-7f8fdf4c75
-/registry/controllerrevisions/ingress-nginx/nginx-ingress-controller-8446bfc58
-/registry/controllerrevisions/ingress-nginx/nginx-ingress-controller-9cc858b66
-/registry/daemonsets/ingress-nginx/nginx-ingress-controller
-/registry/jobs/kube-system/rke-ingress-controller-deploy-job
-/registry/pods/ingress-nginx/nginx-ingress-controller-2f6nf
-/registry/pods/ingress-nginx/nginx-ingress-controller-2zk9s
-/registry/pods/ingress-nginx/nginx-ingress-controller-6lzr4
-/registry/pods/ingress-nginx/nginx-ingress-controller-c9gxl
-/registry/pods/ingress-nginx/nginx-ingress-controller-fj94z
-/registry/pods/ingress-nginx/nginx-ingress-controller-gstz8
-/registry/pods/ingress-nginx/nginx-ingress-controller-kks2w
-/registry/pods/ingress-nginx/nginx-ingress-controller-ntmqm
-/registry/pods/ingress-nginx/nginx-ingress-controller-qjwkw
-/registry/pods/ingress-nginx/nginx-ingress-controller-rfbls
-/registry/pods/ingress-nginx/nginx-ingress-controller-rt5bp
-/registry/pods/ingress-nginx/nginx-ingress-controller-xjcgl
-/registry/pods/kube-system/rke-ingress-controller-deploy-job-2vmwq
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">&gt; docker <span class="nb">exec</span> -it etcd etcdctl get / --prefix --keys-only <span class="p">|</span> grep ingress-controller
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">/registry/configmaps/ingress-nginx/ingress-controller-leader-nginx
+</span></span><span class="line"><span class="cl">/registry/configmaps/kube-system/rke-ingress-controller
+</span></span><span class="line"><span class="cl">/registry/controllerrevisions/ingress-nginx/nginx-ingress-controller-544c7854f8
+</span></span><span class="line"><span class="cl">/registry/controllerrevisions/ingress-nginx/nginx-ingress-controller-668ccb87b6
+</span></span><span class="line"><span class="cl">/registry/controllerrevisions/ingress-nginx/nginx-ingress-controller-678b59dd78
+</span></span><span class="line"><span class="cl">/registry/controllerrevisions/ingress-nginx/nginx-ingress-controller-6c4d466577
+</span></span><span class="line"><span class="cl">/registry/controllerrevisions/ingress-nginx/nginx-ingress-controller-7577d75bc9
+</span></span><span class="line"><span class="cl">/registry/controllerrevisions/ingress-nginx/nginx-ingress-controller-767b694845
+</span></span><span class="line"><span class="cl">/registry/controllerrevisions/ingress-nginx/nginx-ingress-controller-779b9c5dc8
+</span></span><span class="line"><span class="cl">/registry/controllerrevisions/ingress-nginx/nginx-ingress-controller-7854ff6b8d
+</span></span><span class="line"><span class="cl">/registry/controllerrevisions/ingress-nginx/nginx-ingress-controller-7f8fdf4c75
+</span></span><span class="line"><span class="cl">/registry/controllerrevisions/ingress-nginx/nginx-ingress-controller-8446bfc58
+</span></span><span class="line"><span class="cl">/registry/controllerrevisions/ingress-nginx/nginx-ingress-controller-9cc858b66
+</span></span><span class="line"><span class="cl">/registry/daemonsets/ingress-nginx/nginx-ingress-controller
+</span></span><span class="line"><span class="cl">/registry/jobs/kube-system/rke-ingress-controller-deploy-job
+</span></span><span class="line"><span class="cl">/registry/pods/ingress-nginx/nginx-ingress-controller-2f6nf
+</span></span><span class="line"><span class="cl">/registry/pods/ingress-nginx/nginx-ingress-controller-2zk9s
+</span></span><span class="line"><span class="cl">/registry/pods/ingress-nginx/nginx-ingress-controller-6lzr4
+</span></span><span class="line"><span class="cl">/registry/pods/ingress-nginx/nginx-ingress-controller-c9gxl
+</span></span><span class="line"><span class="cl">/registry/pods/ingress-nginx/nginx-ingress-controller-fj94z
+</span></span><span class="line"><span class="cl">/registry/pods/ingress-nginx/nginx-ingress-controller-gstz8
+</span></span><span class="line"><span class="cl">/registry/pods/ingress-nginx/nginx-ingress-controller-kks2w
+</span></span><span class="line"><span class="cl">/registry/pods/ingress-nginx/nginx-ingress-controller-ntmqm
+</span></span><span class="line"><span class="cl">/registry/pods/ingress-nginx/nginx-ingress-controller-qjwkw
+</span></span><span class="line"><span class="cl">/registry/pods/ingress-nginx/nginx-ingress-controller-rfbls
+</span></span><span class="line"><span class="cl">/registry/pods/ingress-nginx/nginx-ingress-controller-rt5bp
+</span></span><span class="line"><span class="cl">/registry/pods/ingress-nginx/nginx-ingress-controller-xjcgl
+</span></span><span class="line"><span class="cl">/registry/pods/kube-system/rke-ingress-controller-deploy-job-2vmwq
+</span></span></code></pre></td></tr></table>
 </div>
 </div><p>没有 nginx-ingress-controller-qxlt8 这个Pod。</p>
 <p>但是注意到 configmap ingress-controller-leader-nginx。</p>
@@ -508,18 +508,18 @@ rules:
 </span><span class="lnt">11
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-yaml" data-lang="yaml"><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l">v1</span><span class="w">
-</span><span class="w"></span><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l">ConfigMap</span><span class="w">
-</span><span class="w"></span><span class="nt">metadata</span><span class="p">:</span><span class="w">
-</span><span class="w">  </span><span class="nt">annotations</span><span class="p">:</span><span class="w">
-</span><span class="w">    </span><span class="nt">control-plane.alpha.kubernetes.io/leader</span><span class="p">:</span><span class="w"> </span><span class="s1">&#39;{&#34;holderIdentity&#34;:&#34;nginx-ingress-controller-qxlt8&#34;,&#34;leaseDurationSeconds&#34;:30,&#34;acquireTime&#34;:&#34;2021-05-10T13:38:53Z&#34;,&#34;renewTime&#34;:&#34;2021-05-12T06:28:50Z&#34;,&#34;leaderTransitions&#34;:11}&#39;</span><span class="w">
-</span><span class="w">  </span><span class="nt">creationTimestamp</span><span class="p">:</span><span class="w"> </span><span class="s2">&#34;2020-02-26T10:37:12Z&#34;</span><span class="w">
-</span><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">ingress-controller-leader-nginx</span><span class="w">
-</span><span class="w">  </span><span class="nt">namespace</span><span class="p">:</span><span class="w"> </span><span class="l">ingress-nginx</span><span class="w">
-</span><span class="w">  </span><span class="nt">resourceVersion</span><span class="p">:</span><span class="w"> </span><span class="s2">&#34;230445553&#34;</span><span class="w">
-</span><span class="w">  </span><span class="nt">selfLink</span><span class="p">:</span><span class="w"> </span><span class="l">/api/v1/namespaces/ingress-nginx/configmaps/ingress-controller-leader-nginx</span><span class="w">
-</span><span class="w">  </span><span class="nt">uid</span><span class="p">:</span><span class="w"> </span><span class="l">14a0deec-eab4-44d1-aff1-36979b52a1e1</span><span class="w">
-</span></code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-yaml" data-lang="yaml"><span class="line"><span class="cl"><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l">v1</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l">ConfigMap</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="nt">metadata</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">annotations</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">control-plane.alpha.kubernetes.io/leader</span><span class="p">:</span><span class="w"> </span><span class="s1">&#39;{&#34;holderIdentity&#34;:&#34;nginx-ingress-controller-qxlt8&#34;,&#34;leaseDurationSeconds&#34;:30,&#34;acquireTime&#34;:&#34;2021-05-10T13:38:53Z&#34;,&#34;renewTime&#34;:&#34;2021-05-12T06:28:50Z&#34;,&#34;leaderTransitions&#34;:11}&#39;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">creationTimestamp</span><span class="p">:</span><span class="w"> </span><span class="s2">&#34;2020-02-26T10:37:12Z&#34;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">ingress-controller-leader-nginx</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">namespace</span><span class="p">:</span><span class="w"> </span><span class="l">ingress-nginx</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">resourceVersion</span><span class="p">:</span><span class="w"> </span><span class="s2">&#34;230445553&#34;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">selfLink</span><span class="p">:</span><span class="w"> </span><span class="l">/api/v1/namespaces/ingress-nginx/configmaps/ingress-controller-leader-nginx</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">uid</span><span class="p">:</span><span class="w"> </span><span class="l">14a0deec-eab4-44d1-aff1-36979b52a1e1</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
 </div>
 </div><p>这个configmap是ingress-controller维护的，目前的值显然是错了。</p>
 <h2 id="再次研究ingress-controller的leader推举机制">再次研究ingress-controller的leader推举机制<a class="anchor ms-1" href="#再次研究ingress-controller的leader推举机制"><i class="fas fa-link"></i></a></h2>
@@ -539,11 +539,11 @@ rules:
 </span><span class="lnt">4
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash">$ docker ps -a<span class="p">|</span>grep ingress
-...
-f4c861555842        a80ffa0b898e                         <span class="s2">&#34;/usr/bin/dumb-init â€¦&#34;</span>   <span class="m">5</span> months ago        Up <span class="m">5</span> months                                     k8s_nginx-ingress-controller_nginx-ingress-controller-qxlt8_ingress-nginx_40487677-32c0-4936-bd1a-3e3cb99fbfa1_0
-...
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">$ docker ps -a<span class="p">|</span>grep ingress
+</span></span><span class="line"><span class="cl">...
+</span></span><span class="line"><span class="cl">f4c861555842        a80ffa0b898e                         <span class="s2">&#34;/usr/bin/dumb-init â€¦&#34;</span>   <span class="m">5</span> months ago        Up <span class="m">5</span> months                                     k8s_nginx-ingress-controller_nginx-ingress-controller-qxlt8_ingress-nginx_40487677-32c0-4936-bd1a-3e3cb99fbfa1_0
+</span></span><span class="line"><span class="cl">...
+</span></span></code></pre></td></tr></table>
 </div>
 </div><p>印证了之前的推断。</p>
 <p>把这台服务器上的kubelet、kube-proxy和ingress-controller容器停掉。</p>
@@ -684,6 +684,9 @@ f4c861555842        a80ffa0b898e                         <span class="s2">&#34;/
   </div>
   <div class="card-body">
     <ul class="post-list"><li>
+        <a href="/post/mysql/charset-intro/">MySQL - 字符集简介
+</a>
+      </li><li>
         <a href="/post/prometheus/how-to-customize/">如何定制 Prometheus 项目
 </a>
       </li><li>
@@ -694,9 +697,6 @@ f4c861555842        a80ffa0b898e                         <span class="s2">&#34;/
 </a>
       </li><li>
         <a href="/post/iphone-to-huawei/download-icloud-photos/">批量导出 ICloud 照片到本地
-</a>
-      </li><li>
-        <a href="/post/rancher/kube-apiserver-profiling/">Rancher 给 Kube-Apiserver 开启 Pprof
 </a>
       </li></ul>
   </div>
@@ -713,7 +713,7 @@ f4c861555842        a80ffa0b898e                         <span class="s2">&#34;/
             troubleshooting<span class="badge badge-sm text-white bg-accent ms-1">40</span></a><a href="/tags/jvm/" class="badge rounded post-taxonomy" title="jvm">
             jvm<span class="badge badge-sm text-white bg-accent ms-1">39</span></a><a href="/tags/docker/" class="badge rounded post-taxonomy" title="docker">
             docker<span class="badge badge-sm text-white bg-accent ms-1">29</span></a><a href="/tags/mysql/" class="badge rounded post-taxonomy" title="mysql">
-            mysql<span class="badge badge-sm text-white bg-accent ms-1">24</span></a><a href="/tags/network/" class="badge rounded post-taxonomy" title="network">
+            mysql<span class="badge badge-sm text-white bg-accent ms-1">25</span></a><a href="/tags/network/" class="badge rounded post-taxonomy" title="network">
             network<span class="badge badge-sm text-white bg-accent ms-1">22</span></a><a href="/tags/cheatsheet/" class="badge rounded post-taxonomy" title="cheatsheet">
             cheatsheet<span class="badge badge-sm text-white bg-accent ms-1">21</span></a><a href="/tags/%E5%B9%B6%E5%8F%91%E7%BC%96%E7%A8%8B/" class="badge rounded post-taxonomy" title="并发编程">
             并发编程<span class="badge badge-sm text-white bg-accent ms-1">20</span></a><a href="/tags/kernel/" class="badge rounded post-taxonomy" title="kernel">
@@ -815,7 +815,7 @@ f4c861555842        a80ffa0b898e                         <span class="s2">&#34;/
     <img src="https://www.netlify.com/img/global/badges/netlify-color-accent.svg" alt="Deploys by Netlify" width="114" height="51" />
 </a>
 </footer>
-<script src="/js/main.2cdce25f280f570596c88888d6af930fe5e15ea030005291dad293defbb231d3.js" integrity="sha256-LNziXygPVwWWyIiI1q&#43;TD&#43;XhXqAwAFKR2tKT3vuyMdM=" crossorigin="anonymous" defer></script><script src="/js/icons.min.8ddcaafc364ff0296c2209c5495287f0de039b852da9b24847f94c198b7639b6.js" integrity="sha256-jdyq/DZP8ClsIgnFSVKH8N4Dm4UtqbJIR/lMGYt2ObY=" crossorigin="anonymous" defer></script>
+<script src="/js/main.2cdce25f280f570596c88888d6af930fe5e15ea030005291dad293defbb231d3.js" integrity="sha256-LNziXygPVwWWyIiI1q&#43;TD&#43;XhXqAwAFKR2tKT3vuyMdM=" crossorigin="anonymous" defer></script><script src="/js/icons.min.7b1f27dfde35467d03350938b2e41dbffd06347009b97ab913edfaca01a07814.js" integrity="sha256-ex8n3941Rn0DNQk4suQdv/0GNHAJuXq5E&#43;36ygGgeBQ=" crossorigin="anonymous" defer></script>
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
@@ -826,6 +826,6 @@ if ('serviceWorker' in navigator) {
     });
   });
 }
-</script><script src="/js/viewer.min.652118a9fbf3403cdfde4026209f97ace22f9e334f0b45a33431a221b3db46a8.js" integrity="sha256-ZSEYqfvzQDzf3kAmIJ&#43;XrOIvnjNPC0WjNDGiIbPbRqg=" crossorigin="anonymous" defer></script>
+</script><script src="/js/viewer.min.1ec1fa5aa3a66267222a44fe1cd51856ad4a92be48ede579fb36d70a6d4c28e9.js" integrity="sha256-HsH6WqOmYmciKkT&#43;HNUYVq1Kkr5I7eV5&#43;zbXCm1MKOk=" crossorigin="anonymous" defer></script>
 </body>
 </html>

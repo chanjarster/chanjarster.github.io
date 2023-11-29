@@ -18,14 +18,14 @@
 <meta property="og:type" content="article" />
 <meta property="og:url" content="/post/network/ip-forwarding-k8s-2/" /><meta property="article:section" content="post" />
 <meta property="article:published_time" content="2022-09-23T15:50:00+08:00" />
-<meta property="article:modified_time" content="2022-09-23T15:50:00+08:00" /><meta property="og:site_name" content="颇忒脱的技术博客" />
+<meta property="article:modified_time" content="2022-09-23T15:50:00+08:00" />
 
 <meta name="twitter:card" content="summary"/>
 <meta name="twitter:title" content="保护 K8S IP Forwarding 的安全"/>
 <meta name="twitter:description" content=""/>
 <meta property="og:image" content="/images/avatar.jpg"/>
-  <meta name="twitter:image" content="/images/avatar.jpg"/><link rel="stylesheet" href="/css/main.min.507afbe6e4670fa3e961a0b35816b5daeb36029866fd6bd7b9d7871fcf88faa5.css" integrity="sha256-UHr75uRnD6PpYaCzWBa12us2Aphm/WvXudeHH8&#43;I&#43;qU=" crossorigin="anonymous"><link rel="stylesheet" href="/css/viewer.min.3d228794bcedbbfa0412beb8fbc1ec6973202945e42af7004f742a4d7bd620ab.css" integrity="sha256-PSKHlLztu/oEEr64&#43;8HsaXMgKUXkKvcAT3QqTXvWIKs=" crossorigin="anonymous"></head>
-  <body><script>const items=['mode','palette'];items.forEach(function(a){const b=localStorage.getItem('hbs-'+a);b&&document.body.parentElement.setAttribute('data-'+a,b)})</script><header><nav class="navbar top-app-bar top-app-bar-expand-lg fixed-top">
+  <meta name="twitter:image" content="/images/avatar.jpg"/><link rel="stylesheet" href="/css/main.min.24196952817c68c8b90d8fa573d560fa62766baa0622bdc0e862255f4a4d1307.css" integrity="sha256-JBlpUoF8aMi5DY&#43;lc9Vg&#43;mJ2a6oGIr3A6GIlX0pNEwc=" crossorigin="anonymous"><link rel="stylesheet" href="/css/viewer.min.3d228794bcedbbfa0412beb8fbc1ec6973202945e42af7004f742a4d7bd620ab.css" integrity="sha256-PSKHlLztu/oEEr64&#43;8HsaXMgKUXkKvcAT3QqTXvWIKs=" crossorigin="anonymous"></head>
+  <body><script>const items=["mode","palette"];items.forEach(function(e){const t=localStorage.getItem("hbs-"+e);t&&document.body.parentElement.setAttribute("data-"+e,t)})</script><header><nav class="navbar top-app-bar top-app-bar-expand-lg fixed-top">
   <div class="container">
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent"
       aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
@@ -240,11 +240,11 @@
 </span><span class="lnt">4
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell">sudo ipset create cluster_nodes iphash
-sudo ipset add cluster_nodes 172.18.10.1
-sudo ipset add cluster_nodes 172.18.10.2
-sudo ipset add cluster_nodes 172.18.10.3
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">sudo ipset create cluster_nodes iphash
+</span></span><span class="line"><span class="cl">sudo ipset add cluster_nodes 172.18.10.1
+</span></span><span class="line"><span class="cl">sudo ipset add cluster_nodes 172.18.10.2
+</span></span><span class="line"><span class="cl">sudo ipset add cluster_nodes 172.18.10.3
+</span></span></code></pre></td></tr></table>
 </div>
 </div><p>根据 <a href="https://www.netfilter.org/documentation/HOWTO/packet-filtering-HOWTO-6.html" target="_blank" rel="noopener noreferrer">iptables 的定义</a>，IP 转发流量（非 NAT 和 Masquerading）对应的 Chain 是 <code>FORWARD</code>。</p>
 <p>因此我们要在 <code>filter</code> Table 的 <code>FORWARD</code> Chain 上添加规则，阻止来自于非 <code>cluster_nodes</code> 的 IP 转发流量，</p>
@@ -269,23 +269,23 @@ sudo ipset add cluster_nodes 172.18.10.3
 </span><span class="lnt">16
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell">&gt; sudo iptables -t filter -L FORWARD -n --line-numbers
-Chain FORWARD <span class="o">(</span>policy DROP<span class="o">)</span>
-num  target     prot opt <span class="nb">source</span>               destination
-<span class="m">1</span>    cali-FORWARD  all  --  0.0.0.0/0            0.0.0.0/0            /* cali:wUHhoiAYhphO9Mso */
-<span class="m">2</span>    KUBE-FORWARD  all  --  0.0.0.0/0            0.0.0.0/0            /* kubernetes forwarding rules */
-<span class="m">3</span>    KUBE-SERVICES  all  --  0.0.0.0/0            0.0.0.0/0            ctstate NEW /* kubernetes service portals */
-<span class="m">4</span>    KUBE-EXTERNAL-SERVICES  all  --  0.0.0.0/0            0.0.0.0/0            ctstate NEW /* kubernetes externally-visible service portals */
-<span class="m">5</span>    DOCKER-USER  all  --  0.0.0.0/0            0.0.0.0/0
-<span class="m">6</span>    DOCKER-ISOLATION-STAGE-1  all  --  0.0.0.0/0            0.0.0.0/0
-<span class="m">7</span>    ACCEPT     all  --  0.0.0.0/0            0.0.0.0/0            ctstate RELATED,ESTABLISHED
-<span class="m">8</span>    DOCKER     all  --  0.0.0.0/0            0.0.0.0/0
-<span class="m">9</span>    ACCEPT     all  --  0.0.0.0/0            0.0.0.0/0
-<span class="m">10</span>   ACCEPT     all  --  0.0.0.0/0            0.0.0.0/0
-<span class="m">11</span>   ACCEPT     all  --  10.42.0.0/16         0.0.0.0/0
-<span class="m">12</span>   ACCEPT     all  --  0.0.0.0/0            10.42.0.0/16
-<span class="m">13</span>   ACCEPT     all  --  0.0.0.0/0            0.0.0.0/0            /* cali:S93hcgKJrXEqnTfs */ /* Policy explicitly accepted packet. */ mark match 0x10000/0x10000
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">&gt; sudo iptables -t filter -L FORWARD -n --line-numbers
+</span></span><span class="line"><span class="cl">Chain FORWARD <span class="o">(</span>policy DROP<span class="o">)</span>
+</span></span><span class="line"><span class="cl">num  target     prot opt <span class="nb">source</span>               destination
+</span></span><span class="line"><span class="cl"><span class="m">1</span>    cali-FORWARD  all  --  0.0.0.0/0            0.0.0.0/0            /* cali:wUHhoiAYhphO9Mso */
+</span></span><span class="line"><span class="cl"><span class="m">2</span>    KUBE-FORWARD  all  --  0.0.0.0/0            0.0.0.0/0            /* kubernetes forwarding rules */
+</span></span><span class="line"><span class="cl"><span class="m">3</span>    KUBE-SERVICES  all  --  0.0.0.0/0            0.0.0.0/0            ctstate NEW /* kubernetes service portals */
+</span></span><span class="line"><span class="cl"><span class="m">4</span>    KUBE-EXTERNAL-SERVICES  all  --  0.0.0.0/0            0.0.0.0/0            ctstate NEW /* kubernetes externally-visible service portals */
+</span></span><span class="line"><span class="cl"><span class="m">5</span>    DOCKER-USER  all  --  0.0.0.0/0            0.0.0.0/0
+</span></span><span class="line"><span class="cl"><span class="m">6</span>    DOCKER-ISOLATION-STAGE-1  all  --  0.0.0.0/0            0.0.0.0/0
+</span></span><span class="line"><span class="cl"><span class="m">7</span>    ACCEPT     all  --  0.0.0.0/0            0.0.0.0/0            ctstate RELATED,ESTABLISHED
+</span></span><span class="line"><span class="cl"><span class="m">8</span>    DOCKER     all  --  0.0.0.0/0            0.0.0.0/0
+</span></span><span class="line"><span class="cl"><span class="m">9</span>    ACCEPT     all  --  0.0.0.0/0            0.0.0.0/0
+</span></span><span class="line"><span class="cl"><span class="m">10</span>   ACCEPT     all  --  0.0.0.0/0            0.0.0.0/0
+</span></span><span class="line"><span class="cl"><span class="m">11</span>   ACCEPT     all  --  10.42.0.0/16         0.0.0.0/0
+</span></span><span class="line"><span class="cl"><span class="m">12</span>   ACCEPT     all  --  0.0.0.0/0            10.42.0.0/16
+</span></span><span class="line"><span class="cl"><span class="m">13</span>   ACCEPT     all  --  0.0.0.0/0            0.0.0.0/0            /* cali:S93hcgKJrXEqnTfs */ /* Policy explicitly accepted packet. */ mark match 0x10000/0x10000
+</span></span></code></pre></td></tr></table>
 </div>
 </div><p>要记住 iptables 规则是按顺序执行的，因此新规则添加在哪里非常重要。</p>
 <p>同时注意到 FORWARD Chain 的默认策略是 DROP，而最后一条规则又等于全部允许。</p>
@@ -295,8 +295,8 @@ num  target     prot opt <span class="nb">source</span>               destinatio
 <pre tabindex="0" class="chroma"><code><span class="lnt">1
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell">sudo iptables -t filter -I FORWARD <span class="m">12</span> -i ens18 -m <span class="nb">set</span> ! --match-set cluster_nodes src -m comment --comment <span class="s2">&#34;路由转发保护&#34;</span> -j REJECT
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">sudo iptables -t filter -I FORWARD <span class="m">12</span> -i ens18 -m <span class="nb">set</span> ! --match-set cluster_nodes src -m comment --comment <span class="s2">&#34;路由转发保护&#34;</span> -j REJECT
+</span></span></code></pre></td></tr></table>
 </div>
 </div><p>这条命令的意思是，把一条规则插入在 <code>12</code> 之前，而这个规则的意思是：凡是来自于网卡 <code>ens18</code> 的 IP 转发包，如果其来源 IP 不在 ipset <code>cluster_nodes</code> 范围内，那么就拒绝。</p>
 <blockquote>
@@ -325,24 +325,24 @@ num  target     prot opt <span class="nb">source</span>               destinatio
 </span><span class="lnt">17
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell">&gt; sudo iptables -t filter -L FORWARD -n --line-numbers
-Chain FORWARD <span class="o">(</span>policy DROP<span class="o">)</span>
-num  target     prot opt <span class="nb">source</span>               destination
-<span class="m">1</span>    cali-FORWARD  all  --  0.0.0.0/0            0.0.0.0/0            /* cali:wUHhoiAYhphO9Mso */
-<span class="m">2</span>    KUBE-FORWARD  all  --  0.0.0.0/0            0.0.0.0/0            /* kubernetes forwarding rules */
-<span class="m">3</span>    KUBE-SERVICES  all  --  0.0.0.0/0            0.0.0.0/0            ctstate NEW /* kubernetes service portals */
-<span class="m">4</span>    KUBE-EXTERNAL-SERVICES  all  --  0.0.0.0/0            0.0.0.0/0            ctstate NEW /* kubernetes externally-visible service portals */
-<span class="m">5</span>    DOCKER-USER  all  --  0.0.0.0/0            0.0.0.0/0
-<span class="m">6</span>    DOCKER-ISOLATION-STAGE-1  all  --  0.0.0.0/0            0.0.0.0/0
-<span class="m">7</span>    ACCEPT     all  --  0.0.0.0/0            0.0.0.0/0            ctstate RELATED,ESTABLISHED
-<span class="m">8</span>    DOCKER     all  --  0.0.0.0/0            0.0.0.0/0
-<span class="m">9</span>    ACCEPT     all  --  0.0.0.0/0            0.0.0.0/0
-<span class="m">10</span>   ACCEPT     all  --  0.0.0.0/0            0.0.0.0/0
-<span class="m">11</span>   ACCEPT     all  --  10.42.0.0/16         0.0.0.0/0
-<span class="m">12</span>   REJECT     all  --  0.0.0.0/0            0.0.0.0/0            ! match-set cluster_nodes src reject-with icmp-port-unreachable
-<span class="m">13</span>   ACCEPT     all  --  0.0.0.0/0            10.42.0.0/16
-<span class="m">14</span>   ACCEPT     all  --  0.0.0.0/0            0.0.0.0/0            /* cali:S93hcgKJrXEqnTfs */ /* Policy explicitly accepted packet. */ mark match 0x10000/0x10000
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">&gt; sudo iptables -t filter -L FORWARD -n --line-numbers
+</span></span><span class="line"><span class="cl">Chain FORWARD <span class="o">(</span>policy DROP<span class="o">)</span>
+</span></span><span class="line"><span class="cl">num  target     prot opt <span class="nb">source</span>               destination
+</span></span><span class="line"><span class="cl"><span class="m">1</span>    cali-FORWARD  all  --  0.0.0.0/0            0.0.0.0/0            /* cali:wUHhoiAYhphO9Mso */
+</span></span><span class="line"><span class="cl"><span class="m">2</span>    KUBE-FORWARD  all  --  0.0.0.0/0            0.0.0.0/0            /* kubernetes forwarding rules */
+</span></span><span class="line"><span class="cl"><span class="m">3</span>    KUBE-SERVICES  all  --  0.0.0.0/0            0.0.0.0/0            ctstate NEW /* kubernetes service portals */
+</span></span><span class="line"><span class="cl"><span class="m">4</span>    KUBE-EXTERNAL-SERVICES  all  --  0.0.0.0/0            0.0.0.0/0            ctstate NEW /* kubernetes externally-visible service portals */
+</span></span><span class="line"><span class="cl"><span class="m">5</span>    DOCKER-USER  all  --  0.0.0.0/0            0.0.0.0/0
+</span></span><span class="line"><span class="cl"><span class="m">6</span>    DOCKER-ISOLATION-STAGE-1  all  --  0.0.0.0/0            0.0.0.0/0
+</span></span><span class="line"><span class="cl"><span class="m">7</span>    ACCEPT     all  --  0.0.0.0/0            0.0.0.0/0            ctstate RELATED,ESTABLISHED
+</span></span><span class="line"><span class="cl"><span class="m">8</span>    DOCKER     all  --  0.0.0.0/0            0.0.0.0/0
+</span></span><span class="line"><span class="cl"><span class="m">9</span>    ACCEPT     all  --  0.0.0.0/0            0.0.0.0/0
+</span></span><span class="line"><span class="cl"><span class="m">10</span>   ACCEPT     all  --  0.0.0.0/0            0.0.0.0/0
+</span></span><span class="line"><span class="cl"><span class="m">11</span>   ACCEPT     all  --  10.42.0.0/16         0.0.0.0/0
+</span></span><span class="line"><span class="cl"><span class="m">12</span>   REJECT     all  --  0.0.0.0/0            0.0.0.0/0            ! match-set cluster_nodes src reject-with icmp-port-unreachable
+</span></span><span class="line"><span class="cl"><span class="m">13</span>   ACCEPT     all  --  0.0.0.0/0            10.42.0.0/16
+</span></span><span class="line"><span class="cl"><span class="m">14</span>   ACCEPT     all  --  0.0.0.0/0            0.0.0.0/0            /* cali:S93hcgKJrXEqnTfs */ /* Policy explicitly accepted packet. */ mark match 0x10000/0x10000
+</span></span></code></pre></td></tr></table>
 </div>
 </div><p>以上操作在所有节点上都执行一遍。</p>
 <p>然后观察你的集群是否正常工作。</p>
@@ -358,13 +358,13 @@ num  target     prot opt <span class="nb">source</span>               destinatio
 </span><span class="lnt">6
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell">&gt; sudo iptables -t filter -L FORWARD -nv --line-numbers
-Chain FORWARD <span class="o">(</span>policy DROP <span class="m">0</span> packets, <span class="m">0</span> bytes<span class="o">)</span>
-num   pkts bytes target     prot opt in     out     <span class="nb">source</span>               destination
-...
-<span class="m">12</span>       <span class="m">1</span>    <span class="m">60</span> REJECT     all  --  ens18  *       0.0.0.0/0            0.0.0.0/0            ! match-set cluster_nodes src reject-with icmp-port-unreachable
-...
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">&gt; sudo iptables -t filter -L FORWARD -nv --line-numbers
+</span></span><span class="line"><span class="cl">Chain FORWARD <span class="o">(</span>policy DROP <span class="m">0</span> packets, <span class="m">0</span> bytes<span class="o">)</span>
+</span></span><span class="line"><span class="cl">num   pkts bytes target     prot opt in     out     <span class="nb">source</span>               destination
+</span></span><span class="line"><span class="cl">...
+</span></span><span class="line"><span class="cl"><span class="m">12</span>       <span class="m">1</span>    <span class="m">60</span> REJECT     all  --  ens18  *       0.0.0.0/0            0.0.0.0/0            ! match-set cluster_nodes src reject-with icmp-port-unreachable
+</span></span><span class="line"><span class="cl">...
+</span></span></code></pre></td></tr></table>
 </div>
 </div><p>你可以我们的规则拦截了 1 个包，60 个字节。</p>
 <h2 id="节点增加删除">节点增加/删除<a class="anchor ms-1" href="#节点增加删除"><i class="fas fa-link"></i></a></h2>
@@ -374,8 +374,8 @@ num   pkts bytes target     prot opt in     out     <span class="nb">source</spa
 <pre tabindex="0" class="chroma"><code><span class="lnt">1
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell">sudo ipset add cluster_nodes &lt;ip&gt;
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">sudo ipset add cluster_nodes &lt;ip&gt;
+</span></span></code></pre></td></tr></table>
 </div>
 </div><p>删除 IP：</p>
 <div class="highlight"><div class="chroma">
@@ -383,8 +383,8 @@ num   pkts bytes target     prot opt in     out     <span class="nb">source</spa
 <pre tabindex="0" class="chroma"><code><span class="lnt">1
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell">sudo ipset del cluster_nodes &lt;ip&gt;
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">sudo ipset del cluster_nodes &lt;ip&gt;
+</span></span></code></pre></td></tr></table>
 </div>
 </div><p>查看 IP：</p>
 <div class="highlight"><div class="chroma">
@@ -392,8 +392,8 @@ num   pkts bytes target     prot opt in     out     <span class="nb">source</spa
 <pre tabindex="0" class="chroma"><code><span class="lnt">1
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell">sudo ipset list cluster_nodes
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">sudo ipset list cluster_nodes
+</span></span></code></pre></td></tr></table>
 </div>
 </div><h2 id="删除规则">删除规则<a class="anchor ms-1" href="#删除规则"><i class="fas fa-link"></i></a></h2>
 <p>如果集群工作异常，那么用下面命令删除这条规则：</p>
@@ -402,8 +402,8 @@ num   pkts bytes target     prot opt in     out     <span class="nb">source</spa
 <pre tabindex="0" class="chroma"><code><span class="lnt">1
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell">sudo iptables -t filter -D FORWARD -i ens18 -m <span class="nb">set</span> ! --match-set cluster_nodes src -m comment --comment <span class="s2">&#34;路由转发保护&#34;</span> -j REJECT
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">sudo iptables -t filter -D FORWARD -i ens18 -m <span class="nb">set</span> ! --match-set cluster_nodes src -m comment --comment <span class="s2">&#34;路由转发保护&#34;</span> -j REJECT
+</span></span></code></pre></td></tr></table>
 </div>
 </div><p>注意：删除的规则时，规则定义必须和你增加规则时的定义完全一样，否则会出现下面这种结果：</p>
 <div class="highlight"><div class="chroma">
@@ -411,8 +411,8 @@ num   pkts bytes target     prot opt in     out     <span class="nb">source</spa
 <pre tabindex="0" class="chroma"><code><span class="lnt">1
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell">iptables: No chain/target/match by that name.
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">iptables: No chain/target/match by that name.
+</span></span></code></pre></td></tr></table>
 </div>
 </div><h2 id="参考资料">参考资料<a class="anchor ms-1" href="#参考资料"><i class="fas fa-link"></i></a></h2>
 <ul>
@@ -536,6 +536,9 @@ num   pkts bytes target     prot opt in     out     <span class="nb">source</spa
   </div>
   <div class="card-body">
     <ul class="post-list"><li>
+        <a href="/post/mysql/charset-intro/">MySQL - 字符集简介
+</a>
+      </li><li>
         <a href="/post/prometheus/how-to-customize/">如何定制 Prometheus 项目
 </a>
       </li><li>
@@ -546,9 +549,6 @@ num   pkts bytes target     prot opt in     out     <span class="nb">source</spa
 </a>
       </li><li>
         <a href="/post/iphone-to-huawei/download-icloud-photos/">批量导出 ICloud 照片到本地
-</a>
-      </li><li>
-        <a href="/post/rancher/kube-apiserver-profiling/">Rancher 给 Kube-Apiserver 开启 Pprof
 </a>
       </li></ul>
   </div>
@@ -565,7 +565,7 @@ num   pkts bytes target     prot opt in     out     <span class="nb">source</spa
             troubleshooting<span class="badge badge-sm text-white bg-accent ms-1">40</span></a><a href="/tags/jvm/" class="badge rounded post-taxonomy" title="jvm">
             jvm<span class="badge badge-sm text-white bg-accent ms-1">39</span></a><a href="/tags/docker/" class="badge rounded post-taxonomy" title="docker">
             docker<span class="badge badge-sm text-white bg-accent ms-1">29</span></a><a href="/tags/mysql/" class="badge rounded post-taxonomy" title="mysql">
-            mysql<span class="badge badge-sm text-white bg-accent ms-1">24</span></a><a href="/tags/network/" class="badge rounded post-taxonomy" title="network">
+            mysql<span class="badge badge-sm text-white bg-accent ms-1">25</span></a><a href="/tags/network/" class="badge rounded post-taxonomy" title="network">
             network<span class="badge badge-sm text-white bg-accent ms-1">22</span></a><a href="/tags/cheatsheet/" class="badge rounded post-taxonomy" title="cheatsheet">
             cheatsheet<span class="badge badge-sm text-white bg-accent ms-1">21</span></a><a href="/tags/%E5%B9%B6%E5%8F%91%E7%BC%96%E7%A8%8B/" class="badge rounded post-taxonomy" title="并发编程">
             并发编程<span class="badge badge-sm text-white bg-accent ms-1">20</span></a><a href="/tags/kernel/" class="badge rounded post-taxonomy" title="kernel">
@@ -667,7 +667,7 @@ num   pkts bytes target     prot opt in     out     <span class="nb">source</spa
     <img src="https://www.netlify.com/img/global/badges/netlify-color-accent.svg" alt="Deploys by Netlify" width="114" height="51" />
 </a>
 </footer>
-<script src="/js/main.2cdce25f280f570596c88888d6af930fe5e15ea030005291dad293defbb231d3.js" integrity="sha256-LNziXygPVwWWyIiI1q&#43;TD&#43;XhXqAwAFKR2tKT3vuyMdM=" crossorigin="anonymous" defer></script><script src="/js/icons.min.8ddcaafc364ff0296c2209c5495287f0de039b852da9b24847f94c198b7639b6.js" integrity="sha256-jdyq/DZP8ClsIgnFSVKH8N4Dm4UtqbJIR/lMGYt2ObY=" crossorigin="anonymous" defer></script>
+<script src="/js/main.2cdce25f280f570596c88888d6af930fe5e15ea030005291dad293defbb231d3.js" integrity="sha256-LNziXygPVwWWyIiI1q&#43;TD&#43;XhXqAwAFKR2tKT3vuyMdM=" crossorigin="anonymous" defer></script><script src="/js/icons.min.7b1f27dfde35467d03350938b2e41dbffd06347009b97ab913edfaca01a07814.js" integrity="sha256-ex8n3941Rn0DNQk4suQdv/0GNHAJuXq5E&#43;36ygGgeBQ=" crossorigin="anonymous" defer></script>
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
@@ -678,6 +678,6 @@ if ('serviceWorker' in navigator) {
     });
   });
 }
-</script><script src="/js/viewer.min.652118a9fbf3403cdfde4026209f97ace22f9e334f0b45a33431a221b3db46a8.js" integrity="sha256-ZSEYqfvzQDzf3kAmIJ&#43;XrOIvnjNPC0WjNDGiIbPbRqg=" crossorigin="anonymous" defer></script>
+</script><script src="/js/viewer.min.1ec1fa5aa3a66267222a44fe1cd51856ad4a92be48ede579fb36d70a6d4c28e9.js" integrity="sha256-HsH6WqOmYmciKkT&#43;HNUYVq1Kkr5I7eV5&#43;zbXCm1MKOk=" crossorigin="anonymous" defer></script>
 </body>
 </html>
