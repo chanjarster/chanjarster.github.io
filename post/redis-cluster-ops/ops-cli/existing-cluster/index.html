@@ -1,0 +1,618 @@
+<!doctype html><html lang="zh-cn" data-palette="blue"
+  >
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>redis-cli 集群管理 - 颇忒脱的技术博客</title><link rel="apple-touch-icon" href="/images/icons/icon-180x180.png" sizes="180x180">
+<link rel="icon" href="/images/icons/icon-32x32.png" sizes="32x32" type="image/png">
+<link rel="icon" href="/images/icons/icon-16x16.png" sizes="16x16" type="image/png">
+<link rel="icon" href="/images/icons/favicon.ico">
+<link rel="manifest" href="/manifest.json">
+<meta name="keywords" content="" />
+<meta name="description" content="这里讲的是已有集群（已经有数据且在运行）的运维操作。 检查集群状态 进入任意 master： 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 redis-cli -a &lt;pass&gt; --cluster check &lt;node-ip&gt;:&lt;node-port&gt; &lt;master1-ip&gt;:&lt;master1-port&gt; (&lt;master1-id&gt;) -&gt;" /><meta name="robots" content="index, follow" /><meta itemprop="name" content="redis-cli 集群管理">
+<meta itemprop="description" content="这里讲的是已有集群（已经有数据且在运行）的运维操作。 检查集群状态 进入任意 master： 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 redis-cli -a &lt;pass&gt; --cluster check &lt;node-ip&gt;:&lt;node-port&gt; &lt;master1-ip&gt;:&lt;master1-port&gt; (&lt;master1-id&gt;) -&gt;"><meta itemprop="datePublished" content="2024-01-27T12:02:32+08:00" />
+<meta itemprop="dateModified" content="2024-01-27T12:02:32+08:00" />
+<meta itemprop="wordCount" content="526">
+<meta itemprop="keywords" content="redis," /><meta property="og:title" content="redis-cli 集群管理" />
+<meta property="og:description" content="这里讲的是已有集群（已经有数据且在运行）的运维操作。 检查集群状态 进入任意 master： 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 redis-cli -a &lt;pass&gt; --cluster check &lt;node-ip&gt;:&lt;node-port&gt; &lt;master1-ip&gt;:&lt;master1-port&gt; (&lt;master1-id&gt;) -&gt;" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="/post/redis-cluster-ops/ops-cli/existing-cluster/" /><meta property="article:section" content="post" />
+<meta property="article:published_time" content="2024-01-27T12:02:32+08:00" />
+<meta property="article:modified_time" content="2024-01-27T12:02:32+08:00" />
+
+<meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="redis-cli 集群管理"/>
+<meta name="twitter:description" content="这里讲的是已有集群（已经有数据且在运行）的运维操作。 检查集群状态 进入任意 master： 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 redis-cli -a &lt;pass&gt; --cluster check &lt;node-ip&gt;:&lt;node-port&gt; &lt;master1-ip&gt;:&lt;master1-port&gt; (&lt;master1-id&gt;) -&gt;"/>
+<meta property="og:image" content="/images/avatar.jpg"/>
+  <meta name="twitter:image" content="/images/avatar.jpg"/><link rel="stylesheet" href="/css/main.min.24196952817c68c8b90d8fa573d560fa62766baa0622bdc0e862255f4a4d1307.css" integrity="sha256-JBlpUoF8aMi5DY&#43;lc9Vg&#43;mJ2a6oGIr3A6GIlX0pNEwc=" crossorigin="anonymous"><link rel="stylesheet" href="/css/viewer.min.3d228794bcedbbfa0412beb8fbc1ec6973202945e42af7004f742a4d7bd620ab.css" integrity="sha256-PSKHlLztu/oEEr64&#43;8HsaXMgKUXkKvcAT3QqTXvWIKs=" crossorigin="anonymous"></head>
+  <body><script>const items=["mode","palette"];items.forEach(function(e){const t=localStorage.getItem("hbs-"+e);t&&document.body.parentElement.setAttribute("data-"+e,t)})</script><header><nav class="navbar top-app-bar top-app-bar-expand-lg fixed-top">
+  <div class="container">
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent"
+      aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <i class="fas fa-bars"></i>
+    </button><a class="navbar-brand flex-grow-1 flex-lg-grow-0 text-center text-lg-start mx-auto me-lg-3" href="/"><img class="logo" alt="Logo" src="/images/avatar.jpg" loading="lazy"
+   width="455" height="455"
+   />
+颇忒脱的技术博客
+    </a>
+    
+    <button class="navbar-settings" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvasSettings"
+  aria-controls="offcanvasSettings" aria-label="Toggle settings">
+  <i class="fas fa-ellipsis-v"></i>
+</button>
+
+<div class="offcanvas offcanvas-end surface h-100" tabindex="-1" id="offcanvasSettings" aria-labelledby="offcanvasSettings">
+  <div class="offcanvas-header">
+    <h3 class="offcanvas-title">设置</h3>
+    <button type="button" class="btn btn-sm btn-outline-primary" data-bs-dismiss="offcanvas" aria-label="Close">
+      <i class="fas fa-times"></i>
+    </button>
+  </div>
+  <div class="offcanvas-body d-flex flex-column">
+
+<section class="setting">
+  <form class="row">
+    <div class="col-auto">
+      <label><i class="fas fa-fw fa-adjust"></i> 模式</label>
+    </div>
+    <div class="col-auto ms-auto">
+      <div class="form-check form-switch">
+        <input class="form-check-input" type="checkbox" id="modeSwitcher">
+      </div>
+    </div>
+  </form>
+</section>
+
+<section class="setting">
+  <form class="font-size-switcher-form row">
+    <div class="col-auto">
+      <label for="fontSize" class="form-label"><i class="fas fa-fw fa-font"></i> 字体大小</label>
+    </div>
+    <div class="col-auto ms-auto">
+      <input type="range" class="form-range" min="-2" max="2" id="fontSize">
+    </div>
+  </form>
+</section>
+
+
+<section class="setting palettes">
+  <form class="row">
+    <div class="col-auto">
+      <label><i class="fas fa-fw fa-palette"></i> 配色</label>
+    </div>
+    <div class="col-auto ms-auto">
+      <a id="btnPalette" class="btn btn-sm btn-outline-primary" role="button" aria-label="palettePicker">
+        <i class="fas fa-eye-dropper"></i>
+      </a>
+    </div>
+  </form>
+  <div class="mt-2 d-flex justify-content-between visually-hidden" id="palettePicker"><button type="button" id="palette-blue" aria-label="蓝色"
+        class="btn btn-sm w-100 palette" data-palette="blue">
+      </button><button type="button" id="palette-blue-gray" aria-label="蓝灰色"
+        class="btn btn-sm w-100 palette" data-palette="blue-gray">
+      </button><button type="button" id="palette-brown" aria-label="棕色"
+        class="btn btn-sm w-100 palette" data-palette="brown">
+      </button><button type="button" id="palette-cyan" aria-label="青色"
+        class="btn btn-sm w-100 palette" data-palette="cyan">
+      </button><button type="button" id="palette-green" aria-label="绿色"
+        class="btn btn-sm w-100 palette" data-palette="green">
+      </button><button type="button" id="palette-indigo" aria-label="靛青色"
+        class="btn btn-sm w-100 palette" data-palette="indigo">
+      </button><button type="button" id="palette-orange" aria-label="橙色"
+        class="btn btn-sm w-100 palette" data-palette="orange">
+      </button><button type="button" id="palette-pink" aria-label="粉色"
+        class="btn btn-sm w-100 palette" data-palette="pink">
+      </button><button type="button" id="palette-purple" aria-label="紫色"
+        class="btn btn-sm w-100 palette" data-palette="purple">
+      </button><button type="button" id="palette-red" aria-label="红色"
+        class="btn btn-sm w-100 palette" data-palette="red">
+      </button><button type="button" id="palette-teal" aria-label="蓝绿色"
+        class="btn btn-sm w-100 palette" data-palette="teal">
+      </button><button type="button" id="palette-yellow" aria-label="黄色"
+        class="btn btn-sm w-100 palette" data-palette="yellow">
+      </button></div>
+</section>
+<section class="setting actions d-flex justify-content-around mt-auto overflow-auto">
+  <a role="button" class="action action-go-back" href="javascript: window.history.back();">
+    <span class="action-icon"><i class="fas fa-2x fa-arrow-left"></i></span> 返回
+  </a>
+  <a role="button" class="action action-reload-page">
+    <span class="action-icon"><i class="fas fa-2x fa-redo-alt"></i></span> 刷新
+  </a>
+  <a role="button" class="action action-copy-url">
+    <span class="action-icon"><i class="fas fa-2x fa-link"></i></span> 复制链接
+  </a></section>
+
+</div>
+</div>
+
+    <div class="collapse navbar-collapse" tabindex="-1" id="navbarSupportedContent" aria-labelledby="navbarSupportedContent">
+      <form class="search-bar my-1" action="/search">
+  <div class="input-group input-group-sm">
+    <span class="btn btn-search disabled position-absolute left-0"><i class="fas fa-fw fa-search"></i></span>
+    <input class="form-control rounded-pill" name="q" type="search" aria-label="Search">
+  </div>
+</form>
+      <ul class="navbar-nav ms-auto"><li class="nav-item">
+          <a class="nav-link" href="/series/">
+            <i class="fas fa-fw fa-columns"></i>专栏
+          </a>
+        </li><li class="nav-item dropdown">
+          <a class="nav-link" id="navbarDropdownIndex" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+            <i class="fas fa-fw fa-chevron-circle-down"></i>快速索引
+          </a>
+          <ul class="dropdown-menu" aria-labelledby="navbarDropdownIndex"><li>
+              <a class="dropdown-item"
+                href="/tags/go">
+                Go
+              </a>
+            </li><li>
+              <a class="dropdown-item"
+                href="/tags/gc">
+                GC
+              </a>
+            </li><li>
+              <a class="dropdown-item"
+                href="/tags/kernel">
+                Kernel
+              </a>
+            </li><li>
+              <a class="dropdown-item"
+                href="/tags/cheatsheet">
+                Cheatsheet
+              </a>
+            </li><li>
+              <a class="dropdown-item"
+                href="/tags/troubleshooting">
+                排障实战记录
+              </a>
+            </li></ul>
+        </li><li class="nav-item">
+          <a class="nav-link" href="/tags/">
+            <i class="fas fa-fw fa-tags"></i>标签
+          </a>
+        </li><li class="nav-item">
+          <a class="nav-link" href="/archives/">
+            <i class="fas fa-fw fa-file-archive"></i>归档
+          </a>
+        </li></ul>
+    </div>
+  </div>
+</nav>
+</header>
+<main role="main" class="container">
+      <div class="row content">
+<div class="col-lg-8">
+  <div class="container"><nav class="row card component" aria-label="breadcrumb">
+  <div class="card-body">
+    <ol class="breadcrumb "><li class="breadcrumb-item"><a href="/">主页</a></li><li class="breadcrumb-item"><a href="/post/">文章</a></li><li class="breadcrumb-item active">Redis-Cli 集群管理</li></ol>
+  </div>
+</nav><div class="post-panel-wrapper">
+  <div class="d-flex flex-column component rounded post-panel">
+    
+    <a class="action action-panel-toggler" role="button" title="Panel toggler">
+      <i class="fas fa-fw fa-chevron-circle-down"></i>
+    </a>
+    <a id="sidebarToggler" class="action d-none d-lg-block" role="button" title="Sidebar toggler">
+  <i class="fas fa-fw fa-expand-alt" data-fa-transform="rotate-45"></i>
+</a>
+
+    
+
+    
+    <a class="action" href="#post-copyright" role="button" aria-label="Copyright" title="Copyright">
+  <i class="fas fa-fw fa-copyright"></i>
+</a>
+    <a class="action" href="#post-comments" role="button" aria-label="Comments" title="Comments">
+  <i class="fas fa-fw fa-comments"></i>
+</a>
+    <a class="action" href="#postTOC" aria-controls="Table of contents" role="button" title="Table of contents">
+  <i class="fas fa-fw fa-list-alt"></i>
+</a>
+    
+  </div>
+</div>
+<article class="row card component mb-4 post">
+  <div class="card-header ">
+    <h1 class="card-title post-title">Redis-Cli 集群管理
+</h1>
+  </div>
+  <div class="card-body"><div class="post-meta">
+  <span class="post-date" title="创建于 2024-01-27 12:02:32 &#43;0800 CST。">
+    2024-01-27
+  </span><span class="post-reading-time">
+    2 分钟阅读
+  </span><span class="post-taxonomies"><a href="/tags/redis/" class="badge post-taxonomy">redis</a></span>
+</div>
+<div class="post-content mb-3"><p>这里讲的是已有集群（已经有数据且在运行）的运维操作。</p>
+<h2 id="检查集群状态">检查集群状态<a class="anchor ms-1" href="#检查集群状态"><i class="fas fa-link"></i></a></h2>
+<p>进入任意 master：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">redis-cli -a &lt;pass&gt; --cluster check &lt;node-ip&gt;:&lt;node-port&gt;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">&lt;master1-ip&gt;:&lt;master1-port&gt; <span class="o">(</span>&lt;master1-id&gt;<span class="o">)</span> -&gt; <span class="m">3355</span> keys <span class="p">|</span> <span class="m">5501</span> slots <span class="p">|</span> <span class="m">0</span> slaves.
+</span></span><span class="line"><span class="cl">&lt;master2-ip&gt;:&lt;master2-port&gt; <span class="o">(</span>&lt;master2-id&gt;<span class="o">)</span> -&gt; <span class="m">3287</span> keys <span class="p">|</span> <span class="m">5383</span> slots <span class="p">|</span> <span class="m">0</span> slaves.
+</span></span><span class="line"><span class="cl">&lt;master3-ip&gt;:&lt;master3-port&gt; <span class="o">(</span>&lt;master3-id&gt;<span class="o">)</span> -&gt; <span class="m">3359</span> keys <span class="p">|</span> <span class="m">5500</span> slots <span class="p">|</span> <span class="m">0</span> slaves.
+</span></span><span class="line"><span class="cl"><span class="o">[</span>OK<span class="o">]</span> <span class="m">10001</span> keys in <span class="m">3</span> masters.
+</span></span><span class="line"><span class="cl">0.61 keys per slot on average.
+</span></span><span class="line"><span class="cl">&gt;&gt;&gt; Performing Cluster Check <span class="o">(</span>using node 127.0.0.1:6379<span class="o">)</span>
+</span></span><span class="line"><span class="cl">M: &lt;master1-id&gt; &lt;master1-ip&gt;:&lt;master1-port&gt;
+</span></span><span class="line"><span class="cl">   slots:<span class="o">[</span>&lt;start&gt;-&lt;end&gt;<span class="o">]</span> <span class="o">(</span>&lt;num&gt; slots<span class="o">)</span> master
+</span></span><span class="line"><span class="cl">M: &lt;master2-id&gt; &lt;master2-ip&gt;:&lt;master2-port&gt;
+</span></span><span class="line"><span class="cl">   slots:<span class="o">[</span>&lt;start&gt;-&lt;end&gt;<span class="o">]</span> <span class="o">(</span>&lt;num&gt; slots<span class="o">)</span> master
+</span></span><span class="line"><span class="cl">M: &lt;master3-id&gt; &lt;master3-ip&gt;:&lt;master3-port&gt;
+</span></span><span class="line"><span class="cl">   slots:<span class="o">[</span>&lt;start&gt;-&lt;end&gt;<span class="o">]</span> <span class="o">(</span>&lt;num&gt; slots<span class="o">)</span> master
+</span></span><span class="line"><span class="cl"><span class="o">[</span>OK<span class="o">]</span> All nodes agree about slots configuration.
+</span></span><span class="line"><span class="cl">&gt;&gt;&gt; Check <span class="k">for</span> open slots...
+</span></span><span class="line"><span class="cl">&gt;&gt;&gt; Check slots coverage...
+</span></span><span class="line"><span class="cl"><span class="o">[</span>OK<span class="o">]</span> All <span class="m">16384</span> slots covered.
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="添加-master">添加 Master<a class="anchor ms-1" href="#添加-master"><i class="fas fa-link"></i></a></h2>
+<p>进入任意 master，把新 master 加进来：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">redis-cli -a &lt;pass&gt; --cluster add-node <span class="se">\
+</span></span></span><span class="line"><span class="cl"><span class="se"></span>   &lt;new-master-ip&gt;:&lt;new-master-port&gt; <span class="se">\
+</span></span></span><span class="line"><span class="cl"><span class="se"></span>   &lt;any-master-ip&gt;:&lt;any-master-port&gt; <span class="se">\
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>成功后要 Resharding，<a href="../resharding">redis-cli方式</a> 或 <a href="../../ops-cmd/resharding">Redis Command方式</a> ，把一些 slot 转移到新 master 上。</p>
+<p>参考资料：</p>
+<ul>
+<li><a href="https://redis.io/topics/cluster-tutorial#adding-a-new-node" target="_blank" rel="noopener noreferrer">Adding a new node</a></li>
+</ul>
+<h2 id="添加-slave-节点">添加 Slave 节点<a class="anchor ms-1" href="#添加-slave-节点"><i class="fas fa-link"></i></a></h2>
+<p>进入任意 master，把新 slave 加进来，同时将其配置为某个 master 的 slave，注意符合<a href="../../ha-arch">高可用部署架构</a>：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">redis-cli -a &lt;pass&gt; --cluster add-node <span class="se">\
+</span></span></span><span class="line"><span class="cl"><span class="se"></span>   &lt;new-slave-ip&gt;:&lt;new-slave-port&gt; <span class="se">\
+</span></span></span><span class="line"><span class="cl"><span class="se"></span>   &lt;any-master-ip&gt;:&lt;any-master-port&gt; <span class="se">\
+</span></span></span><span class="line"><span class="cl"><span class="se"></span>   --cluster-slave <span class="se">\
+</span></span></span><span class="line"><span class="cl"><span class="se"></span>   --cluster-master-id &lt;master-id&gt;
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>参考资料：</p>
+<ul>
+<li><a href="https://redis.io/topics/cluster-tutorial#adding-a-new-node-as-a-replica" target="_blank" rel="noopener noreferrer">Adding a new node as replica</a></li>
+</ul>
+<h2 id="删除-master">删除 Master<a class="anchor ms-1" href="#删除-master"><i class="fas fa-link"></i></a></h2>
+<p>前提：master 是空的，不负责任何 slot。</p>
+<p>方法：Resharding，<a href="../resharding">redis-cli方式</a> 或 <a href="../../ops-cmd/resharding">Redis Command方式</a> ，把 master 上的所有 slot 转移到其他 master 上。</p>
+<p>进入任意 master：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">redis-cli -a &lt;pass&gt; --cluster del-node <span class="se">\
+</span></span></span><span class="line"><span class="cl"><span class="se"></span>  &lt;other-master-ip&gt;:&lt;other-master-port&gt; &lt;del-master-id&gt;
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>被删掉的 master 的 slave 会自动转移到其他 master 下。</p>
+<p>参考资料：</p>
+<ul>
+<li><a href="https://redis.io/topics/cluster-tutorial#removing-a-node" target="_blank" rel="noopener noreferrer">Removing a node</a></li>
+</ul>
+<h2 id="删除-slave">删除 Slave<a class="anchor ms-1" href="#删除-slave"><i class="fas fa-link"></i></a></h2>
+<p>进入任意 master 节点：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">redis-cli -a &lt;pass&gt; --cluster del-node <span class="se">\
+</span></span></span><span class="line"><span class="cl"><span class="se"></span>  &lt;any-master-ip&gt;:&lt;any-master-port&gt; &lt;del-slave-id&gt;
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="手动-failover">手动 Failover<a class="anchor ms-1" href="#手动-failover"><i class="fas fa-link"></i></a></h2>
+<p>见 <a href="../../ops-cmd/existing-cluster/#%e6%89%8b%e5%8a%a8-failover">Redis Command方式</a></p>
+<h2 id="k8s部署环境崩溃">K8S部署环境崩溃<a class="anchor ms-1" href="#k8s部署环境崩溃"><i class="fas fa-link"></i></a></h2>
+<p>见 <a href="../../ops-cmd/existing-cluster/#k8s%e9%83%a8%e7%bd%b2%e7%8e%af%e5%a2%83%e5%b4%a9%e6%ba%83">Redis Command方式</a></p>
+<h2 id="升级节点">升级节点<a class="anchor ms-1" href="#升级节点"><i class="fas fa-link"></i></a></h2>
+<p>见 <a href="../../ha-arch">高可用架构</a>。</p>
+</div></div>
+  <div class="card-footer"><div class="post-navs d-flex justify-content-evenly"><div class="post-nav post-prev">
+    <i class="fas fa-fw fa-chevron-left"></i>
+    <a href="/post/redis-cluster-ops/ha-arch/">Redis 集群运维笔记 - 高可用架构规划
+</a>
+  </div><div class="post-nav post-next">
+    <a href="/post/redis-cluster-ops/ops-cli/new-cluster/">Redis-Cli 创建新集群
+</a>
+    <i class="fas fa-fw fa-chevron-right"></i>
+  </div></div></div>
+</article><div class="post-copyright mb-3 row card component" id="post-copyright">
+    <div class="card-header">
+        <h2 class="card-title">版权</h2>
+    </div>
+    <div class="card-body"><a class="d-flex align-items-center flex-column" target="_blank" rel="license noopener noreferrer" href="https://creativecommons.org/licenses/by-nc-nd/4.0/deed.zh">
+  <span><i class="fab fa-fw fa-2x fa-creative-commons"></i><i class="fab fa-fw fa-2x fa-creative-commons-by"></i><i class="fab fa-fw fa-2x fa-creative-commons-nc"></i><i class="fab fa-fw fa-2x fa-creative-commons-nd"></i></span>
+  CC BY-NC-ND 4.0 
+</a>
+
+
+    </div>
+</div><section class="related-posts row card component">
+    <div class="card-header">
+      <h2 class="card-title">相关文章</h2>
+    </div>
+    <div class="card-body">
+      <ul class="post-list"><li>
+          <a href="/post/redis-cluster-ops/ops-cmd/resharding/">Redis Command Resharding
+</a>
+          <span class="float-end post-date">2024-01-27
+</span>
+        </li><li>
+          <a href="/post/redis-cluster-ops/ops-cmd/new-cluster/">Redis Command 创建新集群
+</a>
+          <span class="float-end post-date">2024-01-27
+</span>
+        </li><li>
+          <a href="/post/redis-cluster-ops/ops-cmd/existing-cluster/">Redis Command 集群管理
+</a>
+          <span class="float-end post-date">2024-01-27
+</span>
+        </li><li>
+          <a href="/post/redis-cluster-ops/bitnami-redis/">Redis 集群运维笔记 - 利用 Bitnami/Redis 部署 Redis Cluster
+</a>
+          <span class="float-end post-date">2024-01-27
+</span>
+        </li><li>
+          <a href="/post/redis-cluster-ops/deploy-migration/">Redis 集群运维笔记 - 迁移到 Redis Cluster
+</a>
+          <span class="float-end post-date">2024-01-27
+</span>
+        </li></ul>
+    </div>
+  </section><div class="card component row post-comments" id="post-comments">
+  <div class="card-header">
+    <h2 class="card-title">评论</h2>
+  </div>
+  <div class="card-body"></div>
+</div></div>
+</div><aside class="col-lg-4 sidebar d-flex">
+  <div class="container d-flex flex-column">
+    
+    <section class="card row text-center profile component">
+  <div class="card-body">
+    <div class="col-12 d-flex align-items-center justify-content-center"><img class="profile-avatar rounded-circle" alt="颇忒脱" src="/images/avatar.jpg" loading="lazy"
+   width="455" height="455"
+   />
+</div>
+    <div class="col-12 profile-meta"><div class="profile-name">颇忒脱</div><nav class="social-links nav justify-content-center"><a class="nav-link social-link" target="_blank" href="https://github.com/chanjarster" title="GitHub" rel="noopener noreferrer">
+        <i class="fa-fw fa-2x fab fa-github"></i>
+      </a></nav>
+</div>
+  </div>
+</section>
+  <div class="post-toc row mb-4 card component" id="postTOC">
+  <div class="card-header">
+    <h2 class="card-title">目录</h2>
+  </div>
+  <div class="card-body">
+    <nav id="TableOfContents">
+  <ul>
+    <li><a href="#检查集群状态">检查集群状态</a></li>
+    <li><a href="#添加-master">添加 Master</a></li>
+    <li><a href="#添加-slave-节点">添加 Slave 节点</a></li>
+    <li><a href="#删除-master">删除 Master</a></li>
+    <li><a href="#删除-slave">删除 Slave</a></li>
+    <li><a href="#手动-failover">手动 Failover</a></li>
+    <li><a href="#k8s部署环境崩溃">K8S部署环境崩溃</a></li>
+    <li><a href="#升级节点">升级节点</a></li>
+  </ul>
+</nav>
+  </div>
+</div><section class="featured-posts row card component">
+    <div class="card-header">
+      <h2 class="card-title">精选文章</h2>
+    </div>
+    <div class="card-body">
+      <ul class="post-list"><li>
+          <a href="/post/redis-cluster-ops/index-page/">Redis 集群运维笔记
+</a>
+        </li><li>
+          <a href="/post/linux/namespace/index-page/">Linux Namespace系列
+</a>
+        </li><li>
+          <a href="/post/network/index-page/">Networking系列
+</a>
+        </li><li>
+          <a href="/post/mysql/index-page/">MySQL系列
+</a>
+        </li><li>
+          <a href="/post/concurrent-programming/index-page/">并发编程系列
+</a>
+        </li></ul>
+    </div>
+  </section><section class="recent-posts row card component">
+  <div class="card-header">
+    <h2 class="card-title">最近文章</h2>
+  </div>
+  <div class="card-body">
+    <ul class="post-list"><li>
+        <a href="/post/redis-cluster-ops/index-page/">Redis 集群运维笔记
+</a>
+      </li><li>
+        <a href="/post/network/calico-firewall-k8s/">Calico 配置 K8s 防火墙
+</a>
+      </li><li>
+        <a href="/post/network/iptables-firewall-docker/">用 Iptables 保护 Docker Host
+</a>
+      </li><li>
+        <a href="/post/network/iptables-firewall-example/">Iptables 防火墙例子
+</a>
+      </li><li>
+        <a href="/post/cache-through-conc-db-query-opt/">缓存穿透后的并发数据库查询优化
+</a>
+      </li></ul>
+  </div>
+</section><section class="tags-taxonomies row card component">
+      <div class="card-header">
+        <h2 class="card-title">
+          <a href="/tags">标签</a>
+        </h2>
+      </div>
+      <div class="card-body">
+        <div class="py-2"><a href="/tags/arts-a/" class="badge rounded post-taxonomy" title="ARTS-A">
+            ARTS-A<span class="badge badge-sm text-white bg-accent ms-1">125</span></a><a href="/tags/k8s/" class="badge rounded post-taxonomy" title="k8s">
+            k8s<span class="badge badge-sm text-white bg-accent ms-1">52</span></a><a href="/tags/troubleshooting/" class="badge rounded post-taxonomy" title="troubleshooting">
+            troubleshooting<span class="badge badge-sm text-white bg-accent ms-1">40</span></a><a href="/tags/jvm/" class="badge rounded post-taxonomy" title="jvm">
+            jvm<span class="badge badge-sm text-white bg-accent ms-1">39</span></a><a href="/tags/docker/" class="badge rounded post-taxonomy" title="docker">
+            docker<span class="badge badge-sm text-white bg-accent ms-1">30</span></a><a href="/tags/mysql/" class="badge rounded post-taxonomy" title="mysql">
+            mysql<span class="badge badge-sm text-white bg-accent ms-1">25</span></a><a href="/tags/network/" class="badge rounded post-taxonomy" title="network">
+            network<span class="badge badge-sm text-white bg-accent ms-1">25</span></a><a href="/tags/%E5%B9%B6%E5%8F%91%E7%BC%96%E7%A8%8B/" class="badge rounded post-taxonomy" title="并发编程">
+            并发编程<span class="badge badge-sm text-white bg-accent ms-1">21</span></a><a href="/tags/cheatsheet/" class="badge rounded post-taxonomy" title="cheatsheet">
+            cheatsheet<span class="badge badge-sm text-white bg-accent ms-1">20</span></a><a href="/tags/kernel/" class="badge rounded post-taxonomy" title="kernel">
+            kernel<span class="badge badge-sm text-white bg-accent ms-1">19</span></a><a href="/tags/linux/" class="badge rounded post-taxonomy" title="linux">
+            linux<span class="badge badge-sm text-white bg-accent ms-1">19</span></a><a href="/tags/java/" class="badge rounded post-taxonomy" title="java">
+            java<span class="badge badge-sm text-white bg-accent ms-1">18</span></a><a href="/tags/redis/" class="badge rounded post-taxonomy" title="redis">
+            redis<span class="badge badge-sm text-white bg-accent ms-1">17</span></a><a href="/tags/prometheus/" class="badge rounded post-taxonomy" title="prometheus">
+            prometheus<span class="badge badge-sm text-white bg-accent ms-1">13</span></a><a href="/tags/%E6%80%A7%E8%83%BD%E8%B0%83%E4%BC%98/" class="badge rounded post-taxonomy" title="性能调优">
+            性能调优<span class="badge badge-sm text-white bg-accent ms-1">13</span></a><a href="/tags/go/" class="badge rounded post-taxonomy" title="go">
+            go<span class="badge badge-sm text-white bg-accent ms-1">10</span></a><a href="/tags/%E5%BE%AE%E6%9C%8D%E5%8A%A1/" class="badge rounded post-taxonomy" title="微服务">
+            微服务<span class="badge badge-sm text-white bg-accent ms-1">10</span></a><a href="/tags/rancher/" class="badge rounded post-taxonomy" title="rancher">
+            rancher<span class="badge badge-sm text-white bg-accent ms-1">9</span></a><a href="/tags/debug/" class="badge rounded post-taxonomy" title="debug">
+            debug<span class="badge badge-sm text-white bg-accent ms-1">7</span></a><a href="/tags/gc/" class="badge rounded post-taxonomy" title="gc">
+            gc<span class="badge badge-sm text-white bg-accent ms-1">7</span></a><a href="/tags/nginx/" class="badge rounded post-taxonomy" title="nginx">
+            nginx<span class="badge badge-sm text-white bg-accent ms-1">7</span></a><a href="/tags/ingress/" class="badge rounded post-taxonomy" title="ingress">
+            ingress<span class="badge badge-sm text-white bg-accent ms-1">6</span></a><a href="/tags/%E8%BF%90%E7%BB%B4/" class="badge rounded post-taxonomy" title="运维">
+            运维<span class="badge badge-sm text-white bg-accent ms-1">6</span></a><a href="/tags/ci_cd/" class="badge rounded post-taxonomy" title="CI_CD">
+            CI_CD<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/interview/" class="badge rounded post-taxonomy" title="interview">
+            interview<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/jmx/" class="badge rounded post-taxonomy" title="jmx">
+            jmx<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/openssl/" class="badge rounded post-taxonomy" title="openssl">
+            openssl<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/tls/" class="badge rounded post-taxonomy" title="tls">
+            tls<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/%E5%88%86%E5%B8%83%E5%BC%8F%E4%BA%8B%E5%8A%A1/" class="badge rounded post-taxonomy" title="分布式事务">
+            分布式事务<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/%E5%88%86%E5%B8%83%E5%BC%8F%E7%AE%97%E6%B3%95/" class="badge rounded post-taxonomy" title="分布式算法">
+            分布式算法<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/%E6%94%B6%E8%97%8F%E5%A4%B9/" class="badge rounded post-taxonomy" title="收藏夹">
+            收藏夹<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/%E9%AB%98%E5%B9%B6%E5%8F%91/" class="badge rounded post-taxonomy" title="高并发">
+            高并发<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/visualvm/" class="badge rounded post-taxonomy" title="visualvm">
+            visualvm<span class="badge badge-sm text-white bg-accent ms-1">4</span></a><a href="/tags/%E6%97%A5%E5%BF%97/" class="badge rounded post-taxonomy" title="日志">
+            日志<span class="badge badge-sm text-white bg-accent ms-1">4</span></a><a href="/tags/arts/" class="badge rounded post-taxonomy" title="arts">
+            arts<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/arts-r/" class="badge rounded post-taxonomy" title="arts-r">
+            arts-r<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/classloader/" class="badge rounded post-taxonomy" title="ClassLoader">
+            ClassLoader<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/container/" class="badge rounded post-taxonomy" title="container">
+            container<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/ios/" class="badge rounded post-taxonomy" title="ios">
+            ios<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/iphone/" class="badge rounded post-taxonomy" title="iphone">
+            iphone<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/jenkins/" class="badge rounded post-taxonomy" title="Jenkins">
+            Jenkins<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/namespace/" class="badge rounded post-taxonomy" title="namespace">
+            namespace<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/scheduling/" class="badge rounded post-taxonomy" title="scheduling">
+            scheduling<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/thread/" class="badge rounded post-taxonomy" title="thread">
+            thread<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/%E5%88%86%E5%B8%83%E5%BC%8F%E6%9E%B6%E6%9E%84/" class="badge rounded post-taxonomy" title="分布式架构">
+            分布式架构<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/%E5%8D%8E%E4%B8%BA/" class="badge rounded post-taxonomy" title="华为">
+            华为<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/%E8%8B%B9%E6%9E%9C/" class="badge rounded post-taxonomy" title="苹果">
+            苹果<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/bash/" class="badge rounded post-taxonomy" title="bash">
+            bash<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/etcd/" class="badge rounded post-taxonomy" title="etcd">
+            etcd<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/grafana/" class="badge rounded post-taxonomy" title="grafana">
+            grafana<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/iptables/" class="badge rounded post-taxonomy" title="iptables">
+            iptables<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/jdbc/" class="badge rounded post-taxonomy" title="JDBC">
+            JDBC<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/jmeter/" class="badge rounded post-taxonomy" title="jmeter">
+            jmeter<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/%E6%95%B0%E6%8D%AE%E5%BA%93%E6%97%B6%E5%8C%BA%E9%82%A3%E4%BA%9B%E4%BA%8B%E5%84%BF/" class="badge rounded post-taxonomy" title="数据库时区那些事儿">
+            数据库时区那些事儿<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/%E7%9B%91%E6%8E%A7/" class="badge rounded post-taxonomy" title="监控">
+            监控<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/%E9%99%90%E6%B5%81/" class="badge rounded post-taxonomy" title="限流">
+            限流<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/acloud/" class="badge rounded post-taxonomy" title="acloud">
+            acloud<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/akka/" class="badge rounded post-taxonomy" title="Akka">
+            Akka<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/alertmanager/" class="badge rounded post-taxonomy" title="alertmanager">
+            alertmanager<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/calico/" class="badge rounded post-taxonomy" title="calico">
+            calico<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/chrome/" class="badge rounded post-taxonomy" title="chrome">
+            chrome<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/coredns/" class="badge rounded post-taxonomy" title="coredns">
+            coredns<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/elasticsearch/" class="badge rounded post-taxonomy" title="elasticsearch">
+            elasticsearch<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/fluentd/" class="badge rounded post-taxonomy" title="fluentd">
+            fluentd<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/harbor/" class="badge rounded post-taxonomy" title="harbor">
+            harbor<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/helm/" class="badge rounded post-taxonomy" title="helm">
+            helm<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/hystrix/" class="badge rounded post-taxonomy" title="hystrix">
+            hystrix<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/io/" class="badge rounded post-taxonomy" title="io">
+            io<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/jdpa/" class="badge rounded post-taxonomy" title="jdpa">
+            jdpa<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/jwt/" class="badge rounded post-taxonomy" title="jwt">
+            jwt<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/kafka/" class="badge rounded post-taxonomy" title="kafka">
+            kafka<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/kibana/" class="badge rounded post-taxonomy" title="kibana">
+            kibana<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/mq/" class="badge rounded post-taxonomy" title="MQ">
+            MQ<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/nfs/" class="badge rounded post-taxonomy" title="nfs">
+            nfs<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/oauth/" class="badge rounded post-taxonomy" title="oauth">
+            oauth<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/oracle/" class="badge rounded post-taxonomy" title="Oracle">
+            Oracle<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/pprof/" class="badge rounded post-taxonomy" title="pprof">
+            pprof<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/reactor/" class="badge rounded post-taxonomy" title="reactor">
+            reactor<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/spring-boot/" class="badge rounded post-taxonomy" title="spring-boot">
+            spring-boot<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/spring-cloud/" class="badge rounded post-taxonomy" title="Spring Cloud">
+            Spring Cloud<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/springboot/" class="badge rounded post-taxonomy" title="springboot">
+            springboot<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/ssl/" class="badge rounded post-taxonomy" title="ssl">
+            ssl<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/systemtap/" class="badge rounded post-taxonomy" title="systemtap">
+            systemtap<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/tiller/" class="badge rounded post-taxonomy" title="tiller">
+            tiller<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/tomcat/" class="badge rounded post-taxonomy" title="tomcat">
+            tomcat<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/ubuntu/" class="badge rounded post-taxonomy" title="ubuntu">
+            ubuntu<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/vtable/" class="badge rounded post-taxonomy" title="vtable">
+            vtable<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/%E6%B6%88%E6%81%AF%E9%98%9F%E5%88%97/" class="badge rounded post-taxonomy" title="消息队列">
+            消息队列<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/%E6%B7%B1%E4%BF%A1%E6%9C%8D/" class="badge rounded post-taxonomy" title="深信服">
+            深信服<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/%E7%BC%93%E5%AD%98/" class="badge rounded post-taxonomy" title="缓存">
+            缓存<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/%E8%99%9A%E6%8B%9F%E5%8C%96/" class="badge rounded post-taxonomy" title="虚拟化">
+            虚拟化<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/%E8%B0%83%E7%94%A8%E9%93%BE%E8%BF%BD%E8%B8%AA/" class="badge rounded post-taxonomy" title="调用链追踪">
+            调用链追踪<span class="badge badge-sm text-white bg-accent ms-1">1</span></a></div>
+      </div>
+    </section>
+    
+  </div>
+</aside>
+</div>
+    </main><footer class="footer mt-auto py-3 text-center container"><nav class="social-links nav justify-content-center mb-2"><a class="nav-link social-link" target="_blank" href="https://github.com/chanjarster" title="GitHub" rel="noopener noreferrer">
+        <i class="fa-fw fa-2x fab fa-github"></i>
+      </a></nav>
+<div class="copyright mb-2">
+  Copyright © 2010-2025 Daniel Qian. All Rights Reserved.
+</div>
+<div class="powered-by mb-2">
+  Powered by <a href="https://gohugo.io" target="_blank" rel="noopener noreferrer">Hugo</a> and the <a href="https://github.com/razonyang/hugo-theme-bootstrap" target="_blank" rel="noopener noreferrer">Bootstrap</a> theme.
+</div>
+<a href="https://www.netlify.com" target="_blank" rel="noopener noreferrer">
+    <img src="https://www.netlify.com/img/global/badges/netlify-color-accent.svg" alt="Deploys by Netlify" width="114" height="51" />
+</a>
+</footer>
+<script src="/js/main.2cdce25f280f570596c88888d6af930fe5e15ea030005291dad293defbb231d3.js" integrity="sha256-LNziXygPVwWWyIiI1q&#43;TD&#43;XhXqAwAFKR2tKT3vuyMdM=" crossorigin="anonymous" defer></script><script src="/js/icons.min.7b1f27dfde35467d03350938b2e41dbffd06347009b97ab913edfaca01a07814.js" integrity="sha256-ex8n3941Rn0DNQk4suQdv/0GNHAJuXq5E&#43;36ygGgeBQ=" crossorigin="anonymous" defer></script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('\/service-worker.js').then(function(reg) {
+      console.log('Successfully registered service worker', reg);
+    }).catch(function(err) {
+      console.warn('Error whilst registering service worker', err);
+    });
+  });
+}
+</script><script src="/js/viewer.min.1ec1fa5aa3a66267222a44fe1cd51856ad4a92be48ede579fb36d70a6d4c28e9.js" integrity="sha256-HsH6WqOmYmciKkT&#43;HNUYVq1Kkr5I7eV5&#43;zbXCm1MKOk=" crossorigin="anonymous" defer></script>
+</body>
+</html>

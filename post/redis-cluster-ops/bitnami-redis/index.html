@@ -1,0 +1,1229 @@
+<!doctype html><html lang="zh-cn" data-palette="blue"
+  >
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Redis 集群运维笔记 - 利用 bitnami/redis 部署 Redis Cluster - 颇忒脱的技术博客</title><link rel="apple-touch-icon" href="/images/icons/icon-180x180.png" sizes="180x180">
+<link rel="icon" href="/images/icons/icon-32x32.png" sizes="32x32" type="image/png">
+<link rel="icon" href="/images/icons/icon-16x16.png" sizes="16x16" type="image/png">
+<link rel="icon" href="/images/icons/favicon.ico">
+<link rel="manifest" href="/manifest.json">
+<meta name="keywords" content="" />
+<meta name="description" content="" /><meta name="robots" content="index, follow" /><meta itemprop="name" content="Redis 集群运维笔记 - 利用 bitnami/redis 部署 Redis Cluster">
+<meta itemprop="description" content=""><meta itemprop="datePublished" content="2024-01-27T12:02:32+08:00" />
+<meta itemprop="dateModified" content="2024-01-27T12:02:32+08:00" />
+<meta itemprop="wordCount" content="2118">
+<meta itemprop="keywords" content="redis," /><meta property="og:title" content="Redis 集群运维笔记 - 利用 bitnami/redis 部署 Redis Cluster" />
+<meta property="og:description" content="" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="/post/redis-cluster-ops/bitnami-redis/" /><meta property="article:section" content="post" />
+<meta property="article:published_time" content="2024-01-27T12:02:32+08:00" />
+<meta property="article:modified_time" content="2024-01-27T12:02:32+08:00" />
+
+<meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="Redis 集群运维笔记 - 利用 bitnami/redis 部署 Redis Cluster"/>
+<meta name="twitter:description" content=""/>
+<meta property="og:image" content="/images/avatar.jpg"/>
+  <meta name="twitter:image" content="/images/avatar.jpg"/><link rel="stylesheet" href="/css/main.min.24196952817c68c8b90d8fa573d560fa62766baa0622bdc0e862255f4a4d1307.css" integrity="sha256-JBlpUoF8aMi5DY&#43;lc9Vg&#43;mJ2a6oGIr3A6GIlX0pNEwc=" crossorigin="anonymous"><link rel="stylesheet" href="/css/viewer.min.3d228794bcedbbfa0412beb8fbc1ec6973202945e42af7004f742a4d7bd620ab.css" integrity="sha256-PSKHlLztu/oEEr64&#43;8HsaXMgKUXkKvcAT3QqTXvWIKs=" crossorigin="anonymous"></head>
+  <body><script>const items=["mode","palette"];items.forEach(function(e){const t=localStorage.getItem("hbs-"+e);t&&document.body.parentElement.setAttribute("data-"+e,t)})</script><header><nav class="navbar top-app-bar top-app-bar-expand-lg fixed-top">
+  <div class="container">
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent"
+      aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <i class="fas fa-bars"></i>
+    </button><a class="navbar-brand flex-grow-1 flex-lg-grow-0 text-center text-lg-start mx-auto me-lg-3" href="/"><img class="logo" alt="Logo" src="/images/avatar.jpg" loading="lazy"
+   width="455" height="455"
+   />
+颇忒脱的技术博客
+    </a>
+    
+    <button class="navbar-settings" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvasSettings"
+  aria-controls="offcanvasSettings" aria-label="Toggle settings">
+  <i class="fas fa-ellipsis-v"></i>
+</button>
+
+<div class="offcanvas offcanvas-end surface h-100" tabindex="-1" id="offcanvasSettings" aria-labelledby="offcanvasSettings">
+  <div class="offcanvas-header">
+    <h3 class="offcanvas-title">设置</h3>
+    <button type="button" class="btn btn-sm btn-outline-primary" data-bs-dismiss="offcanvas" aria-label="Close">
+      <i class="fas fa-times"></i>
+    </button>
+  </div>
+  <div class="offcanvas-body d-flex flex-column">
+
+<section class="setting">
+  <form class="row">
+    <div class="col-auto">
+      <label><i class="fas fa-fw fa-adjust"></i> 模式</label>
+    </div>
+    <div class="col-auto ms-auto">
+      <div class="form-check form-switch">
+        <input class="form-check-input" type="checkbox" id="modeSwitcher">
+      </div>
+    </div>
+  </form>
+</section>
+
+<section class="setting">
+  <form class="font-size-switcher-form row">
+    <div class="col-auto">
+      <label for="fontSize" class="form-label"><i class="fas fa-fw fa-font"></i> 字体大小</label>
+    </div>
+    <div class="col-auto ms-auto">
+      <input type="range" class="form-range" min="-2" max="2" id="fontSize">
+    </div>
+  </form>
+</section>
+
+
+<section class="setting palettes">
+  <form class="row">
+    <div class="col-auto">
+      <label><i class="fas fa-fw fa-palette"></i> 配色</label>
+    </div>
+    <div class="col-auto ms-auto">
+      <a id="btnPalette" class="btn btn-sm btn-outline-primary" role="button" aria-label="palettePicker">
+        <i class="fas fa-eye-dropper"></i>
+      </a>
+    </div>
+  </form>
+  <div class="mt-2 d-flex justify-content-between visually-hidden" id="palettePicker"><button type="button" id="palette-blue" aria-label="蓝色"
+        class="btn btn-sm w-100 palette" data-palette="blue">
+      </button><button type="button" id="palette-blue-gray" aria-label="蓝灰色"
+        class="btn btn-sm w-100 palette" data-palette="blue-gray">
+      </button><button type="button" id="palette-brown" aria-label="棕色"
+        class="btn btn-sm w-100 palette" data-palette="brown">
+      </button><button type="button" id="palette-cyan" aria-label="青色"
+        class="btn btn-sm w-100 palette" data-palette="cyan">
+      </button><button type="button" id="palette-green" aria-label="绿色"
+        class="btn btn-sm w-100 palette" data-palette="green">
+      </button><button type="button" id="palette-indigo" aria-label="靛青色"
+        class="btn btn-sm w-100 palette" data-palette="indigo">
+      </button><button type="button" id="palette-orange" aria-label="橙色"
+        class="btn btn-sm w-100 palette" data-palette="orange">
+      </button><button type="button" id="palette-pink" aria-label="粉色"
+        class="btn btn-sm w-100 palette" data-palette="pink">
+      </button><button type="button" id="palette-purple" aria-label="紫色"
+        class="btn btn-sm w-100 palette" data-palette="purple">
+      </button><button type="button" id="palette-red" aria-label="红色"
+        class="btn btn-sm w-100 palette" data-palette="red">
+      </button><button type="button" id="palette-teal" aria-label="蓝绿色"
+        class="btn btn-sm w-100 palette" data-palette="teal">
+      </button><button type="button" id="palette-yellow" aria-label="黄色"
+        class="btn btn-sm w-100 palette" data-palette="yellow">
+      </button></div>
+</section>
+<section class="setting actions d-flex justify-content-around mt-auto overflow-auto">
+  <a role="button" class="action action-go-back" href="javascript: window.history.back();">
+    <span class="action-icon"><i class="fas fa-2x fa-arrow-left"></i></span> 返回
+  </a>
+  <a role="button" class="action action-reload-page">
+    <span class="action-icon"><i class="fas fa-2x fa-redo-alt"></i></span> 刷新
+  </a>
+  <a role="button" class="action action-copy-url">
+    <span class="action-icon"><i class="fas fa-2x fa-link"></i></span> 复制链接
+  </a></section>
+
+</div>
+</div>
+
+    <div class="collapse navbar-collapse" tabindex="-1" id="navbarSupportedContent" aria-labelledby="navbarSupportedContent">
+      <form class="search-bar my-1" action="/search">
+  <div class="input-group input-group-sm">
+    <span class="btn btn-search disabled position-absolute left-0"><i class="fas fa-fw fa-search"></i></span>
+    <input class="form-control rounded-pill" name="q" type="search" aria-label="Search">
+  </div>
+</form>
+      <ul class="navbar-nav ms-auto"><li class="nav-item">
+          <a class="nav-link" href="/series/">
+            <i class="fas fa-fw fa-columns"></i>专栏
+          </a>
+        </li><li class="nav-item dropdown">
+          <a class="nav-link" id="navbarDropdownIndex" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+            <i class="fas fa-fw fa-chevron-circle-down"></i>快速索引
+          </a>
+          <ul class="dropdown-menu" aria-labelledby="navbarDropdownIndex"><li>
+              <a class="dropdown-item"
+                href="/tags/go">
+                Go
+              </a>
+            </li><li>
+              <a class="dropdown-item"
+                href="/tags/gc">
+                GC
+              </a>
+            </li><li>
+              <a class="dropdown-item"
+                href="/tags/kernel">
+                Kernel
+              </a>
+            </li><li>
+              <a class="dropdown-item"
+                href="/tags/cheatsheet">
+                Cheatsheet
+              </a>
+            </li><li>
+              <a class="dropdown-item"
+                href="/tags/troubleshooting">
+                排障实战记录
+              </a>
+            </li></ul>
+        </li><li class="nav-item">
+          <a class="nav-link" href="/tags/">
+            <i class="fas fa-fw fa-tags"></i>标签
+          </a>
+        </li><li class="nav-item">
+          <a class="nav-link" href="/archives/">
+            <i class="fas fa-fw fa-file-archive"></i>归档
+          </a>
+        </li></ul>
+    </div>
+  </div>
+</nav>
+</header>
+<main role="main" class="container">
+      <div class="row content">
+<div class="col-lg-8">
+  <div class="container"><nav class="row card component" aria-label="breadcrumb">
+  <div class="card-body">
+    <ol class="breadcrumb "><li class="breadcrumb-item"><a href="/">主页</a></li><li class="breadcrumb-item"><a href="/post/">文章</a></li><li class="breadcrumb-item active">Redis 集群运维笔记 - 利用 Bitnami/Redis 部署 Redis Cluster</li></ol>
+  </div>
+</nav><div class="post-panel-wrapper">
+  <div class="d-flex flex-column component rounded post-panel">
+    
+    <a class="action action-panel-toggler" role="button" title="Panel toggler">
+      <i class="fas fa-fw fa-chevron-circle-down"></i>
+    </a>
+    <a id="sidebarToggler" class="action d-none d-lg-block" role="button" title="Sidebar toggler">
+  <i class="fas fa-fw fa-expand-alt" data-fa-transform="rotate-45"></i>
+</a>
+
+    
+
+    
+    <a class="action" href="#post-copyright" role="button" aria-label="Copyright" title="Copyright">
+  <i class="fas fa-fw fa-copyright"></i>
+</a>
+    <a class="action" href="#post-comments" role="button" aria-label="Comments" title="Comments">
+  <i class="fas fa-fw fa-comments"></i>
+</a>
+    <a class="action" href="#postTOC" aria-controls="Table of contents" role="button" title="Table of contents">
+  <i class="fas fa-fw fa-list-alt"></i>
+</a>
+    
+  </div>
+</div>
+<article class="row card component mb-4 post">
+  <div class="card-header ">
+    <h1 class="card-title post-title">Redis 集群运维笔记 - 利用 Bitnami/Redis 部署 Redis Cluster
+</h1>
+  </div>
+  <div class="card-body"><div class="post-meta">
+  <span class="post-date" title="创建于 2024-01-27 12:02:32 &#43;0800 CST。">
+    2024-01-27
+  </span><span class="post-reading-time">
+    5 分钟阅读
+  </span><span class="post-taxonomies"><a href="/tags/redis/" class="badge post-taxonomy">redis</a></span>
+</div>
+<div class="post-content mb-3"><p>本文介绍如何使用 <a href="https://github.com/bitnami/charts/tree/master/bitnami/redis" target="_blank" rel="noopener noreferrer">bitnami/redis helm chart</a> 组成 Redis Cluster。</p>
+<p>虽然有 <a href="https://github.com/bitnami/charts/tree/master/bitnami/redis-cluster" target="_blank" rel="noopener noreferrer">bitnami/redis-cluster helm chart</a> 可以使用，但是它是自动组成 Redis Cluster 的，缺少了一定的灵活性，因此没有选它。</p>
+<h2 id="拓扑">拓扑<a class="anchor ms-1" href="#拓扑"><i class="fas fa-link"></i></a></h2>
+<p>先做好<a href="../ha-arch">高可用架构规划</a>，然后再来看 K8S 对应的解决方案：</p>
+<ul>
+<li>master 和 slave 共享服务器：不需要特别设置。</li>
+<li>master 和 slave 共享服务器，Pod 错开：做不到。</li>
+<li>master Pod 散布开：<a href="https://kubernetes.io/docs/concepts/workloads/pods/pod-topology-spread-constraints/" target="_blank" rel="noopener noreferrer">Pod Topology Spread Constraints</a>(k8s &gt;= v1.19)。</li>
+<li>slave Pod 散布开：同上。</li>
+<li>master 和 slave 服务器分离：<a href="https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#inter-pod-affinity-and-anti-affinity" target="_blank" rel="noopener noreferrer">Inter-pod anti-affinity</a>。</li>
+<li>slave 和 slave 共享服务器，Pod 错开：做不到。</li>
+</ul>
+<p>总结来说就是：</p>
+<ul>
+<li>服务器分离：<a href="https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#inter-pod-affinity-and-anti-affinity" target="_blank" rel="noopener noreferrer">Inter-pod anti-affinity</a>。</li>
+<li>Pod 散布开：<a href="https://kubernetes.io/docs/concepts/workloads/pods/pod-topology-spread-constraints/" target="_blank" rel="noopener noreferrer">Pod Topology Spread Constraints</a>。</li>
+<li>Pod 错开：只能人工处理。</li>
+</ul>
+<p>本方案默认 Redis Cluster 由两个 StatefulSets 组成，一个是 Master （默认3副本），一个是 Slave （默认3副本）。</p>
+<h2 id="步骤">步骤<a class="anchor ms-1" href="#步骤"><i class="fas fa-link"></i></a></h2>
+<p>clone bitnami charts 仓库：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">git clone https://github.com/bitnami/charts.git bitnami-charts
+</span></span><span class="line"><span class="cl"><span class="nb">cd</span> bitnami-charts/bitnami
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>1）部署 Master 和 Slave StatefulSets</p>
+<p>Release 名字叫做 <code>rc-master</code> 和 <code>rc-slave</code>：</p>
+<p>rc-master-values.yaml:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">  1
+</span><span class="lnt">  2
+</span><span class="lnt">  3
+</span><span class="lnt">  4
+</span><span class="lnt">  5
+</span><span class="lnt">  6
+</span><span class="lnt">  7
+</span><span class="lnt">  8
+</span><span class="lnt">  9
+</span><span class="lnt"> 10
+</span><span class="lnt"> 11
+</span><span class="lnt"> 12
+</span><span class="lnt"> 13
+</span><span class="lnt"> 14
+</span><span class="lnt"> 15
+</span><span class="lnt"> 16
+</span><span class="lnt"> 17
+</span><span class="lnt"> 18
+</span><span class="lnt"> 19
+</span><span class="lnt"> 20
+</span><span class="lnt"> 21
+</span><span class="lnt"> 22
+</span><span class="lnt"> 23
+</span><span class="lnt"> 24
+</span><span class="lnt"> 25
+</span><span class="lnt"> 26
+</span><span class="lnt"> 27
+</span><span class="lnt"> 28
+</span><span class="lnt"> 29
+</span><span class="lnt"> 30
+</span><span class="lnt"> 31
+</span><span class="lnt"> 32
+</span><span class="lnt"> 33
+</span><span class="lnt"> 34
+</span><span class="lnt"> 35
+</span><span class="lnt"> 36
+</span><span class="lnt"> 37
+</span><span class="lnt"> 38
+</span><span class="lnt"> 39
+</span><span class="lnt"> 40
+</span><span class="lnt"> 41
+</span><span class="lnt"> 42
+</span><span class="lnt"> 43
+</span><span class="lnt"> 44
+</span><span class="lnt"> 45
+</span><span class="lnt"> 46
+</span><span class="lnt"> 47
+</span><span class="lnt"> 48
+</span><span class="lnt"> 49
+</span><span class="lnt"> 50
+</span><span class="lnt"> 51
+</span><span class="lnt"> 52
+</span><span class="lnt"> 53
+</span><span class="lnt"> 54
+</span><span class="lnt"> 55
+</span><span class="lnt"> 56
+</span><span class="lnt"> 57
+</span><span class="lnt"> 58
+</span><span class="lnt"> 59
+</span><span class="lnt"> 60
+</span><span class="lnt"> 61
+</span><span class="lnt"> 62
+</span><span class="lnt"> 63
+</span><span class="lnt"> 64
+</span><span class="lnt"> 65
+</span><span class="lnt"> 66
+</span><span class="lnt"> 67
+</span><span class="lnt"> 68
+</span><span class="lnt"> 69
+</span><span class="lnt"> 70
+</span><span class="lnt"> 71
+</span><span class="lnt"> 72
+</span><span class="lnt"> 73
+</span><span class="lnt"> 74
+</span><span class="lnt"> 75
+</span><span class="lnt"> 76
+</span><span class="lnt"> 77
+</span><span class="lnt"> 78
+</span><span class="lnt"> 79
+</span><span class="lnt"> 80
+</span><span class="lnt"> 81
+</span><span class="lnt"> 82
+</span><span class="lnt"> 83
+</span><span class="lnt"> 84
+</span><span class="lnt"> 85
+</span><span class="lnt"> 86
+</span><span class="lnt"> 87
+</span><span class="lnt"> 88
+</span><span class="lnt"> 89
+</span><span class="lnt"> 90
+</span><span class="lnt"> 91
+</span><span class="lnt"> 92
+</span><span class="lnt"> 93
+</span><span class="lnt"> 94
+</span><span class="lnt"> 95
+</span><span class="lnt"> 96
+</span><span class="lnt"> 97
+</span><span class="lnt"> 98
+</span><span class="lnt"> 99
+</span><span class="lnt">100
+</span><span class="lnt">101
+</span><span class="lnt">102
+</span><span class="lnt">103
+</span><span class="lnt">104
+</span><span class="lnt">105
+</span><span class="lnt">106
+</span><span class="lnt">107
+</span><span class="lnt">108
+</span><span class="lnt">109
+</span><span class="lnt">110
+</span><span class="lnt">111
+</span><span class="lnt">112
+</span><span class="lnt">113
+</span><span class="lnt">114
+</span><span class="lnt">115
+</span><span class="lnt">116
+</span><span class="lnt">117
+</span><span class="lnt">118
+</span><span class="lnt">119
+</span><span class="lnt">120
+</span><span class="lnt">121
+</span><span class="lnt">122
+</span><span class="lnt">123
+</span><span class="lnt">124
+</span><span class="lnt">125
+</span><span class="lnt">126
+</span><span class="lnt">127
+</span><span class="lnt">128
+</span><span class="lnt">129
+</span><span class="lnt">130
+</span><span class="lnt">131
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-yaml" data-lang="yaml"><span class="line"><span class="cl"><span class="nt">architecture</span><span class="p">:</span><span class="w"> </span><span class="l">standalone</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="nt">auth</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="c"># 密码</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">password</span><span class="p">:</span><span class="w"> </span><span class="l">foobarloozoo</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="c"># 用户名</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">username</span><span class="p">:</span><span class="w"> </span><span class="l">default</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="nt">global</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">imageRegistry</span><span class="p">:</span><span class="w"> </span><span class="l">harbor2.supwisdom.com</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="c"># imagePullSecrets:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="c">#   - harbor-ipr</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">storageClass</span><span class="p">:</span><span class="w"> </span><span class="l">nfs-client</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="nt">image</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">repository</span><span class="p">:</span><span class="w"> </span><span class="l">bitnami/redis</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">tag</span><span class="p">:</span><span class="w"> </span><span class="m">6.2</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">pullPolicy</span><span class="p">:</span><span class="w"> </span><span class="l">Always</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="c"># 自定义的</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="nt">roleLabels</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">master</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">redis-cluster/role</span><span class="p">:</span><span class="w"> </span><span class="l">master</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">slave</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">redis-cluster/role</span><span class="p">:</span><span class="w"> </span><span class="l">slave</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="nt">master</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">configuration</span><span class="p">:</span><span class="w"> </span><span class="p">|-</span><span class="sd">
+</span></span></span><span class="line"><span class="cl"><span class="sd">    # append to redis.conf
+</span></span></span><span class="line"><span class="cl"><span class="sd">    cluster-enabled yes
+</span></span></span><span class="line"><span class="cl"><span class="sd">    cluster-config-file {{ .Values.master.persistence.path }}/nodes.conf
+</span></span></span><span class="line"><span class="cl"><span class="sd">    aclfile /data/users.acl
+</span></span></span><span class="line"><span class="cl"><span class="sd">    maxmemory 1024mb</span><span class="w">    
+</span></span></span><span class="line"><span class="cl"><span class="w">  
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">initContainers</span><span class="p">:</span><span class="w"> </span><span class="p">|-</span><span class="sd">
+</span></span></span><span class="line"><span class="cl"><span class="sd">    - name: aclfile-init
+</span></span></span><span class="line"><span class="cl"><span class="sd">      image: &#39;{{ include &#34;redis.sysctl.image&#34; . }}&#39;
+</span></span></span><span class="line"><span class="cl"><span class="sd">      imagePullPolicy: IfNotPresent
+</span></span></span><span class="line"><span class="cl"><span class="sd">      command:
+</span></span></span><span class="line"><span class="cl"><span class="sd">        - /bin/bash
+</span></span></span><span class="line"><span class="cl"><span class="sd">        - -ec
+</span></span></span><span class="line"><span class="cl"><span class="sd">        - |
+</span></span></span><span class="line"><span class="cl"><span class="sd">          echo &#39;write {{ .Values.master.persistence.path }}/users-default.acl&#39;
+</span></span></span><span class="line"><span class="cl"><span class="sd">          echo &#39;user {{ .Values.auth.username }} on #{{ sha256sum .Values.auth.password }} ~* &amp;* +@all&#39; &gt; {{ .Values.master.persistence.path }}/users-default.acl
+</span></span></span><span class="line"><span class="cl"><span class="sd">      volumeMounts:
+</span></span></span><span class="line"><span class="cl"><span class="sd">        - name: redis-data
+</span></span></span><span class="line"><span class="cl"><span class="sd">          mountPath: &#34;{{ .Values.master.persistence.path }}&#34;
+</span></span></span><span class="line"><span class="cl"><span class="sd">          subPath: &#34;{{ .Values.master.persistence.subPath }}&#34;</span><span class="w">    
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">preExecCmds</span><span class="p">:</span><span class="w"> </span><span class="p">|-</span><span class="sd">
+</span></span></span><span class="line"><span class="cl"><span class="sd">    if [[ ! -e  &#34;$DATA_DIR/users.acl&#34; ]]; then
+</span></span></span><span class="line"><span class="cl"><span class="sd">      echo &#34;Initialize $DATA_DIR/users.acl&#34;
+</span></span></span><span class="line"><span class="cl"><span class="sd">      cat &#34;$DATA_DIR/users-default.acl&#34; &gt; &#34;$DATA_DIR/users.acl&#34;
+</span></span></span><span class="line"><span class="cl"><span class="sd">    else
+</span></span></span><span class="line"><span class="cl"><span class="sd">      echo &#34;Skipping initialize $DATA_DIR/users.acl, because it already exists&#34;
+</span></span></span><span class="line"><span class="cl"><span class="sd">    fi</span><span class="w">    
+</span></span></span><span class="line"><span class="cl"><span class="w">  
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">extraEnvVars</span><span class="p">:</span><span class="w"> </span><span class="p">|-</span><span class="sd">
+</span></span></span><span class="line"><span class="cl"><span class="sd">    - name: POD_IP
+</span></span></span><span class="line"><span class="cl"><span class="sd">      valueFrom:
+</span></span></span><span class="line"><span class="cl"><span class="sd">        fieldRef:
+</span></span></span><span class="line"><span class="cl"><span class="sd">          fieldPath: status.podIP
+</span></span></span><span class="line"><span class="cl"><span class="sd">    - name: DATA_DIR
+</span></span></span><span class="line"><span class="cl"><span class="sd">      value: {{ .Values.master.persistence.path }}</span><span class="w">    
+</span></span></span><span class="line"><span class="cl"><span class="w">  
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">extraFlags</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span>- --<span class="l">cluster-announce-ip $POD_IP</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">persistence</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">size</span><span class="p">:</span><span class="w"> </span><span class="l">2Gi</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">resources</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">requests</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">      </span><span class="nt">cpu</span><span class="p">:</span><span class="w"> </span><span class="l">500m</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">      </span><span class="nt">memory</span><span class="p">:</span><span class="w"> </span><span class="l">128Mi</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">limits</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">      </span><span class="nt">cpu</span><span class="p">:</span><span class="w"> </span><span class="m">2</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">      </span><span class="nt">memory</span><span class="p">:</span><span class="w"> </span><span class="l">1088Mi</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">podLabels</span><span class="p">:</span><span class="w"> </span><span class="p">|-</span><span class="sd">
+</span></span></span><span class="line"><span class="cl"><span class="sd">    {{ .Values.roleLabels.master | toYaml }}</span><span class="w">    
+</span></span></span><span class="line"><span class="cl"><span class="w">  
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="c"># 尽量不和 slave pod 在一起</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">podAntiAffinityPreset</span><span class="p">:</span><span class="w"> </span><span class="l">soft</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">affinity</span><span class="p">:</span><span class="w"> </span><span class="p">|-</span><span class="sd">
+</span></span></span><span class="line"><span class="cl"><span class="sd">    podAntiAffinity: 
+</span></span></span><span class="line"><span class="cl"><span class="sd">      preferredDuringSchedulingIgnoredDuringExecution:
+</span></span></span><span class="line"><span class="cl"><span class="sd">      - podAffinityTerm:
+</span></span></span><span class="line"><span class="cl"><span class="sd">          labelSelector:
+</span></span></span><span class="line"><span class="cl"><span class="sd">            matchLabels:
+</span></span></span><span class="line"><span class="cl"><span class="sd">              {{ .Values.roleLabels.slave | toYaml | nindent 12 }}
+</span></span></span><span class="line"><span class="cl"><span class="sd">          topologyKey: kubernetes.io/hostname
+</span></span></span><span class="line"><span class="cl"><span class="sd">        weight: 1
+</span></span></span><span class="line"><span class="cl"><span class="sd">    </span><span class="w">    
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="c"># 强制分散分布</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">topologySpreadConstraints</span><span class="p">:</span><span class="w"> </span><span class="p">|-</span><span class="sd">
+</span></span></span><span class="line"><span class="cl"><span class="sd">    - maxSkew: 1
+</span></span></span><span class="line"><span class="cl"><span class="sd">      topologyKey: kubernetes.io/hostname
+</span></span></span><span class="line"><span class="cl"><span class="sd">      whenUnsatisfiable: DoNotSchedule
+</span></span></span><span class="line"><span class="cl"><span class="sd">      labelSelector:
+</span></span></span><span class="line"><span class="cl"><span class="sd">        matchLabels: {{- (include &#34;common.labels.matchLabels&#34; $) | nindent 6 }}
+</span></span></span><span class="line"><span class="cl"><span class="sd">          {{ .Values.roleLabels.master | toYaml | nindent 6 }}
+</span></span></span><span class="line"><span class="cl"><span class="sd">          app.kubernetes.io/component: master</span><span class="w">    
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="nt">sysctl</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">image</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">repository</span><span class="p">:</span><span class="w"> </span><span class="l">bitnami/bitnami-shell</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">tag</span><span class="p">:</span><span class="w"> </span><span class="m">10</span>-<span class="l">debian-10</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">pullPolicy</span><span class="p">:</span><span class="w"> </span><span class="l">Always</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">command</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span>- <span class="l">/bin/bash</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span>- -<span class="l">ec</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span>- <span class="p">|</span><span class="sd">
+</span></span></span><span class="line"><span class="cl"><span class="sd">      sysctl -w net.core.somaxconn=512</span><span class="w">      
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">resources</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">limits</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">      </span><span class="nt">cpu</span><span class="p">:</span><span class="w"> </span><span class="l">500m</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">      </span><span class="nt">memory</span><span class="p">:</span><span class="w"> </span><span class="l">128Mi</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="nt">metrics</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">image</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">repository</span><span class="p">:</span><span class="w"> </span><span class="l">bitnami/redis-exporter</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">tag</span><span class="p">:</span><span class="w"> </span><span class="m">1</span>-<span class="l">debian-10</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">pullPolicy</span><span class="p">:</span><span class="w"> </span><span class="l">Always</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">resources</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">limits</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">      </span><span class="nt">cpu</span><span class="p">:</span><span class="w"> </span><span class="l">500m</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">      </span><span class="nt">memory</span><span class="p">:</span><span class="w"> </span><span class="l">128Mi</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>rc-slave-values.yaml:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">  1
+</span><span class="lnt">  2
+</span><span class="lnt">  3
+</span><span class="lnt">  4
+</span><span class="lnt">  5
+</span><span class="lnt">  6
+</span><span class="lnt">  7
+</span><span class="lnt">  8
+</span><span class="lnt">  9
+</span><span class="lnt"> 10
+</span><span class="lnt"> 11
+</span><span class="lnt"> 12
+</span><span class="lnt"> 13
+</span><span class="lnt"> 14
+</span><span class="lnt"> 15
+</span><span class="lnt"> 16
+</span><span class="lnt"> 17
+</span><span class="lnt"> 18
+</span><span class="lnt"> 19
+</span><span class="lnt"> 20
+</span><span class="lnt"> 21
+</span><span class="lnt"> 22
+</span><span class="lnt"> 23
+</span><span class="lnt"> 24
+</span><span class="lnt"> 25
+</span><span class="lnt"> 26
+</span><span class="lnt"> 27
+</span><span class="lnt"> 28
+</span><span class="lnt"> 29
+</span><span class="lnt"> 30
+</span><span class="lnt"> 31
+</span><span class="lnt"> 32
+</span><span class="lnt"> 33
+</span><span class="lnt"> 34
+</span><span class="lnt"> 35
+</span><span class="lnt"> 36
+</span><span class="lnt"> 37
+</span><span class="lnt"> 38
+</span><span class="lnt"> 39
+</span><span class="lnt"> 40
+</span><span class="lnt"> 41
+</span><span class="lnt"> 42
+</span><span class="lnt"> 43
+</span><span class="lnt"> 44
+</span><span class="lnt"> 45
+</span><span class="lnt"> 46
+</span><span class="lnt"> 47
+</span><span class="lnt"> 48
+</span><span class="lnt"> 49
+</span><span class="lnt"> 50
+</span><span class="lnt"> 51
+</span><span class="lnt"> 52
+</span><span class="lnt"> 53
+</span><span class="lnt"> 54
+</span><span class="lnt"> 55
+</span><span class="lnt"> 56
+</span><span class="lnt"> 57
+</span><span class="lnt"> 58
+</span><span class="lnt"> 59
+</span><span class="lnt"> 60
+</span><span class="lnt"> 61
+</span><span class="lnt"> 62
+</span><span class="lnt"> 63
+</span><span class="lnt"> 64
+</span><span class="lnt"> 65
+</span><span class="lnt"> 66
+</span><span class="lnt"> 67
+</span><span class="lnt"> 68
+</span><span class="lnt"> 69
+</span><span class="lnt"> 70
+</span><span class="lnt"> 71
+</span><span class="lnt"> 72
+</span><span class="lnt"> 73
+</span><span class="lnt"> 74
+</span><span class="lnt"> 75
+</span><span class="lnt"> 76
+</span><span class="lnt"> 77
+</span><span class="lnt"> 78
+</span><span class="lnt"> 79
+</span><span class="lnt"> 80
+</span><span class="lnt"> 81
+</span><span class="lnt"> 82
+</span><span class="lnt"> 83
+</span><span class="lnt"> 84
+</span><span class="lnt"> 85
+</span><span class="lnt"> 86
+</span><span class="lnt"> 87
+</span><span class="lnt"> 88
+</span><span class="lnt"> 89
+</span><span class="lnt"> 90
+</span><span class="lnt"> 91
+</span><span class="lnt"> 92
+</span><span class="lnt"> 93
+</span><span class="lnt"> 94
+</span><span class="lnt"> 95
+</span><span class="lnt"> 96
+</span><span class="lnt"> 97
+</span><span class="lnt"> 98
+</span><span class="lnt"> 99
+</span><span class="lnt">100
+</span><span class="lnt">101
+</span><span class="lnt">102
+</span><span class="lnt">103
+</span><span class="lnt">104
+</span><span class="lnt">105
+</span><span class="lnt">106
+</span><span class="lnt">107
+</span><span class="lnt">108
+</span><span class="lnt">109
+</span><span class="lnt">110
+</span><span class="lnt">111
+</span><span class="lnt">112
+</span><span class="lnt">113
+</span><span class="lnt">114
+</span><span class="lnt">115
+</span><span class="lnt">116
+</span><span class="lnt">117
+</span><span class="lnt">118
+</span><span class="lnt">119
+</span><span class="lnt">120
+</span><span class="lnt">121
+</span><span class="lnt">122
+</span><span class="lnt">123
+</span><span class="lnt">124
+</span><span class="lnt">125
+</span><span class="lnt">126
+</span><span class="lnt">127
+</span><span class="lnt">128
+</span><span class="lnt">129
+</span><span class="lnt">130
+</span><span class="lnt">131
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-yaml" data-lang="yaml"><span class="line"><span class="cl"><span class="nt">architecture</span><span class="p">:</span><span class="w"> </span><span class="l">standalone</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="nt">auth</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="c"># 密码</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">password</span><span class="p">:</span><span class="w"> </span><span class="l">foobarloozoo</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="c"># 用户名</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">username</span><span class="p">:</span><span class="w"> </span><span class="l">default</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="nt">global</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">imageRegistry</span><span class="p">:</span><span class="w"> </span><span class="l">harbor2.supwisdom.com</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="c"># imagePullSecrets:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="c">#   - harbor-ipr</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">storageClass</span><span class="p">:</span><span class="w"> </span><span class="l">nfs-client</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="nt">image</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">repository</span><span class="p">:</span><span class="w"> </span><span class="l">bitnami/redis</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">tag</span><span class="p">:</span><span class="w"> </span><span class="m">6.2</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">pullPolicy</span><span class="p">:</span><span class="w"> </span><span class="l">Always</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="c"># 自定义的</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="nt">roleLabels</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">master</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">redis-cluster/role</span><span class="p">:</span><span class="w"> </span><span class="l">master</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">slave</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">redis-cluster/role</span><span class="p">:</span><span class="w"> </span><span class="l">slave</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="nt">master</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">configuration</span><span class="p">:</span><span class="w"> </span><span class="p">|-</span><span class="sd">
+</span></span></span><span class="line"><span class="cl"><span class="sd">    # append to redis.conf
+</span></span></span><span class="line"><span class="cl"><span class="sd">    cluster-enabled yes
+</span></span></span><span class="line"><span class="cl"><span class="sd">    cluster-config-file {{ .Values.master.persistence.path }}/nodes.conf
+</span></span></span><span class="line"><span class="cl"><span class="sd">    aclfile /data/users.acl
+</span></span></span><span class="line"><span class="cl"><span class="sd">    maxmemory 1024mb</span><span class="w">    
+</span></span></span><span class="line"><span class="cl"><span class="w">  
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">initContainers</span><span class="p">:</span><span class="w"> </span><span class="p">|-</span><span class="sd">
+</span></span></span><span class="line"><span class="cl"><span class="sd">    - name: aclfile-init
+</span></span></span><span class="line"><span class="cl"><span class="sd">      image: &#39;{{ include &#34;redis.sysctl.image&#34; . }}&#39;
+</span></span></span><span class="line"><span class="cl"><span class="sd">      imagePullPolicy: IfNotPresent
+</span></span></span><span class="line"><span class="cl"><span class="sd">      command:
+</span></span></span><span class="line"><span class="cl"><span class="sd">        - /bin/bash
+</span></span></span><span class="line"><span class="cl"><span class="sd">        - -ec
+</span></span></span><span class="line"><span class="cl"><span class="sd">        - |
+</span></span></span><span class="line"><span class="cl"><span class="sd">          echo &#39;write {{ .Values.master.persistence.path }}/users-default.acl&#39;
+</span></span></span><span class="line"><span class="cl"><span class="sd">          echo &#39;user {{ .Values.auth.username }} on #{{ sha256sum .Values.auth.password }} ~* &amp;* +@all&#39; &gt; {{ .Values.master.persistence.path }}/users-default.acl
+</span></span></span><span class="line"><span class="cl"><span class="sd">      volumeMounts:
+</span></span></span><span class="line"><span class="cl"><span class="sd">        - name: redis-data
+</span></span></span><span class="line"><span class="cl"><span class="sd">          mountPath: &#34;{{ .Values.master.persistence.path }}&#34;
+</span></span></span><span class="line"><span class="cl"><span class="sd">          subPath: &#34;{{ .Values.master.persistence.subPath }}&#34;</span><span class="w">    
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">preExecCmds</span><span class="p">:</span><span class="w"> </span><span class="p">|-</span><span class="sd">
+</span></span></span><span class="line"><span class="cl"><span class="sd">    if [[ ! -e  &#34;$DATA_DIR/users.acl&#34; ]]; then
+</span></span></span><span class="line"><span class="cl"><span class="sd">      echo &#34;Initialize $DATA_DIR/users.acl&#34;
+</span></span></span><span class="line"><span class="cl"><span class="sd">      cat &#34;$DATA_DIR/users-default.acl&#34; &gt; &#34;$DATA_DIR/users.acl&#34;
+</span></span></span><span class="line"><span class="cl"><span class="sd">    else
+</span></span></span><span class="line"><span class="cl"><span class="sd">      echo &#34;Skipping initialize $DATA_DIR/users.acl, because it already exists&#34;
+</span></span></span><span class="line"><span class="cl"><span class="sd">    fi</span><span class="w">    
+</span></span></span><span class="line"><span class="cl"><span class="w">  
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">extraEnvVars</span><span class="p">:</span><span class="w"> </span><span class="p">|-</span><span class="sd">
+</span></span></span><span class="line"><span class="cl"><span class="sd">    - name: POD_IP
+</span></span></span><span class="line"><span class="cl"><span class="sd">      valueFrom:
+</span></span></span><span class="line"><span class="cl"><span class="sd">        fieldRef:
+</span></span></span><span class="line"><span class="cl"><span class="sd">          fieldPath: status.podIP
+</span></span></span><span class="line"><span class="cl"><span class="sd">    - name: DATA_DIR
+</span></span></span><span class="line"><span class="cl"><span class="sd">      value: {{ .Values.master.persistence.path }}</span><span class="w">    
+</span></span></span><span class="line"><span class="cl"><span class="w">  
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">extraFlags</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span>- --<span class="l">cluster-announce-ip $POD_IP</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">persistence</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">size</span><span class="p">:</span><span class="w"> </span><span class="l">2Gi</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">resources</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">requests</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">      </span><span class="nt">cpu</span><span class="p">:</span><span class="w"> </span><span class="l">500m</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">      </span><span class="nt">memory</span><span class="p">:</span><span class="w"> </span><span class="l">128Mi</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">limits</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">      </span><span class="nt">cpu</span><span class="p">:</span><span class="w"> </span><span class="m">2</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">      </span><span class="nt">memory</span><span class="p">:</span><span class="w"> </span><span class="l">1088Mi</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">podLabels</span><span class="p">:</span><span class="w"> </span><span class="p">|-</span><span class="sd">
+</span></span></span><span class="line"><span class="cl"><span class="sd">    {{ .Values.roleLabels.slave | toYaml }}</span><span class="w">    
+</span></span></span><span class="line"><span class="cl"><span class="w">  
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="c"># 尽量不和 slave pod 在一起</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">podAntiAffinityPreset</span><span class="p">:</span><span class="w"> </span><span class="l">soft</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">affinity</span><span class="p">:</span><span class="w"> </span><span class="p">|-</span><span class="sd">
+</span></span></span><span class="line"><span class="cl"><span class="sd">    podAntiAffinity: 
+</span></span></span><span class="line"><span class="cl"><span class="sd">      preferredDuringSchedulingIgnoredDuringExecution:
+</span></span></span><span class="line"><span class="cl"><span class="sd">      - podAffinityTerm:
+</span></span></span><span class="line"><span class="cl"><span class="sd">          labelSelector:
+</span></span></span><span class="line"><span class="cl"><span class="sd">            matchLabels:
+</span></span></span><span class="line"><span class="cl"><span class="sd">              {{ .Values.roleLabels.master | toYaml | nindent 12 }}
+</span></span></span><span class="line"><span class="cl"><span class="sd">          topologyKey: kubernetes.io/hostname
+</span></span></span><span class="line"><span class="cl"><span class="sd">        weight: 1</span><span class="w">    
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="c"># 强制分散分布</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">topologySpreadConstraints</span><span class="p">:</span><span class="w"> </span><span class="p">|-</span><span class="sd">
+</span></span></span><span class="line"><span class="cl"><span class="sd">    - maxSkew: 1
+</span></span></span><span class="line"><span class="cl"><span class="sd">      topologyKey: kubernetes.io/hostname
+</span></span></span><span class="line"><span class="cl"><span class="sd">      whenUnsatisfiable: DoNotSchedule
+</span></span></span><span class="line"><span class="cl"><span class="sd">      labelSelector:
+</span></span></span><span class="line"><span class="cl"><span class="sd">        matchLabels: {{- (include &#34;common.labels.matchLabels&#34; $) | nindent 6 }}
+</span></span></span><span class="line"><span class="cl"><span class="sd">          {{ .Values.roleLabels.slave | toYaml | nindent 6 }}
+</span></span></span><span class="line"><span class="cl"><span class="sd">          app.kubernetes.io/component: master</span><span class="w">    
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="nt">sysctl</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">image</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">repository</span><span class="p">:</span><span class="w"> </span><span class="l">bitnami/bitnami-shell</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">tag</span><span class="p">:</span><span class="w"> </span><span class="m">10</span>-<span class="l">debian-10</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">pullPolicy</span><span class="p">:</span><span class="w"> </span><span class="l">Always</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">command</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span>- <span class="l">/bin/bash</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span>- -<span class="l">ec</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span>- <span class="p">|</span><span class="sd">
+</span></span></span><span class="line"><span class="cl"><span class="sd">      sysctl -w net.core.somaxconn=512</span><span class="w">      
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">resources</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">limits</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">      </span><span class="nt">cpu</span><span class="p">:</span><span class="w"> </span><span class="l">500m</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">      </span><span class="nt">memory</span><span class="p">:</span><span class="w"> </span><span class="l">128Mi</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="nt">metrics</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">image</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">repository</span><span class="p">:</span><span class="w"> </span><span class="l">bitnami/redis-exporter</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">tag</span><span class="p">:</span><span class="w"> </span><span class="m">1</span>-<span class="l">debian-10</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">pullPolicy</span><span class="p">:</span><span class="w"> </span><span class="l">Always</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">resources</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">limits</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">      </span><span class="nt">cpu</span><span class="p">:</span><span class="w"> </span><span class="l">500m</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">      </span><span class="nt">memory</span><span class="p">:</span><span class="w"> </span><span class="l">128Mi</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">helm install -n &lt;namespace&gt; <span class="se">\
+</span></span></span><span class="line"><span class="cl"><span class="se"></span>  -f bitnami-redis/rc-master-values.yaml <span class="se">\
+</span></span></span><span class="line"><span class="cl"><span class="se"></span>  --set <span class="nv">fullnameOverride</span><span class="o">=</span>rc-master <span class="se">\
+</span></span></span><span class="line"><span class="cl"><span class="se"></span>  rc-master <span class="se">\
+</span></span></span><span class="line"><span class="cl"><span class="se"></span>  /path/to/bitnami-charts/bitnami/redis
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">helm install -n &lt;namespace&gt; <span class="se">\
+</span></span></span><span class="line"><span class="cl"><span class="se"></span>  -f bitnami-redis/rc-slave-values.yaml <span class="se">\
+</span></span></span><span class="line"><span class="cl"><span class="se"></span>  --set <span class="nv">fullnameOverride</span><span class="o">=</span>rc-slave <span class="se">\
+</span></span></span><span class="line"><span class="cl"><span class="se"></span>  rc-slave <span class="se">\
+</span></span></span><span class="line"><span class="cl"><span class="se"></span>  /path/to/bitnami-charts/bitnami/redis
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>注意这里使用了 <code>bitnami-redis/rc-master-values.yaml</code> 和 <code>bitnami-redis/rc-slave-values.yaml</code> 参数文件。</p>
+<p>2）给 StatefulSets 打 patch：</p>
+<p><code>rc-master</code> 和 <code>rc-slave</code> 对应的 StatefulSets 名字叫做 <code>rc-master-master</code> 和 <code>rc-slave-master</code>，不要在乎结尾的 <code>-master</code> ，因为 bitnami/redis 写死了 StatefulSets 名字后面会加上 <code>-master</code>。</p>
+<p>redis-patch.yaml:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-yaml" data-lang="yaml"><span class="line"><span class="cl"><span class="nt">spec</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">replicas</span><span class="p">:</span><span class="w"> </span><span class="m">3</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">template</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">spec</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">      </span><span class="nt">containers</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">      </span>- <span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">redis</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="nt">ports</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span>- <span class="nt">containerPort</span><span class="p">:</span><span class="w"> </span><span class="m">16379</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">          </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">redis-bus</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">          </span><span class="nt">protocol</span><span class="p">:</span><span class="w"> </span><span class="l">TCP</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>patch 的功能：</p>
+<ol>
+<li>暴露 <code>16379</code> 端口</li>
+<li>副本数变为 3</li>
+</ol>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">kubectl -n &lt;namespace&gt; <span class="se">\
+</span></span></span><span class="line"><span class="cl"><span class="se"></span>  patch statefulsets rc-master-master <span class="se">\
+</span></span></span><span class="line"><span class="cl"><span class="se"></span>  --patch <span class="s2">&#34;</span><span class="k">$(</span>cat bitnami-redis/redis-patch.yaml<span class="k">)</span><span class="s2">&#34;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">kubectl -n &lt;namespace&gt; <span class="se">\
+</span></span></span><span class="line"><span class="cl"><span class="se"></span>  patch statefulsets rc-slave-master <span class="se">\
+</span></span></span><span class="line"><span class="cl"><span class="se"></span>  --patch <span class="s2">&#34;</span><span class="k">$(</span>cat bitnami-redis/redis-patch.yaml<span class="k">)</span><span class="s2">&#34;</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>3）给 Service 打 patch：</p>
+<p>redis-headless-svc-patch.yaml:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-yaml" data-lang="yaml"><span class="line"><span class="cl"><span class="nt">spec</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">ports</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span>- <span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">tcp-redis-bus</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">port</span><span class="p">:</span><span class="w"> </span><span class="m">16379</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">protocol</span><span class="p">:</span><span class="w"> </span><span class="l">TCP</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">targetPort</span><span class="p">:</span><span class="w"> </span><span class="l">redis-bus</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>patch 功能：</p>
+<ol>
+<li>headless Service 暴露 <code>16379</code> 端口</li>
+</ol>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">kubectl -n &lt;namespace&gt; <span class="se">\
+</span></span></span><span class="line"><span class="cl"><span class="se"></span>  patch service rc-master-headless <span class="se">\
+</span></span></span><span class="line"><span class="cl"><span class="se"></span>  --patch <span class="s2">&#34;</span><span class="k">$(</span>cat bitnami-redis/redis-headless-svc-patch.yaml<span class="k">)</span><span class="s2">&#34;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">kubectl -n &lt;namespace&gt; <span class="se">\
+</span></span></span><span class="line"><span class="cl"><span class="se"></span>  patch service rc-slave-headless <span class="se">\
+</span></span></span><span class="line"><span class="cl"><span class="se"></span>  --patch <span class="s2">&#34;</span><span class="k">$(</span>cat bitnami-redis/redis-headless-svc-patch.yaml<span class="k">)</span><span class="s2">&#34;</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>4）组建集群，两种方式，任选一种：</p>
+<ul>
+<li><a href="../ops-cli/new-cluster">redis-cli 方式</a></li>
+<li><a href="../ops-cmd/new-cluster">Redis Command 方式</a></li>
+</ul>
+<h2 id="statefulsets-升级注意事项">StatefulSets 升级注意事项<a class="anchor ms-1" href="#statefulsets-升级注意事项"><i class="fas fa-link"></i></a></h2>
+<p>先了解以下几个事实：</p>
+<ul>
+<li>StatefulSets 的滚动升级策略是从最后一个 Pod 开始挨个升级</li>
+<li>StatefulSets 的升级方式是先重建 Pod：先删除，再创建</li>
+<li>Redis Cluster 只认 NodeID，节点的 IP 端口变化无所谓</li>
+<li>Redis Cluster 的自动 failover 策略具有一定时延</li>
+</ul>
+<p>所以升级时会出现以下现象：</p>
+<ul>
+<li>因为 Pod 在重建，而时间比较短，无法触发自动 failover，部分节点出现短暂不可用</li>
+<li>Pod 重建失败，那么在短暂不可用之后，redis cluster 触发自动 failover</li>
+<li>Pod 重建之后可能破坏高可用架构</li>
+</ul>
+<p>因此建议的做法是：</p>
+<ol>
+<li>先通过 failover 把所有 slave 升格为 master，这样 master 就变成了 slave</li>
+<li>对原 master（现在降格为 slave 了）StatefulSets 做升级</li>
+<li>升级完成后，再通过 failover 把角色变回原来的样子</li>
+<li>对 slave StatefulSets 做升级</li>
+<li>如果重建 Pod 运行位置破坏了 <a href="../ha-arch">高可用部署架构</a>，则还需要手工处理。</li>
+</ol>
+<h2 id="节点-ipport-变化后重新加入">节点 IP:PORT 变化后重新加入<a class="anchor ms-1" href="#节点-ipport-变化后重新加入"><i class="fas fa-link"></i></a></h2>
+<p>根据 <a href="https://redis.io/topics/cluster-tutorial#creating-and-using-a-redis-cluster" target="_blank" rel="noopener noreferrer">Creating and using a Redis Cluster</a> ：</p>
+<blockquote>
+<p>Every node remembers every other node using this IDs, and not by IP or port. IP addresses and ports may change, but the unique node identifier will never change for all the life of the node. We call this identifier simply <strong>Node ID</strong>.</p>
+</blockquote>
+<p>所以，只要 nodes.conf 信息不丢失，IP port 随便怎么变都可以。</p>
+<p>本方案中，nodes.conf 应存放在持久卷中。</p>
+<p>如果 Pod 重建发生 IP 变更，那么分情况说明：</p>
+<p><strong>情况1：</strong></p>
+<p>N 个 Pod 中只有 1 个重建，那么问题不大，因为重启后 Pod 会把自己连接到集群的其他节点，然后 redis 会通过 gossip 协议把 Pod 的新 IP 传播到其他节点上。</p>
+<p><strong>情况2：</strong></p>
+<p>所有 Pod 都重建了，那么这个集群肯定会 fail，因为每个 Pod 都无法使用原来的 IP 和其他 Pod 通信了。</p>
+<p>处理方式，按照新建集群的步骤（<a href="../ops-cli/new-cluster">redis-cli方式</a> 或 <a href="../ops-cmd/new-cluster">Redis Command方式</a>），把所有节点都再加一遍。</p>
+<p>当然，加入后，你还得保持<a href="../ha-arch">高可用部署架构</a>。</p></div></div>
+  <div class="card-footer"><div class="post-navs d-flex justify-content-evenly"><div class="post-nav post-prev">
+    <i class="fas fa-fw fa-chevron-left"></i>
+    <a href="/post/redis-cluster-ops/deploy-migration/">Redis 集群运维笔记 - 迁移到 Redis Cluster
+</a>
+  </div><div class="post-nav post-next">
+    <a href="/post/redis-cluster-ops/ops-cmd/existing-cluster/">Redis Command 集群管理
+</a>
+    <i class="fas fa-fw fa-chevron-right"></i>
+  </div></div></div>
+</article><div class="post-copyright mb-3 row card component" id="post-copyright">
+    <div class="card-header">
+        <h2 class="card-title">版权</h2>
+    </div>
+    <div class="card-body"><a class="d-flex align-items-center flex-column" target="_blank" rel="license noopener noreferrer" href="https://creativecommons.org/licenses/by-nc-nd/4.0/deed.zh">
+  <span><i class="fab fa-fw fa-2x fa-creative-commons"></i><i class="fab fa-fw fa-2x fa-creative-commons-by"></i><i class="fab fa-fw fa-2x fa-creative-commons-nc"></i><i class="fab fa-fw fa-2x fa-creative-commons-nd"></i></span>
+  CC BY-NC-ND 4.0 
+</a>
+
+
+    </div>
+</div><section class="related-posts row card component">
+    <div class="card-header">
+      <h2 class="card-title">相关文章</h2>
+    </div>
+    <div class="card-body">
+      <ul class="post-list"><li>
+          <a href="/post/redis-cluster-ops/ops-cmd/resharding/">Redis Command Resharding
+</a>
+          <span class="float-end post-date">2024-01-27
+</span>
+        </li><li>
+          <a href="/post/redis-cluster-ops/ops-cmd/new-cluster/">Redis Command 创建新集群
+</a>
+          <span class="float-end post-date">2024-01-27
+</span>
+        </li><li>
+          <a href="/post/redis-cluster-ops/ops-cmd/existing-cluster/">Redis Command 集群管理
+</a>
+          <span class="float-end post-date">2024-01-27
+</span>
+        </li><li>
+          <a href="/post/redis-cluster-ops/deploy-migration/">Redis 集群运维笔记 - 迁移到 Redis Cluster
+</a>
+          <span class="float-end post-date">2024-01-27
+</span>
+        </li><li>
+          <a href="/post/redis-cluster-ops/ops-cli/resharding/">Redis-Cli Resharding
+</a>
+          <span class="float-end post-date">2024-01-27
+</span>
+        </li></ul>
+    </div>
+  </section><div class="card component row post-comments" id="post-comments">
+  <div class="card-header">
+    <h2 class="card-title">评论</h2>
+  </div>
+  <div class="card-body"></div>
+</div></div>
+</div><aside class="col-lg-4 sidebar d-flex">
+  <div class="container d-flex flex-column">
+    
+    <section class="card row text-center profile component">
+  <div class="card-body">
+    <div class="col-12 d-flex align-items-center justify-content-center"><img class="profile-avatar rounded-circle" alt="颇忒脱" src="/images/avatar.jpg" loading="lazy"
+   width="455" height="455"
+   />
+</div>
+    <div class="col-12 profile-meta"><div class="profile-name">颇忒脱</div><nav class="social-links nav justify-content-center"><a class="nav-link social-link" target="_blank" href="https://github.com/chanjarster" title="GitHub" rel="noopener noreferrer">
+        <i class="fa-fw fa-2x fab fa-github"></i>
+      </a></nav>
+</div>
+  </div>
+</section>
+  <div class="post-toc row mb-4 card component" id="postTOC">
+  <div class="card-header">
+    <h2 class="card-title">目录</h2>
+  </div>
+  <div class="card-body">
+    <nav id="TableOfContents">
+  <ul>
+    <li><a href="#拓扑">拓扑</a></li>
+    <li><a href="#步骤">步骤</a></li>
+    <li><a href="#statefulsets-升级注意事项">StatefulSets 升级注意事项</a></li>
+    <li><a href="#节点-ipport-变化后重新加入">节点 IP:PORT 变化后重新加入</a></li>
+  </ul>
+</nav>
+  </div>
+</div><section class="featured-posts row card component">
+    <div class="card-header">
+      <h2 class="card-title">精选文章</h2>
+    </div>
+    <div class="card-body">
+      <ul class="post-list"><li>
+          <a href="/post/redis-cluster-ops/index-page/">Redis 集群运维笔记
+</a>
+        </li><li>
+          <a href="/post/linux/namespace/index-page/">Linux Namespace系列
+</a>
+        </li><li>
+          <a href="/post/network/index-page/">Networking系列
+</a>
+        </li><li>
+          <a href="/post/mysql/index-page/">MySQL系列
+</a>
+        </li><li>
+          <a href="/post/concurrent-programming/index-page/">并发编程系列
+</a>
+        </li></ul>
+    </div>
+  </section><section class="recent-posts row card component">
+  <div class="card-header">
+    <h2 class="card-title">最近文章</h2>
+  </div>
+  <div class="card-body">
+    <ul class="post-list"><li>
+        <a href="/post/redis-cluster-ops/index-page/">Redis 集群运维笔记
+</a>
+      </li><li>
+        <a href="/post/network/calico-firewall-k8s/">Calico 配置 K8s 防火墙
+</a>
+      </li><li>
+        <a href="/post/network/iptables-firewall-docker/">用 Iptables 保护 Docker Host
+</a>
+      </li><li>
+        <a href="/post/network/iptables-firewall-example/">Iptables 防火墙例子
+</a>
+      </li><li>
+        <a href="/post/cache-through-conc-db-query-opt/">缓存穿透后的并发数据库查询优化
+</a>
+      </li></ul>
+  </div>
+</section><section class="tags-taxonomies row card component">
+      <div class="card-header">
+        <h2 class="card-title">
+          <a href="/tags">标签</a>
+        </h2>
+      </div>
+      <div class="card-body">
+        <div class="py-2"><a href="/tags/arts-a/" class="badge rounded post-taxonomy" title="ARTS-A">
+            ARTS-A<span class="badge badge-sm text-white bg-accent ms-1">125</span></a><a href="/tags/k8s/" class="badge rounded post-taxonomy" title="k8s">
+            k8s<span class="badge badge-sm text-white bg-accent ms-1">52</span></a><a href="/tags/troubleshooting/" class="badge rounded post-taxonomy" title="troubleshooting">
+            troubleshooting<span class="badge badge-sm text-white bg-accent ms-1">40</span></a><a href="/tags/jvm/" class="badge rounded post-taxonomy" title="jvm">
+            jvm<span class="badge badge-sm text-white bg-accent ms-1">39</span></a><a href="/tags/docker/" class="badge rounded post-taxonomy" title="docker">
+            docker<span class="badge badge-sm text-white bg-accent ms-1">30</span></a><a href="/tags/mysql/" class="badge rounded post-taxonomy" title="mysql">
+            mysql<span class="badge badge-sm text-white bg-accent ms-1">25</span></a><a href="/tags/network/" class="badge rounded post-taxonomy" title="network">
+            network<span class="badge badge-sm text-white bg-accent ms-1">25</span></a><a href="/tags/%E5%B9%B6%E5%8F%91%E7%BC%96%E7%A8%8B/" class="badge rounded post-taxonomy" title="并发编程">
+            并发编程<span class="badge badge-sm text-white bg-accent ms-1">21</span></a><a href="/tags/cheatsheet/" class="badge rounded post-taxonomy" title="cheatsheet">
+            cheatsheet<span class="badge badge-sm text-white bg-accent ms-1">20</span></a><a href="/tags/kernel/" class="badge rounded post-taxonomy" title="kernel">
+            kernel<span class="badge badge-sm text-white bg-accent ms-1">19</span></a><a href="/tags/linux/" class="badge rounded post-taxonomy" title="linux">
+            linux<span class="badge badge-sm text-white bg-accent ms-1">19</span></a><a href="/tags/java/" class="badge rounded post-taxonomy" title="java">
+            java<span class="badge badge-sm text-white bg-accent ms-1">18</span></a><a href="/tags/redis/" class="badge rounded post-taxonomy" title="redis">
+            redis<span class="badge badge-sm text-white bg-accent ms-1">17</span></a><a href="/tags/prometheus/" class="badge rounded post-taxonomy" title="prometheus">
+            prometheus<span class="badge badge-sm text-white bg-accent ms-1">13</span></a><a href="/tags/%E6%80%A7%E8%83%BD%E8%B0%83%E4%BC%98/" class="badge rounded post-taxonomy" title="性能调优">
+            性能调优<span class="badge badge-sm text-white bg-accent ms-1">13</span></a><a href="/tags/go/" class="badge rounded post-taxonomy" title="go">
+            go<span class="badge badge-sm text-white bg-accent ms-1">10</span></a><a href="/tags/%E5%BE%AE%E6%9C%8D%E5%8A%A1/" class="badge rounded post-taxonomy" title="微服务">
+            微服务<span class="badge badge-sm text-white bg-accent ms-1">10</span></a><a href="/tags/rancher/" class="badge rounded post-taxonomy" title="rancher">
+            rancher<span class="badge badge-sm text-white bg-accent ms-1">9</span></a><a href="/tags/debug/" class="badge rounded post-taxonomy" title="debug">
+            debug<span class="badge badge-sm text-white bg-accent ms-1">7</span></a><a href="/tags/gc/" class="badge rounded post-taxonomy" title="gc">
+            gc<span class="badge badge-sm text-white bg-accent ms-1">7</span></a><a href="/tags/nginx/" class="badge rounded post-taxonomy" title="nginx">
+            nginx<span class="badge badge-sm text-white bg-accent ms-1">7</span></a><a href="/tags/ingress/" class="badge rounded post-taxonomy" title="ingress">
+            ingress<span class="badge badge-sm text-white bg-accent ms-1">6</span></a><a href="/tags/%E8%BF%90%E7%BB%B4/" class="badge rounded post-taxonomy" title="运维">
+            运维<span class="badge badge-sm text-white bg-accent ms-1">6</span></a><a href="/tags/ci_cd/" class="badge rounded post-taxonomy" title="CI_CD">
+            CI_CD<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/interview/" class="badge rounded post-taxonomy" title="interview">
+            interview<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/jmx/" class="badge rounded post-taxonomy" title="jmx">
+            jmx<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/openssl/" class="badge rounded post-taxonomy" title="openssl">
+            openssl<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/tls/" class="badge rounded post-taxonomy" title="tls">
+            tls<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/%E5%88%86%E5%B8%83%E5%BC%8F%E4%BA%8B%E5%8A%A1/" class="badge rounded post-taxonomy" title="分布式事务">
+            分布式事务<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/%E5%88%86%E5%B8%83%E5%BC%8F%E7%AE%97%E6%B3%95/" class="badge rounded post-taxonomy" title="分布式算法">
+            分布式算法<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/%E6%94%B6%E8%97%8F%E5%A4%B9/" class="badge rounded post-taxonomy" title="收藏夹">
+            收藏夹<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/%E9%AB%98%E5%B9%B6%E5%8F%91/" class="badge rounded post-taxonomy" title="高并发">
+            高并发<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/visualvm/" class="badge rounded post-taxonomy" title="visualvm">
+            visualvm<span class="badge badge-sm text-white bg-accent ms-1">4</span></a><a href="/tags/%E6%97%A5%E5%BF%97/" class="badge rounded post-taxonomy" title="日志">
+            日志<span class="badge badge-sm text-white bg-accent ms-1">4</span></a><a href="/tags/arts/" class="badge rounded post-taxonomy" title="arts">
+            arts<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/arts-r/" class="badge rounded post-taxonomy" title="arts-r">
+            arts-r<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/classloader/" class="badge rounded post-taxonomy" title="ClassLoader">
+            ClassLoader<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/container/" class="badge rounded post-taxonomy" title="container">
+            container<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/ios/" class="badge rounded post-taxonomy" title="ios">
+            ios<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/iphone/" class="badge rounded post-taxonomy" title="iphone">
+            iphone<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/jenkins/" class="badge rounded post-taxonomy" title="Jenkins">
+            Jenkins<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/namespace/" class="badge rounded post-taxonomy" title="namespace">
+            namespace<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/scheduling/" class="badge rounded post-taxonomy" title="scheduling">
+            scheduling<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/thread/" class="badge rounded post-taxonomy" title="thread">
+            thread<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/%E5%88%86%E5%B8%83%E5%BC%8F%E6%9E%B6%E6%9E%84/" class="badge rounded post-taxonomy" title="分布式架构">
+            分布式架构<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/%E5%8D%8E%E4%B8%BA/" class="badge rounded post-taxonomy" title="华为">
+            华为<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/%E8%8B%B9%E6%9E%9C/" class="badge rounded post-taxonomy" title="苹果">
+            苹果<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/bash/" class="badge rounded post-taxonomy" title="bash">
+            bash<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/etcd/" class="badge rounded post-taxonomy" title="etcd">
+            etcd<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/grafana/" class="badge rounded post-taxonomy" title="grafana">
+            grafana<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/iptables/" class="badge rounded post-taxonomy" title="iptables">
+            iptables<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/jdbc/" class="badge rounded post-taxonomy" title="JDBC">
+            JDBC<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/jmeter/" class="badge rounded post-taxonomy" title="jmeter">
+            jmeter<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/%E6%95%B0%E6%8D%AE%E5%BA%93%E6%97%B6%E5%8C%BA%E9%82%A3%E4%BA%9B%E4%BA%8B%E5%84%BF/" class="badge rounded post-taxonomy" title="数据库时区那些事儿">
+            数据库时区那些事儿<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/%E7%9B%91%E6%8E%A7/" class="badge rounded post-taxonomy" title="监控">
+            监控<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/%E9%99%90%E6%B5%81/" class="badge rounded post-taxonomy" title="限流">
+            限流<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/acloud/" class="badge rounded post-taxonomy" title="acloud">
+            acloud<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/akka/" class="badge rounded post-taxonomy" title="Akka">
+            Akka<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/alertmanager/" class="badge rounded post-taxonomy" title="alertmanager">
+            alertmanager<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/calico/" class="badge rounded post-taxonomy" title="calico">
+            calico<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/chrome/" class="badge rounded post-taxonomy" title="chrome">
+            chrome<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/coredns/" class="badge rounded post-taxonomy" title="coredns">
+            coredns<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/elasticsearch/" class="badge rounded post-taxonomy" title="elasticsearch">
+            elasticsearch<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/fluentd/" class="badge rounded post-taxonomy" title="fluentd">
+            fluentd<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/harbor/" class="badge rounded post-taxonomy" title="harbor">
+            harbor<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/helm/" class="badge rounded post-taxonomy" title="helm">
+            helm<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/hystrix/" class="badge rounded post-taxonomy" title="hystrix">
+            hystrix<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/io/" class="badge rounded post-taxonomy" title="io">
+            io<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/jdpa/" class="badge rounded post-taxonomy" title="jdpa">
+            jdpa<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/jwt/" class="badge rounded post-taxonomy" title="jwt">
+            jwt<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/kafka/" class="badge rounded post-taxonomy" title="kafka">
+            kafka<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/kibana/" class="badge rounded post-taxonomy" title="kibana">
+            kibana<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/mq/" class="badge rounded post-taxonomy" title="MQ">
+            MQ<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/nfs/" class="badge rounded post-taxonomy" title="nfs">
+            nfs<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/oauth/" class="badge rounded post-taxonomy" title="oauth">
+            oauth<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/oracle/" class="badge rounded post-taxonomy" title="Oracle">
+            Oracle<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/pprof/" class="badge rounded post-taxonomy" title="pprof">
+            pprof<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/reactor/" class="badge rounded post-taxonomy" title="reactor">
+            reactor<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/spring-boot/" class="badge rounded post-taxonomy" title="spring-boot">
+            spring-boot<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/spring-cloud/" class="badge rounded post-taxonomy" title="Spring Cloud">
+            Spring Cloud<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/springboot/" class="badge rounded post-taxonomy" title="springboot">
+            springboot<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/ssl/" class="badge rounded post-taxonomy" title="ssl">
+            ssl<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/systemtap/" class="badge rounded post-taxonomy" title="systemtap">
+            systemtap<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/tiller/" class="badge rounded post-taxonomy" title="tiller">
+            tiller<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/tomcat/" class="badge rounded post-taxonomy" title="tomcat">
+            tomcat<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/ubuntu/" class="badge rounded post-taxonomy" title="ubuntu">
+            ubuntu<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/vtable/" class="badge rounded post-taxonomy" title="vtable">
+            vtable<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/%E6%B6%88%E6%81%AF%E9%98%9F%E5%88%97/" class="badge rounded post-taxonomy" title="消息队列">
+            消息队列<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/%E6%B7%B1%E4%BF%A1%E6%9C%8D/" class="badge rounded post-taxonomy" title="深信服">
+            深信服<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/%E7%BC%93%E5%AD%98/" class="badge rounded post-taxonomy" title="缓存">
+            缓存<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/%E8%99%9A%E6%8B%9F%E5%8C%96/" class="badge rounded post-taxonomy" title="虚拟化">
+            虚拟化<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/%E8%B0%83%E7%94%A8%E9%93%BE%E8%BF%BD%E8%B8%AA/" class="badge rounded post-taxonomy" title="调用链追踪">
+            调用链追踪<span class="badge badge-sm text-white bg-accent ms-1">1</span></a></div>
+      </div>
+    </section>
+    
+  </div>
+</aside>
+</div>
+    </main><footer class="footer mt-auto py-3 text-center container"><nav class="social-links nav justify-content-center mb-2"><a class="nav-link social-link" target="_blank" href="https://github.com/chanjarster" title="GitHub" rel="noopener noreferrer">
+        <i class="fa-fw fa-2x fab fa-github"></i>
+      </a></nav>
+<div class="copyright mb-2">
+  Copyright © 2010-2025 Daniel Qian. All Rights Reserved.
+</div>
+<div class="powered-by mb-2">
+  Powered by <a href="https://gohugo.io" target="_blank" rel="noopener noreferrer">Hugo</a> and the <a href="https://github.com/razonyang/hugo-theme-bootstrap" target="_blank" rel="noopener noreferrer">Bootstrap</a> theme.
+</div>
+<a href="https://www.netlify.com" target="_blank" rel="noopener noreferrer">
+    <img src="https://www.netlify.com/img/global/badges/netlify-color-accent.svg" alt="Deploys by Netlify" width="114" height="51" />
+</a>
+</footer>
+<script src="/js/main.2cdce25f280f570596c88888d6af930fe5e15ea030005291dad293defbb231d3.js" integrity="sha256-LNziXygPVwWWyIiI1q&#43;TD&#43;XhXqAwAFKR2tKT3vuyMdM=" crossorigin="anonymous" defer></script><script src="/js/icons.min.7b1f27dfde35467d03350938b2e41dbffd06347009b97ab913edfaca01a07814.js" integrity="sha256-ex8n3941Rn0DNQk4suQdv/0GNHAJuXq5E&#43;36ygGgeBQ=" crossorigin="anonymous" defer></script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('\/service-worker.js').then(function(reg) {
+      console.log('Successfully registered service worker', reg);
+    }).catch(function(err) {
+      console.warn('Error whilst registering service worker', err);
+    });
+  });
+}
+</script><script src="/js/viewer.min.1ec1fa5aa3a66267222a44fe1cd51856ad4a92be48ede579fb36d70a6d4c28e9.js" integrity="sha256-HsH6WqOmYmciKkT&#43;HNUYVq1Kkr5I7eV5&#43;zbXCm1MKOk=" crossorigin="anonymous" defer></script>
+</body>
+</html>
