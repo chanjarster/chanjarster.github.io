@@ -1,0 +1,688 @@
+<!doctype html><html lang="zh-cn" data-palette="blue"
+  >
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>数据库时区那些事儿 - Oracle的时区处理 - 颇忒脱的技术博客</title><link rel="apple-touch-icon" href="/images/icons/icon-180x180.png" sizes="180x180">
+<link rel="icon" href="/images/icons/icon-32x32.png" sizes="32x32" type="image/png">
+<link rel="icon" href="/images/icons/icon-16x16.png" sizes="16x16" type="image/png">
+<link rel="icon" href="/images/icons/favicon.ico">
+<link rel="manifest" href="/manifest.json">
+<meta name="keywords" content="" />
+<meta name="description" content="当JVM时区和数据库时区不一致的时候，会发生什么？这个问题也许你从来没有注意过，但是当把Java程序容器化的时候，问题就浮现出来了，因为目前几乎所有的Docker Image的时区都是UTC。本文探究了Oracle及其JDBC驱动对于时区的处理方式，并尝试给出最佳实践。" /><meta name="robots" content="index, follow" /><meta itemprop="name" content="数据库时区那些事儿 - Oracle的时区处理">
+<meta itemprop="description" content="当JVM时区和数据库时区不一致的时候，会发生什么？这个问题也许你从来没有注意过，但是当把Java程序容器化的时候，问题就浮现出来了，因为目前几乎所有的Docker Image的时区都是UTC。本文探究了Oracle及其JDBC驱动对于时区的处理方式，并尝试给出最佳实践。"><meta itemprop="datePublished" content="2018-09-18T10:41:33+08:00" />
+<meta itemprop="dateModified" content="2018-09-18T10:41:33+08:00" />
+<meta itemprop="wordCount" content="1958">
+<meta itemprop="keywords" content="JDBC,Oracle,数据库时区那些事儿," /><meta property="og:title" content="数据库时区那些事儿 - Oracle的时区处理" />
+<meta property="og:description" content="当JVM时区和数据库时区不一致的时候，会发生什么？这个问题也许你从来没有注意过，但是当把Java程序容器化的时候，问题就浮现出来了，因为目前几乎所有的Docker Image的时区都是UTC。本文探究了Oracle及其JDBC驱动对于时区的处理方式，并尝试给出最佳实践。" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="/post/oracle-timezone/" /><meta property="article:section" content="post" />
+<meta property="article:published_time" content="2018-09-18T10:41:33+08:00" />
+<meta property="article:modified_time" content="2018-09-18T10:41:33+08:00" />
+
+<meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="数据库时区那些事儿 - Oracle的时区处理"/>
+<meta name="twitter:description" content="当JVM时区和数据库时区不一致的时候，会发生什么？这个问题也许你从来没有注意过，但是当把Java程序容器化的时候，问题就浮现出来了，因为目前几乎所有的Docker Image的时区都是UTC。本文探究了Oracle及其JDBC驱动对于时区的处理方式，并尝试给出最佳实践。"/>
+<meta property="og:image" content="/images/avatar.jpg"/>
+  <meta name="twitter:image" content="/images/avatar.jpg"/><link rel="stylesheet" href="/css/main.min.24196952817c68c8b90d8fa573d560fa62766baa0622bdc0e862255f4a4d1307.css" integrity="sha256-JBlpUoF8aMi5DY&#43;lc9Vg&#43;mJ2a6oGIr3A6GIlX0pNEwc=" crossorigin="anonymous"><link rel="stylesheet" href="/css/viewer.min.3d228794bcedbbfa0412beb8fbc1ec6973202945e42af7004f742a4d7bd620ab.css" integrity="sha256-PSKHlLztu/oEEr64&#43;8HsaXMgKUXkKvcAT3QqTXvWIKs=" crossorigin="anonymous"></head>
+  <body><script>const items=["mode","palette"];items.forEach(function(e){const t=localStorage.getItem("hbs-"+e);t&&document.body.parentElement.setAttribute("data-"+e,t)})</script><header><nav class="navbar top-app-bar top-app-bar-expand-lg fixed-top">
+  <div class="container">
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent"
+      aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <i class="fas fa-bars"></i>
+    </button><a class="navbar-brand flex-grow-1 flex-lg-grow-0 text-center text-lg-start mx-auto me-lg-3" href="/"><img class="logo" alt="Logo" src="/images/avatar.jpg" loading="lazy"
+   width="455" height="455"
+   />
+颇忒脱的技术博客
+    </a>
+    
+    <button class="navbar-settings" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvasSettings"
+  aria-controls="offcanvasSettings" aria-label="Toggle settings">
+  <i class="fas fa-ellipsis-v"></i>
+</button>
+
+<div class="offcanvas offcanvas-end surface h-100" tabindex="-1" id="offcanvasSettings" aria-labelledby="offcanvasSettings">
+  <div class="offcanvas-header">
+    <h3 class="offcanvas-title">设置</h3>
+    <button type="button" class="btn btn-sm btn-outline-primary" data-bs-dismiss="offcanvas" aria-label="Close">
+      <i class="fas fa-times"></i>
+    </button>
+  </div>
+  <div class="offcanvas-body d-flex flex-column">
+
+<section class="setting">
+  <form class="row">
+    <div class="col-auto">
+      <label><i class="fas fa-fw fa-adjust"></i> 模式</label>
+    </div>
+    <div class="col-auto ms-auto">
+      <div class="form-check form-switch">
+        <input class="form-check-input" type="checkbox" id="modeSwitcher">
+      </div>
+    </div>
+  </form>
+</section>
+
+<section class="setting">
+  <form class="font-size-switcher-form row">
+    <div class="col-auto">
+      <label for="fontSize" class="form-label"><i class="fas fa-fw fa-font"></i> 字体大小</label>
+    </div>
+    <div class="col-auto ms-auto">
+      <input type="range" class="form-range" min="-2" max="2" id="fontSize">
+    </div>
+  </form>
+</section>
+
+
+<section class="setting palettes">
+  <form class="row">
+    <div class="col-auto">
+      <label><i class="fas fa-fw fa-palette"></i> 配色</label>
+    </div>
+    <div class="col-auto ms-auto">
+      <a id="btnPalette" class="btn btn-sm btn-outline-primary" role="button" aria-label="palettePicker">
+        <i class="fas fa-eye-dropper"></i>
+      </a>
+    </div>
+  </form>
+  <div class="mt-2 d-flex justify-content-between visually-hidden" id="palettePicker"><button type="button" id="palette-blue" aria-label="蓝色"
+        class="btn btn-sm w-100 palette" data-palette="blue">
+      </button><button type="button" id="palette-blue-gray" aria-label="蓝灰色"
+        class="btn btn-sm w-100 palette" data-palette="blue-gray">
+      </button><button type="button" id="palette-brown" aria-label="棕色"
+        class="btn btn-sm w-100 palette" data-palette="brown">
+      </button><button type="button" id="palette-cyan" aria-label="青色"
+        class="btn btn-sm w-100 palette" data-palette="cyan">
+      </button><button type="button" id="palette-green" aria-label="绿色"
+        class="btn btn-sm w-100 palette" data-palette="green">
+      </button><button type="button" id="palette-indigo" aria-label="靛青色"
+        class="btn btn-sm w-100 palette" data-palette="indigo">
+      </button><button type="button" id="palette-orange" aria-label="橙色"
+        class="btn btn-sm w-100 palette" data-palette="orange">
+      </button><button type="button" id="palette-pink" aria-label="粉色"
+        class="btn btn-sm w-100 palette" data-palette="pink">
+      </button><button type="button" id="palette-purple" aria-label="紫色"
+        class="btn btn-sm w-100 palette" data-palette="purple">
+      </button><button type="button" id="palette-red" aria-label="红色"
+        class="btn btn-sm w-100 palette" data-palette="red">
+      </button><button type="button" id="palette-teal" aria-label="蓝绿色"
+        class="btn btn-sm w-100 palette" data-palette="teal">
+      </button><button type="button" id="palette-yellow" aria-label="黄色"
+        class="btn btn-sm w-100 palette" data-palette="yellow">
+      </button></div>
+</section>
+<section class="setting actions d-flex justify-content-around mt-auto overflow-auto">
+  <a role="button" class="action action-go-back" href="javascript: window.history.back();">
+    <span class="action-icon"><i class="fas fa-2x fa-arrow-left"></i></span> 返回
+  </a>
+  <a role="button" class="action action-reload-page">
+    <span class="action-icon"><i class="fas fa-2x fa-redo-alt"></i></span> 刷新
+  </a>
+  <a role="button" class="action action-copy-url">
+    <span class="action-icon"><i class="fas fa-2x fa-link"></i></span> 复制链接
+  </a></section>
+
+</div>
+</div>
+
+    <div class="collapse navbar-collapse" tabindex="-1" id="navbarSupportedContent" aria-labelledby="navbarSupportedContent">
+      <form class="search-bar my-1" action="/search">
+  <div class="input-group input-group-sm">
+    <span class="btn btn-search disabled position-absolute left-0"><i class="fas fa-fw fa-search"></i></span>
+    <input class="form-control rounded-pill" name="q" type="search" aria-label="Search">
+  </div>
+</form>
+      <ul class="navbar-nav ms-auto"><li class="nav-item">
+          <a class="nav-link" href="/series/">
+            <i class="fas fa-fw fa-columns"></i>专栏
+          </a>
+        </li><li class="nav-item dropdown">
+          <a class="nav-link" id="navbarDropdownIndex" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+            <i class="fas fa-fw fa-chevron-circle-down"></i>快速索引
+          </a>
+          <ul class="dropdown-menu" aria-labelledby="navbarDropdownIndex"><li>
+              <a class="dropdown-item"
+                href="/tags/go">
+                Go
+              </a>
+            </li><li>
+              <a class="dropdown-item"
+                href="/tags/gc">
+                GC
+              </a>
+            </li><li>
+              <a class="dropdown-item"
+                href="/tags/kernel">
+                Kernel
+              </a>
+            </li><li>
+              <a class="dropdown-item"
+                href="/tags/cheatsheet">
+                Cheatsheet
+              </a>
+            </li><li>
+              <a class="dropdown-item"
+                href="/tags/troubleshooting">
+                排障实战记录
+              </a>
+            </li></ul>
+        </li><li class="nav-item">
+          <a class="nav-link" href="/tags/">
+            <i class="fas fa-fw fa-tags"></i>标签
+          </a>
+        </li><li class="nav-item">
+          <a class="nav-link" href="/archives/">
+            <i class="fas fa-fw fa-file-archive"></i>归档
+          </a>
+        </li></ul>
+    </div>
+  </div>
+</nav>
+</header>
+<main role="main" class="container">
+      <div class="row content">
+<div class="col-lg-8">
+  <div class="container"><nav class="row card component" aria-label="breadcrumb">
+  <div class="card-body">
+    <ol class="breadcrumb "><li class="breadcrumb-item"><a href="/">主页</a></li><li class="breadcrumb-item"><a href="/post/">文章</a></li><li class="breadcrumb-item active">数据库时区那些事儿 - Oracle的时区处理</li></ol>
+  </div>
+</nav><div class="post-panel-wrapper">
+  <div class="d-flex flex-column component rounded post-panel">
+    
+    <a class="action action-panel-toggler" role="button" title="Panel toggler">
+      <i class="fas fa-fw fa-chevron-circle-down"></i>
+    </a>
+    <a id="sidebarToggler" class="action d-none d-lg-block" role="button" title="Sidebar toggler">
+  <i class="fas fa-fw fa-expand-alt" data-fa-transform="rotate-45"></i>
+</a>
+
+    
+
+    
+    <a class="action" href="#post-copyright" role="button" aria-label="Copyright" title="Copyright">
+  <i class="fas fa-fw fa-copyright"></i>
+</a>
+    <a class="action" href="#post-comments" role="button" aria-label="Comments" title="Comments">
+  <i class="fas fa-fw fa-comments"></i>
+</a>
+    <a class="action" href="#postTOC" aria-controls="Table of contents" role="button" title="Table of contents">
+  <i class="fas fa-fw fa-list-alt"></i>
+</a>
+    
+  </div>
+</div>
+<article class="row card component mb-4 post">
+  <div class="card-header ">
+    <h1 class="card-title post-title">数据库时区那些事儿 - Oracle的时区处理
+</h1>
+  </div>
+  <div class="card-body"><div class="post-meta">
+  <span class="post-date" title="创建于 2018-09-18 10:41:33 &#43;0800 CST。">
+    2018-09-18
+  </span><span class="post-reading-time">
+    4 分钟阅读
+  </span><span class="post-taxonomies"><a href="/tags/jdbc/" class="badge post-taxonomy">JDBC</a><a href="/tags/oracle/" class="badge post-taxonomy">Oracle</a><a href="/tags/%E6%95%B0%E6%8D%AE%E5%BA%93%E6%97%B6%E5%8C%BA%E9%82%A3%E4%BA%9B%E4%BA%8B%E5%84%BF/" class="badge post-taxonomy">数据库时区那些事儿</a></span>
+</div>
+<div class="post-content mb-3"><p>当JVM时区和数据库时区不一致的时候，会发生什么？这个问题也许你从来没有注意过，但是当把Java程序容器化的时候，问题就浮现出来了，因为目前几乎所有的Docker Image的时区都是UTC。本文探究了Oracle及其JDBC驱动对于时区的处理方式，并尝试给出最佳实践。</p>
+<h2 id="先给总结">先给总结<a class="anchor ms-1" href="#先给总结"><i class="fas fa-link"></i></a></h2>
+<ul>
+<li><code>DATE</code>和<code>TIMESTAMP</code>类型不支持时区转换。</li>
+<li>如果应用和Oracle的时区不一致，那么应该使用<code>TIMESTAMP WITH LOCAL TIME ZONE</code>。
+<ul>
+<li>对于JDBC程序来说，JVM时区和用户时区保持一致就行了。</li>
+</ul>
+</li>
+<li>如果应用和Oracle的时区不一致，而且需要保存时区信息，那么应该使用<code>TIMESTAMP WITH TIME ZONE</code>。</li>
+<li>格式化日期时间字符串函数<code>TO_CHAR</code>：
+<ul>
+<li>对于<code>TIMESTAMP WITH TIME ZONE</code>来说，使用<code>TO_CHAR</code>时要注意让它输出时区信息（<code>TZH:TZM TZR TZD</code>），否则结果会是截断的。</li>
+<li>对于<code>TIMESTAMP WITH LOCAL TIME ZONE</code>来说，使用<code>TO_CHAR</code>返回的结果会转换时区。</li>
+</ul>
+</li>
+<li>当前日期时间的函数：
+<ul>
+<li>除非必要，不要使用<code>SYSDATE</code>和<code>SYSTIMESTAMP</code>，这个返回的是数据库所在操作系统的时间。</li>
+<li>尽量使用<code>CURRENT_TIMESTAMP</code>，它返回的是<code>TIMESTAMP WITH TIME ZONE</code>，能够用来安全的比较时间。</li>
+</ul>
+</li>
+</ul>
+<h2 id="日期时间类型的时区">日期时间类型的时区<a class="anchor ms-1" href="#日期时间类型的时区"><i class="fas fa-link"></i></a></h2>
+<p><a href="https://docs.oracle.com/cd/B19306_01/server.102/b14225/ch4datetime.htm#i1005983" target="_blank" rel="noopener noreferrer">Oracle Datetime Datatypes</a>有这么几种：</p>
+<ul>
+<li><a href="https://docs.oracle.com/cd/B19306_01/server.102/b14225/ch4datetime.htm#i1006006" target="_blank" rel="noopener noreferrer">DATE</a>，保存<code>YYYY-MM-DD HH24:MI:SS</code>。</li>
+<li><a href="https://docs.oracle.com/cd/B19306_01/server.102/b14225/ch4datetime.htm#i1006050" target="_blank" rel="noopener noreferrer">TIMESTAMP</a>，比<code>DATE</code>多存了fractional seconds（<code>FF</code>）。</li>
+<li><a href="https://docs.oracle.com/cd/B19306_01/server.102/b14225/ch4datetime.htm#i1006081" target="_blank" rel="noopener noreferrer">TIMESTAMP WITH TIME ZONE</a>，比<code>TIMESTAMP</code>多了时区偏移量（比如+08:00，<code>TZH:TZM</code>）or 时区区域名称（比如Asia/Shanghai，<code>TZR</code>）和夏令时标记（<code>TZD</code>）。</li>
+<li><a href="https://docs.oracle.com/cd/B19306_01/server.102/b14225/ch4datetime.htm#i1006169" target="_blank" rel="noopener noreferrer">TIMESTAMP WITH LOCAL TIME ZONE</a>。和<code>TIMESTAMP</code>类似，不过存储的数据会标准化为数据库的时区，用户获取它的时候会转换成用户时区（对于JDBC来说，就是JVM时区）。</li>
+</ul>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">docker run --name oracle-xe-timezone-test <span class="se">\
+</span></span></span><span class="line"><span class="cl"><span class="se"></span>  -e <span class="nv">ORACLE_ALLOW_REMOTE</span><span class="o">=</span><span class="nb">true</span> <span class="se">\
+</span></span></span><span class="line"><span class="cl"><span class="se"></span>  -p 1521:1521 <span class="se">\
+</span></span></span><span class="line"><span class="cl"><span class="se"></span>  -d wnameless/oracle-xe-11g:16.04
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>然后用system/oracle用户登录到oracle，执行下列sql建表：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="line"><span class="cl"><span class="k">create</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">test</span><span class="w"> </span><span class="p">(</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="n">date_field</span><span class="w"> </span><span class="nb">date</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="n">ts_field</span><span class="w"> </span><span class="k">timestamp</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="n">ts_tz_field</span><span class="w"> </span><span class="k">timestamp</span><span class="w"> </span><span class="k">with</span><span class="w"> </span><span class="n">time</span><span class="w"> </span><span class="k">zone</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="n">ts_ltz_field</span><span class="w"> </span><span class="k">timestamp</span><span class="w"> </span><span class="k">with</span><span class="w"> </span><span class="k">local</span><span class="w"> </span><span class="n">time</span><span class="w"> </span><span class="k">zone</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="p">);</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>为了验证这个结论，我写了一段程序来实验，这个程序做了三件事情：</p>
+<ol>
+<li>使用Asia/Shanghai时区构造一个日期java.util.Date：2018-09-14 10:00:00，然后插入到数据库里。</li>
+<li>使用Asia/Shanghai时区把这个值再查出来，看看结果。</li>
+<li>使用Asia/Shanghai时区，获得这个字段的格式化字符串（使用DATE_FORMAT()函数）。</li>
+<li>使用Europe/Paris时区重复第2-3步的动作。</li>
+</ol>
+<p>运行程序获得以下结果：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="line"><span class="cl">JVM Time Zone      : 中国标准时间
+</span></span><span class="line"><span class="cl">Retrieve java.util.Date from DATE column                              : 2018-09-14 10:00:00.0
+</span></span><span class="line"><span class="cl">Retrieve java.util.Date from TIMESTAMP column                         : 2018-09-14 10:00:00.0
+</span></span><span class="line"><span class="cl">Retrieve java.util.Date from TIMESTAMP WITH TIME ZONE column          : 2018-09-14 10:00:00.0
+</span></span><span class="line"><span class="cl">Retrieve java.util.Date from TIMESTAMP WITH LOCAL TIME ZONE column    : 2018-09-14 10:00:00.0
+</span></span><span class="line"><span class="cl">Retrieve formatted string from DATE column                            : 2018-09-14 10:00:00
+</span></span><span class="line"><span class="cl">Retrieve formatted string from TIMESTAMP column                       : 2018-09-14 10:00:00
+</span></span><span class="line"><span class="cl">Retrieve formatted string from TIMESTAMP WITH TIME ZONE column        : 2018-09-14 10:00:00 +08:00 ASIA/SHANGHAI CST
+</span></span><span class="line"><span class="cl">Retrieve formatted string from TIMESTAMP WITH LOCAL TIME ZONE column  : 2018-09-14 10:00:00
+</span></span><span class="line"><span class="cl">--------------------
+</span></span><span class="line"><span class="cl">JVM Time Zone      : 中欧时间
+</span></span><span class="line"><span class="cl">Retrieve java.util.Date from DATE column                              : 2018-09-14 10:00:00.0
+</span></span><span class="line"><span class="cl">Retrieve java.util.Date from TIMESTAMP column                         : 2018-09-14 10:00:00.0
+</span></span><span class="line"><span class="cl">Retrieve java.util.Date from TIMESTAMP WITH TIME ZONE column          : 2018-09-14 04:00:00.0
+</span></span><span class="line"><span class="cl">Retrieve java.util.Date from TIMESTAMP WITH LOCAL TIME ZONE column    : 2018-09-14 04:00:00.0
+</span></span><span class="line"><span class="cl">Retrieve formatted string from DATE column                            : 2018-09-14 10:00:00
+</span></span><span class="line"><span class="cl">Retrieve formatted string from TIMESTAMP column                       : 2018-09-14 10:00:00
+</span></span><span class="line"><span class="cl">Retrieve formatted string from TIMESTAMP WITH TIME ZONE column        : 2018-09-14 10:00:00 +08:00 ASIA/SHANGHAI CST
+</span></span><span class="line"><span class="cl">Retrieve formatted string from TIMESTAMP WITH LOCAL TIME ZONE column  : 2018-09-14 04:00:00
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>可以看到，<code>DATE</code>和<code>TIMESTAMP</code>是不支持时区转换的，实际上<code>DATE</code>和<code>TIMESTAMP</code>会丢弃掉时区信息。</p>
+<p>对于<code>TIMESTAMP WITH TIME ZONE</code>来说，使用<code>TO_CHAR</code>时要注意让它输出时区信息（<code>TZH:TZM TZR TZD</code>），否则结果会是截断的。</p>
+<p>对于<code>TIMESTAMP WITH LOCAL TIME ZONE</code>来说，使用<code>TO_CHAR</code>返回的结果会转换时区。</p>
+<h2 id="当前日期时间相关函数">当前日期时间相关函数<a class="anchor ms-1" href="#当前日期时间相关函数"><i class="fas fa-link"></i></a></h2>
+<p><a href="https://docs.oracle.com/cd/B19306_01/server.102/b14225/ch4datetime.htm#i1006333" target="_blank" rel="noopener noreferrer">Oracle和当前时间有关的函数</a>有这么几个：</p>
+<ul>
+<li><code>CURRENT_DATE</code>，返回的是<code>DATE</code>类型</li>
+<li><code>CURRENT_TIMESTAMP</code>，返回的是<code>TIMESTAMP WITH TIME ZONE</code>类型</li>
+<li><code>LOCALTIMESTAMP</code>，返回的是<code>TIMESTAMP</code>类型</li>
+<li><code>SYSDATE</code>，返回的是<code>DATE</code>类型</li>
+<li><code>SYSTIMESTAMP</code>，返回的是<code>TIMESTAMP</code>类型</li>
+</ul>
+<p>写了一段程序，输出结果是这样的：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="line"><span class="cl">=========TEST CURRENT DATE/TIME FUNCTIONS===========
+</span></span><span class="line"><span class="cl">JVM Time Zone               : 中国标准时间
+</span></span><span class="line"><span class="cl">Test CURRENT_DATE           : 2018-09-18 10:27:23.0
+</span></span><span class="line"><span class="cl">Test CURRENT_TIMESTAMP      : 2018-09-18 10:27:23.880378 Asia/Shanghai
+</span></span><span class="line"><span class="cl">Test LOCALTIMESTAMP         : 2018-09-18 10:27:23.926375
+</span></span><span class="line"><span class="cl">Test SYSDATE                : 2018-09-18 02:27:23.0
+</span></span><span class="line"><span class="cl">Test SYSTIMESTAMP           : 2018-09-18 02:27:23.929605 +0:00
+</span></span><span class="line"><span class="cl">--------------------
+</span></span><span class="line"><span class="cl">JVM Time Zone               : 中欧时间
+</span></span><span class="line"><span class="cl">Test CURRENT_DATE           : 2018-09-18 04:27:45.0
+</span></span><span class="line"><span class="cl">Test CURRENT_TIMESTAMP      : 2018-09-18 04:27:45.429024 Europe/Paris
+</span></span><span class="line"><span class="cl">Test LOCALTIMESTAMP         : 2018-09-18 04:27:45.482485
+</span></span><span class="line"><span class="cl">Test SYSDATE                : 2018-09-18 02:27:45.0
+</span></span><span class="line"><span class="cl">Test SYSTIMESTAMP           : 2018-09-18 02:27:45.48582 +0:00
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>可以发现，<code>CURRENT_DATE</code>、<code>CURRENT_TIMESTAMP</code>、<code>LOCALTIMESTAMP</code>的结果都根据客户端时区做了转换。而<code>SYSDATE</code>和<code>SYSTIMESTAMP</code>返回的则是数据库所在操作系统所在时区的时间。</p>
+<h2 id="在oracle客户端操作时区">在Oracle客户端操作时区<a class="anchor ms-1" href="#在oracle客户端操作时区"><i class="fas fa-link"></i></a></h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="line"><span class="cl"><span class="c1">-- 查询系统时区和session时区
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">SELECT</span><span class="w"> </span><span class="n">DBTIMEZONE</span><span class="p">,</span><span class="w"> </span><span class="n">SESSIONTIMEZONE</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">DUAL</span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="c1">-- 设置session时区
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">ALTER</span><span class="w"> </span><span class="k">SESSION</span><span class="w"> </span><span class="k">SET</span><span class="w"> </span><span class="n">TIME_ZONE</span><span class="o">=</span><span class="s1">&#39;Asia/Shanghai&#39;</span><span class="p">;</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>参见<a href="https://docs.oracle.com/cd/B19306_01/server.102/b14225/ch4datetime.htm#i1006705" target="_blank" rel="noopener noreferrer">Setting the Database Time Zone</a> 和 <a href="https://docs.oracle.com/cd/B19306_01/server.102/b14225/ch4datetime.htm#i1006728" target="_blank" rel="noopener noreferrer">Setting the Session Time Zone</a></p>
+<h2 id="参考资料">参考资料<a class="anchor ms-1" href="#参考资料"><i class="fas fa-link"></i></a></h2>
+<ul>
+<li><a href="https://docs.oracle.com/cd/B19306_01/server.102/b14225/ch4datetime.htm#i1005983" target="_blank" rel="noopener noreferrer">Oracle Datetime Datatypes</a></li>
+<li><a href="https://docs.oracle.com/cd/B19306_01/server.102/b14225/ch4datetime.htm#i1006333" target="_blank" rel="noopener noreferrer">Oracle和当前时间有关的函数</a></li>
+<li><a href="https://docs.oracle.com/cd/B19306_01/server.102/b14225/ch4datetime.htm#i1009114" target="_blank" rel="noopener noreferrer">Oracle Datetime Comparisons</a></li>
+<li><a href="https://docs.oracle.com/cd/B19306_01/server.102/b14225/ch4datetime.htm#i1006705" target="_blank" rel="noopener noreferrer">Setting the Database Time Zone</a></li>
+<li><a href="https://docs.oracle.com/cd/B19306_01/server.102/b14225/ch4datetime.htm#i1006728" target="_blank" rel="noopener noreferrer">Setting the Session Time Zone</a></li>
+<li><a href="https://docs.oracle.com/database/121/JAJDB/constant-values.html#oracle_jdbc_OracleConnection_ACCESSMODE_SYSTEMPROP" target="_blank" rel="noopener noreferrer">Oracle JDBC Connection Constant Field Values</a></li>
+<li><a href="https://www.w3.org/TR/timezone/" target="_blank" rel="noopener noreferrer">W3C- Working with timezone</a></li>
+</ul>
+<h2 id="相关代码">相关代码<a class="anchor ms-1" href="#相关代码"><i class="fas fa-link"></i></a></h2>
+<p><a href="https://github.com/chanjarster/jdbc-timezone" target="_blank" rel="noopener noreferrer">https://github.com/chanjarster/jdbc-timezone</a></p></div></div>
+  <div class="card-footer"><div class="post-navs d-flex justify-content-evenly"><div class="post-nav post-prev">
+    <i class="fas fa-fw fa-chevron-left"></i>
+    <a href="/post/mysql-timezone/">数据库时区那些事儿 - MySQL的时区处理
+</a>
+  </div><div class="post-nav post-next">
+    <a href="/post/java-dockerfile-best-practice/">Java程序制作Docker Image推荐方案
+</a>
+    <i class="fas fa-fw fa-chevron-right"></i>
+  </div></div></div>
+</article><div class="post-copyright mb-3 row card component" id="post-copyright">
+    <div class="card-header">
+        <h2 class="card-title">版权</h2>
+    </div>
+    <div class="card-body"><a class="d-flex align-items-center flex-column" target="_blank" rel="license noopener noreferrer" href="https://creativecommons.org/licenses/by-nc-nd/4.0/deed.zh">
+  <span><i class="fab fa-fw fa-2x fa-creative-commons"></i><i class="fab fa-fw fa-2x fa-creative-commons-by"></i><i class="fab fa-fw fa-2x fa-creative-commons-nc"></i><i class="fab fa-fw fa-2x fa-creative-commons-nd"></i></span>
+  CC BY-NC-ND 4.0 
+</a>
+
+
+    </div>
+</div><section class="related-posts row card component">
+    <div class="card-header">
+      <h2 class="card-title">相关文章</h2>
+    </div>
+    <div class="card-body">
+      <ul class="post-list"><li>
+          <a href="/post/mysql-timezone/">数据库时区那些事儿 - MySQL的时区处理
+</a>
+          <span class="float-end post-date">2018-09-17
+</span>
+        </li><li>
+          <a href="/post/spring-cloud-config-best-practice/">Spring Cloud Config配置文件最佳实践
+</a>
+          <span class="float-end post-date">2018-09-10
+</span>
+        </li><li>
+          <a href="/post/extract-public-service/">如何抽取公共服务并成功迁移
+</a>
+          <span class="float-end post-date">2018-08-23
+</span>
+        </li><li>
+          <a href="/post/compare-authc-authz-models/">多种认证、授权模型的比较
+</a>
+          <span class="float-end post-date">2018-08-22
+</span>
+        </li><li>
+          <a href="/post/d-transactions/saga/">事务 - Saga
+</a>
+          <span class="float-end post-date">2018-03-21
+</span>
+        </li></ul>
+    </div>
+  </section><div class="card component row post-comments" id="post-comments">
+  <div class="card-header">
+    <h2 class="card-title">评论</h2>
+  </div>
+  <div class="card-body"></div>
+</div></div>
+</div><aside class="col-lg-4 sidebar d-flex">
+  <div class="container d-flex flex-column">
+    
+    <section class="card row text-center profile component">
+  <div class="card-body">
+    <div class="col-12 d-flex align-items-center justify-content-center"><img class="profile-avatar rounded-circle" alt="颇忒脱" src="/images/avatar.jpg" loading="lazy"
+   width="455" height="455"
+   />
+</div>
+    <div class="col-12 profile-meta"><div class="profile-name">颇忒脱</div><nav class="social-links nav justify-content-center"><a class="nav-link social-link" target="_blank" href="https://github.com/chanjarster" title="GitHub" rel="noopener noreferrer">
+        <i class="fa-fw fa-2x fab fa-github"></i>
+      </a></nav>
+</div>
+  </div>
+</section>
+  <div class="post-toc row mb-4 card component" id="postTOC">
+  <div class="card-header">
+    <h2 class="card-title">目录</h2>
+  </div>
+  <div class="card-body">
+    <nav id="TableOfContents">
+  <ul>
+    <li><a href="#先给总结">先给总结</a></li>
+    <li><a href="#日期时间类型的时区">日期时间类型的时区</a></li>
+    <li><a href="#当前日期时间相关函数">当前日期时间相关函数</a></li>
+    <li><a href="#在oracle客户端操作时区">在Oracle客户端操作时区</a></li>
+    <li><a href="#参考资料">参考资料</a></li>
+    <li><a href="#相关代码">相关代码</a></li>
+  </ul>
+</nav>
+  </div>
+</div><section class="featured-posts row card component">
+    <div class="card-header">
+      <h2 class="card-title">精选文章</h2>
+    </div>
+    <div class="card-body">
+      <ul class="post-list"><li>
+          <a href="/post/redis-cluster-ops/index-page/">Redis 集群运维笔记
+</a>
+        </li><li>
+          <a href="/post/linux/namespace/index-page/">Linux Namespace系列
+</a>
+        </li><li>
+          <a href="/post/network/index-page/">Networking系列
+</a>
+        </li><li>
+          <a href="/post/mysql/index-page/">MySQL系列
+</a>
+        </li><li>
+          <a href="/post/concurrent-programming/index-page/">并发编程系列
+</a>
+        </li></ul>
+    </div>
+  </section><section class="recent-posts row card component">
+  <div class="card-header">
+    <h2 class="card-title">最近文章</h2>
+  </div>
+  <div class="card-body">
+    <ul class="post-list"><li>
+        <a href="/post/qoder-switch-session/">QoderCN 切换账号后迁移会话历史
+</a>
+      </li><li>
+        <a href="/post/spring-boot-jdk-comp-table-copy/">Spring Boot 3.4 升级过程记录
+</a>
+      </li><li>
+        <a href="/post/redis-cluster-ops/index-page/">Redis 集群运维笔记
+</a>
+      </li><li>
+        <a href="/post/spring-boot-jdk-comp-table/">Spring、JDK、Maven 版本兼容性表格
+</a>
+      </li><li>
+        <a href="/post/network/calico-firewall-k8s/">Calico 配置 K8s 防火墙
+</a>
+      </li></ul>
+  </div>
+</section><section class="tags-taxonomies row card component">
+      <div class="card-header">
+        <h2 class="card-title">
+          <a href="/tags">标签</a>
+        </h2>
+      </div>
+      <div class="card-body">
+        <div class="py-2"><a href="/tags/arts-a/" class="badge rounded post-taxonomy" title="ARTS-A">
+            ARTS-A<span class="badge badge-sm text-white bg-accent ms-1">125</span></a><a href="/tags/k8s/" class="badge rounded post-taxonomy" title="k8s">
+            k8s<span class="badge badge-sm text-white bg-accent ms-1">52</span></a><a href="/tags/troubleshooting/" class="badge rounded post-taxonomy" title="troubleshooting">
+            troubleshooting<span class="badge badge-sm text-white bg-accent ms-1">40</span></a><a href="/tags/jvm/" class="badge rounded post-taxonomy" title="jvm">
+            jvm<span class="badge badge-sm text-white bg-accent ms-1">39</span></a><a href="/tags/docker/" class="badge rounded post-taxonomy" title="docker">
+            docker<span class="badge badge-sm text-white bg-accent ms-1">30</span></a><a href="/tags/mysql/" class="badge rounded post-taxonomy" title="mysql">
+            mysql<span class="badge badge-sm text-white bg-accent ms-1">25</span></a><a href="/tags/network/" class="badge rounded post-taxonomy" title="network">
+            network<span class="badge badge-sm text-white bg-accent ms-1">25</span></a><a href="/tags/%E5%B9%B6%E5%8F%91%E7%BC%96%E7%A8%8B/" class="badge rounded post-taxonomy" title="并发编程">
+            并发编程<span class="badge badge-sm text-white bg-accent ms-1">21</span></a><a href="/tags/cheatsheet/" class="badge rounded post-taxonomy" title="cheatsheet">
+            cheatsheet<span class="badge badge-sm text-white bg-accent ms-1">20</span></a><a href="/tags/java/" class="badge rounded post-taxonomy" title="java">
+            java<span class="badge badge-sm text-white bg-accent ms-1">20</span></a><a href="/tags/kernel/" class="badge rounded post-taxonomy" title="kernel">
+            kernel<span class="badge badge-sm text-white bg-accent ms-1">19</span></a><a href="/tags/linux/" class="badge rounded post-taxonomy" title="linux">
+            linux<span class="badge badge-sm text-white bg-accent ms-1">19</span></a><a href="/tags/redis/" class="badge rounded post-taxonomy" title="redis">
+            redis<span class="badge badge-sm text-white bg-accent ms-1">17</span></a><a href="/tags/prometheus/" class="badge rounded post-taxonomy" title="prometheus">
+            prometheus<span class="badge badge-sm text-white bg-accent ms-1">13</span></a><a href="/tags/%E6%80%A7%E8%83%BD%E8%B0%83%E4%BC%98/" class="badge rounded post-taxonomy" title="性能调优">
+            性能调优<span class="badge badge-sm text-white bg-accent ms-1">13</span></a><a href="/tags/go/" class="badge rounded post-taxonomy" title="go">
+            go<span class="badge badge-sm text-white bg-accent ms-1">10</span></a><a href="/tags/%E5%BE%AE%E6%9C%8D%E5%8A%A1/" class="badge rounded post-taxonomy" title="微服务">
+            微服务<span class="badge badge-sm text-white bg-accent ms-1">10</span></a><a href="/tags/rancher/" class="badge rounded post-taxonomy" title="rancher">
+            rancher<span class="badge badge-sm text-white bg-accent ms-1">9</span></a><a href="/tags/debug/" class="badge rounded post-taxonomy" title="debug">
+            debug<span class="badge badge-sm text-white bg-accent ms-1">7</span></a><a href="/tags/gc/" class="badge rounded post-taxonomy" title="gc">
+            gc<span class="badge badge-sm text-white bg-accent ms-1">7</span></a><a href="/tags/nginx/" class="badge rounded post-taxonomy" title="nginx">
+            nginx<span class="badge badge-sm text-white bg-accent ms-1">7</span></a><a href="/tags/ingress/" class="badge rounded post-taxonomy" title="ingress">
+            ingress<span class="badge badge-sm text-white bg-accent ms-1">6</span></a><a href="/tags/%E8%BF%90%E7%BB%B4/" class="badge rounded post-taxonomy" title="运维">
+            运维<span class="badge badge-sm text-white bg-accent ms-1">6</span></a><a href="/tags/ci_cd/" class="badge rounded post-taxonomy" title="CI_CD">
+            CI_CD<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/interview/" class="badge rounded post-taxonomy" title="interview">
+            interview<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/jmx/" class="badge rounded post-taxonomy" title="jmx">
+            jmx<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/openssl/" class="badge rounded post-taxonomy" title="openssl">
+            openssl<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/tls/" class="badge rounded post-taxonomy" title="tls">
+            tls<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/%E5%88%86%E5%B8%83%E5%BC%8F%E4%BA%8B%E5%8A%A1/" class="badge rounded post-taxonomy" title="分布式事务">
+            分布式事务<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/%E5%88%86%E5%B8%83%E5%BC%8F%E7%AE%97%E6%B3%95/" class="badge rounded post-taxonomy" title="分布式算法">
+            分布式算法<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/%E6%94%B6%E8%97%8F%E5%A4%B9/" class="badge rounded post-taxonomy" title="收藏夹">
+            收藏夹<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/%E9%AB%98%E5%B9%B6%E5%8F%91/" class="badge rounded post-taxonomy" title="高并发">
+            高并发<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/visualvm/" class="badge rounded post-taxonomy" title="visualvm">
+            visualvm<span class="badge badge-sm text-white bg-accent ms-1">4</span></a><a href="/tags/%E6%97%A5%E5%BF%97/" class="badge rounded post-taxonomy" title="日志">
+            日志<span class="badge badge-sm text-white bg-accent ms-1">4</span></a><a href="/tags/arts/" class="badge rounded post-taxonomy" title="arts">
+            arts<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/arts-r/" class="badge rounded post-taxonomy" title="arts-r">
+            arts-r<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/classloader/" class="badge rounded post-taxonomy" title="ClassLoader">
+            ClassLoader<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/container/" class="badge rounded post-taxonomy" title="container">
+            container<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/ios/" class="badge rounded post-taxonomy" title="ios">
+            ios<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/iphone/" class="badge rounded post-taxonomy" title="iphone">
+            iphone<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/jenkins/" class="badge rounded post-taxonomy" title="Jenkins">
+            Jenkins<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/namespace/" class="badge rounded post-taxonomy" title="namespace">
+            namespace<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/scheduling/" class="badge rounded post-taxonomy" title="scheduling">
+            scheduling<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/springboot/" class="badge rounded post-taxonomy" title="springboot">
+            springboot<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/thread/" class="badge rounded post-taxonomy" title="thread">
+            thread<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/%E5%88%86%E5%B8%83%E5%BC%8F%E6%9E%B6%E6%9E%84/" class="badge rounded post-taxonomy" title="分布式架构">
+            分布式架构<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/%E5%8D%8E%E4%B8%BA/" class="badge rounded post-taxonomy" title="华为">
+            华为<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/%E8%8B%B9%E6%9E%9C/" class="badge rounded post-taxonomy" title="苹果">
+            苹果<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/bash/" class="badge rounded post-taxonomy" title="bash">
+            bash<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/etcd/" class="badge rounded post-taxonomy" title="etcd">
+            etcd<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/grafana/" class="badge rounded post-taxonomy" title="grafana">
+            grafana<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/iptables/" class="badge rounded post-taxonomy" title="iptables">
+            iptables<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/jdbc/" class="badge rounded post-taxonomy" title="JDBC">
+            JDBC<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/jmeter/" class="badge rounded post-taxonomy" title="jmeter">
+            jmeter<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/%E6%95%B0%E6%8D%AE%E5%BA%93%E6%97%B6%E5%8C%BA%E9%82%A3%E4%BA%9B%E4%BA%8B%E5%84%BF/" class="badge rounded post-taxonomy" title="数据库时区那些事儿">
+            数据库时区那些事儿<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/%E7%9B%91%E6%8E%A7/" class="badge rounded post-taxonomy" title="监控">
+            监控<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/%E9%99%90%E6%B5%81/" class="badge rounded post-taxonomy" title="限流">
+            限流<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/acloud/" class="badge rounded post-taxonomy" title="acloud">
+            acloud<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/agent/" class="badge rounded post-taxonomy" title="agent">
+            agent<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/akka/" class="badge rounded post-taxonomy" title="Akka">
+            Akka<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/alertmanager/" class="badge rounded post-taxonomy" title="alertmanager">
+            alertmanager<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/calico/" class="badge rounded post-taxonomy" title="calico">
+            calico<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/chrome/" class="badge rounded post-taxonomy" title="chrome">
+            chrome<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/coredns/" class="badge rounded post-taxonomy" title="coredns">
+            coredns<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/elasticsearch/" class="badge rounded post-taxonomy" title="elasticsearch">
+            elasticsearch<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/fluentd/" class="badge rounded post-taxonomy" title="fluentd">
+            fluentd<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/harbor/" class="badge rounded post-taxonomy" title="harbor">
+            harbor<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/helm/" class="badge rounded post-taxonomy" title="helm">
+            helm<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/hystrix/" class="badge rounded post-taxonomy" title="hystrix">
+            hystrix<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/io/" class="badge rounded post-taxonomy" title="io">
+            io<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/jdpa/" class="badge rounded post-taxonomy" title="jdpa">
+            jdpa<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/jwt/" class="badge rounded post-taxonomy" title="jwt">
+            jwt<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/kafka/" class="badge rounded post-taxonomy" title="kafka">
+            kafka<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/kibana/" class="badge rounded post-taxonomy" title="kibana">
+            kibana<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/mq/" class="badge rounded post-taxonomy" title="MQ">
+            MQ<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/nfs/" class="badge rounded post-taxonomy" title="nfs">
+            nfs<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/oauth/" class="badge rounded post-taxonomy" title="oauth">
+            oauth<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/oracle/" class="badge rounded post-taxonomy" title="Oracle">
+            Oracle<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/pprof/" class="badge rounded post-taxonomy" title="pprof">
+            pprof<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/qoder/" class="badge rounded post-taxonomy" title="qoder">
+            qoder<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/reactor/" class="badge rounded post-taxonomy" title="reactor">
+            reactor<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/spring-boot/" class="badge rounded post-taxonomy" title="spring-boot">
+            spring-boot<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/spring-cloud/" class="badge rounded post-taxonomy" title="Spring Cloud">
+            Spring Cloud<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/ssl/" class="badge rounded post-taxonomy" title="ssl">
+            ssl<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/systemtap/" class="badge rounded post-taxonomy" title="systemtap">
+            systemtap<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/tiller/" class="badge rounded post-taxonomy" title="tiller">
+            tiller<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/tomcat/" class="badge rounded post-taxonomy" title="tomcat">
+            tomcat<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/ubuntu/" class="badge rounded post-taxonomy" title="ubuntu">
+            ubuntu<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/vtable/" class="badge rounded post-taxonomy" title="vtable">
+            vtable<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/%E6%B6%88%E6%81%AF%E9%98%9F%E5%88%97/" class="badge rounded post-taxonomy" title="消息队列">
+            消息队列<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/%E6%B7%B1%E4%BF%A1%E6%9C%8D/" class="badge rounded post-taxonomy" title="深信服">
+            深信服<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/%E7%BC%93%E5%AD%98/" class="badge rounded post-taxonomy" title="缓存">
+            缓存<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/%E8%99%9A%E6%8B%9F%E5%8C%96/" class="badge rounded post-taxonomy" title="虚拟化">
+            虚拟化<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/%E8%B0%83%E7%94%A8%E9%93%BE%E8%BF%BD%E8%B8%AA/" class="badge rounded post-taxonomy" title="调用链追踪">
+            调用链追踪<span class="badge badge-sm text-white bg-accent ms-1">1</span></a></div>
+      </div>
+    </section>
+    
+  </div>
+</aside>
+</div>
+    </main><footer class="footer mt-auto py-3 text-center container"><nav class="social-links nav justify-content-center mb-2"><a class="nav-link social-link" target="_blank" href="https://github.com/chanjarster" title="GitHub" rel="noopener noreferrer">
+        <i class="fa-fw fa-2x fab fa-github"></i>
+      </a></nav>
+<div class="copyright mb-2">
+  Copyright © 2010-2026 Daniel Qian. All Rights Reserved.
+</div>
+<div class="powered-by mb-2">
+  Powered by <a href="https://gohugo.io" target="_blank" rel="noopener noreferrer">Hugo</a> and the <a href="https://github.com/razonyang/hugo-theme-bootstrap" target="_blank" rel="noopener noreferrer">Bootstrap</a> theme.
+</div>
+<a href="https://www.netlify.com" target="_blank" rel="noopener noreferrer">
+    <img src="https://www.netlify.com/img/global/badges/netlify-color-accent.svg" alt="Deploys by Netlify" width="114" height="51" />
+</a>
+</footer>
+<script src="/js/main.2cdce25f280f570596c88888d6af930fe5e15ea030005291dad293defbb231d3.js" integrity="sha256-LNziXygPVwWWyIiI1q&#43;TD&#43;XhXqAwAFKR2tKT3vuyMdM=" crossorigin="anonymous" defer></script><script src="/js/icons.min.7b1f27dfde35467d03350938b2e41dbffd06347009b97ab913edfaca01a07814.js" integrity="sha256-ex8n3941Rn0DNQk4suQdv/0GNHAJuXq5E&#43;36ygGgeBQ=" crossorigin="anonymous" defer></script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('\/service-worker.js').then(function(reg) {
+      console.log('Successfully registered service worker', reg);
+    }).catch(function(err) {
+      console.warn('Error whilst registering service worker', err);
+    });
+  });
+}
+</script><script src="/js/viewer.min.1ec1fa5aa3a66267222a44fe1cd51856ad4a92be48ede579fb36d70a6d4c28e9.js" integrity="sha256-HsH6WqOmYmciKkT&#43;HNUYVq1Kkr5I7eV5&#43;zbXCm1MKOk=" crossorigin="anonymous" defer></script>
+</body>
+</html>

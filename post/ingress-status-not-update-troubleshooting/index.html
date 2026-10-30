@@ -1,0 +1,837 @@
+<!doctype html><html lang="zh-cn" data-palette="blue"
+  >
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>排查Ingress对象status字段不更新的问题 - 颇忒脱的技术博客</title><link rel="apple-touch-icon" href="/images/icons/icon-180x180.png" sizes="180x180">
+<link rel="icon" href="/images/icons/icon-32x32.png" sizes="32x32" type="image/png">
+<link rel="icon" href="/images/icons/icon-16x16.png" sizes="16x16" type="image/png">
+<link rel="icon" href="/images/icons/favicon.ico">
+<link rel="manifest" href="/manifest.json">
+<meta name="keywords" content="" />
+<meta name="description" content="" /><meta name="robots" content="index, follow" /><meta itemprop="name" content="排查Ingress对象status字段不更新的问题">
+<meta itemprop="description" content=""><meta itemprop="datePublished" content="2021-05-14T09:10:20+08:00" />
+<meta itemprop="dateModified" content="2021-05-14T09:10:20+08:00" />
+<meta itemprop="wordCount" content="1846">
+<meta itemprop="keywords" content="k8s,ingress,troubleshooting," /><meta property="og:title" content="排查Ingress对象status字段不更新的问题" />
+<meta property="og:description" content="" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="/post/ingress-status-not-update-troubleshooting/" /><meta property="article:section" content="post" />
+<meta property="article:published_time" content="2021-05-14T09:10:20+08:00" />
+<meta property="article:modified_time" content="2021-05-14T09:10:20+08:00" />
+
+<meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="排查Ingress对象status字段不更新的问题"/>
+<meta name="twitter:description" content=""/>
+<meta property="og:image" content="/images/avatar.jpg"/>
+  <meta name="twitter:image" content="/images/avatar.jpg"/><link rel="stylesheet" href="/css/main.min.24196952817c68c8b90d8fa573d560fa62766baa0622bdc0e862255f4a4d1307.css" integrity="sha256-JBlpUoF8aMi5DY&#43;lc9Vg&#43;mJ2a6oGIr3A6GIlX0pNEwc=" crossorigin="anonymous"><link rel="stylesheet" href="/css/viewer.min.3d228794bcedbbfa0412beb8fbc1ec6973202945e42af7004f742a4d7bd620ab.css" integrity="sha256-PSKHlLztu/oEEr64&#43;8HsaXMgKUXkKvcAT3QqTXvWIKs=" crossorigin="anonymous"></head>
+  <body><script>const items=["mode","palette"];items.forEach(function(e){const t=localStorage.getItem("hbs-"+e);t&&document.body.parentElement.setAttribute("data-"+e,t)})</script><header><nav class="navbar top-app-bar top-app-bar-expand-lg fixed-top">
+  <div class="container">
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent"
+      aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <i class="fas fa-bars"></i>
+    </button><a class="navbar-brand flex-grow-1 flex-lg-grow-0 text-center text-lg-start mx-auto me-lg-3" href="/"><img class="logo" alt="Logo" src="/images/avatar.jpg" loading="lazy"
+   width="455" height="455"
+   />
+颇忒脱的技术博客
+    </a>
+    
+    <button class="navbar-settings" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvasSettings"
+  aria-controls="offcanvasSettings" aria-label="Toggle settings">
+  <i class="fas fa-ellipsis-v"></i>
+</button>
+
+<div class="offcanvas offcanvas-end surface h-100" tabindex="-1" id="offcanvasSettings" aria-labelledby="offcanvasSettings">
+  <div class="offcanvas-header">
+    <h3 class="offcanvas-title">设置</h3>
+    <button type="button" class="btn btn-sm btn-outline-primary" data-bs-dismiss="offcanvas" aria-label="Close">
+      <i class="fas fa-times"></i>
+    </button>
+  </div>
+  <div class="offcanvas-body d-flex flex-column">
+
+<section class="setting">
+  <form class="row">
+    <div class="col-auto">
+      <label><i class="fas fa-fw fa-adjust"></i> 模式</label>
+    </div>
+    <div class="col-auto ms-auto">
+      <div class="form-check form-switch">
+        <input class="form-check-input" type="checkbox" id="modeSwitcher">
+      </div>
+    </div>
+  </form>
+</section>
+
+<section class="setting">
+  <form class="font-size-switcher-form row">
+    <div class="col-auto">
+      <label for="fontSize" class="form-label"><i class="fas fa-fw fa-font"></i> 字体大小</label>
+    </div>
+    <div class="col-auto ms-auto">
+      <input type="range" class="form-range" min="-2" max="2" id="fontSize">
+    </div>
+  </form>
+</section>
+
+
+<section class="setting palettes">
+  <form class="row">
+    <div class="col-auto">
+      <label><i class="fas fa-fw fa-palette"></i> 配色</label>
+    </div>
+    <div class="col-auto ms-auto">
+      <a id="btnPalette" class="btn btn-sm btn-outline-primary" role="button" aria-label="palettePicker">
+        <i class="fas fa-eye-dropper"></i>
+      </a>
+    </div>
+  </form>
+  <div class="mt-2 d-flex justify-content-between visually-hidden" id="palettePicker"><button type="button" id="palette-blue" aria-label="蓝色"
+        class="btn btn-sm w-100 palette" data-palette="blue">
+      </button><button type="button" id="palette-blue-gray" aria-label="蓝灰色"
+        class="btn btn-sm w-100 palette" data-palette="blue-gray">
+      </button><button type="button" id="palette-brown" aria-label="棕色"
+        class="btn btn-sm w-100 palette" data-palette="brown">
+      </button><button type="button" id="palette-cyan" aria-label="青色"
+        class="btn btn-sm w-100 palette" data-palette="cyan">
+      </button><button type="button" id="palette-green" aria-label="绿色"
+        class="btn btn-sm w-100 palette" data-palette="green">
+      </button><button type="button" id="palette-indigo" aria-label="靛青色"
+        class="btn btn-sm w-100 palette" data-palette="indigo">
+      </button><button type="button" id="palette-orange" aria-label="橙色"
+        class="btn btn-sm w-100 palette" data-palette="orange">
+      </button><button type="button" id="palette-pink" aria-label="粉色"
+        class="btn btn-sm w-100 palette" data-palette="pink">
+      </button><button type="button" id="palette-purple" aria-label="紫色"
+        class="btn btn-sm w-100 palette" data-palette="purple">
+      </button><button type="button" id="palette-red" aria-label="红色"
+        class="btn btn-sm w-100 palette" data-palette="red">
+      </button><button type="button" id="palette-teal" aria-label="蓝绿色"
+        class="btn btn-sm w-100 palette" data-palette="teal">
+      </button><button type="button" id="palette-yellow" aria-label="黄色"
+        class="btn btn-sm w-100 palette" data-palette="yellow">
+      </button></div>
+</section>
+<section class="setting actions d-flex justify-content-around mt-auto overflow-auto">
+  <a role="button" class="action action-go-back" href="javascript: window.history.back();">
+    <span class="action-icon"><i class="fas fa-2x fa-arrow-left"></i></span> 返回
+  </a>
+  <a role="button" class="action action-reload-page">
+    <span class="action-icon"><i class="fas fa-2x fa-redo-alt"></i></span> 刷新
+  </a>
+  <a role="button" class="action action-copy-url">
+    <span class="action-icon"><i class="fas fa-2x fa-link"></i></span> 复制链接
+  </a></section>
+
+</div>
+</div>
+
+    <div class="collapse navbar-collapse" tabindex="-1" id="navbarSupportedContent" aria-labelledby="navbarSupportedContent">
+      <form class="search-bar my-1" action="/search">
+  <div class="input-group input-group-sm">
+    <span class="btn btn-search disabled position-absolute left-0"><i class="fas fa-fw fa-search"></i></span>
+    <input class="form-control rounded-pill" name="q" type="search" aria-label="Search">
+  </div>
+</form>
+      <ul class="navbar-nav ms-auto"><li class="nav-item">
+          <a class="nav-link" href="/series/">
+            <i class="fas fa-fw fa-columns"></i>专栏
+          </a>
+        </li><li class="nav-item dropdown">
+          <a class="nav-link" id="navbarDropdownIndex" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+            <i class="fas fa-fw fa-chevron-circle-down"></i>快速索引
+          </a>
+          <ul class="dropdown-menu" aria-labelledby="navbarDropdownIndex"><li>
+              <a class="dropdown-item"
+                href="/tags/go">
+                Go
+              </a>
+            </li><li>
+              <a class="dropdown-item"
+                href="/tags/gc">
+                GC
+              </a>
+            </li><li>
+              <a class="dropdown-item"
+                href="/tags/kernel">
+                Kernel
+              </a>
+            </li><li>
+              <a class="dropdown-item"
+                href="/tags/cheatsheet">
+                Cheatsheet
+              </a>
+            </li><li>
+              <a class="dropdown-item"
+                href="/tags/troubleshooting">
+                排障实战记录
+              </a>
+            </li></ul>
+        </li><li class="nav-item">
+          <a class="nav-link" href="/tags/">
+            <i class="fas fa-fw fa-tags"></i>标签
+          </a>
+        </li><li class="nav-item">
+          <a class="nav-link" href="/archives/">
+            <i class="fas fa-fw fa-file-archive"></i>归档
+          </a>
+        </li></ul>
+    </div>
+  </div>
+</nav>
+</header>
+<main role="main" class="container">
+      <div class="row content">
+<div class="col-lg-8">
+  <div class="container"><nav class="row card component" aria-label="breadcrumb">
+  <div class="card-body">
+    <ol class="breadcrumb "><li class="breadcrumb-item"><a href="/">主页</a></li><li class="breadcrumb-item"><a href="/post/">文章</a></li><li class="breadcrumb-item active">排查Ingress对象status字段不更新的问题</li></ol>
+  </div>
+</nav><div class="post-panel-wrapper">
+  <div class="d-flex flex-column component rounded post-panel">
+    
+    <a class="action action-panel-toggler" role="button" title="Panel toggler">
+      <i class="fas fa-fw fa-chevron-circle-down"></i>
+    </a>
+    <a id="sidebarToggler" class="action d-none d-lg-block" role="button" title="Sidebar toggler">
+  <i class="fas fa-fw fa-expand-alt" data-fa-transform="rotate-45"></i>
+</a>
+
+    
+
+    
+    <a class="action" href="#post-copyright" role="button" aria-label="Copyright" title="Copyright">
+  <i class="fas fa-fw fa-copyright"></i>
+</a>
+    <a class="action" href="#post-comments" role="button" aria-label="Comments" title="Comments">
+  <i class="fas fa-fw fa-comments"></i>
+</a>
+    <a class="action" href="#postTOC" aria-controls="Table of contents" role="button" title="Table of contents">
+  <i class="fas fa-fw fa-list-alt"></i>
+</a>
+    
+  </div>
+</div>
+<article class="row card component mb-4 post">
+  <div class="card-header ">
+    <h1 class="card-title post-title">排查Ingress对象status字段不更新的问题
+</h1>
+  </div>
+  <div class="card-body"><div class="post-meta">
+  <span class="post-date" title="创建于 2021-05-14 09:10:20 &#43;0800 CST。">
+    2021-05-14
+  </span><span class="post-reading-time">
+    4 分钟阅读
+  </span><span class="post-taxonomies"><a href="/tags/k8s/" class="badge post-taxonomy">k8s</a><a href="/tags/ingress/" class="badge post-taxonomy">ingress</a><a href="/tags/troubleshooting/" class="badge post-taxonomy">troubleshooting</a></span>
+</div>
+<div class="post-content mb-3"><h2 id="现象">现象<a class="anchor ms-1" href="#现象"><i class="fas fa-link"></i></a></h2>
+<p>在rancher中发现所有的Ingress都是黄色的Initializing状态，但是访问应用没有问题。</p>
+<p><img class="img-fluid" alt="" src="/post/ingress-status-not-update-troubleshooting/1.png" loading="lazy"
+  
+   />
+
+</p>
+<h2 id="检查ingress对象">检查ingress对象<a class="anchor ms-1" href="#检查ingress对象"><i class="fas fa-link"></i></a></h2>
+<p>查看ingress的status，会看到status.loadBalancer 字段是空的：</p>
+<p><img class="img-fluid" alt="" src="/post/ingress-status-not-update-troubleshooting/2.png" loading="lazy"
+  
+   />
+
+</p>
+<p>对比一个正常：</p>
+<p><img class="img-fluid" alt="" src="/post/ingress-status-not-update-troubleshooting/3.png" loading="lazy"
+  
+   />
+
+</p>
+<h2 id="查看nginx-ingress的日志">查看Nginx ingress的日志<a class="anchor ms-1" href="#查看nginx-ingress的日志"><i class="fas fa-link"></i></a></h2>
+<p>在三个Pod（共10个）上看到了以下日志：</p>
+<p><img class="img-fluid" alt="" src="/post/ingress-status-not-update-troubleshooting/4.png" loading="lazy"
+  
+   />
+
+</p>
+<p>怀疑受到攻击，导致nginx-ingress-controller异常。</p>
+<h2 id="尝试重启ingress-controller">尝试重启Ingress controller<a class="anchor ms-1" href="#尝试重启ingress-controller"><i class="fas fa-link"></i></a></h2>
+<p>删掉这三个Pod重启，没用。</p>
+<p>重启所有ingress-controller，也没用。</p>
+<h2 id="观察master服务器上etcd的日志">观察master服务器上etcd的日志<a class="anchor ms-1" href="#观察master服务器上etcd的日志"><i class="fas fa-link"></i></a></h2>
+<p>在master-1上看到如下内容：</p>
+<p><img class="img-fluid" alt="" src="/post/ingress-status-not-update-troubleshooting/5.png" loading="lazy"
+  
+   />
+
+</p>
+<p>在master-2上看到如下内容：</p>
+<p><img class="img-fluid" alt="" src="/post/ingress-status-not-update-troubleshooting/6.png" loading="lazy"
+  
+   />
+
+</p>
+<p>master-3上没有这些warning。</p>
+<p>因为K8S对象都保存在etcd中的，怀疑如果etcd出了问题，那么对象的状态是过时的，也会造成无法更新的问题。</p>
+<p>校准服务器时间，问题依旧。</p>
+<h2 id="检查ingress-controller和kube-apiserver的通信">检查Ingress Controller和kube apiserver的通信<a class="anchor ms-1" href="#检查ingress-controller和kube-apiserver的通信"><i class="fas fa-link"></i></a></h2>
+<p>K8S的Controller模型告诉我们，都必须和Apiserver通信，那么是不是Ingress Controller和Apiserver的通信出了问题呢？</p>
+<p>进入某个ingress controller容器，执行下列命令：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl"><span class="nv">TOKEN</span><span class="o">=</span><span class="sb">`</span>cat /var/run/secrets/kubernetes.io/serviceaccount/token<span class="sb">`</span>
+</span></span><span class="line"><span class="cl">curl -k https://10.43.0.1:443/api --header <span class="s2">&#34;Authorization: Bearer </span><span class="nv">$TOKEN</span><span class="s2">&#34;</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>发现和API Server的通信是OK的。</p>
+<h2 id="检查ingress-controller的service-account的权限是否足够">检查Ingress Controller的Service Account的权限是否足够<a class="anchor ms-1" href="#检查ingress-controller的service-account的权限是否足够"><i class="fas fa-link"></i></a></h2>
+<p>因为调用Kube ApiServer需要权限，检查一下：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span><span class="lnt">46
+</span><span class="lnt">47
+</span><span class="lnt">48
+</span><span class="lnt">49
+</span><span class="lnt">50
+</span><span class="lnt">51
+</span><span class="lnt">52
+</span><span class="lnt">53
+</span><span class="lnt">54
+</span><span class="lnt">55
+</span><span class="lnt">56
+</span><span class="lnt">57
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">&gt; kubectl -n ingress-nginx get sa
+</span></span><span class="line"><span class="cl">NAME                           SECRETS   AGE
+</span></span><span class="line"><span class="cl">default                        <span class="m">1</span>         440d
+</span></span><span class="line"><span class="cl">nginx-ingress-serviceaccount   <span class="m">1</span>         440d
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">&gt; kubectl -n ingress-nginx get rolebinding
+</span></span><span class="line"><span class="cl">NAME                              AGE
+</span></span><span class="line"><span class="cl">clusterrolebinding-2ltlc          440d
+</span></span><span class="line"><span class="cl">clusterrolebinding-6sk8h          440d
+</span></span><span class="line"><span class="cl">clusterrolebinding-964mz          440d
+</span></span><span class="line"><span class="cl">clusterrolebinding-znvvl          440d
+</span></span><span class="line"><span class="cl">nginx-ingress-role-nisa-binding   440d
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">&gt; kubectl -n ingress-nginx get rolebinding nginx-ingress-role-nisa-binding
+</span></span><span class="line"><span class="cl">…
+</span></span><span class="line"><span class="cl">roleRef:
+</span></span><span class="line"><span class="cl">  apiGroup: rbac.authorization.k8s.io
+</span></span><span class="line"><span class="cl">  kind: Role
+</span></span><span class="line"><span class="cl">  name: nginx-ingress-role
+</span></span><span class="line"><span class="cl">subjects:
+</span></span><span class="line"><span class="cl">- kind: ServiceAccount
+</span></span><span class="line"><span class="cl">  name: nginx-ingress-serviceaccount
+</span></span><span class="line"><span class="cl">  namespace: ingress-nginx
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">&gt; kubectl -n ingress-nginx get role nginx-ingress-role -o yaml
+</span></span><span class="line"><span class="cl">…
+</span></span><span class="line"><span class="cl">rules:
+</span></span><span class="line"><span class="cl">- apiGroups:
+</span></span><span class="line"><span class="cl">  - <span class="s2">&#34;&#34;</span>
+</span></span><span class="line"><span class="cl">  resources:
+</span></span><span class="line"><span class="cl">  - configmaps
+</span></span><span class="line"><span class="cl">  - pods
+</span></span><span class="line"><span class="cl">  - secrets
+</span></span><span class="line"><span class="cl">  - namespaces
+</span></span><span class="line"><span class="cl">  verbs:
+</span></span><span class="line"><span class="cl">  - get
+</span></span><span class="line"><span class="cl">- apiGroups:
+</span></span><span class="line"><span class="cl">  - <span class="s2">&#34;&#34;</span>
+</span></span><span class="line"><span class="cl">  resourceNames:
+</span></span><span class="line"><span class="cl">  - ingress-controller-leader-nginx
+</span></span><span class="line"><span class="cl">  resources:
+</span></span><span class="line"><span class="cl">  - configmaps
+</span></span><span class="line"><span class="cl">  verbs:
+</span></span><span class="line"><span class="cl">  - get
+</span></span><span class="line"><span class="cl">  - update
+</span></span><span class="line"><span class="cl">- apiGroups:
+</span></span><span class="line"><span class="cl">  - <span class="s2">&#34;&#34;</span>
+</span></span><span class="line"><span class="cl">  resources:
+</span></span><span class="line"><span class="cl">  - configmaps
+</span></span><span class="line"><span class="cl">  verbs:
+</span></span><span class="line"><span class="cl">  - create
+</span></span><span class="line"><span class="cl">- apiGroups:
+</span></span><span class="line"><span class="cl">  - <span class="s2">&#34;&#34;</span>
+</span></span><span class="line"><span class="cl">  resources:
+</span></span><span class="line"><span class="cl">  - endpoints
+</span></span><span class="line"><span class="cl">  verbs:
+</span></span><span class="line"><span class="cl">  - get
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>发现权限是足够的，而且和一个正常的集群对比，结果也是一样的。</p>
+<h2 id="再次观察ingress-controller的日志">再次观察ingress controller的日志<a class="anchor ms-1" href="#再次观察ingress-controller的日志"><i class="fas fa-link"></i></a></h2>
+<p>调整ingress controller的参数，<a href="https://kubernetes.github.io/ingress-nginx/user-guide/nginx-configuration/configmap/#disable-access-log" target="_blank" rel="noopener noreferrer">把access log关掉</a>，能够更清楚的看到controller的日志。</p>
+<p>发现这么一条：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">I0512 03:52:31.256060 <span class="m">6</span> status.go:86<span class="o">]</span> new  leader elected: nginx-ingress-controller-qxlt8  
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>所有ingress-controller推举leader为 nginx-ingress-controller-qxlt8。</p>
+<p>但是在K8S里根本就不存在名字是这个的Pod。</p>
+<p>阅读<a href="https://github.com/kubernetes/ingress-nginx/blob/nginx-0.25.1/internal/ingress/controller/nginx.go#L290" target="_blank" rel="noopener noreferrer">源码</a>得知，只有leader才会负责更新Ingress对象的status字段。</p>
+<h2 id="查找-nginx-ingress-controller-qxlt8">查找 nginx-ingress-controller-qxlt8<a class="anchor ms-1" href="#查找-nginx-ingress-controller-qxlt8"><i class="fas fa-link"></i></a></h2>
+<p>怀疑是不是etcd里有，但是这个没有K8S查不到，于是到etcd上查询。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">&gt; docker <span class="nb">exec</span> -it etcd etcdctl get / --prefix --keys-only <span class="p">|</span> grep ingress-controller
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">/registry/configmaps/ingress-nginx/ingress-controller-leader-nginx
+</span></span><span class="line"><span class="cl">/registry/configmaps/kube-system/rke-ingress-controller
+</span></span><span class="line"><span class="cl">/registry/controllerrevisions/ingress-nginx/nginx-ingress-controller-544c7854f8
+</span></span><span class="line"><span class="cl">/registry/controllerrevisions/ingress-nginx/nginx-ingress-controller-668ccb87b6
+</span></span><span class="line"><span class="cl">/registry/controllerrevisions/ingress-nginx/nginx-ingress-controller-678b59dd78
+</span></span><span class="line"><span class="cl">/registry/controllerrevisions/ingress-nginx/nginx-ingress-controller-6c4d466577
+</span></span><span class="line"><span class="cl">/registry/controllerrevisions/ingress-nginx/nginx-ingress-controller-7577d75bc9
+</span></span><span class="line"><span class="cl">/registry/controllerrevisions/ingress-nginx/nginx-ingress-controller-767b694845
+</span></span><span class="line"><span class="cl">/registry/controllerrevisions/ingress-nginx/nginx-ingress-controller-779b9c5dc8
+</span></span><span class="line"><span class="cl">/registry/controllerrevisions/ingress-nginx/nginx-ingress-controller-7854ff6b8d
+</span></span><span class="line"><span class="cl">/registry/controllerrevisions/ingress-nginx/nginx-ingress-controller-7f8fdf4c75
+</span></span><span class="line"><span class="cl">/registry/controllerrevisions/ingress-nginx/nginx-ingress-controller-8446bfc58
+</span></span><span class="line"><span class="cl">/registry/controllerrevisions/ingress-nginx/nginx-ingress-controller-9cc858b66
+</span></span><span class="line"><span class="cl">/registry/daemonsets/ingress-nginx/nginx-ingress-controller
+</span></span><span class="line"><span class="cl">/registry/jobs/kube-system/rke-ingress-controller-deploy-job
+</span></span><span class="line"><span class="cl">/registry/pods/ingress-nginx/nginx-ingress-controller-2f6nf
+</span></span><span class="line"><span class="cl">/registry/pods/ingress-nginx/nginx-ingress-controller-2zk9s
+</span></span><span class="line"><span class="cl">/registry/pods/ingress-nginx/nginx-ingress-controller-6lzr4
+</span></span><span class="line"><span class="cl">/registry/pods/ingress-nginx/nginx-ingress-controller-c9gxl
+</span></span><span class="line"><span class="cl">/registry/pods/ingress-nginx/nginx-ingress-controller-fj94z
+</span></span><span class="line"><span class="cl">/registry/pods/ingress-nginx/nginx-ingress-controller-gstz8
+</span></span><span class="line"><span class="cl">/registry/pods/ingress-nginx/nginx-ingress-controller-kks2w
+</span></span><span class="line"><span class="cl">/registry/pods/ingress-nginx/nginx-ingress-controller-ntmqm
+</span></span><span class="line"><span class="cl">/registry/pods/ingress-nginx/nginx-ingress-controller-qjwkw
+</span></span><span class="line"><span class="cl">/registry/pods/ingress-nginx/nginx-ingress-controller-rfbls
+</span></span><span class="line"><span class="cl">/registry/pods/ingress-nginx/nginx-ingress-controller-rt5bp
+</span></span><span class="line"><span class="cl">/registry/pods/ingress-nginx/nginx-ingress-controller-xjcgl
+</span></span><span class="line"><span class="cl">/registry/pods/kube-system/rke-ingress-controller-deploy-job-2vmwq
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>没有 nginx-ingress-controller-qxlt8 这个Pod。</p>
+<p>但是注意到 configmap ingress-controller-leader-nginx。</p>
+<p>打开之后看到：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-yaml" data-lang="yaml"><span class="line"><span class="cl"><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l">v1</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l">ConfigMap</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="nt">metadata</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">annotations</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">control-plane.alpha.kubernetes.io/leader</span><span class="p">:</span><span class="w"> </span><span class="s1">&#39;{&#34;holderIdentity&#34;:&#34;nginx-ingress-controller-qxlt8&#34;,&#34;leaseDurationSeconds&#34;:30,&#34;acquireTime&#34;:&#34;2021-05-10T13:38:53Z&#34;,&#34;renewTime&#34;:&#34;2021-05-12T06:28:50Z&#34;,&#34;leaderTransitions&#34;:11}&#39;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">creationTimestamp</span><span class="p">:</span><span class="w"> </span><span class="s2">&#34;2020-02-26T10:37:12Z&#34;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">ingress-controller-leader-nginx</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">namespace</span><span class="p">:</span><span class="w"> </span><span class="l">ingress-nginx</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">resourceVersion</span><span class="p">:</span><span class="w"> </span><span class="s2">&#34;230445553&#34;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">selfLink</span><span class="p">:</span><span class="w"> </span><span class="l">/api/v1/namespaces/ingress-nginx/configmaps/ingress-controller-leader-nginx</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">uid</span><span class="p">:</span><span class="w"> </span><span class="l">14a0deec-eab4-44d1-aff1-36979b52a1e1</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>这个configmap是ingress-controller维护的，目前的值显然是错了。</p>
+<h2 id="再次研究ingress-controller的leader推举机制">再次研究ingress-controller的leader推举机制<a class="anchor ms-1" href="#再次研究ingress-controller的leader推举机制"><i class="fas fa-link"></i></a></h2>
+<p>查了代码之后发现，ingress-controller其实并不是想象中的分布式共识协议推举leader，而是最简单的抢座位的方式来定leader。</p>
+<p>只要有一个controller在其他controller之前占有锁（就是前面提到的configmap），并且在lease之前（30秒）刷新这个锁，那它就是leader。</p>
+<p>而且只有leader才会负责更新Ingress对象的status字段。</p>
+<h2 id="手动修改configmap">手动修改configmap<a class="anchor ms-1" href="#手动修改configmap"><i class="fas fa-link"></i></a></h2>
+<p>手动修改configmap，把leader指向一个存在的Pod。</p>
+<p>所有Ingress上的status字段状态都更新了。</p>
+<h2 id="排查游离在k8s集群之外的节点">排查游离在K8S集群之外的节点<a class="anchor ms-1" href="#排查游离在k8s集群之外的节点"><i class="fas fa-link"></i></a></h2>
+<p>现在可以推断存在游离在K8S集群之外，但是可以和K8S通信的服务器，后来果然在一台不在集群范围内的机器上找到了：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">$ docker ps -a<span class="p">|</span>grep ingress
+</span></span><span class="line"><span class="cl">...
+</span></span><span class="line"><span class="cl">f4c861555842        a80ffa0b898e                         <span class="s2">&#34;/usr/bin/dumb-init â€¦&#34;</span>   <span class="m">5</span> months ago        Up <span class="m">5</span> months                                     k8s_nginx-ingress-controller_nginx-ingress-controller-qxlt8_ingress-nginx_40487677-32c0-4936-bd1a-3e3cb99fbfa1_0
+</span></span><span class="line"><span class="cl">...
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>印证了之前的推断。</p>
+<p>把这台服务器上的kubelet、kube-proxy和ingress-controller容器停掉。</p>
+<h2 id="总结">总结<a class="anchor ms-1" href="#总结"><i class="fas fa-link"></i></a></h2>
+<p>本次排查发现三个问题：</p>
+<ol>
+<li>
+<p>Ingress对象的status字段不更新的问题。</p>
+</li>
+<li>
+<p>问题1产生的原因可能是，存在游离在K8S集群之外，但是可以和K8S通信的服务器。</p>
+</li>
+<li>
+<p>集群的nginx接入点疑似收到攻击。</p>
+</li>
+</ol></div></div>
+  <div class="card-footer"><div class="post-navs d-flex justify-content-evenly"><div class="post-nav post-prev">
+    <i class="fas fa-fw fa-chevron-left"></i>
+    <a href="/post/harbor-job-fail-troubleshooting/">排查Harbor定时任务无法执行的问题
+</a>
+  </div><div class="post-nav post-next">
+    <a href="/post/vm-disk-snapshot-api-bad/">因集群磁盘快照导致的API调用失败排查
+</a>
+    <i class="fas fa-fw fa-chevron-right"></i>
+  </div></div></div>
+</article><div class="post-copyright mb-3 row card component" id="post-copyright">
+    <div class="card-header">
+        <h2 class="card-title">版权</h2>
+    </div>
+    <div class="card-body"><a class="d-flex align-items-center flex-column" target="_blank" rel="license noopener noreferrer" href="https://creativecommons.org/licenses/by-nc-nd/4.0/deed.zh">
+  <span><i class="fab fa-fw fa-2x fa-creative-commons"></i><i class="fab fa-fw fa-2x fa-creative-commons-by"></i><i class="fab fa-fw fa-2x fa-creative-commons-nc"></i><i class="fab fa-fw fa-2x fa-creative-commons-nd"></i></span>
+  CC BY-NC-ND 4.0 
+</a>
+
+
+    </div>
+</div><section class="related-posts row card component">
+    <div class="card-header">
+      <h2 class="card-title">相关文章</h2>
+    </div>
+    <div class="card-body">
+      <ul class="post-list"><li>
+          <a href="/post/k8s/k8s-server-perf-test/">K8S服务器性能测试
+</a>
+          <span class="float-end post-date">2020-12-14
+</span>
+        </li><li>
+          <a href="/post/k8s/vxlan-8472-port-conflict/">记一次K8S VXLAN Overlay网络8472端口冲突问题的排查
+</a>
+          <span class="float-end post-date">2020-11-10
+</span>
+        </li><li>
+          <a href="/post/k8s/ingress-nginx-tlsv1/">让Ingress Nginx支持TLSv1的方法
+</a>
+          <span class="float-end post-date">2019-12-16
+</span>
+        </li><li>
+          <a href="/post/k8s/ingress-nginx-session-cookie-sticky/">Nginx Ingress的Cookie粘滞策略
+</a>
+          <span class="float-end post-date">2019-12-03
+</span>
+        </li><li>
+          <a href="/post/k8s/find-high-disk-usage-pod/">查找K8S中高磁盘占用Pod
+</a>
+          <span class="float-end post-date">2019-11-11
+</span>
+        </li></ul>
+    </div>
+  </section><div class="card component row post-comments" id="post-comments">
+  <div class="card-header">
+    <h2 class="card-title">评论</h2>
+  </div>
+  <div class="card-body"></div>
+</div></div>
+</div><aside class="col-lg-4 sidebar d-flex">
+  <div class="container d-flex flex-column">
+    
+    <section class="card row text-center profile component">
+  <div class="card-body">
+    <div class="col-12 d-flex align-items-center justify-content-center"><img class="profile-avatar rounded-circle" alt="颇忒脱" src="/images/avatar.jpg" loading="lazy"
+   width="455" height="455"
+   />
+</div>
+    <div class="col-12 profile-meta"><div class="profile-name">颇忒脱</div><nav class="social-links nav justify-content-center"><a class="nav-link social-link" target="_blank" href="https://github.com/chanjarster" title="GitHub" rel="noopener noreferrer">
+        <i class="fa-fw fa-2x fab fa-github"></i>
+      </a></nav>
+</div>
+  </div>
+</section>
+  <div class="post-toc row mb-4 card component" id="postTOC">
+  <div class="card-header">
+    <h2 class="card-title">目录</h2>
+  </div>
+  <div class="card-body">
+    <nav id="TableOfContents">
+  <ul>
+    <li><a href="#现象">现象</a></li>
+    <li><a href="#检查ingress对象">检查ingress对象</a></li>
+    <li><a href="#查看nginx-ingress的日志">查看Nginx ingress的日志</a></li>
+    <li><a href="#尝试重启ingress-controller">尝试重启Ingress controller</a></li>
+    <li><a href="#观察master服务器上etcd的日志">观察master服务器上etcd的日志</a></li>
+    <li><a href="#检查ingress-controller和kube-apiserver的通信">检查Ingress Controller和kube apiserver的通信</a></li>
+    <li><a href="#检查ingress-controller的service-account的权限是否足够">检查Ingress Controller的Service Account的权限是否足够</a></li>
+    <li><a href="#再次观察ingress-controller的日志">再次观察ingress controller的日志</a></li>
+    <li><a href="#查找-nginx-ingress-controller-qxlt8">查找 nginx-ingress-controller-qxlt8</a></li>
+    <li><a href="#再次研究ingress-controller的leader推举机制">再次研究ingress-controller的leader推举机制</a></li>
+    <li><a href="#手动修改configmap">手动修改configmap</a></li>
+    <li><a href="#排查游离在k8s集群之外的节点">排查游离在K8S集群之外的节点</a></li>
+    <li><a href="#总结">总结</a></li>
+  </ul>
+</nav>
+  </div>
+</div><section class="featured-posts row card component">
+    <div class="card-header">
+      <h2 class="card-title">精选文章</h2>
+    </div>
+    <div class="card-body">
+      <ul class="post-list"><li>
+          <a href="/post/redis-cluster-ops/index-page/">Redis 集群运维笔记
+</a>
+        </li><li>
+          <a href="/post/linux/namespace/index-page/">Linux Namespace系列
+</a>
+        </li><li>
+          <a href="/post/network/index-page/">Networking系列
+</a>
+        </li><li>
+          <a href="/post/mysql/index-page/">MySQL系列
+</a>
+        </li><li>
+          <a href="/post/concurrent-programming/index-page/">并发编程系列
+</a>
+        </li></ul>
+    </div>
+  </section><section class="recent-posts row card component">
+  <div class="card-header">
+    <h2 class="card-title">最近文章</h2>
+  </div>
+  <div class="card-body">
+    <ul class="post-list"><li>
+        <a href="/post/qoder-switch-session/">QoderCN 切换账号后迁移会话历史
+</a>
+      </li><li>
+        <a href="/post/spring-boot-jdk-comp-table-copy/">Spring Boot 3.4 升级过程记录
+</a>
+      </li><li>
+        <a href="/post/redis-cluster-ops/index-page/">Redis 集群运维笔记
+</a>
+      </li><li>
+        <a href="/post/spring-boot-jdk-comp-table/">Spring、JDK、Maven 版本兼容性表格
+</a>
+      </li><li>
+        <a href="/post/network/calico-firewall-k8s/">Calico 配置 K8s 防火墙
+</a>
+      </li></ul>
+  </div>
+</section><section class="tags-taxonomies row card component">
+      <div class="card-header">
+        <h2 class="card-title">
+          <a href="/tags">标签</a>
+        </h2>
+      </div>
+      <div class="card-body">
+        <div class="py-2"><a href="/tags/arts-a/" class="badge rounded post-taxonomy" title="ARTS-A">
+            ARTS-A<span class="badge badge-sm text-white bg-accent ms-1">125</span></a><a href="/tags/k8s/" class="badge rounded post-taxonomy" title="k8s">
+            k8s<span class="badge badge-sm text-white bg-accent ms-1">52</span></a><a href="/tags/troubleshooting/" class="badge rounded post-taxonomy" title="troubleshooting">
+            troubleshooting<span class="badge badge-sm text-white bg-accent ms-1">40</span></a><a href="/tags/jvm/" class="badge rounded post-taxonomy" title="jvm">
+            jvm<span class="badge badge-sm text-white bg-accent ms-1">39</span></a><a href="/tags/docker/" class="badge rounded post-taxonomy" title="docker">
+            docker<span class="badge badge-sm text-white bg-accent ms-1">30</span></a><a href="/tags/mysql/" class="badge rounded post-taxonomy" title="mysql">
+            mysql<span class="badge badge-sm text-white bg-accent ms-1">25</span></a><a href="/tags/network/" class="badge rounded post-taxonomy" title="network">
+            network<span class="badge badge-sm text-white bg-accent ms-1">25</span></a><a href="/tags/%E5%B9%B6%E5%8F%91%E7%BC%96%E7%A8%8B/" class="badge rounded post-taxonomy" title="并发编程">
+            并发编程<span class="badge badge-sm text-white bg-accent ms-1">21</span></a><a href="/tags/cheatsheet/" class="badge rounded post-taxonomy" title="cheatsheet">
+            cheatsheet<span class="badge badge-sm text-white bg-accent ms-1">20</span></a><a href="/tags/java/" class="badge rounded post-taxonomy" title="java">
+            java<span class="badge badge-sm text-white bg-accent ms-1">20</span></a><a href="/tags/kernel/" class="badge rounded post-taxonomy" title="kernel">
+            kernel<span class="badge badge-sm text-white bg-accent ms-1">19</span></a><a href="/tags/linux/" class="badge rounded post-taxonomy" title="linux">
+            linux<span class="badge badge-sm text-white bg-accent ms-1">19</span></a><a href="/tags/redis/" class="badge rounded post-taxonomy" title="redis">
+            redis<span class="badge badge-sm text-white bg-accent ms-1">17</span></a><a href="/tags/prometheus/" class="badge rounded post-taxonomy" title="prometheus">
+            prometheus<span class="badge badge-sm text-white bg-accent ms-1">13</span></a><a href="/tags/%E6%80%A7%E8%83%BD%E8%B0%83%E4%BC%98/" class="badge rounded post-taxonomy" title="性能调优">
+            性能调优<span class="badge badge-sm text-white bg-accent ms-1">13</span></a><a href="/tags/go/" class="badge rounded post-taxonomy" title="go">
+            go<span class="badge badge-sm text-white bg-accent ms-1">10</span></a><a href="/tags/%E5%BE%AE%E6%9C%8D%E5%8A%A1/" class="badge rounded post-taxonomy" title="微服务">
+            微服务<span class="badge badge-sm text-white bg-accent ms-1">10</span></a><a href="/tags/rancher/" class="badge rounded post-taxonomy" title="rancher">
+            rancher<span class="badge badge-sm text-white bg-accent ms-1">9</span></a><a href="/tags/debug/" class="badge rounded post-taxonomy" title="debug">
+            debug<span class="badge badge-sm text-white bg-accent ms-1">7</span></a><a href="/tags/gc/" class="badge rounded post-taxonomy" title="gc">
+            gc<span class="badge badge-sm text-white bg-accent ms-1">7</span></a><a href="/tags/nginx/" class="badge rounded post-taxonomy" title="nginx">
+            nginx<span class="badge badge-sm text-white bg-accent ms-1">7</span></a><a href="/tags/ingress/" class="badge rounded post-taxonomy" title="ingress">
+            ingress<span class="badge badge-sm text-white bg-accent ms-1">6</span></a><a href="/tags/%E8%BF%90%E7%BB%B4/" class="badge rounded post-taxonomy" title="运维">
+            运维<span class="badge badge-sm text-white bg-accent ms-1">6</span></a><a href="/tags/ci_cd/" class="badge rounded post-taxonomy" title="CI_CD">
+            CI_CD<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/interview/" class="badge rounded post-taxonomy" title="interview">
+            interview<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/jmx/" class="badge rounded post-taxonomy" title="jmx">
+            jmx<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/openssl/" class="badge rounded post-taxonomy" title="openssl">
+            openssl<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/tls/" class="badge rounded post-taxonomy" title="tls">
+            tls<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/%E5%88%86%E5%B8%83%E5%BC%8F%E4%BA%8B%E5%8A%A1/" class="badge rounded post-taxonomy" title="分布式事务">
+            分布式事务<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/%E5%88%86%E5%B8%83%E5%BC%8F%E7%AE%97%E6%B3%95/" class="badge rounded post-taxonomy" title="分布式算法">
+            分布式算法<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/%E6%94%B6%E8%97%8F%E5%A4%B9/" class="badge rounded post-taxonomy" title="收藏夹">
+            收藏夹<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/%E9%AB%98%E5%B9%B6%E5%8F%91/" class="badge rounded post-taxonomy" title="高并发">
+            高并发<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/visualvm/" class="badge rounded post-taxonomy" title="visualvm">
+            visualvm<span class="badge badge-sm text-white bg-accent ms-1">4</span></a><a href="/tags/%E6%97%A5%E5%BF%97/" class="badge rounded post-taxonomy" title="日志">
+            日志<span class="badge badge-sm text-white bg-accent ms-1">4</span></a><a href="/tags/arts/" class="badge rounded post-taxonomy" title="arts">
+            arts<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/arts-r/" class="badge rounded post-taxonomy" title="arts-r">
+            arts-r<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/classloader/" class="badge rounded post-taxonomy" title="ClassLoader">
+            ClassLoader<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/container/" class="badge rounded post-taxonomy" title="container">
+            container<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/ios/" class="badge rounded post-taxonomy" title="ios">
+            ios<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/iphone/" class="badge rounded post-taxonomy" title="iphone">
+            iphone<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/jenkins/" class="badge rounded post-taxonomy" title="Jenkins">
+            Jenkins<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/namespace/" class="badge rounded post-taxonomy" title="namespace">
+            namespace<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/scheduling/" class="badge rounded post-taxonomy" title="scheduling">
+            scheduling<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/springboot/" class="badge rounded post-taxonomy" title="springboot">
+            springboot<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/thread/" class="badge rounded post-taxonomy" title="thread">
+            thread<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/%E5%88%86%E5%B8%83%E5%BC%8F%E6%9E%B6%E6%9E%84/" class="badge rounded post-taxonomy" title="分布式架构">
+            分布式架构<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/%E5%8D%8E%E4%B8%BA/" class="badge rounded post-taxonomy" title="华为">
+            华为<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/%E8%8B%B9%E6%9E%9C/" class="badge rounded post-taxonomy" title="苹果">
+            苹果<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/bash/" class="badge rounded post-taxonomy" title="bash">
+            bash<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/etcd/" class="badge rounded post-taxonomy" title="etcd">
+            etcd<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/grafana/" class="badge rounded post-taxonomy" title="grafana">
+            grafana<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/iptables/" class="badge rounded post-taxonomy" title="iptables">
+            iptables<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/jdbc/" class="badge rounded post-taxonomy" title="JDBC">
+            JDBC<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/jmeter/" class="badge rounded post-taxonomy" title="jmeter">
+            jmeter<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/%E6%95%B0%E6%8D%AE%E5%BA%93%E6%97%B6%E5%8C%BA%E9%82%A3%E4%BA%9B%E4%BA%8B%E5%84%BF/" class="badge rounded post-taxonomy" title="数据库时区那些事儿">
+            数据库时区那些事儿<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/%E7%9B%91%E6%8E%A7/" class="badge rounded post-taxonomy" title="监控">
+            监控<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/%E9%99%90%E6%B5%81/" class="badge rounded post-taxonomy" title="限流">
+            限流<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/acloud/" class="badge rounded post-taxonomy" title="acloud">
+            acloud<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/agent/" class="badge rounded post-taxonomy" title="agent">
+            agent<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/akka/" class="badge rounded post-taxonomy" title="Akka">
+            Akka<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/alertmanager/" class="badge rounded post-taxonomy" title="alertmanager">
+            alertmanager<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/calico/" class="badge rounded post-taxonomy" title="calico">
+            calico<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/chrome/" class="badge rounded post-taxonomy" title="chrome">
+            chrome<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/coredns/" class="badge rounded post-taxonomy" title="coredns">
+            coredns<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/elasticsearch/" class="badge rounded post-taxonomy" title="elasticsearch">
+            elasticsearch<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/fluentd/" class="badge rounded post-taxonomy" title="fluentd">
+            fluentd<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/harbor/" class="badge rounded post-taxonomy" title="harbor">
+            harbor<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/helm/" class="badge rounded post-taxonomy" title="helm">
+            helm<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/hystrix/" class="badge rounded post-taxonomy" title="hystrix">
+            hystrix<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/io/" class="badge rounded post-taxonomy" title="io">
+            io<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/jdpa/" class="badge rounded post-taxonomy" title="jdpa">
+            jdpa<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/jwt/" class="badge rounded post-taxonomy" title="jwt">
+            jwt<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/kafka/" class="badge rounded post-taxonomy" title="kafka">
+            kafka<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/kibana/" class="badge rounded post-taxonomy" title="kibana">
+            kibana<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/mq/" class="badge rounded post-taxonomy" title="MQ">
+            MQ<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/nfs/" class="badge rounded post-taxonomy" title="nfs">
+            nfs<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/oauth/" class="badge rounded post-taxonomy" title="oauth">
+            oauth<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/oracle/" class="badge rounded post-taxonomy" title="Oracle">
+            Oracle<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/pprof/" class="badge rounded post-taxonomy" title="pprof">
+            pprof<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/qoder/" class="badge rounded post-taxonomy" title="qoder">
+            qoder<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/reactor/" class="badge rounded post-taxonomy" title="reactor">
+            reactor<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/spring-boot/" class="badge rounded post-taxonomy" title="spring-boot">
+            spring-boot<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/spring-cloud/" class="badge rounded post-taxonomy" title="Spring Cloud">
+            Spring Cloud<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/ssl/" class="badge rounded post-taxonomy" title="ssl">
+            ssl<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/systemtap/" class="badge rounded post-taxonomy" title="systemtap">
+            systemtap<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/tiller/" class="badge rounded post-taxonomy" title="tiller">
+            tiller<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/tomcat/" class="badge rounded post-taxonomy" title="tomcat">
+            tomcat<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/ubuntu/" class="badge rounded post-taxonomy" title="ubuntu">
+            ubuntu<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/vtable/" class="badge rounded post-taxonomy" title="vtable">
+            vtable<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/%E6%B6%88%E6%81%AF%E9%98%9F%E5%88%97/" class="badge rounded post-taxonomy" title="消息队列">
+            消息队列<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/%E6%B7%B1%E4%BF%A1%E6%9C%8D/" class="badge rounded post-taxonomy" title="深信服">
+            深信服<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/%E7%BC%93%E5%AD%98/" class="badge rounded post-taxonomy" title="缓存">
+            缓存<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/%E8%99%9A%E6%8B%9F%E5%8C%96/" class="badge rounded post-taxonomy" title="虚拟化">
+            虚拟化<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/%E8%B0%83%E7%94%A8%E9%93%BE%E8%BF%BD%E8%B8%AA/" class="badge rounded post-taxonomy" title="调用链追踪">
+            调用链追踪<span class="badge badge-sm text-white bg-accent ms-1">1</span></a></div>
+      </div>
+    </section>
+    
+  </div>
+</aside>
+</div>
+    </main><footer class="footer mt-auto py-3 text-center container"><nav class="social-links nav justify-content-center mb-2"><a class="nav-link social-link" target="_blank" href="https://github.com/chanjarster" title="GitHub" rel="noopener noreferrer">
+        <i class="fa-fw fa-2x fab fa-github"></i>
+      </a></nav>
+<div class="copyright mb-2">
+  Copyright © 2010-2026 Daniel Qian. All Rights Reserved.
+</div>
+<div class="powered-by mb-2">
+  Powered by <a href="https://gohugo.io" target="_blank" rel="noopener noreferrer">Hugo</a> and the <a href="https://github.com/razonyang/hugo-theme-bootstrap" target="_blank" rel="noopener noreferrer">Bootstrap</a> theme.
+</div>
+<a href="https://www.netlify.com" target="_blank" rel="noopener noreferrer">
+    <img src="https://www.netlify.com/img/global/badges/netlify-color-accent.svg" alt="Deploys by Netlify" width="114" height="51" />
+</a>
+</footer>
+<script src="/js/main.2cdce25f280f570596c88888d6af930fe5e15ea030005291dad293defbb231d3.js" integrity="sha256-LNziXygPVwWWyIiI1q&#43;TD&#43;XhXqAwAFKR2tKT3vuyMdM=" crossorigin="anonymous" defer></script><script src="/js/icons.min.7b1f27dfde35467d03350938b2e41dbffd06347009b97ab913edfaca01a07814.js" integrity="sha256-ex8n3941Rn0DNQk4suQdv/0GNHAJuXq5E&#43;36ygGgeBQ=" crossorigin="anonymous" defer></script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('\/service-worker.js').then(function(reg) {
+      console.log('Successfully registered service worker', reg);
+    }).catch(function(err) {
+      console.warn('Error whilst registering service worker', err);
+    });
+  });
+}
+</script><script src="/js/viewer.min.1ec1fa5aa3a66267222a44fe1cd51856ad4a92be48ede579fb36d70a6d4c28e9.js" integrity="sha256-HsH6WqOmYmciKkT&#43;HNUYVq1Kkr5I7eV5&#43;zbXCm1MKOk=" crossorigin="anonymous" defer></script>
+</body>
+</html>

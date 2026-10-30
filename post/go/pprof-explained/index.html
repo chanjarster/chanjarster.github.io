@@ -1,0 +1,948 @@
+<!doctype html><html lang="zh-cn" data-palette="blue"
+  >
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>解读pprof报告 - 颇忒脱的技术博客</title><link rel="apple-touch-icon" href="/images/icons/icon-180x180.png" sizes="180x180">
+<link rel="icon" href="/images/icons/icon-32x32.png" sizes="32x32" type="image/png">
+<link rel="icon" href="/images/icons/icon-16x16.png" sizes="16x16" type="image/png">
+<link rel="icon" href="/images/icons/favicon.ico">
+<link rel="manifest" href="/manifest.json">
+<meta name="keywords" content="" />
+<meta name="description" content="" /><meta name="robots" content="index, follow" /><meta itemprop="name" content="解读pprof报告">
+<meta itemprop="description" content=""><meta itemprop="datePublished" content="2020-03-17T14:10:26+08:00" />
+<meta itemprop="dateModified" content="2020-03-17T14:10:26+08:00" />
+<meta itemprop="wordCount" content="2373">
+<meta itemprop="keywords" content="go,debug,cheatsheet," /><meta property="og:title" content="解读pprof报告" />
+<meta property="og:description" content="" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="/post/go/pprof-explained/" /><meta property="article:section" content="post" />
+<meta property="article:published_time" content="2020-03-17T14:10:26+08:00" />
+<meta property="article:modified_time" content="2020-03-17T14:10:26+08:00" />
+
+<meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="解读pprof报告"/>
+<meta name="twitter:description" content=""/>
+<meta property="og:image" content="/images/avatar.jpg"/>
+  <meta name="twitter:image" content="/images/avatar.jpg"/><link rel="stylesheet" href="/css/main.min.24196952817c68c8b90d8fa573d560fa62766baa0622bdc0e862255f4a4d1307.css" integrity="sha256-JBlpUoF8aMi5DY&#43;lc9Vg&#43;mJ2a6oGIr3A6GIlX0pNEwc=" crossorigin="anonymous"><link rel="stylesheet" href="/css/viewer.min.3d228794bcedbbfa0412beb8fbc1ec6973202945e42af7004f742a4d7bd620ab.css" integrity="sha256-PSKHlLztu/oEEr64&#43;8HsaXMgKUXkKvcAT3QqTXvWIKs=" crossorigin="anonymous"></head>
+  <body><script>const items=["mode","palette"];items.forEach(function(e){const t=localStorage.getItem("hbs-"+e);t&&document.body.parentElement.setAttribute("data-"+e,t)})</script><header><nav class="navbar top-app-bar top-app-bar-expand-lg fixed-top">
+  <div class="container">
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent"
+      aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <i class="fas fa-bars"></i>
+    </button><a class="navbar-brand flex-grow-1 flex-lg-grow-0 text-center text-lg-start mx-auto me-lg-3" href="/"><img class="logo" alt="Logo" src="/images/avatar.jpg" loading="lazy"
+   width="455" height="455"
+   />
+颇忒脱的技术博客
+    </a>
+    
+    <button class="navbar-settings" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvasSettings"
+  aria-controls="offcanvasSettings" aria-label="Toggle settings">
+  <i class="fas fa-ellipsis-v"></i>
+</button>
+
+<div class="offcanvas offcanvas-end surface h-100" tabindex="-1" id="offcanvasSettings" aria-labelledby="offcanvasSettings">
+  <div class="offcanvas-header">
+    <h3 class="offcanvas-title">设置</h3>
+    <button type="button" class="btn btn-sm btn-outline-primary" data-bs-dismiss="offcanvas" aria-label="Close">
+      <i class="fas fa-times"></i>
+    </button>
+  </div>
+  <div class="offcanvas-body d-flex flex-column">
+
+<section class="setting">
+  <form class="row">
+    <div class="col-auto">
+      <label><i class="fas fa-fw fa-adjust"></i> 模式</label>
+    </div>
+    <div class="col-auto ms-auto">
+      <div class="form-check form-switch">
+        <input class="form-check-input" type="checkbox" id="modeSwitcher">
+      </div>
+    </div>
+  </form>
+</section>
+
+<section class="setting">
+  <form class="font-size-switcher-form row">
+    <div class="col-auto">
+      <label for="fontSize" class="form-label"><i class="fas fa-fw fa-font"></i> 字体大小</label>
+    </div>
+    <div class="col-auto ms-auto">
+      <input type="range" class="form-range" min="-2" max="2" id="fontSize">
+    </div>
+  </form>
+</section>
+
+
+<section class="setting palettes">
+  <form class="row">
+    <div class="col-auto">
+      <label><i class="fas fa-fw fa-palette"></i> 配色</label>
+    </div>
+    <div class="col-auto ms-auto">
+      <a id="btnPalette" class="btn btn-sm btn-outline-primary" role="button" aria-label="palettePicker">
+        <i class="fas fa-eye-dropper"></i>
+      </a>
+    </div>
+  </form>
+  <div class="mt-2 d-flex justify-content-between visually-hidden" id="palettePicker"><button type="button" id="palette-blue" aria-label="蓝色"
+        class="btn btn-sm w-100 palette" data-palette="blue">
+      </button><button type="button" id="palette-blue-gray" aria-label="蓝灰色"
+        class="btn btn-sm w-100 palette" data-palette="blue-gray">
+      </button><button type="button" id="palette-brown" aria-label="棕色"
+        class="btn btn-sm w-100 palette" data-palette="brown">
+      </button><button type="button" id="palette-cyan" aria-label="青色"
+        class="btn btn-sm w-100 palette" data-palette="cyan">
+      </button><button type="button" id="palette-green" aria-label="绿色"
+        class="btn btn-sm w-100 palette" data-palette="green">
+      </button><button type="button" id="palette-indigo" aria-label="靛青色"
+        class="btn btn-sm w-100 palette" data-palette="indigo">
+      </button><button type="button" id="palette-orange" aria-label="橙色"
+        class="btn btn-sm w-100 palette" data-palette="orange">
+      </button><button type="button" id="palette-pink" aria-label="粉色"
+        class="btn btn-sm w-100 palette" data-palette="pink">
+      </button><button type="button" id="palette-purple" aria-label="紫色"
+        class="btn btn-sm w-100 palette" data-palette="purple">
+      </button><button type="button" id="palette-red" aria-label="红色"
+        class="btn btn-sm w-100 palette" data-palette="red">
+      </button><button type="button" id="palette-teal" aria-label="蓝绿色"
+        class="btn btn-sm w-100 palette" data-palette="teal">
+      </button><button type="button" id="palette-yellow" aria-label="黄色"
+        class="btn btn-sm w-100 palette" data-palette="yellow">
+      </button></div>
+</section>
+<section class="setting actions d-flex justify-content-around mt-auto overflow-auto">
+  <a role="button" class="action action-go-back" href="javascript: window.history.back();">
+    <span class="action-icon"><i class="fas fa-2x fa-arrow-left"></i></span> 返回
+  </a>
+  <a role="button" class="action action-reload-page">
+    <span class="action-icon"><i class="fas fa-2x fa-redo-alt"></i></span> 刷新
+  </a>
+  <a role="button" class="action action-copy-url">
+    <span class="action-icon"><i class="fas fa-2x fa-link"></i></span> 复制链接
+  </a></section>
+
+</div>
+</div>
+
+    <div class="collapse navbar-collapse" tabindex="-1" id="navbarSupportedContent" aria-labelledby="navbarSupportedContent">
+      <form class="search-bar my-1" action="/search">
+  <div class="input-group input-group-sm">
+    <span class="btn btn-search disabled position-absolute left-0"><i class="fas fa-fw fa-search"></i></span>
+    <input class="form-control rounded-pill" name="q" type="search" aria-label="Search">
+  </div>
+</form>
+      <ul class="navbar-nav ms-auto"><li class="nav-item">
+          <a class="nav-link" href="/series/">
+            <i class="fas fa-fw fa-columns"></i>专栏
+          </a>
+        </li><li class="nav-item dropdown">
+          <a class="nav-link" id="navbarDropdownIndex" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+            <i class="fas fa-fw fa-chevron-circle-down"></i>快速索引
+          </a>
+          <ul class="dropdown-menu" aria-labelledby="navbarDropdownIndex"><li>
+              <a class="dropdown-item"
+                href="/tags/go">
+                Go
+              </a>
+            </li><li>
+              <a class="dropdown-item"
+                href="/tags/gc">
+                GC
+              </a>
+            </li><li>
+              <a class="dropdown-item"
+                href="/tags/kernel">
+                Kernel
+              </a>
+            </li><li>
+              <a class="dropdown-item"
+                href="/tags/cheatsheet">
+                Cheatsheet
+              </a>
+            </li><li>
+              <a class="dropdown-item"
+                href="/tags/troubleshooting">
+                排障实战记录
+              </a>
+            </li></ul>
+        </li><li class="nav-item">
+          <a class="nav-link" href="/tags/">
+            <i class="fas fa-fw fa-tags"></i>标签
+          </a>
+        </li><li class="nav-item">
+          <a class="nav-link" href="/archives/">
+            <i class="fas fa-fw fa-file-archive"></i>归档
+          </a>
+        </li></ul>
+    </div>
+  </div>
+</nav>
+</header>
+<main role="main" class="container">
+      <div class="row content">
+<div class="col-lg-8">
+  <div class="container"><nav class="row card component" aria-label="breadcrumb">
+  <div class="card-body">
+    <ol class="breadcrumb "><li class="breadcrumb-item"><a href="/">主页</a></li><li class="breadcrumb-item"><a href="/post/">文章</a></li><li class="breadcrumb-item active">解读pprof报告</li></ol>
+  </div>
+</nav><div class="post-panel-wrapper">
+  <div class="d-flex flex-column component rounded post-panel">
+    
+    <a class="action action-panel-toggler" role="button" title="Panel toggler">
+      <i class="fas fa-fw fa-chevron-circle-down"></i>
+    </a>
+    <a id="sidebarToggler" class="action d-none d-lg-block" role="button" title="Sidebar toggler">
+  <i class="fas fa-fw fa-expand-alt" data-fa-transform="rotate-45"></i>
+</a>
+
+    
+
+    
+    <a class="action" href="#post-copyright" role="button" aria-label="Copyright" title="Copyright">
+  <i class="fas fa-fw fa-copyright"></i>
+</a>
+    <a class="action" href="#post-comments" role="button" aria-label="Comments" title="Comments">
+  <i class="fas fa-fw fa-comments"></i>
+</a>
+    <a class="action" href="#postTOC" aria-controls="Table of contents" role="button" title="Table of contents">
+  <i class="fas fa-fw fa-list-alt"></i>
+</a>
+    
+  </div>
+</div>
+<article class="row card component mb-4 post">
+  <div class="card-header ">
+    <h1 class="card-title post-title">解读pprof报告
+</h1>
+  </div>
+  <div class="card-body"><div class="post-meta">
+  <span class="post-date" title="创建于 2020-03-17 14:10:26 &#43;0800 CST。">
+    2020-03-17
+  </span><span class="post-reading-time">
+    5 分钟阅读
+  </span><span class="post-taxonomies"><a href="/tags/go/" class="badge post-taxonomy">go</a><a href="/tags/debug/" class="badge post-taxonomy">debug</a><a href="/tags/cheatsheet/" class="badge post-taxonomy">cheatsheet</a></span>
+</div>
+<div class="post-content mb-3"><p><a href="https://blog.golang.org/profiling-go-programs" target="_blank" rel="noopener noreferrer">Profiling Go Programs</a>里详细举例说明了如何看pprof报告，但并没有清晰简明的告知读者提供数字的是什么意思，所以本文做一个归纳笔记。</p>
+<h2 id="解读cpu">解读CPU<a class="anchor ms-1" href="#解读cpu"><i class="fas fa-link"></i></a></h2>
+<p>以文中提供的CPU Profile来举例说明，我们使用<code>go tool pprof -http=0.0.0.0:4231 havlak1 havalk1.prof</code>来观察</p>
+<h3 id="解读top">解读Top<a class="anchor ms-1" href="#解读top"><i class="fas fa-link"></i></a></h3>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="line"><span class="cl">(pprof) top10
+</span></span><span class="line"><span class="cl">Total: 2525 samples
+</span></span><span class="line"><span class="cl">    Flat  Flat%   Sum%      Cum   Cum% Name
+</span></span><span class="line"><span class="cl">     298  11.8%  11.8%      345  13.7% runtime.mapaccess1_fast64
+</span></span><span class="line"><span class="cl">     268  10.6%  22.4%     2124  84.1% main.FindLoops
+</span></span><span class="line"><span class="cl">     251   9.9%  32.4%      451  17.9% scanblock
+</span></span><span class="line"><span class="cl">     178   7.0%  39.4%      351  13.9% hash_insert
+</span></span><span class="line"><span class="cl">     131   5.2%  44.6%      158   6.3% sweepspan
+</span></span><span class="line"><span class="cl">     119   4.7%  49.3%      350  13.9% main.DFS
+</span></span><span class="line"><span class="cl">      96   3.8%  53.1%       98   3.9% flushptrbuf
+</span></span><span class="line"><span class="cl">      95   3.8%  56.9%       95   3.8% runtime.aeshash64
+</span></span><span class="line"><span class="cl">      95   3.8%  60.6%      101   4.0% runtime.settype_flush
+</span></span><span class="line"><span class="cl">      88   3.5%  64.1%      988  39.1% runtime.mallocgc
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>先了解是如何采样的：</p>
+<ul>
+<li>采样频率是每秒100次</li>
+<li>一个样本包含goroutine栈的程序计数器（program counters）</li>
+<li>每次只会采样调用栈的前100行</li>
+</ul>
+<p>原文中没有给出列名，这里给了出来，下面是解释：</p>
+<ul>
+<li>Total：总共采样次数，这里是2525次。</li>
+<li>Flat：函数在样本中处于运行状态的次数。简单来说就是函数出现在栈顶的次数，而函数在栈顶则意味着它在使用CPU。</li>
+<li>Flat%：Flat / Total。</li>
+<li>Sum%：自己以及所有前面的Flat%的累积值。解读方式：表中第3行Sum% 32.4%，意思是前3个函数（运行状态）的计数占了总样本数的32.4%</li>
+<li>Cum：函数在样本中出现的次数。只要这个函数出现在栈中那么就算进去，这个和Flat不同（必须是栈顶才能算进去）。也可以解读为这个函数的调用次数。</li>
+<li>Cum%：Cum / Total</li>
+</ul>
+<h3 id="解读图">解读图<a class="anchor ms-1" href="#解读图"><i class="fas fa-link"></i></a></h3>
+<p><img class="img-fluid" alt="" src="/post/go/pprof-explained/profiling-go-programs_havlak1a-75.png" loading="lazy"
+  
+   />
+
+</p>
+<ul>
+<li>方框：函数</li>
+<li>方框尺寸：代表了Flat的次数</li>
+<li>箭头：X调用Y</li>
+<li>线条：记录了X调用Y的次数。数字越大，线条越粗。图中main.DFS有一个指向自己的箭头，说明存在递归调用，而且调用了21342次。</li>
+<li>方框第一行数字：Flat (Flat%)，栈顶次数</li>
+<li>方框第二行数字：Cum (Cum%)，调用次数</li>
+</ul>
+<h3 id="解读源码">解读源码<a class="anchor ms-1" href="#解读源码"><i class="fas fa-link"></i></a></h3>
+<p>下面是在pprof交互cli界面看到的报告：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="line"><span class="cl">(pprof) list DFS
+</span></span><span class="line"><span class="cl">Total: 2525 samples
+</span></span><span class="line"><span class="cl">ROUTINE ====================== main.DFS in /home/rsc/g/benchgraffiti/havlak/havlak1.go
+</span></span><span class="line"><span class="cl">   119    697 Total samples (flat / cumulative)
+</span></span><span class="line"><span class="cl">     3      3  240: func DFS(currentNode *BasicBlock, nodes []*UnionFindNode, number map[*BasicBlock]int, last []int, current int) int {
+</span></span><span class="line"><span class="cl">     1      1  241:     nodes[current].Init(currentNode, current)
+</span></span><span class="line"><span class="cl">     1     37  242:     number[currentNode] = current
+</span></span><span class="line"><span class="cl">     .      .  243:
+</span></span><span class="line"><span class="cl">     1      1  244:     lastid := current
+</span></span><span class="line"><span class="cl">    89     89  245:     for _, target := range currentNode.OutEdges {
+</span></span><span class="line"><span class="cl">     9    152  246:             if number[target] == unvisited {
+</span></span><span class="line"><span class="cl">     7    354  247:                     lastid = DFS(target, nodes, number, last, lastid+1)
+</span></span><span class="line"><span class="cl">     .      .  248:             }
+</span></span><span class="line"><span class="cl">     .      .  249:     }
+</span></span><span class="line"><span class="cl">     7     59  250:     last[number[currentNode]] = lastid
+</span></span><span class="line"><span class="cl">     1      1  251:     return lastid
+</span></span><span class="line"><span class="cl">(pprof)
+</span></span></code></pre></td></tr></table>
+</div>
+</div><ul>
+<li>第一列：Flat</li>
+<li>第二列：Cum</li>
+<li>第三列：行号</li>
+</ul>
+<p>下面是在Web界面看到的报告（基本差不多，<a href="https://rawgit.com/rsc/benchgraffiti/master/havlak/havlak1.html" target="_blank" rel="noopener noreferrer">见这里</a>）：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="line"><span class="cl">havlak1
+</span></span><span class="line"><span class="cl">Total: 5758 samples
+</span></span><span class="line"><span class="cl">main.DFS
+</span></span><span class="line"><span class="cl">/home/rsc/g/benchgraffiti/havlak/havlak1.go
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">Total:   225   2296 (flat / cumulative samples)
+</span></span><span class="line"><span class="cl">  235               	return false
+</span></span><span class="line"><span class="cl">  236               }
+</span></span><span class="line"><span class="cl">  237               
+</span></span><span class="line"><span class="cl">  238               // DFS - Depth-First-Search and node numbering.
+</span></span><span class="line"><span class="cl">  239               //
+</span></span><span class="line"><span class="cl">  240      3      3 func DFS(currentNode *BasicBlock, nodes []*UnionFindNode, number map[*BasicBlock]int, last []int, current int) int {
+</span></span><span class="line"><span class="cl">  241     18     19 	nodes[current].Init(currentNode, current)
+</span></span><span class="line"><span class="cl">  242           166 	number[currentNode] = current
+</span></span><span class="line"><span class="cl">  243               
+</span></span><span class="line"><span class="cl">  244      2      2 	lastid := current
+</span></span><span class="line"><span class="cl">  245    167    167 	for _, target := range currentNode.OutEdges {
+</span></span><span class="line"><span class="cl">  246     17    508 		if number[target] == unvisited {
+</span></span><span class="line"><span class="cl">  247     10   1157 			lastid = DFS(target, nodes, number, last, lastid+1)
+</span></span><span class="line"><span class="cl">  248               		}
+</span></span><span class="line"><span class="cl">  249               	}
+</span></span><span class="line"><span class="cl">  250      7    273 	last[number[currentNode]] = lastid
+</span></span><span class="line"><span class="cl">  251      1      1 	return lastid
+</span></span><span class="line"><span class="cl">  252               }
+</span></span><span class="line"><span class="cl">  253               
+</span></span><span class="line"><span class="cl">  254               // FindLoops
+</span></span><span class="line"><span class="cl">  255               //
+</span></span><span class="line"><span class="cl">  256               // Find loops and build loop forest using Havlak&#39;s algorithm, which
+</span></span></code></pre></td></tr></table>
+</div>
+</div><ul>
+<li>第一列：行号</li>
+<li>第二列：Flat</li>
+<li>第三列：Cum</li>
+</ul>
+<h2 id="解读内存">解读内存<a class="anchor ms-1" href="#解读内存"><i class="fas fa-link"></i></a></h2>
+<p>以文中提供的内存Profile来举例说明，我们使用<code>go tool pprof -http=0.0.0.0:4231 havlak3 havalk3.mprof</code>来观察。</p>
+<p>pprof提供了4种视角，默认是<code>-inuse_space</code>：</p>
+<ul>
+<li><code>-inuse_space</code> ：live object占用内存</li>
+<li><code>-inuse_objects</code> ：live object的数量</li>
+<li><code>-alloc_space</code> ：程序启动到现在，总共分配的内存</li>
+<li><code>-alloc_objects</code> ：程序启动到现在总共object的数量</li>
+</ul>
+<h3 id="解读top-1">解读Top<a class="anchor ms-1" href="#解读top-1"><i class="fas fa-link"></i></a></h3>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span><span class="lnt">9
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="line"><span class="cl">(pprof) top5
+</span></span><span class="line"><span class="cl">Total: 82.4 MB
+</span></span><span class="line"><span class="cl">    Flat  Flat%   Sum%      Cum   Cum% Name
+</span></span><span class="line"><span class="cl">    56.3  68.4%  68.4%     56.3  68.4% main.FindLoops
+</span></span><span class="line"><span class="cl">    17.6  21.3%  89.7%     17.6  21.3% main.(*CFG).CreateNode
+</span></span><span class="line"><span class="cl">     8.0   9.7%  99.4%     25.6  31.0% main.NewBasicBlockEdge
+</span></span><span class="line"><span class="cl">     0.5   0.6% 100.0%      0.5   0.6% itab
+</span></span><span class="line"><span class="cl">     0.0   0.0% 100.0%      0.5   0.6% fmt.init
+</span></span><span class="line"><span class="cl">(pprof)
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>采样频率：</p>
+<ul>
+<li>每分配512K，采样一个block（具体啥意思不知道）</li>
+</ul>
+<p>照例我们加上列：</p>
+<ul>
+<li>Total：总共占用内存</li>
+<li>Flat：函数分配的内存，不包含它调用其他函数造成的内存分配。</li>
+<li>Flat%：Flat / Total</li>
+<li>Sum%：自己和前面所有的Flat%累积值</li>
+<li>Cum：这个函数分配的内存，以及它调用其他函数分配的内存之和。可以解读为因为这个函数所造成的所有内存分配。</li>
+<li>Cum%：Cum / Total</li>
+</ul>
+<h3 id="解读源码-1">解读源码<a class="anchor ms-1" href="#解读源码-1"><i class="fas fa-link"></i></a></h3>
+<p>和CPU源码解读差不多：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="line"><span class="cl">(pprof) list FindLoops
+</span></span><span class="line"><span class="cl">Total: 82.4 MB
+</span></span><span class="line"><span class="cl">ROUTINE ====================== main.FindLoops in /home/rsc/g/benchgraffiti/havlak/havlak3.go
+</span></span><span class="line"><span class="cl">  56.3   56.3 Total MB (flat / cumulative)
+</span></span><span class="line"><span class="cl">...
+</span></span><span class="line"><span class="cl">   1.9    1.9  268:     nonBackPreds := make([]map[int]bool, size)
+</span></span><span class="line"><span class="cl">   5.8    5.8  269:     backPreds := make([][]int, size)
+</span></span><span class="line"><span class="cl">     .      .  270:
+</span></span><span class="line"><span class="cl">   1.9    1.9  271:     number := make([]int, size)
+</span></span><span class="line"><span class="cl">   1.9    1.9  272:     header := make([]int, size, size)
+</span></span><span class="line"><span class="cl">   1.9    1.9  273:     types := make([]int, size, size)
+</span></span><span class="line"><span class="cl">   1.9    1.9  274:     last := make([]int, size, size)
+</span></span><span class="line"><span class="cl">   1.9    1.9  275:     nodes := make([]*UnionFindNode, size, size)
+</span></span><span class="line"><span class="cl">     .      .  276:
+</span></span><span class="line"><span class="cl">     .      .  277:     for i := 0; i &lt; size; i++ {
+</span></span><span class="line"><span class="cl">   9.5    9.5  278:             nodes[i] = new(UnionFindNode)
+</span></span><span class="line"><span class="cl">     .      .  279:     }
+</span></span><span class="line"><span class="cl">...
+</span></span><span class="line"><span class="cl">     .      .  286:     for i, bb := range cfgraph.Blocks {
+</span></span><span class="line"><span class="cl">     .      .  287:             number[bb.Name] = unvisited
+</span></span><span class="line"><span class="cl">  29.5   29.5  288:             nonBackPreds[i] = make(map[int]bool)
+</span></span><span class="line"><span class="cl">     .      .  289:     }
+</span></span><span class="line"><span class="cl">...
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>可以发现L288占用了29.5M内存。用<code>-inuse_objects</code>来观察，可以看到分配次数：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="line"><span class="cl">$ go tool pprof --inuse_objects havlak3 havlak3.mprof
+</span></span><span class="line"><span class="cl">Adjusting heap profiles for 1-in-524288 sampling rate
+</span></span><span class="line"><span class="cl">Welcome to pprof!  For help, type &#39;help&#39;.
+</span></span><span class="line"><span class="cl">(pprof) list FindLoops
+</span></span><span class="line"><span class="cl">Total: 1763108 objects
+</span></span><span class="line"><span class="cl">ROUTINE ====================== main.FindLoops in /home/rsc/g/benchgraffiti/havlak/havlak3.go
+</span></span><span class="line"><span class="cl">720903 720903 Total objects (flat / cumulative)
+</span></span><span class="line"><span class="cl">...
+</span></span><span class="line"><span class="cl">     .      .  277:     for i := 0; i &lt; size; i++ {
+</span></span><span class="line"><span class="cl">311296 311296  278:             nodes[i] = new(UnionFindNode)
+</span></span><span class="line"><span class="cl">     .      .  279:     }
+</span></span><span class="line"><span class="cl">     .      .  280:
+</span></span><span class="line"><span class="cl">     .      .  281:     // Step a:
+</span></span><span class="line"><span class="cl">     .      .  282:     //   - initialize all nodes as unvisited.
+</span></span><span class="line"><span class="cl">     .      .  283:     //   - depth-first traversal and numbering.
+</span></span><span class="line"><span class="cl">     .      .  284:     //   - unreached BB&#39;s are marked as dead.
+</span></span><span class="line"><span class="cl">     .      .  285:     //
+</span></span><span class="line"><span class="cl">     .      .  286:     for i, bb := range cfgraph.Blocks {
+</span></span><span class="line"><span class="cl">     .      .  287:             number[bb.Name] = unvisited
+</span></span><span class="line"><span class="cl">409600 409600  288:             nonBackPreds[i] = make(map[int]bool)
+</span></span><span class="line"><span class="cl">     .      .  289:     }
+</span></span><span class="line"><span class="cl">...
+</span></span><span class="line"><span class="cl">(pprof)
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="分析gc">分析GC<a class="anchor ms-1" href="#分析gc"><i class="fas fa-link"></i></a></h2>
+<p>你可以通过CPU Profile来分析GC：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="line"><span class="cl">(pprof) top10
+</span></span><span class="line"><span class="cl">Total: 1173 samples
+</span></span><span class="line"><span class="cl">     205  17.5%  17.5%     1083  92.3% main.FindLoops
+</span></span><span class="line"><span class="cl">     138  11.8%  29.2%      215  18.3% scanblock
+</span></span><span class="line"><span class="cl">      88   7.5%  36.7%       96   8.2% sweepspan
+</span></span><span class="line"><span class="cl">      76   6.5%  43.2%      597  50.9% runtime.mallocgc
+</span></span><span class="line"><span class="cl">      75   6.4%  49.6%       78   6.6% runtime.settype_flush
+</span></span><span class="line"><span class="cl">      74   6.3%  55.9%       75   6.4% flushptrbuf
+</span></span><span class="line"><span class="cl">      64   5.5%  61.4%       64   5.5% runtime.memmove
+</span></span><span class="line"><span class="cl">      63   5.4%  66.8%      524  44.7% runtime.growslice
+</span></span><span class="line"><span class="cl">      51   4.3%  71.1%       51   4.3% main.DFS
+</span></span><span class="line"><span class="cl">      50   4.3%  75.4%      146  12.4% runtime.MCache_Alloc
+</span></span><span class="line"><span class="cl">(pprof)
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>可以看到<code>runtime.mallocgc</code>的调用次数占了50.9%。</p>
+<p>查看系统为何进行垃圾收集的另一种方法是查看导致收集的分配，这些分配在mallocgc中花费了大部分时间。使用<code>--nodefraction=0.1</code>去掉占比小于10%的结果：</p>
+<p><img class="img-fluid" alt="" src="/post/go/pprof-explained/profiling-go-programs_havlak4a-mallocgc-trim.png" loading="lazy"
+  
+   />
+
+</p>
+<p>可以看到<code>main.FindLoops</code>导致了大多数GC。</p>
+<h2 id="在线profile">在线Profile<a class="anchor ms-1" href="#在线profile"><i class="fas fa-link"></i></a></h2>
+<p>如果你是一个Web应用，你可以使用<a href="https://golang.org/pkg/net/http/pprof/" target="_blank" rel="noopener noreferrer">net/http/pprof</a>来添加一个Handler，访问<code>http://&lt;host&gt;:&lt;port&gt;/debug/pprof/</code>可以得到功能列表：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="line"><span class="cl">/debug/pprof/
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">Types of profiles available:
+</span></span><span class="line"><span class="cl">Count	Profile
+</span></span><span class="line"><span class="cl">8   allocs
+</span></span><span class="line"><span class="cl">0	  block
+</span></span><span class="line"><span class="cl">0	  cmdline
+</span></span><span class="line"><span class="cl">10	goroutine
+</span></span><span class="line"><span class="cl">8	  heap
+</span></span><span class="line"><span class="cl">0	  mutex
+</span></span><span class="line"><span class="cl">0	  profile
+</span></span><span class="line"><span class="cl">19	threadcreate
+</span></span><span class="line"><span class="cl">0	  trace
+</span></span><span class="line"><span class="cl">...
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>然后你可以通过这样来用<code>go tool pprof &lt;url&gt;</code>来分析，比如：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl"><span class="c1"># 分析CPU</span>
+</span></span><span class="line"><span class="cl">go tool pprof http://localhost:9090/debug/pprof/profile
+</span></span><span class="line"><span class="cl"><span class="c1"># 打开网页分析heap</span>
+</span></span><span class="line"><span class="cl">go tool pprof -http<span class="o">=</span>0.0.0.0:4231 http://localhost:9090/debug/pprof/heap
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>在生产中，你需要对<code>/debug/pprof/*</code>做<a href="https://en.wikipedia.org/wiki/Basic_access_authentication" target="_blank" rel="noopener noreferrer">HTTP BasicAuth</a>保护（很简单，一个响应头和请求头罢了），那么你去抓取数据分析的时候得这样：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">go tool pprof http://&lt;user&gt;:&lt;password&gt;@localhost:9090/debug/pprof/profile
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="参考资料">参考资料<a class="anchor ms-1" href="#参考资料"><i class="fas fa-link"></i></a></h2>
+<ul>
+<li><a href="https://blog.golang.org/profiling-go-programs" target="_blank" rel="noopener noreferrer">Profiling Go Programs</a></li>
+<li><a href="https://golang.org/pkg/runtime/pprof/#Profile" target="_blank" rel="noopener noreferrer">runtime/pprof</a></li>
+<li><a href="https://golang.org/pkg/net/http/pprof/" target="_blank" rel="noopener noreferrer">net/http/pprof</a></li>
+<li><a href="https://en.wikipedia.org/wiki/Basic_access_authentication" target="_blank" rel="noopener noreferrer">HTTP BasicAuth</a></li>
+<li><a href="https://github.com/golang/go/wiki/Performance" target="_blank" rel="noopener noreferrer">Debugging performance issues in Go programs</a></li>
+</ul></div></div>
+  <div class="card-footer"><div class="post-navs d-flex justify-content-evenly"><div class="post-nav post-prev">
+    <i class="fas fa-fw fa-chevron-left"></i>
+    <a href="/post/tls/openssl-tls-issuing/">Openssl签发Tls证书
+</a>
+  </div><div class="post-nav post-next">
+    <a href="/post/article-review/visualizing-gc-algo/">Visualizing Garbage Collection Algorithms阅读笔记
+</a>
+    <i class="fas fa-fw fa-chevron-right"></i>
+  </div></div></div>
+</article><div class="post-copyright mb-3 row card component" id="post-copyright">
+    <div class="card-header">
+        <h2 class="card-title">版权</h2>
+    </div>
+    <div class="card-body"><a class="d-flex align-items-center flex-column" target="_blank" rel="license noopener noreferrer" href="https://creativecommons.org/licenses/by-nc-nd/4.0/deed.zh">
+  <span><i class="fab fa-fw fa-2x fa-creative-commons"></i><i class="fab fa-fw fa-2x fa-creative-commons-by"></i><i class="fab fa-fw fa-2x fa-creative-commons-nc"></i><i class="fab fa-fw fa-2x fa-creative-commons-nd"></i></span>
+  CC BY-NC-ND 4.0 
+</a>
+
+
+    </div>
+</div><section class="related-posts row card component">
+    <div class="card-header">
+      <h2 class="card-title">相关文章</h2>
+    </div>
+    <div class="card-body">
+      <ul class="post-list"><li>
+          <a href="/post/jvm/jvm-perf-tuning-common-ways/">Java应用性能调优套路
+</a>
+          <span class="float-end post-date">2020-03-05
+</span>
+        </li><li>
+          <a href="/post/kernel/perf-analyze-cpu-note/">Perf分析CPU性能问题笔记
+</a>
+          <span class="float-end post-date">2019-04-12
+</span>
+        </li><li>
+          <a href="/post/mysql/commands-params/">MySQL - 常见命令及参数
+</a>
+          <span class="float-end post-date">2019-12-18
+</span>
+        </li><li>
+          <a href="/post/kernel/sync-async-blocking-non-blocking-io-abstract/">关于同步/异步、阻塞/非阻塞IO的摘要
+</a>
+          <span class="float-end post-date">2019-04-04
+</span>
+        </li><li>
+          <a href="/post/java-remote-debug/">远程Debug Java进程的方法
+</a>
+          <span class="float-end post-date">2018-10-09
+</span>
+        </li></ul>
+    </div>
+  </section><div class="card component row post-comments" id="post-comments">
+  <div class="card-header">
+    <h2 class="card-title">评论</h2>
+  </div>
+  <div class="card-body"></div>
+</div></div>
+</div><aside class="col-lg-4 sidebar d-flex">
+  <div class="container d-flex flex-column">
+    
+    <section class="card row text-center profile component">
+  <div class="card-body">
+    <div class="col-12 d-flex align-items-center justify-content-center"><img class="profile-avatar rounded-circle" alt="颇忒脱" src="/images/avatar.jpg" loading="lazy"
+   width="455" height="455"
+   />
+</div>
+    <div class="col-12 profile-meta"><div class="profile-name">颇忒脱</div><nav class="social-links nav justify-content-center"><a class="nav-link social-link" target="_blank" href="https://github.com/chanjarster" title="GitHub" rel="noopener noreferrer">
+        <i class="fa-fw fa-2x fab fa-github"></i>
+      </a></nav>
+</div>
+  </div>
+</section>
+  <div class="post-toc row mb-4 card component" id="postTOC">
+  <div class="card-header">
+    <h2 class="card-title">目录</h2>
+  </div>
+  <div class="card-body">
+    <nav id="TableOfContents">
+  <ul>
+    <li><a href="#解读cpu">解读CPU</a>
+      <ul>
+        <li><a href="#解读top">解读Top</a></li>
+        <li><a href="#解读图">解读图</a></li>
+        <li><a href="#解读源码">解读源码</a></li>
+      </ul>
+    </li>
+    <li><a href="#解读内存">解读内存</a>
+      <ul>
+        <li><a href="#解读top-1">解读Top</a></li>
+        <li><a href="#解读源码-1">解读源码</a></li>
+      </ul>
+    </li>
+    <li><a href="#分析gc">分析GC</a></li>
+    <li><a href="#在线profile">在线Profile</a></li>
+    <li><a href="#参考资料">参考资料</a></li>
+  </ul>
+</nav>
+  </div>
+</div><section class="featured-posts row card component">
+    <div class="card-header">
+      <h2 class="card-title">精选文章</h2>
+    </div>
+    <div class="card-body">
+      <ul class="post-list"><li>
+          <a href="/post/redis-cluster-ops/index-page/">Redis 集群运维笔记
+</a>
+        </li><li>
+          <a href="/post/linux/namespace/index-page/">Linux Namespace系列
+</a>
+        </li><li>
+          <a href="/post/network/index-page/">Networking系列
+</a>
+        </li><li>
+          <a href="/post/mysql/index-page/">MySQL系列
+</a>
+        </li><li>
+          <a href="/post/concurrent-programming/index-page/">并发编程系列
+</a>
+        </li></ul>
+    </div>
+  </section><section class="recent-posts row card component">
+  <div class="card-header">
+    <h2 class="card-title">最近文章</h2>
+  </div>
+  <div class="card-body">
+    <ul class="post-list"><li>
+        <a href="/post/qoder-switch-session/">QoderCN 切换账号后迁移会话历史
+</a>
+      </li><li>
+        <a href="/post/spring-boot-jdk-comp-table-copy/">Spring Boot 3.4 升级过程记录
+</a>
+      </li><li>
+        <a href="/post/redis-cluster-ops/index-page/">Redis 集群运维笔记
+</a>
+      </li><li>
+        <a href="/post/spring-boot-jdk-comp-table/">Spring、JDK、Maven 版本兼容性表格
+</a>
+      </li><li>
+        <a href="/post/network/calico-firewall-k8s/">Calico 配置 K8s 防火墙
+</a>
+      </li></ul>
+  </div>
+</section><section class="tags-taxonomies row card component">
+      <div class="card-header">
+        <h2 class="card-title">
+          <a href="/tags">标签</a>
+        </h2>
+      </div>
+      <div class="card-body">
+        <div class="py-2"><a href="/tags/arts-a/" class="badge rounded post-taxonomy" title="ARTS-A">
+            ARTS-A<span class="badge badge-sm text-white bg-accent ms-1">125</span></a><a href="/tags/k8s/" class="badge rounded post-taxonomy" title="k8s">
+            k8s<span class="badge badge-sm text-white bg-accent ms-1">52</span></a><a href="/tags/troubleshooting/" class="badge rounded post-taxonomy" title="troubleshooting">
+            troubleshooting<span class="badge badge-sm text-white bg-accent ms-1">40</span></a><a href="/tags/jvm/" class="badge rounded post-taxonomy" title="jvm">
+            jvm<span class="badge badge-sm text-white bg-accent ms-1">39</span></a><a href="/tags/docker/" class="badge rounded post-taxonomy" title="docker">
+            docker<span class="badge badge-sm text-white bg-accent ms-1">30</span></a><a href="/tags/mysql/" class="badge rounded post-taxonomy" title="mysql">
+            mysql<span class="badge badge-sm text-white bg-accent ms-1">25</span></a><a href="/tags/network/" class="badge rounded post-taxonomy" title="network">
+            network<span class="badge badge-sm text-white bg-accent ms-1">25</span></a><a href="/tags/%E5%B9%B6%E5%8F%91%E7%BC%96%E7%A8%8B/" class="badge rounded post-taxonomy" title="并发编程">
+            并发编程<span class="badge badge-sm text-white bg-accent ms-1">21</span></a><a href="/tags/cheatsheet/" class="badge rounded post-taxonomy" title="cheatsheet">
+            cheatsheet<span class="badge badge-sm text-white bg-accent ms-1">20</span></a><a href="/tags/java/" class="badge rounded post-taxonomy" title="java">
+            java<span class="badge badge-sm text-white bg-accent ms-1">20</span></a><a href="/tags/kernel/" class="badge rounded post-taxonomy" title="kernel">
+            kernel<span class="badge badge-sm text-white bg-accent ms-1">19</span></a><a href="/tags/linux/" class="badge rounded post-taxonomy" title="linux">
+            linux<span class="badge badge-sm text-white bg-accent ms-1">19</span></a><a href="/tags/redis/" class="badge rounded post-taxonomy" title="redis">
+            redis<span class="badge badge-sm text-white bg-accent ms-1">17</span></a><a href="/tags/prometheus/" class="badge rounded post-taxonomy" title="prometheus">
+            prometheus<span class="badge badge-sm text-white bg-accent ms-1">13</span></a><a href="/tags/%E6%80%A7%E8%83%BD%E8%B0%83%E4%BC%98/" class="badge rounded post-taxonomy" title="性能调优">
+            性能调优<span class="badge badge-sm text-white bg-accent ms-1">13</span></a><a href="/tags/go/" class="badge rounded post-taxonomy" title="go">
+            go<span class="badge badge-sm text-white bg-accent ms-1">10</span></a><a href="/tags/%E5%BE%AE%E6%9C%8D%E5%8A%A1/" class="badge rounded post-taxonomy" title="微服务">
+            微服务<span class="badge badge-sm text-white bg-accent ms-1">10</span></a><a href="/tags/rancher/" class="badge rounded post-taxonomy" title="rancher">
+            rancher<span class="badge badge-sm text-white bg-accent ms-1">9</span></a><a href="/tags/debug/" class="badge rounded post-taxonomy" title="debug">
+            debug<span class="badge badge-sm text-white bg-accent ms-1">7</span></a><a href="/tags/gc/" class="badge rounded post-taxonomy" title="gc">
+            gc<span class="badge badge-sm text-white bg-accent ms-1">7</span></a><a href="/tags/nginx/" class="badge rounded post-taxonomy" title="nginx">
+            nginx<span class="badge badge-sm text-white bg-accent ms-1">7</span></a><a href="/tags/ingress/" class="badge rounded post-taxonomy" title="ingress">
+            ingress<span class="badge badge-sm text-white bg-accent ms-1">6</span></a><a href="/tags/%E8%BF%90%E7%BB%B4/" class="badge rounded post-taxonomy" title="运维">
+            运维<span class="badge badge-sm text-white bg-accent ms-1">6</span></a><a href="/tags/ci_cd/" class="badge rounded post-taxonomy" title="CI_CD">
+            CI_CD<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/interview/" class="badge rounded post-taxonomy" title="interview">
+            interview<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/jmx/" class="badge rounded post-taxonomy" title="jmx">
+            jmx<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/openssl/" class="badge rounded post-taxonomy" title="openssl">
+            openssl<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/tls/" class="badge rounded post-taxonomy" title="tls">
+            tls<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/%E5%88%86%E5%B8%83%E5%BC%8F%E4%BA%8B%E5%8A%A1/" class="badge rounded post-taxonomy" title="分布式事务">
+            分布式事务<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/%E5%88%86%E5%B8%83%E5%BC%8F%E7%AE%97%E6%B3%95/" class="badge rounded post-taxonomy" title="分布式算法">
+            分布式算法<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/%E6%94%B6%E8%97%8F%E5%A4%B9/" class="badge rounded post-taxonomy" title="收藏夹">
+            收藏夹<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/%E9%AB%98%E5%B9%B6%E5%8F%91/" class="badge rounded post-taxonomy" title="高并发">
+            高并发<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/visualvm/" class="badge rounded post-taxonomy" title="visualvm">
+            visualvm<span class="badge badge-sm text-white bg-accent ms-1">4</span></a><a href="/tags/%E6%97%A5%E5%BF%97/" class="badge rounded post-taxonomy" title="日志">
+            日志<span class="badge badge-sm text-white bg-accent ms-1">4</span></a><a href="/tags/arts/" class="badge rounded post-taxonomy" title="arts">
+            arts<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/arts-r/" class="badge rounded post-taxonomy" title="arts-r">
+            arts-r<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/classloader/" class="badge rounded post-taxonomy" title="ClassLoader">
+            ClassLoader<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/container/" class="badge rounded post-taxonomy" title="container">
+            container<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/ios/" class="badge rounded post-taxonomy" title="ios">
+            ios<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/iphone/" class="badge rounded post-taxonomy" title="iphone">
+            iphone<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/jenkins/" class="badge rounded post-taxonomy" title="Jenkins">
+            Jenkins<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/namespace/" class="badge rounded post-taxonomy" title="namespace">
+            namespace<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/scheduling/" class="badge rounded post-taxonomy" title="scheduling">
+            scheduling<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/springboot/" class="badge rounded post-taxonomy" title="springboot">
+            springboot<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/thread/" class="badge rounded post-taxonomy" title="thread">
+            thread<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/%E5%88%86%E5%B8%83%E5%BC%8F%E6%9E%B6%E6%9E%84/" class="badge rounded post-taxonomy" title="分布式架构">
+            分布式架构<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/%E5%8D%8E%E4%B8%BA/" class="badge rounded post-taxonomy" title="华为">
+            华为<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/%E8%8B%B9%E6%9E%9C/" class="badge rounded post-taxonomy" title="苹果">
+            苹果<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/bash/" class="badge rounded post-taxonomy" title="bash">
+            bash<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/etcd/" class="badge rounded post-taxonomy" title="etcd">
+            etcd<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/grafana/" class="badge rounded post-taxonomy" title="grafana">
+            grafana<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/iptables/" class="badge rounded post-taxonomy" title="iptables">
+            iptables<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/jdbc/" class="badge rounded post-taxonomy" title="JDBC">
+            JDBC<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/jmeter/" class="badge rounded post-taxonomy" title="jmeter">
+            jmeter<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/%E6%95%B0%E6%8D%AE%E5%BA%93%E6%97%B6%E5%8C%BA%E9%82%A3%E4%BA%9B%E4%BA%8B%E5%84%BF/" class="badge rounded post-taxonomy" title="数据库时区那些事儿">
+            数据库时区那些事儿<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/%E7%9B%91%E6%8E%A7/" class="badge rounded post-taxonomy" title="监控">
+            监控<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/%E9%99%90%E6%B5%81/" class="badge rounded post-taxonomy" title="限流">
+            限流<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/acloud/" class="badge rounded post-taxonomy" title="acloud">
+            acloud<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/agent/" class="badge rounded post-taxonomy" title="agent">
+            agent<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/akka/" class="badge rounded post-taxonomy" title="Akka">
+            Akka<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/alertmanager/" class="badge rounded post-taxonomy" title="alertmanager">
+            alertmanager<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/calico/" class="badge rounded post-taxonomy" title="calico">
+            calico<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/chrome/" class="badge rounded post-taxonomy" title="chrome">
+            chrome<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/coredns/" class="badge rounded post-taxonomy" title="coredns">
+            coredns<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/elasticsearch/" class="badge rounded post-taxonomy" title="elasticsearch">
+            elasticsearch<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/fluentd/" class="badge rounded post-taxonomy" title="fluentd">
+            fluentd<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/harbor/" class="badge rounded post-taxonomy" title="harbor">
+            harbor<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/helm/" class="badge rounded post-taxonomy" title="helm">
+            helm<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/hystrix/" class="badge rounded post-taxonomy" title="hystrix">
+            hystrix<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/io/" class="badge rounded post-taxonomy" title="io">
+            io<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/jdpa/" class="badge rounded post-taxonomy" title="jdpa">
+            jdpa<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/jwt/" class="badge rounded post-taxonomy" title="jwt">
+            jwt<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/kafka/" class="badge rounded post-taxonomy" title="kafka">
+            kafka<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/kibana/" class="badge rounded post-taxonomy" title="kibana">
+            kibana<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/mq/" class="badge rounded post-taxonomy" title="MQ">
+            MQ<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/nfs/" class="badge rounded post-taxonomy" title="nfs">
+            nfs<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/oauth/" class="badge rounded post-taxonomy" title="oauth">
+            oauth<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/oracle/" class="badge rounded post-taxonomy" title="Oracle">
+            Oracle<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/pprof/" class="badge rounded post-taxonomy" title="pprof">
+            pprof<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/qoder/" class="badge rounded post-taxonomy" title="qoder">
+            qoder<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/reactor/" class="badge rounded post-taxonomy" title="reactor">
+            reactor<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/spring-boot/" class="badge rounded post-taxonomy" title="spring-boot">
+            spring-boot<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/spring-cloud/" class="badge rounded post-taxonomy" title="Spring Cloud">
+            Spring Cloud<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/ssl/" class="badge rounded post-taxonomy" title="ssl">
+            ssl<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/systemtap/" class="badge rounded post-taxonomy" title="systemtap">
+            systemtap<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/tiller/" class="badge rounded post-taxonomy" title="tiller">
+            tiller<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/tomcat/" class="badge rounded post-taxonomy" title="tomcat">
+            tomcat<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/ubuntu/" class="badge rounded post-taxonomy" title="ubuntu">
+            ubuntu<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/vtable/" class="badge rounded post-taxonomy" title="vtable">
+            vtable<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/%E6%B6%88%E6%81%AF%E9%98%9F%E5%88%97/" class="badge rounded post-taxonomy" title="消息队列">
+            消息队列<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/%E6%B7%B1%E4%BF%A1%E6%9C%8D/" class="badge rounded post-taxonomy" title="深信服">
+            深信服<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/%E7%BC%93%E5%AD%98/" class="badge rounded post-taxonomy" title="缓存">
+            缓存<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/%E8%99%9A%E6%8B%9F%E5%8C%96/" class="badge rounded post-taxonomy" title="虚拟化">
+            虚拟化<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/%E8%B0%83%E7%94%A8%E9%93%BE%E8%BF%BD%E8%B8%AA/" class="badge rounded post-taxonomy" title="调用链追踪">
+            调用链追踪<span class="badge badge-sm text-white bg-accent ms-1">1</span></a></div>
+      </div>
+    </section>
+    
+  </div>
+</aside>
+</div>
+    </main><footer class="footer mt-auto py-3 text-center container"><nav class="social-links nav justify-content-center mb-2"><a class="nav-link social-link" target="_blank" href="https://github.com/chanjarster" title="GitHub" rel="noopener noreferrer">
+        <i class="fa-fw fa-2x fab fa-github"></i>
+      </a></nav>
+<div class="copyright mb-2">
+  Copyright © 2010-2026 Daniel Qian. All Rights Reserved.
+</div>
+<div class="powered-by mb-2">
+  Powered by <a href="https://gohugo.io" target="_blank" rel="noopener noreferrer">Hugo</a> and the <a href="https://github.com/razonyang/hugo-theme-bootstrap" target="_blank" rel="noopener noreferrer">Bootstrap</a> theme.
+</div>
+<a href="https://www.netlify.com" target="_blank" rel="noopener noreferrer">
+    <img src="https://www.netlify.com/img/global/badges/netlify-color-accent.svg" alt="Deploys by Netlify" width="114" height="51" />
+</a>
+</footer>
+<script src="/js/main.2cdce25f280f570596c88888d6af930fe5e15ea030005291dad293defbb231d3.js" integrity="sha256-LNziXygPVwWWyIiI1q&#43;TD&#43;XhXqAwAFKR2tKT3vuyMdM=" crossorigin="anonymous" defer></script><script src="/js/icons.min.7b1f27dfde35467d03350938b2e41dbffd06347009b97ab913edfaca01a07814.js" integrity="sha256-ex8n3941Rn0DNQk4suQdv/0GNHAJuXq5E&#43;36ygGgeBQ=" crossorigin="anonymous" defer></script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('\/service-worker.js').then(function(reg) {
+      console.log('Successfully registered service worker', reg);
+    }).catch(function(err) {
+      console.warn('Error whilst registering service worker', err);
+    });
+  });
+}
+</script><script src="/js/viewer.min.1ec1fa5aa3a66267222a44fe1cd51856ad4a92be48ede579fb36d70a6d4c28e9.js" integrity="sha256-HsH6WqOmYmciKkT&#43;HNUYVq1Kkr5I7eV5&#43;zbXCm1MKOk=" crossorigin="anonymous" defer></script>
+</body>
+</html>

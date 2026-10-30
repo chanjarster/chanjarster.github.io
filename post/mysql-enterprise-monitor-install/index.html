@@ -1,0 +1,1102 @@
+<!doctype html><html lang="zh-cn" data-palette="blue"
+  >
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>MySQL 企业版监控安装和使用 - 颇忒脱的技术博客</title><link rel="apple-touch-icon" href="/images/icons/icon-180x180.png" sizes="180x180">
+<link rel="icon" href="/images/icons/icon-32x32.png" sizes="32x32" type="image/png">
+<link rel="icon" href="/images/icons/icon-16x16.png" sizes="16x16" type="image/png">
+<link rel="icon" href="/images/icons/favicon.ico">
+<link rel="manifest" href="/manifest.json">
+<meta name="keywords" content="" />
+<meta name="description" content="" /><meta name="robots" content="index, follow" /><meta itemprop="name" content="MySQL 企业版监控安装和使用">
+<meta itemprop="description" content=""><meta itemprop="datePublished" content="2021-05-18T09:35:10+08:00" />
+<meta itemprop="dateModified" content="2021-05-18T09:35:10+08:00" />
+<meta itemprop="wordCount" content="3270">
+<meta itemprop="keywords" content="mysql," /><meta property="og:title" content="MySQL 企业版监控安装和使用" />
+<meta property="og:description" content="" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="/post/mysql-enterprise-monitor-install/" /><meta property="article:section" content="post" />
+<meta property="article:published_time" content="2021-05-18T09:35:10+08:00" />
+<meta property="article:modified_time" content="2021-05-18T09:35:10+08:00" />
+
+<meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="MySQL 企业版监控安装和使用"/>
+<meta name="twitter:description" content=""/>
+<meta property="og:image" content="/images/avatar.jpg"/>
+  <meta name="twitter:image" content="/images/avatar.jpg"/><link rel="stylesheet" href="/css/main.min.24196952817c68c8b90d8fa573d560fa62766baa0622bdc0e862255f4a4d1307.css" integrity="sha256-JBlpUoF8aMi5DY&#43;lc9Vg&#43;mJ2a6oGIr3A6GIlX0pNEwc=" crossorigin="anonymous"><link rel="stylesheet" href="/css/viewer.min.3d228794bcedbbfa0412beb8fbc1ec6973202945e42af7004f742a4d7bd620ab.css" integrity="sha256-PSKHlLztu/oEEr64&#43;8HsaXMgKUXkKvcAT3QqTXvWIKs=" crossorigin="anonymous"></head>
+  <body><script>const items=["mode","palette"];items.forEach(function(e){const t=localStorage.getItem("hbs-"+e);t&&document.body.parentElement.setAttribute("data-"+e,t)})</script><header><nav class="navbar top-app-bar top-app-bar-expand-lg fixed-top">
+  <div class="container">
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent"
+      aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <i class="fas fa-bars"></i>
+    </button><a class="navbar-brand flex-grow-1 flex-lg-grow-0 text-center text-lg-start mx-auto me-lg-3" href="/"><img class="logo" alt="Logo" src="/images/avatar.jpg" loading="lazy"
+   width="455" height="455"
+   />
+颇忒脱的技术博客
+    </a>
+    
+    <button class="navbar-settings" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvasSettings"
+  aria-controls="offcanvasSettings" aria-label="Toggle settings">
+  <i class="fas fa-ellipsis-v"></i>
+</button>
+
+<div class="offcanvas offcanvas-end surface h-100" tabindex="-1" id="offcanvasSettings" aria-labelledby="offcanvasSettings">
+  <div class="offcanvas-header">
+    <h3 class="offcanvas-title">设置</h3>
+    <button type="button" class="btn btn-sm btn-outline-primary" data-bs-dismiss="offcanvas" aria-label="Close">
+      <i class="fas fa-times"></i>
+    </button>
+  </div>
+  <div class="offcanvas-body d-flex flex-column">
+
+<section class="setting">
+  <form class="row">
+    <div class="col-auto">
+      <label><i class="fas fa-fw fa-adjust"></i> 模式</label>
+    </div>
+    <div class="col-auto ms-auto">
+      <div class="form-check form-switch">
+        <input class="form-check-input" type="checkbox" id="modeSwitcher">
+      </div>
+    </div>
+  </form>
+</section>
+
+<section class="setting">
+  <form class="font-size-switcher-form row">
+    <div class="col-auto">
+      <label for="fontSize" class="form-label"><i class="fas fa-fw fa-font"></i> 字体大小</label>
+    </div>
+    <div class="col-auto ms-auto">
+      <input type="range" class="form-range" min="-2" max="2" id="fontSize">
+    </div>
+  </form>
+</section>
+
+
+<section class="setting palettes">
+  <form class="row">
+    <div class="col-auto">
+      <label><i class="fas fa-fw fa-palette"></i> 配色</label>
+    </div>
+    <div class="col-auto ms-auto">
+      <a id="btnPalette" class="btn btn-sm btn-outline-primary" role="button" aria-label="palettePicker">
+        <i class="fas fa-eye-dropper"></i>
+      </a>
+    </div>
+  </form>
+  <div class="mt-2 d-flex justify-content-between visually-hidden" id="palettePicker"><button type="button" id="palette-blue" aria-label="蓝色"
+        class="btn btn-sm w-100 palette" data-palette="blue">
+      </button><button type="button" id="palette-blue-gray" aria-label="蓝灰色"
+        class="btn btn-sm w-100 palette" data-palette="blue-gray">
+      </button><button type="button" id="palette-brown" aria-label="棕色"
+        class="btn btn-sm w-100 palette" data-palette="brown">
+      </button><button type="button" id="palette-cyan" aria-label="青色"
+        class="btn btn-sm w-100 palette" data-palette="cyan">
+      </button><button type="button" id="palette-green" aria-label="绿色"
+        class="btn btn-sm w-100 palette" data-palette="green">
+      </button><button type="button" id="palette-indigo" aria-label="靛青色"
+        class="btn btn-sm w-100 palette" data-palette="indigo">
+      </button><button type="button" id="palette-orange" aria-label="橙色"
+        class="btn btn-sm w-100 palette" data-palette="orange">
+      </button><button type="button" id="palette-pink" aria-label="粉色"
+        class="btn btn-sm w-100 palette" data-palette="pink">
+      </button><button type="button" id="palette-purple" aria-label="紫色"
+        class="btn btn-sm w-100 palette" data-palette="purple">
+      </button><button type="button" id="palette-red" aria-label="红色"
+        class="btn btn-sm w-100 palette" data-palette="red">
+      </button><button type="button" id="palette-teal" aria-label="蓝绿色"
+        class="btn btn-sm w-100 palette" data-palette="teal">
+      </button><button type="button" id="palette-yellow" aria-label="黄色"
+        class="btn btn-sm w-100 palette" data-palette="yellow">
+      </button></div>
+</section>
+<section class="setting actions d-flex justify-content-around mt-auto overflow-auto">
+  <a role="button" class="action action-go-back" href="javascript: window.history.back();">
+    <span class="action-icon"><i class="fas fa-2x fa-arrow-left"></i></span> 返回
+  </a>
+  <a role="button" class="action action-reload-page">
+    <span class="action-icon"><i class="fas fa-2x fa-redo-alt"></i></span> 刷新
+  </a>
+  <a role="button" class="action action-copy-url">
+    <span class="action-icon"><i class="fas fa-2x fa-link"></i></span> 复制链接
+  </a></section>
+
+</div>
+</div>
+
+    <div class="collapse navbar-collapse" tabindex="-1" id="navbarSupportedContent" aria-labelledby="navbarSupportedContent">
+      <form class="search-bar my-1" action="/search">
+  <div class="input-group input-group-sm">
+    <span class="btn btn-search disabled position-absolute left-0"><i class="fas fa-fw fa-search"></i></span>
+    <input class="form-control rounded-pill" name="q" type="search" aria-label="Search">
+  </div>
+</form>
+      <ul class="navbar-nav ms-auto"><li class="nav-item">
+          <a class="nav-link" href="/series/">
+            <i class="fas fa-fw fa-columns"></i>专栏
+          </a>
+        </li><li class="nav-item dropdown">
+          <a class="nav-link" id="navbarDropdownIndex" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+            <i class="fas fa-fw fa-chevron-circle-down"></i>快速索引
+          </a>
+          <ul class="dropdown-menu" aria-labelledby="navbarDropdownIndex"><li>
+              <a class="dropdown-item"
+                href="/tags/go">
+                Go
+              </a>
+            </li><li>
+              <a class="dropdown-item"
+                href="/tags/gc">
+                GC
+              </a>
+            </li><li>
+              <a class="dropdown-item"
+                href="/tags/kernel">
+                Kernel
+              </a>
+            </li><li>
+              <a class="dropdown-item"
+                href="/tags/cheatsheet">
+                Cheatsheet
+              </a>
+            </li><li>
+              <a class="dropdown-item"
+                href="/tags/troubleshooting">
+                排障实战记录
+              </a>
+            </li></ul>
+        </li><li class="nav-item">
+          <a class="nav-link" href="/tags/">
+            <i class="fas fa-fw fa-tags"></i>标签
+          </a>
+        </li><li class="nav-item">
+          <a class="nav-link" href="/archives/">
+            <i class="fas fa-fw fa-file-archive"></i>归档
+          </a>
+        </li></ul>
+    </div>
+  </div>
+</nav>
+</header>
+<main role="main" class="container">
+      <div class="row content">
+<div class="col-lg-8">
+  <div class="container"><nav class="row card component" aria-label="breadcrumb">
+  <div class="card-body">
+    <ol class="breadcrumb "><li class="breadcrumb-item"><a href="/">主页</a></li><li class="breadcrumb-item"><a href="/post/">文章</a></li><li class="breadcrumb-item active">MySQL 企业版监控安装和使用</li></ol>
+  </div>
+</nav><div class="post-panel-wrapper">
+  <div class="d-flex flex-column component rounded post-panel">
+    
+    <a class="action action-panel-toggler" role="button" title="Panel toggler">
+      <i class="fas fa-fw fa-chevron-circle-down"></i>
+    </a>
+    <a id="sidebarToggler" class="action d-none d-lg-block" role="button" title="Sidebar toggler">
+  <i class="fas fa-fw fa-expand-alt" data-fa-transform="rotate-45"></i>
+</a>
+
+    
+
+    
+    <a class="action" href="#post-copyright" role="button" aria-label="Copyright" title="Copyright">
+  <i class="fas fa-fw fa-copyright"></i>
+</a>
+    <a class="action" href="#post-comments" role="button" aria-label="Comments" title="Comments">
+  <i class="fas fa-fw fa-comments"></i>
+</a>
+    <a class="action" href="#postTOC" aria-controls="Table of contents" role="button" title="Table of contents">
+  <i class="fas fa-fw fa-list-alt"></i>
+</a>
+    
+  </div>
+</div>
+<article class="row card component mb-4 post">
+  <div class="card-header ">
+    <h1 class="card-title post-title">MySQL 企业版监控安装和使用
+</h1>
+  </div>
+  <div class="card-body"><div class="post-meta">
+  <span class="post-date" title="创建于 2021-05-18 09:35:10 &#43;0800 CST。">
+    2021-05-18
+  </span><span class="post-reading-time">
+    7 分钟阅读
+  </span><span class="post-taxonomies"><a href="/tags/mysql/" class="badge post-taxonomy">mysql</a></span>
+</div>
+<div class="post-content mb-3"><p>本方案用到了MySQL企业版的监控管理，请自行决定是否存在商业版授权的问题。</p>
+<p>架构上分为两个部分：</p>
+<ul>
+<li>Service Manager（监控管理后台）</li>
+<li>Monitor Agent（采集器）运行在MySQL服务器上</li>
+</ul>
+<h2 id="下载软件">下载软件<a class="anchor ms-1" href="#下载软件"><i class="fas fa-link"></i></a></h2>
+<p>访问 <a href="https://edelivery.oracle.com/" target="_blank" rel="noopener noreferrer">https://edelivery.oracle.com/</a> ，需要登录，可自行注册账号。</p>
+<p>搜索 MySQL Enterprise Monitor，根据下图的顺序点击：</p>
+<img src="1.jpg" style="zoom:50%;" />
+<p>选择Linux x86-64 平台，然后下一步：</p>
+<img src="2.jpg" style="zoom:50%;" />
+<p>阅读授权，然后下一步：</p>
+<img src="3.jpg" style="zoom:50%;" />
+<p>可以点击文件名直接浏览器下载，也可以点击Download下载一个下载器，然后再下载：</p>
+<img src="4.jpg" style="zoom:50%;" />
+<h2 id="文件说明">文件说明<a class="anchor ms-1" href="#文件说明"><i class="fas fa-link"></i></a></h2>
+<p>两个文件下载完之后，解压缩，你可以看到一些文档文件和几个可执行文件（bin文件）：</p>
+<ul>
+<li>mysqlmonitor-8.0.25.1328-linux-x86_64-installer.bin</li>
+<li>mysqlmonitor-8.0.25.1328-linux-x86_64-update-installer.bin</li>
+<li>mysqlmonitoragent-8.0.25.1328-linux-x86-64bit-installer.bin</li>
+<li>mysqlmonitoragent-8.0.25.1328-linux-x86-64bit-update-installer.bin</li>
+</ul>
+<p>首次安装只需要<code>*-installer.bin</code>就可以了，如果是对已有安装的升级需要<code>*-update-installer.bin</code>。这里讲的是首次安装。</p>
+<h2 id="安装service-manager">安装Service Manager<a class="anchor ms-1" href="#安装service-manager"><i class="fas fa-link"></i></a></h2>
+<p>找任意一台服务器，把mysqlmonitor-8.0.25.1328-linux-x86_64-installer.bin传上去，然后安装：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">  1
+</span><span class="lnt">  2
+</span><span class="lnt">  3
+</span><span class="lnt">  4
+</span><span class="lnt">  5
+</span><span class="lnt">  6
+</span><span class="lnt">  7
+</span><span class="lnt">  8
+</span><span class="lnt">  9
+</span><span class="lnt"> 10
+</span><span class="lnt"> 11
+</span><span class="lnt"> 12
+</span><span class="lnt"> 13
+</span><span class="lnt"> 14
+</span><span class="lnt"> 15
+</span><span class="lnt"> 16
+</span><span class="lnt"> 17
+</span><span class="lnt"> 18
+</span><span class="lnt"> 19
+</span><span class="lnt"> 20
+</span><span class="lnt"> 21
+</span><span class="lnt"> 22
+</span><span class="lnt"> 23
+</span><span class="lnt"> 24
+</span><span class="lnt"> 25
+</span><span class="lnt"> 26
+</span><span class="lnt"> 27
+</span><span class="lnt"> 28
+</span><span class="lnt"> 29
+</span><span class="lnt"> 30
+</span><span class="lnt"> 31
+</span><span class="lnt"> 32
+</span><span class="lnt"> 33
+</span><span class="lnt"> 34
+</span><span class="lnt"> 35
+</span><span class="lnt"> 36
+</span><span class="lnt"> 37
+</span><span class="lnt"> 38
+</span><span class="lnt"> 39
+</span><span class="lnt"> 40
+</span><span class="lnt"> 41
+</span><span class="lnt"> 42
+</span><span class="lnt"> 43
+</span><span class="lnt"> 44
+</span><span class="lnt"> 45
+</span><span class="lnt"> 46
+</span><span class="lnt"> 47
+</span><span class="lnt"> 48
+</span><span class="lnt"> 49
+</span><span class="lnt"> 50
+</span><span class="lnt"> 51
+</span><span class="lnt"> 52
+</span><span class="lnt"> 53
+</span><span class="lnt"> 54
+</span><span class="lnt"> 55
+</span><span class="lnt"> 56
+</span><span class="lnt"> 57
+</span><span class="lnt"> 58
+</span><span class="lnt"> 59
+</span><span class="lnt"> 60
+</span><span class="lnt"> 61
+</span><span class="lnt"> 62
+</span><span class="lnt"> 63
+</span><span class="lnt"> 64
+</span><span class="lnt"> 65
+</span><span class="lnt"> 66
+</span><span class="lnt"> 67
+</span><span class="lnt"> 68
+</span><span class="lnt"> 69
+</span><span class="lnt"> 70
+</span><span class="lnt"> 71
+</span><span class="lnt"> 72
+</span><span class="lnt"> 73
+</span><span class="lnt"> 74
+</span><span class="lnt"> 75
+</span><span class="lnt"> 76
+</span><span class="lnt"> 77
+</span><span class="lnt"> 78
+</span><span class="lnt"> 79
+</span><span class="lnt"> 80
+</span><span class="lnt"> 81
+</span><span class="lnt"> 82
+</span><span class="lnt"> 83
+</span><span class="lnt"> 84
+</span><span class="lnt"> 85
+</span><span class="lnt"> 86
+</span><span class="lnt"> 87
+</span><span class="lnt"> 88
+</span><span class="lnt"> 89
+</span><span class="lnt"> 90
+</span><span class="lnt"> 91
+</span><span class="lnt"> 92
+</span><span class="lnt"> 93
+</span><span class="lnt"> 94
+</span><span class="lnt"> 95
+</span><span class="lnt"> 96
+</span><span class="lnt"> 97
+</span><span class="lnt"> 98
+</span><span class="lnt"> 99
+</span><span class="lnt">100
+</span><span class="lnt">101
+</span><span class="lnt">102
+</span><span class="lnt">103
+</span><span class="lnt">104
+</span><span class="lnt">105
+</span><span class="lnt">106
+</span><span class="lnt">107
+</span><span class="lnt">108
+</span><span class="lnt">109
+</span><span class="lnt">110
+</span><span class="lnt">111
+</span><span class="lnt">112
+</span><span class="lnt">113
+</span><span class="lnt">114
+</span><span class="lnt">115
+</span><span class="lnt">116
+</span><span class="lnt">117
+</span><span class="lnt">118
+</span><span class="lnt">119
+</span><span class="lnt">120
+</span><span class="lnt">121
+</span><span class="lnt">122
+</span><span class="lnt">123
+</span><span class="lnt">124
+</span><span class="lnt">125
+</span><span class="lnt">126
+</span><span class="lnt">127
+</span><span class="lnt">128
+</span><span class="lnt">129
+</span><span class="lnt">130
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">$ ./mysqlmonitor-8.0.25.1328-linux-x86_64-installer.bin --mode text
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">Language Selection
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">Please <span class="k">select</span> the installation language
+</span></span><span class="line"><span class="cl"><span class="o">[</span>1<span class="o">]</span> English - English
+</span></span><span class="line"><span class="cl"><span class="o">[</span>2<span class="o">]</span> Japanese - 日本語
+</span></span><span class="line"><span class="cl"><span class="o">[</span>3<span class="o">]</span> Simplified Chinese - 简体中文
+</span></span><span class="line"><span class="cl">Please choose an option <span class="o">[</span>1<span class="o">]</span> : <span class="m">3</span>  &lt;选择3&gt;
+</span></span><span class="line"><span class="cl">信息: 安装过程中要求您输入 Enterprise Monitor 使用的多个用户名和密码。请将这些密码保存至安全场所，以备恢复使用。
+</span></span><span class="line"><span class="cl">按 <span class="o">[</span>Enter<span class="o">]</span> 继续：&lt;回车&gt;
+</span></span><span class="line"><span class="cl">----------------------------------------------------------------------------
+</span></span><span class="line"><span class="cl">欢迎使用 MySQL Enterprise Monitor 安装向导
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">----------------------------------------------------------------------------
+</span></span><span class="line"><span class="cl">请指定 MySQL Enterprise Monitor 的安装目录
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">安装目录 <span class="o">[</span>/home/ubuntu/mysql/enterprise/monitor<span class="o">]</span>: &lt;回车&gt;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">----------------------------------------------------------------------------
+</span></span><span class="line"><span class="cl">Select Requirements
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">选择要求
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">请指明监视范围，安装初始过程中将相应地配置内存使用。注意: 该设置对性能有极大影响。手册中包含相关内容，如有需要，您可以之后更新该配置。该安装将监视:
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">系统容量
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="o">[</span>1<span class="o">]</span> 小型系统: 使用笔记本电脑或不超过4GB内存的低档服务器监视 <span class="m">1</span> 至 <span class="m">5</span> 个 MySQL 服务器
+</span></span><span class="line"><span class="cl"><span class="o">[</span>2<span class="o">]</span> 中型系统: 使用一个共享4 GB 到8 GB内存的中型服务器上监视多达100个 MySQL 服务器
+</span></span><span class="line"><span class="cl"><span class="o">[</span>3<span class="o">]</span> 大型系统: 使用超过8 GB内存的 MEM 专用服务器监视超过100个 MySQL 服务器
+</span></span><span class="line"><span class="cl">请选择选项 <span class="o">[</span>2<span class="o">]</span> : <span class="m">1</span>  &lt;选择1&gt;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">----------------------------------------------------------------------------
+</span></span><span class="line"><span class="cl">Tomcat 服务器选项
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">请为绑定的 Tomcat 服务器指定以下参数
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">Tomcat 服务器端口 <span class="o">[</span>18080<span class="o">]</span>: &lt;回车&gt;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">Tomcat SSL 端口 <span class="o">[</span>18443<span class="o">]</span>: &lt;回车&gt;
+</span></span><span class="line"><span class="cl">----------------------------------------------------------------------------
+</span></span><span class="line"><span class="cl">安装数据库
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">请选择希望配置使用的数据库
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="o">[</span>1<span class="o">]</span> 使用 MEM 绑定的 MySQL 数据库
+</span></span><span class="line"><span class="cl"><span class="o">[</span>2<span class="o">]</span> 使用既存的 MySQL 数据库 *
+</span></span><span class="line"><span class="cl">请选择选项 <span class="o">[</span>1<span class="o">]</span> : &lt;回车&gt;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">* 在安装过程中将验证既存 MySQL 数据库的版本. 查阅文档获取最低版本要求信息。
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">* 重要: 如果您的既存 MySQL 数据库中已经存在了另一个 MySQL Enterprise Monitor
+</span></span><span class="line"><span class="cl">存储库，继续保留该存储库，请在下一个画面的<span class="s2">&#34;MySQL Database Name&#34;</span>区域内指定一个唯一名称。
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">访问下记 URL 获取更多信息:
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">http://dev.mysql.com/doc/mysql-monitor/8.0/en/mem-install-server.html
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">----------------------------------------------------------------------------
+</span></span><span class="line"><span class="cl">配置存储库
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">请指定 bundled MySQL 服务器的下记参数
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">存储库用户名称 <span class="o">[</span>service_manager<span class="o">]</span>:  &lt;回车&gt;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">密码 : &lt;输入密码&gt;
+</span></span><span class="line"><span class="cl">再次输入 : &lt;输入密码&gt;
+</span></span><span class="line"><span class="cl">MySQL 数据库端口 <span class="o">[</span>13306<span class="o">]</span>: &lt;回车&gt;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">MySQL 数据库名称 <span class="o">[</span>mem<span class="o">]</span>: &lt;回车&gt;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">----------------------------------------------------------------------------
+</span></span><span class="line"><span class="cl">配置报告
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">没有使用root用户安装 MySQL Enterprise Monitor。因此无法配置为重启后自动运行。参阅 MySQL Enterprise Monitor
+</span></span><span class="line"><span class="cl">文档的安装部分获得手动安装的详细信息
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">按 <span class="o">[</span>Enter<span class="o">]</span> 继续：&lt;回车&gt;
+</span></span><span class="line"><span class="cl">----------------------------------------------------------------------------
+</span></span><span class="line"><span class="cl">准备安装 MySQL Enterprise Monitor 至您的计算机。
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">您确定要继续吗？ <span class="o">[</span>Y/n<span class="o">]</span>: &lt;回车&gt;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">----------------------------------------------------------------------------
+</span></span><span class="line"><span class="cl">正在安装 MySQL Enterprise Monitor 至您的电脑中，请稍候。
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"> 正在安装
+</span></span><span class="line"><span class="cl"> 0% ______________ 50% ______________ 100%
+</span></span><span class="line"><span class="cl"> <span class="c1">#########################################</span>
+</span></span><span class="line"><span class="cl"> 
+</span></span><span class="line"><span class="cl"> ----------------------------------------------------------------------------
+</span></span><span class="line"><span class="cl">完成安装文件
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">完成 MySQL Enterprise Monitor 安装文件在您的计算机
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">卸载 MySQL Enterprise Monitor 文件调用:
+</span></span><span class="line"><span class="cl">/home/ubuntu/mysql/enterprise/monitor/uninstall
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">完成安装，启动 MySQL Enterprise Monitor 监视面板并完成初始配置。请参阅自述文件以获得更多信息和已知问题列表。
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">按 <span class="o">[</span>Enter<span class="o">]</span> 继续： &lt;回车&gt;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">----------------------------------------------------------------------------
+</span></span><span class="line"><span class="cl">完成安装文件
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">警告: 为提升安全性，与服务管理器的通信采用
+</span></span><span class="line"><span class="cl">SSL。因为在安装服务管理器时包含基本的自签署安全证书，所以您的浏览器很可能会显示一个关于不可信连接的警告。请安装您自己的证书或为服务管理器的 URL
+</span></span><span class="line"><span class="cl">添加一个安全例外。查阅文档获取更多信息。
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">http://dev.mysql.com/doc/mysql-monitor/8.0/en/mem-ssl-installation.html
+</span></span><span class="line"><span class="cl">按 <span class="o">[</span>Enter<span class="o">]</span> 继续： &lt;回车&gt;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">----------------------------------------------------------------------------
+</span></span><span class="line"><span class="cl">安装程序已经将 MySQL Enterprise Monitor 安装于您的电脑中。
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">查看自述文件 <span class="o">[</span>Y/n<span class="o">]</span>: &lt;回车&gt;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">信息: 配置 MySQL Enterprise Monitor 请访问下记页面: https://localhost:18443
+</span></span><span class="line"><span class="cl">按 <span class="o">[</span>Enter<span class="o">]</span> 继续：&lt;回车&gt;
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>访问<code>https://&lt;ip&gt;:18443</code>，初始化配置一下Service Monitor：</p>
+<img src="5.jpg" style="zoom:50%;" />
+<ol>
+<li>设置 manager 角色的账号，以后访问Service Manager就用它</li>
+<li>设置 agent 角色的账号，之后 Agent 和 Service Manager通信的时候，需要使用这个账号</li>
+<li>设置数据保留期，根据情况自行设置</li>
+<li>关闭自动在线检查更新</li>
+<li>完成设置</li>
+</ol>
+<p>然后你会进入首页，提示你设置时区和语言：</p>
+<img src="6.jpg" style="zoom:50%;" />
+<h2 id="安装agent">安装Agent<a class="anchor ms-1" href="#安装agent"><i class="fas fa-link"></i></a></h2>
+<p>上传mysqlmonitoragent-8.0.25.1328-linux-x86-64bit-installer.bin到MySQL服务器，然后安装：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">  1
+</span><span class="lnt">  2
+</span><span class="lnt">  3
+</span><span class="lnt">  4
+</span><span class="lnt">  5
+</span><span class="lnt">  6
+</span><span class="lnt">  7
+</span><span class="lnt">  8
+</span><span class="lnt">  9
+</span><span class="lnt"> 10
+</span><span class="lnt"> 11
+</span><span class="lnt"> 12
+</span><span class="lnt"> 13
+</span><span class="lnt"> 14
+</span><span class="lnt"> 15
+</span><span class="lnt"> 16
+</span><span class="lnt"> 17
+</span><span class="lnt"> 18
+</span><span class="lnt"> 19
+</span><span class="lnt"> 20
+</span><span class="lnt"> 21
+</span><span class="lnt"> 22
+</span><span class="lnt"> 23
+</span><span class="lnt"> 24
+</span><span class="lnt"> 25
+</span><span class="lnt"> 26
+</span><span class="lnt"> 27
+</span><span class="lnt"> 28
+</span><span class="lnt"> 29
+</span><span class="lnt"> 30
+</span><span class="lnt"> 31
+</span><span class="lnt"> 32
+</span><span class="lnt"> 33
+</span><span class="lnt"> 34
+</span><span class="lnt"> 35
+</span><span class="lnt"> 36
+</span><span class="lnt"> 37
+</span><span class="lnt"> 38
+</span><span class="lnt"> 39
+</span><span class="lnt"> 40
+</span><span class="lnt"> 41
+</span><span class="lnt"> 42
+</span><span class="lnt"> 43
+</span><span class="lnt"> 44
+</span><span class="lnt"> 45
+</span><span class="lnt"> 46
+</span><span class="lnt"> 47
+</span><span class="lnt"> 48
+</span><span class="lnt"> 49
+</span><span class="lnt"> 50
+</span><span class="lnt"> 51
+</span><span class="lnt"> 52
+</span><span class="lnt"> 53
+</span><span class="lnt"> 54
+</span><span class="lnt"> 55
+</span><span class="lnt"> 56
+</span><span class="lnt"> 57
+</span><span class="lnt"> 58
+</span><span class="lnt"> 59
+</span><span class="lnt"> 60
+</span><span class="lnt"> 61
+</span><span class="lnt"> 62
+</span><span class="lnt"> 63
+</span><span class="lnt"> 64
+</span><span class="lnt"> 65
+</span><span class="lnt"> 66
+</span><span class="lnt"> 67
+</span><span class="lnt"> 68
+</span><span class="lnt"> 69
+</span><span class="lnt"> 70
+</span><span class="lnt"> 71
+</span><span class="lnt"> 72
+</span><span class="lnt"> 73
+</span><span class="lnt"> 74
+</span><span class="lnt"> 75
+</span><span class="lnt"> 76
+</span><span class="lnt"> 77
+</span><span class="lnt"> 78
+</span><span class="lnt"> 79
+</span><span class="lnt"> 80
+</span><span class="lnt"> 81
+</span><span class="lnt"> 82
+</span><span class="lnt"> 83
+</span><span class="lnt"> 84
+</span><span class="lnt"> 85
+</span><span class="lnt"> 86
+</span><span class="lnt"> 87
+</span><span class="lnt"> 88
+</span><span class="lnt"> 89
+</span><span class="lnt"> 90
+</span><span class="lnt"> 91
+</span><span class="lnt"> 92
+</span><span class="lnt"> 93
+</span><span class="lnt"> 94
+</span><span class="lnt"> 95
+</span><span class="lnt"> 96
+</span><span class="lnt"> 97
+</span><span class="lnt"> 98
+</span><span class="lnt"> 99
+</span><span class="lnt">100
+</span><span class="lnt">101
+</span><span class="lnt">102
+</span><span class="lnt">103
+</span><span class="lnt">104
+</span><span class="lnt">105
+</span><span class="lnt">106
+</span><span class="lnt">107
+</span><span class="lnt">108
+</span><span class="lnt">109
+</span><span class="lnt">110
+</span><span class="lnt">111
+</span><span class="lnt">112
+</span><span class="lnt">113
+</span><span class="lnt">114
+</span><span class="lnt">115
+</span><span class="lnt">116
+</span><span class="lnt">117
+</span><span class="lnt">118
+</span><span class="lnt">119
+</span><span class="lnt">120
+</span><span class="lnt">121
+</span><span class="lnt">122
+</span><span class="lnt">123
+</span><span class="lnt">124
+</span><span class="lnt">125
+</span><span class="lnt">126
+</span><span class="lnt">127
+</span><span class="lnt">128
+</span><span class="lnt">129
+</span><span class="lnt">130
+</span><span class="lnt">131
+</span><span class="lnt">132
+</span><span class="lnt">133
+</span><span class="lnt">134
+</span><span class="lnt">135
+</span><span class="lnt">136
+</span><span class="lnt">137
+</span><span class="lnt">138
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">$ ./mysqlmonitoragent-8.0.25.1328-linux-x86-64bit-installer.bin --mode text
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">Language Selection
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">Please <span class="k">select</span> the installation language
+</span></span><span class="line"><span class="cl"><span class="o">[</span>1<span class="o">]</span> English - English
+</span></span><span class="line"><span class="cl"><span class="o">[</span>2<span class="o">]</span> Japanese - 日本語
+</span></span><span class="line"><span class="cl"><span class="o">[</span>3<span class="o">]</span> Simplified Chinese - 简体中文
+</span></span><span class="line"><span class="cl">Please choose an option <span class="o">[</span>1<span class="o">]</span> : <span class="m">3</span>  &lt;选择3&gt;
+</span></span><span class="line"><span class="cl">----------------------------------------------------------------------------
+</span></span><span class="line"><span class="cl">欢迎使用 MySQL Enterprise Monitor Agent 安装向导。
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">----------------------------------------------------------------------------
+</span></span><span class="line"><span class="cl">安装目录
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">请指定 MySQL Enterprise Monitor Agent 安装位置
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">安装目录 <span class="o">[</span>/home/ubuntu/mysql/enterprise/agent<span class="o">]</span>: &lt;回车&gt;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">agent 连接方式？
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="o">[</span>1<span class="o">]</span> TCP/IP
+</span></span><span class="line"><span class="cl"><span class="o">[</span>2<span class="o">]</span> Socket
+</span></span><span class="line"><span class="cl">请选择选项 <span class="o">[</span>1<span class="o">]</span> : &lt;回车&gt;
+</span></span><span class="line"><span class="cl">----------------------------------------------------------------------------
+</span></span><span class="line"><span class="cl">监视选项
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">您可以配置 Agent 用于监视主机。<span class="o">(</span>文件系统， CPU， RAM， 等等。<span class="o">)</span> 使用监视面板为当前或之后运行的 MySQL 实例提供连接参数。
+</span></span><span class="line"><span class="cl">Agent所识别的每个实例可以自动或手动进行添加。<span class="o">(</span>注意: Windows上无法提供运行中MySQL的进程扫描功能，
+</span></span><span class="line"><span class="cl">但是您可以通过监视面板手动添加连接和参数。<span class="o">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">访问下记 URL 获取更多信息:
+</span></span><span class="line"><span class="cl">http://dev.mysql.com/doc/mysql-monitor/8.0/en/mem-qanal-using-feeding.html
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">监视选项:
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="o">[</span>1<span class="o">]</span> 仅主机: 配置 Agent 去监视主机并使用监视面板为当前或之后运行的 MySQL 实例提供连接参数。
+</span></span><span class="line"><span class="cl"><span class="o">[</span>2<span class="o">]</span> 主机和数据库: 配置 Agent 去监视主机并为指定的 MySQL 实例提供连接参数。 该过程可以脚本化。一旦安装， Agent 将持续寻找新的MySQL实例并监视。
+</span></span><span class="line"><span class="cl">请选择选项 <span class="o">[</span>2<span class="o">]</span> : &lt;回车&gt;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">----------------------------------------------------------------------------
+</span></span><span class="line"><span class="cl">准备将 MySQL Enterprise Monitor Agent 安装至您的计算机。
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">您确定要继续吗？ <span class="o">[</span>Y/n<span class="o">]</span>: &lt;回车&gt;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">----------------------------------------------------------------------------
+</span></span><span class="line"><span class="cl">请等待安装 MySQL Enterprise Monitor Agent 至您的计算机。
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"> 正在安装
+</span></span><span class="line"><span class="cl"> 0% ______________ 50% ______________ 100%
+</span></span><span class="line"><span class="cl"> <span class="c1">#########################################</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">----------------------------------------------------------------------------
+</span></span><span class="line"><span class="cl">MySQL Enterprise Monitor 选项
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">主机名称或 IP 地址 <span class="o">[]</span>:  &lt;输入Service Manager的IP&gt;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">Tomcat SSL 端口 <span class="o">[</span>18443<span class="o">]</span>: &lt;回车&gt;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">Agent使用下记用户名称和密码连接到 Monitor。它们在您安装 Monitor 时定义，可以在设置里面修改， 管理用户。它们的角色定义为 <span class="s2">&#34;agent&#34;</span>。
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">Agent 用户名称 <span class="o">[</span>agent<span class="o">]</span>:  &lt;回车&gt; &lt;这里用到的就是之前配置的Agent角色的账号&gt;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">Agent 密码 : &lt;agent账号密码&gt;
+</span></span><span class="line"><span class="cl">再次输入 : &lt;agent账号密码&gt;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">----------------------------------------------------------------------------
+</span></span><span class="line"><span class="cl">监视数据库配置选项
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">验证主机名称，端口，和管理账户权限 <span class="o">[</span>Y/n<span class="o">]</span>: &lt;回车&gt;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">配置用户账户加密 <span class="o">[</span>y/N<span class="o">]</span>: &lt;回车&gt;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">配置少权限用户账户 <span class="o">[</span>y/N<span class="o">]</span>: &lt;回车&gt;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">----------------------------------------------------------------------------
+</span></span><span class="line"><span class="cl">监视对象数据库的信息
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">重要: 以下管理用户需要特别的 MySQL 权限。
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">访问下记 URL 获取更多信息:
+</span></span><span class="line"><span class="cl">http://dev.mysql.com/doc/mysql-monitor/8.0/en/mem-agent-rights.html
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">MySQL 主机名称或 IP 地址 <span class="o">[</span>localhost<span class="o">]</span>:
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">MySQL 端口 <span class="o">[</span>3306<span class="o">]</span>: &lt;回车&gt;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">管理用户 <span class="o">[]</span>: root
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">管理密码 : &lt;root账号密码&gt;
+</span></span><span class="line"><span class="cl">再次输入密码 : &lt;root账号密码&gt;
+</span></span><span class="line"><span class="cl">监视组 <span class="o">[]</span>: &lt;回车&gt;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">----------------------------------------------------------------------------
+</span></span><span class="line"><span class="cl">配置报告
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">MySQL Enterprise Monitor Agent <span class="o">(</span>Version 8.0.25.1328<span class="o">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">指定的设置如下
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">注意使用连接器收集查询分析器数据，
+</span></span><span class="line"><span class="cl">您需要一些设置去配置连接器。 参照
+</span></span><span class="line"><span class="cl">下记信息:
+</span></span><span class="line"><span class="cl">http://dev.mysql.com/doc/mysql-monitor/8.0/en/mem-qanal-using-feeding.html
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">安装目录: /home/ubuntu/mysql/enterprise/agent
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">MySQL Enterprise Monitor UI:
+</span></span><span class="line"><span class="cl">-------------------------
+</span></span><span class="line"><span class="cl">主机名称或 IP 地址: &lt;...&gt;
+</span></span><span class="line"><span class="cl">Tomcat Server 端口: <span class="m">18443</span>
+</span></span><span class="line"><span class="cl">使用 SSL: yes
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">监视 MySQL 数据库:
+</span></span><span class="line"><span class="cl">-------------------------
+</span></span><span class="line"><span class="cl">主机名称或 IP 地址: localhost
+</span></span><span class="line"><span class="cl">端口: <span class="m">3306</span>
+</span></span><span class="line"><span class="cl">按 <span class="o">[</span>Enter<span class="o">]</span> 继续： &lt;回车&gt;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">----------------------------------------------------------------------------
+</span></span><span class="line"><span class="cl">启动 MySQL Enterprise Monitor Agent
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">启动 MySQL Enterprise Monitor Agent 信息
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">MySQL Enterprise Monitor Agent 成功安装。启动 Agent 请调用:
+</span></span><span class="line"><span class="cl">/home/ubuntu/mysql/enterprise/agent/etc/init.d/mysql-monitor-agent start
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">按 <span class="o">[</span>Enter<span class="o">]</span> 继续： &lt;回车&gt;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">----------------------------------------------------------------------------
+</span></span><span class="line"><span class="cl">已在您的计算机完成安装 MySQL Enterprise Monitor Agent 。
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>然后启动Agent：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">$ /home/ubuntu/mysql/enterprise/agent/etc/init.d/mysql-monitor-agent start
+</span></span><span class="line"><span class="cl">Starting MySQL Enterprise Agent service...
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="在service-manager上查看">在Service Manager上查看<a class="anchor ms-1" href="#在service-manager上查看"><i class="fas fa-link"></i></a></h2>
+<p>如果一切正常，那么你可以在Service Manager上看到两个MySQL实例：</p>
+<img src="7.jpg" style="zoom:50%;" />
+<ul>
+<li>xxxx:3306 是刚才安装的Agent所在的实例</li>
+<li>xxxx:13306 则是Service Monitor自己用的MySQL的实例</li>
+</ul>
+<h2 id="文档">文档<a class="anchor ms-1" href="#文档"><i class="fas fa-link"></i></a></h2>
+<p><a href="https://dev.mysql.com/doc/mysql-monitor/8.0/en/preface.html" target="_blank" rel="noopener noreferrer">https://dev.mysql.com/doc/mysql-monitor/8.0/en/preface.html</a></p></div></div>
+  <div class="card-footer"><div class="post-navs d-flex justify-content-evenly"><div class="post-nav post-prev">
+    <i class="fas fa-fw fa-chevron-left"></i>
+    <a href="/post/slow-disk-etcd-troubleshooting/">慢磁盘导致etcd不健康问题排查
+</a>
+  </div><div class="post-nav post-next">
+    <a href="/post/rancher/rancher-grafana-loki/">Rancher安装Grafana Loki
+</a>
+    <i class="fas fa-fw fa-chevron-right"></i>
+  </div></div></div>
+</article><div class="post-copyright mb-3 row card component" id="post-copyright">
+    <div class="card-header">
+        <h2 class="card-title">版权</h2>
+    </div>
+    <div class="card-body"><a class="d-flex align-items-center flex-column" target="_blank" rel="license noopener noreferrer" href="https://creativecommons.org/licenses/by-nc-nd/4.0/deed.zh">
+  <span><i class="fab fa-fw fa-2x fa-creative-commons"></i><i class="fab fa-fw fa-2x fa-creative-commons-by"></i><i class="fab fa-fw fa-2x fa-creative-commons-nc"></i><i class="fab fa-fw fa-2x fa-creative-commons-nd"></i></span>
+  CC BY-NC-ND 4.0 
+</a>
+
+
+    </div>
+</div><section class="related-posts row card component">
+    <div class="card-header">
+      <h2 class="card-title">相关文章</h2>
+    </div>
+    <div class="card-body">
+      <ul class="post-list"><li>
+          <a href="/post/mysql-case-insensitive-query/">Mysql字符串字段查询默认大小写不敏感
+</a>
+          <span class="float-end post-date">2020-09-30
+</span>
+        </li><li>
+          <a href="/post/mysql/index-for-string/">MySQL - 给字符串加索引
+</a>
+          <span class="float-end post-date">2020-01-13
+</span>
+        </li><li>
+          <a href="/post/mysql/force-index/">MySQL - 数据库选错索引怎么办
+</a>
+          <span class="float-end post-date">2020-01-12
+</span>
+        </li><li>
+          <a href="/post/mysql/page-change-buffer-index/">MySQL - 数据页、change Buffer和索引
+</a>
+          <span class="float-end post-date">2020-01-07
+</span>
+        </li><li>
+          <a href="/post/mysql/mvcc/">MySQL - MVCC和事务隔离
+</a>
+          <span class="float-end post-date">2019-12-30
+</span>
+        </li></ul>
+    </div>
+  </section><div class="card component row post-comments" id="post-comments">
+  <div class="card-header">
+    <h2 class="card-title">评论</h2>
+  </div>
+  <div class="card-body"></div>
+</div></div>
+</div><aside class="col-lg-4 sidebar d-flex">
+  <div class="container d-flex flex-column">
+    
+    <section class="card row text-center profile component">
+  <div class="card-body">
+    <div class="col-12 d-flex align-items-center justify-content-center"><img class="profile-avatar rounded-circle" alt="颇忒脱" src="/images/avatar.jpg" loading="lazy"
+   width="455" height="455"
+   />
+</div>
+    <div class="col-12 profile-meta"><div class="profile-name">颇忒脱</div><nav class="social-links nav justify-content-center"><a class="nav-link social-link" target="_blank" href="https://github.com/chanjarster" title="GitHub" rel="noopener noreferrer">
+        <i class="fa-fw fa-2x fab fa-github"></i>
+      </a></nav>
+</div>
+  </div>
+</section>
+  <div class="post-toc row mb-4 card component" id="postTOC">
+  <div class="card-header">
+    <h2 class="card-title">目录</h2>
+  </div>
+  <div class="card-body">
+    <nav id="TableOfContents">
+  <ul>
+    <li><a href="#下载软件">下载软件</a></li>
+    <li><a href="#文件说明">文件说明</a></li>
+    <li><a href="#安装service-manager">安装Service Manager</a></li>
+    <li><a href="#安装agent">安装Agent</a></li>
+    <li><a href="#在service-manager上查看">在Service Manager上查看</a></li>
+    <li><a href="#文档">文档</a></li>
+  </ul>
+</nav>
+  </div>
+</div><section class="featured-posts row card component">
+    <div class="card-header">
+      <h2 class="card-title">精选文章</h2>
+    </div>
+    <div class="card-body">
+      <ul class="post-list"><li>
+          <a href="/post/redis-cluster-ops/index-page/">Redis 集群运维笔记
+</a>
+        </li><li>
+          <a href="/post/linux/namespace/index-page/">Linux Namespace系列
+</a>
+        </li><li>
+          <a href="/post/network/index-page/">Networking系列
+</a>
+        </li><li>
+          <a href="/post/mysql/index-page/">MySQL系列
+</a>
+        </li><li>
+          <a href="/post/concurrent-programming/index-page/">并发编程系列
+</a>
+        </li></ul>
+    </div>
+  </section><section class="recent-posts row card component">
+  <div class="card-header">
+    <h2 class="card-title">最近文章</h2>
+  </div>
+  <div class="card-body">
+    <ul class="post-list"><li>
+        <a href="/post/qoder-switch-session/">QoderCN 切换账号后迁移会话历史
+</a>
+      </li><li>
+        <a href="/post/spring-boot-jdk-comp-table-copy/">Spring Boot 3.4 升级过程记录
+</a>
+      </li><li>
+        <a href="/post/redis-cluster-ops/index-page/">Redis 集群运维笔记
+</a>
+      </li><li>
+        <a href="/post/spring-boot-jdk-comp-table/">Spring、JDK、Maven 版本兼容性表格
+</a>
+      </li><li>
+        <a href="/post/network/calico-firewall-k8s/">Calico 配置 K8s 防火墙
+</a>
+      </li></ul>
+  </div>
+</section><section class="tags-taxonomies row card component">
+      <div class="card-header">
+        <h2 class="card-title">
+          <a href="/tags">标签</a>
+        </h2>
+      </div>
+      <div class="card-body">
+        <div class="py-2"><a href="/tags/arts-a/" class="badge rounded post-taxonomy" title="ARTS-A">
+            ARTS-A<span class="badge badge-sm text-white bg-accent ms-1">125</span></a><a href="/tags/k8s/" class="badge rounded post-taxonomy" title="k8s">
+            k8s<span class="badge badge-sm text-white bg-accent ms-1">52</span></a><a href="/tags/troubleshooting/" class="badge rounded post-taxonomy" title="troubleshooting">
+            troubleshooting<span class="badge badge-sm text-white bg-accent ms-1">40</span></a><a href="/tags/jvm/" class="badge rounded post-taxonomy" title="jvm">
+            jvm<span class="badge badge-sm text-white bg-accent ms-1">39</span></a><a href="/tags/docker/" class="badge rounded post-taxonomy" title="docker">
+            docker<span class="badge badge-sm text-white bg-accent ms-1">30</span></a><a href="/tags/mysql/" class="badge rounded post-taxonomy" title="mysql">
+            mysql<span class="badge badge-sm text-white bg-accent ms-1">25</span></a><a href="/tags/network/" class="badge rounded post-taxonomy" title="network">
+            network<span class="badge badge-sm text-white bg-accent ms-1">25</span></a><a href="/tags/%E5%B9%B6%E5%8F%91%E7%BC%96%E7%A8%8B/" class="badge rounded post-taxonomy" title="并发编程">
+            并发编程<span class="badge badge-sm text-white bg-accent ms-1">21</span></a><a href="/tags/cheatsheet/" class="badge rounded post-taxonomy" title="cheatsheet">
+            cheatsheet<span class="badge badge-sm text-white bg-accent ms-1">20</span></a><a href="/tags/java/" class="badge rounded post-taxonomy" title="java">
+            java<span class="badge badge-sm text-white bg-accent ms-1">20</span></a><a href="/tags/kernel/" class="badge rounded post-taxonomy" title="kernel">
+            kernel<span class="badge badge-sm text-white bg-accent ms-1">19</span></a><a href="/tags/linux/" class="badge rounded post-taxonomy" title="linux">
+            linux<span class="badge badge-sm text-white bg-accent ms-1">19</span></a><a href="/tags/redis/" class="badge rounded post-taxonomy" title="redis">
+            redis<span class="badge badge-sm text-white bg-accent ms-1">17</span></a><a href="/tags/prometheus/" class="badge rounded post-taxonomy" title="prometheus">
+            prometheus<span class="badge badge-sm text-white bg-accent ms-1">13</span></a><a href="/tags/%E6%80%A7%E8%83%BD%E8%B0%83%E4%BC%98/" class="badge rounded post-taxonomy" title="性能调优">
+            性能调优<span class="badge badge-sm text-white bg-accent ms-1">13</span></a><a href="/tags/go/" class="badge rounded post-taxonomy" title="go">
+            go<span class="badge badge-sm text-white bg-accent ms-1">10</span></a><a href="/tags/%E5%BE%AE%E6%9C%8D%E5%8A%A1/" class="badge rounded post-taxonomy" title="微服务">
+            微服务<span class="badge badge-sm text-white bg-accent ms-1">10</span></a><a href="/tags/rancher/" class="badge rounded post-taxonomy" title="rancher">
+            rancher<span class="badge badge-sm text-white bg-accent ms-1">9</span></a><a href="/tags/debug/" class="badge rounded post-taxonomy" title="debug">
+            debug<span class="badge badge-sm text-white bg-accent ms-1">7</span></a><a href="/tags/gc/" class="badge rounded post-taxonomy" title="gc">
+            gc<span class="badge badge-sm text-white bg-accent ms-1">7</span></a><a href="/tags/nginx/" class="badge rounded post-taxonomy" title="nginx">
+            nginx<span class="badge badge-sm text-white bg-accent ms-1">7</span></a><a href="/tags/ingress/" class="badge rounded post-taxonomy" title="ingress">
+            ingress<span class="badge badge-sm text-white bg-accent ms-1">6</span></a><a href="/tags/%E8%BF%90%E7%BB%B4/" class="badge rounded post-taxonomy" title="运维">
+            运维<span class="badge badge-sm text-white bg-accent ms-1">6</span></a><a href="/tags/ci_cd/" class="badge rounded post-taxonomy" title="CI_CD">
+            CI_CD<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/interview/" class="badge rounded post-taxonomy" title="interview">
+            interview<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/jmx/" class="badge rounded post-taxonomy" title="jmx">
+            jmx<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/openssl/" class="badge rounded post-taxonomy" title="openssl">
+            openssl<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/tls/" class="badge rounded post-taxonomy" title="tls">
+            tls<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/%E5%88%86%E5%B8%83%E5%BC%8F%E4%BA%8B%E5%8A%A1/" class="badge rounded post-taxonomy" title="分布式事务">
+            分布式事务<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/%E5%88%86%E5%B8%83%E5%BC%8F%E7%AE%97%E6%B3%95/" class="badge rounded post-taxonomy" title="分布式算法">
+            分布式算法<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/%E6%94%B6%E8%97%8F%E5%A4%B9/" class="badge rounded post-taxonomy" title="收藏夹">
+            收藏夹<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/%E9%AB%98%E5%B9%B6%E5%8F%91/" class="badge rounded post-taxonomy" title="高并发">
+            高并发<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/visualvm/" class="badge rounded post-taxonomy" title="visualvm">
+            visualvm<span class="badge badge-sm text-white bg-accent ms-1">4</span></a><a href="/tags/%E6%97%A5%E5%BF%97/" class="badge rounded post-taxonomy" title="日志">
+            日志<span class="badge badge-sm text-white bg-accent ms-1">4</span></a><a href="/tags/arts/" class="badge rounded post-taxonomy" title="arts">
+            arts<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/arts-r/" class="badge rounded post-taxonomy" title="arts-r">
+            arts-r<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/classloader/" class="badge rounded post-taxonomy" title="ClassLoader">
+            ClassLoader<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/container/" class="badge rounded post-taxonomy" title="container">
+            container<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/ios/" class="badge rounded post-taxonomy" title="ios">
+            ios<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/iphone/" class="badge rounded post-taxonomy" title="iphone">
+            iphone<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/jenkins/" class="badge rounded post-taxonomy" title="Jenkins">
+            Jenkins<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/namespace/" class="badge rounded post-taxonomy" title="namespace">
+            namespace<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/scheduling/" class="badge rounded post-taxonomy" title="scheduling">
+            scheduling<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/springboot/" class="badge rounded post-taxonomy" title="springboot">
+            springboot<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/thread/" class="badge rounded post-taxonomy" title="thread">
+            thread<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/%E5%88%86%E5%B8%83%E5%BC%8F%E6%9E%B6%E6%9E%84/" class="badge rounded post-taxonomy" title="分布式架构">
+            分布式架构<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/%E5%8D%8E%E4%B8%BA/" class="badge rounded post-taxonomy" title="华为">
+            华为<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/%E8%8B%B9%E6%9E%9C/" class="badge rounded post-taxonomy" title="苹果">
+            苹果<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/bash/" class="badge rounded post-taxonomy" title="bash">
+            bash<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/etcd/" class="badge rounded post-taxonomy" title="etcd">
+            etcd<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/grafana/" class="badge rounded post-taxonomy" title="grafana">
+            grafana<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/iptables/" class="badge rounded post-taxonomy" title="iptables">
+            iptables<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/jdbc/" class="badge rounded post-taxonomy" title="JDBC">
+            JDBC<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/jmeter/" class="badge rounded post-taxonomy" title="jmeter">
+            jmeter<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/%E6%95%B0%E6%8D%AE%E5%BA%93%E6%97%B6%E5%8C%BA%E9%82%A3%E4%BA%9B%E4%BA%8B%E5%84%BF/" class="badge rounded post-taxonomy" title="数据库时区那些事儿">
+            数据库时区那些事儿<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/%E7%9B%91%E6%8E%A7/" class="badge rounded post-taxonomy" title="监控">
+            监控<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/%E9%99%90%E6%B5%81/" class="badge rounded post-taxonomy" title="限流">
+            限流<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/acloud/" class="badge rounded post-taxonomy" title="acloud">
+            acloud<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/agent/" class="badge rounded post-taxonomy" title="agent">
+            agent<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/akka/" class="badge rounded post-taxonomy" title="Akka">
+            Akka<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/alertmanager/" class="badge rounded post-taxonomy" title="alertmanager">
+            alertmanager<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/calico/" class="badge rounded post-taxonomy" title="calico">
+            calico<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/chrome/" class="badge rounded post-taxonomy" title="chrome">
+            chrome<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/coredns/" class="badge rounded post-taxonomy" title="coredns">
+            coredns<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/elasticsearch/" class="badge rounded post-taxonomy" title="elasticsearch">
+            elasticsearch<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/fluentd/" class="badge rounded post-taxonomy" title="fluentd">
+            fluentd<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/harbor/" class="badge rounded post-taxonomy" title="harbor">
+            harbor<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/helm/" class="badge rounded post-taxonomy" title="helm">
+            helm<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/hystrix/" class="badge rounded post-taxonomy" title="hystrix">
+            hystrix<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/io/" class="badge rounded post-taxonomy" title="io">
+            io<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/jdpa/" class="badge rounded post-taxonomy" title="jdpa">
+            jdpa<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/jwt/" class="badge rounded post-taxonomy" title="jwt">
+            jwt<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/kafka/" class="badge rounded post-taxonomy" title="kafka">
+            kafka<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/kibana/" class="badge rounded post-taxonomy" title="kibana">
+            kibana<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/mq/" class="badge rounded post-taxonomy" title="MQ">
+            MQ<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/nfs/" class="badge rounded post-taxonomy" title="nfs">
+            nfs<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/oauth/" class="badge rounded post-taxonomy" title="oauth">
+            oauth<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/oracle/" class="badge rounded post-taxonomy" title="Oracle">
+            Oracle<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/pprof/" class="badge rounded post-taxonomy" title="pprof">
+            pprof<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/qoder/" class="badge rounded post-taxonomy" title="qoder">
+            qoder<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/reactor/" class="badge rounded post-taxonomy" title="reactor">
+            reactor<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/spring-boot/" class="badge rounded post-taxonomy" title="spring-boot">
+            spring-boot<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/spring-cloud/" class="badge rounded post-taxonomy" title="Spring Cloud">
+            Spring Cloud<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/ssl/" class="badge rounded post-taxonomy" title="ssl">
+            ssl<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/systemtap/" class="badge rounded post-taxonomy" title="systemtap">
+            systemtap<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/tiller/" class="badge rounded post-taxonomy" title="tiller">
+            tiller<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/tomcat/" class="badge rounded post-taxonomy" title="tomcat">
+            tomcat<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/ubuntu/" class="badge rounded post-taxonomy" title="ubuntu">
+            ubuntu<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/vtable/" class="badge rounded post-taxonomy" title="vtable">
+            vtable<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/%E6%B6%88%E6%81%AF%E9%98%9F%E5%88%97/" class="badge rounded post-taxonomy" title="消息队列">
+            消息队列<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/%E6%B7%B1%E4%BF%A1%E6%9C%8D/" class="badge rounded post-taxonomy" title="深信服">
+            深信服<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/%E7%BC%93%E5%AD%98/" class="badge rounded post-taxonomy" title="缓存">
+            缓存<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/%E8%99%9A%E6%8B%9F%E5%8C%96/" class="badge rounded post-taxonomy" title="虚拟化">
+            虚拟化<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/%E8%B0%83%E7%94%A8%E9%93%BE%E8%BF%BD%E8%B8%AA/" class="badge rounded post-taxonomy" title="调用链追踪">
+            调用链追踪<span class="badge badge-sm text-white bg-accent ms-1">1</span></a></div>
+      </div>
+    </section>
+    
+  </div>
+</aside>
+</div>
+    </main><footer class="footer mt-auto py-3 text-center container"><nav class="social-links nav justify-content-center mb-2"><a class="nav-link social-link" target="_blank" href="https://github.com/chanjarster" title="GitHub" rel="noopener noreferrer">
+        <i class="fa-fw fa-2x fab fa-github"></i>
+      </a></nav>
+<div class="copyright mb-2">
+  Copyright © 2010-2026 Daniel Qian. All Rights Reserved.
+</div>
+<div class="powered-by mb-2">
+  Powered by <a href="https://gohugo.io" target="_blank" rel="noopener noreferrer">Hugo</a> and the <a href="https://github.com/razonyang/hugo-theme-bootstrap" target="_blank" rel="noopener noreferrer">Bootstrap</a> theme.
+</div>
+<a href="https://www.netlify.com" target="_blank" rel="noopener noreferrer">
+    <img src="https://www.netlify.com/img/global/badges/netlify-color-accent.svg" alt="Deploys by Netlify" width="114" height="51" />
+</a>
+</footer>
+<script src="/js/main.2cdce25f280f570596c88888d6af930fe5e15ea030005291dad293defbb231d3.js" integrity="sha256-LNziXygPVwWWyIiI1q&#43;TD&#43;XhXqAwAFKR2tKT3vuyMdM=" crossorigin="anonymous" defer></script><script src="/js/icons.min.7b1f27dfde35467d03350938b2e41dbffd06347009b97ab913edfaca01a07814.js" integrity="sha256-ex8n3941Rn0DNQk4suQdv/0GNHAJuXq5E&#43;36ygGgeBQ=" crossorigin="anonymous" defer></script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('\/service-worker.js').then(function(reg) {
+      console.log('Successfully registered service worker', reg);
+    }).catch(function(err) {
+      console.warn('Error whilst registering service worker', err);
+    });
+  });
+}
+</script><script src="/js/viewer.min.1ec1fa5aa3a66267222a44fe1cd51856ad4a92be48ede579fb36d70a6d4c28e9.js" integrity="sha256-HsH6WqOmYmciKkT&#43;HNUYVq1Kkr5I7eV5&#43;zbXCm1MKOk=" crossorigin="anonymous" defer></script>
+</body>
+</html>

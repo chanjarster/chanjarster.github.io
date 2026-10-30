@@ -1,0 +1,592 @@
+<!doctype html><html lang="zh-cn" data-palette="blue"
+  >
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>jps jstat jstack...的工作原理 - 颇忒脱的技术博客</title><link rel="apple-touch-icon" href="/images/icons/icon-180x180.png" sizes="180x180">
+<link rel="icon" href="/images/icons/icon-32x32.png" sizes="32x32" type="image/png">
+<link rel="icon" href="/images/icons/icon-16x16.png" sizes="16x16" type="image/png">
+<link rel="icon" href="/images/icons/favicon.ico">
+<link rel="manifest" href="/manifest.json">
+<meta name="keywords" content="" />
+<meta name="description" content="本文介绍JDK 8的jps、jstat、jstack &hellip; 的工作原理。" /><meta name="robots" content="index, follow" /><meta itemprop="name" content="jps jstat jstack...的工作原理">
+<meta itemprop="description" content="本文介绍JDK 8的jps、jstat、jstack &hellip; 的工作原理。"><meta itemprop="datePublished" content="2021-12-07T13:12:18+08:00" />
+<meta itemprop="dateModified" content="2021-12-07T13:12:18+08:00" />
+<meta itemprop="wordCount" content="1163">
+<meta itemprop="keywords" content="jvm," /><meta property="og:title" content="jps jstat jstack...的工作原理" />
+<meta property="og:description" content="本文介绍JDK 8的jps、jstat、jstack &hellip; 的工作原理。" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="/post/jvm-tools/" /><meta property="article:section" content="post" />
+<meta property="article:published_time" content="2021-12-07T13:12:18+08:00" />
+<meta property="article:modified_time" content="2021-12-07T13:12:18+08:00" />
+
+<meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="jps jstat jstack...的工作原理"/>
+<meta name="twitter:description" content="本文介绍JDK 8的jps、jstat、jstack &hellip; 的工作原理。"/>
+<meta property="og:image" content="/images/avatar.jpg"/>
+  <meta name="twitter:image" content="/images/avatar.jpg"/><link rel="stylesheet" href="/css/main.min.24196952817c68c8b90d8fa573d560fa62766baa0622bdc0e862255f4a4d1307.css" integrity="sha256-JBlpUoF8aMi5DY&#43;lc9Vg&#43;mJ2a6oGIr3A6GIlX0pNEwc=" crossorigin="anonymous"><link rel="stylesheet" href="/css/viewer.min.3d228794bcedbbfa0412beb8fbc1ec6973202945e42af7004f742a4d7bd620ab.css" integrity="sha256-PSKHlLztu/oEEr64&#43;8HsaXMgKUXkKvcAT3QqTXvWIKs=" crossorigin="anonymous"></head>
+  <body><script>const items=["mode","palette"];items.forEach(function(e){const t=localStorage.getItem("hbs-"+e);t&&document.body.parentElement.setAttribute("data-"+e,t)})</script><header><nav class="navbar top-app-bar top-app-bar-expand-lg fixed-top">
+  <div class="container">
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent"
+      aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <i class="fas fa-bars"></i>
+    </button><a class="navbar-brand flex-grow-1 flex-lg-grow-0 text-center text-lg-start mx-auto me-lg-3" href="/"><img class="logo" alt="Logo" src="/images/avatar.jpg" loading="lazy"
+   width="455" height="455"
+   />
+颇忒脱的技术博客
+    </a>
+    
+    <button class="navbar-settings" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvasSettings"
+  aria-controls="offcanvasSettings" aria-label="Toggle settings">
+  <i class="fas fa-ellipsis-v"></i>
+</button>
+
+<div class="offcanvas offcanvas-end surface h-100" tabindex="-1" id="offcanvasSettings" aria-labelledby="offcanvasSettings">
+  <div class="offcanvas-header">
+    <h3 class="offcanvas-title">设置</h3>
+    <button type="button" class="btn btn-sm btn-outline-primary" data-bs-dismiss="offcanvas" aria-label="Close">
+      <i class="fas fa-times"></i>
+    </button>
+  </div>
+  <div class="offcanvas-body d-flex flex-column">
+
+<section class="setting">
+  <form class="row">
+    <div class="col-auto">
+      <label><i class="fas fa-fw fa-adjust"></i> 模式</label>
+    </div>
+    <div class="col-auto ms-auto">
+      <div class="form-check form-switch">
+        <input class="form-check-input" type="checkbox" id="modeSwitcher">
+      </div>
+    </div>
+  </form>
+</section>
+
+<section class="setting">
+  <form class="font-size-switcher-form row">
+    <div class="col-auto">
+      <label for="fontSize" class="form-label"><i class="fas fa-fw fa-font"></i> 字体大小</label>
+    </div>
+    <div class="col-auto ms-auto">
+      <input type="range" class="form-range" min="-2" max="2" id="fontSize">
+    </div>
+  </form>
+</section>
+
+
+<section class="setting palettes">
+  <form class="row">
+    <div class="col-auto">
+      <label><i class="fas fa-fw fa-palette"></i> 配色</label>
+    </div>
+    <div class="col-auto ms-auto">
+      <a id="btnPalette" class="btn btn-sm btn-outline-primary" role="button" aria-label="palettePicker">
+        <i class="fas fa-eye-dropper"></i>
+      </a>
+    </div>
+  </form>
+  <div class="mt-2 d-flex justify-content-between visually-hidden" id="palettePicker"><button type="button" id="palette-blue" aria-label="蓝色"
+        class="btn btn-sm w-100 palette" data-palette="blue">
+      </button><button type="button" id="palette-blue-gray" aria-label="蓝灰色"
+        class="btn btn-sm w-100 palette" data-palette="blue-gray">
+      </button><button type="button" id="palette-brown" aria-label="棕色"
+        class="btn btn-sm w-100 palette" data-palette="brown">
+      </button><button type="button" id="palette-cyan" aria-label="青色"
+        class="btn btn-sm w-100 palette" data-palette="cyan">
+      </button><button type="button" id="palette-green" aria-label="绿色"
+        class="btn btn-sm w-100 palette" data-palette="green">
+      </button><button type="button" id="palette-indigo" aria-label="靛青色"
+        class="btn btn-sm w-100 palette" data-palette="indigo">
+      </button><button type="button" id="palette-orange" aria-label="橙色"
+        class="btn btn-sm w-100 palette" data-palette="orange">
+      </button><button type="button" id="palette-pink" aria-label="粉色"
+        class="btn btn-sm w-100 palette" data-palette="pink">
+      </button><button type="button" id="palette-purple" aria-label="紫色"
+        class="btn btn-sm w-100 palette" data-palette="purple">
+      </button><button type="button" id="palette-red" aria-label="红色"
+        class="btn btn-sm w-100 palette" data-palette="red">
+      </button><button type="button" id="palette-teal" aria-label="蓝绿色"
+        class="btn btn-sm w-100 palette" data-palette="teal">
+      </button><button type="button" id="palette-yellow" aria-label="黄色"
+        class="btn btn-sm w-100 palette" data-palette="yellow">
+      </button></div>
+</section>
+<section class="setting actions d-flex justify-content-around mt-auto overflow-auto">
+  <a role="button" class="action action-go-back" href="javascript: window.history.back();">
+    <span class="action-icon"><i class="fas fa-2x fa-arrow-left"></i></span> 返回
+  </a>
+  <a role="button" class="action action-reload-page">
+    <span class="action-icon"><i class="fas fa-2x fa-redo-alt"></i></span> 刷新
+  </a>
+  <a role="button" class="action action-copy-url">
+    <span class="action-icon"><i class="fas fa-2x fa-link"></i></span> 复制链接
+  </a></section>
+
+</div>
+</div>
+
+    <div class="collapse navbar-collapse" tabindex="-1" id="navbarSupportedContent" aria-labelledby="navbarSupportedContent">
+      <form class="search-bar my-1" action="/search">
+  <div class="input-group input-group-sm">
+    <span class="btn btn-search disabled position-absolute left-0"><i class="fas fa-fw fa-search"></i></span>
+    <input class="form-control rounded-pill" name="q" type="search" aria-label="Search">
+  </div>
+</form>
+      <ul class="navbar-nav ms-auto"><li class="nav-item">
+          <a class="nav-link" href="/series/">
+            <i class="fas fa-fw fa-columns"></i>专栏
+          </a>
+        </li><li class="nav-item dropdown">
+          <a class="nav-link" id="navbarDropdownIndex" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+            <i class="fas fa-fw fa-chevron-circle-down"></i>快速索引
+          </a>
+          <ul class="dropdown-menu" aria-labelledby="navbarDropdownIndex"><li>
+              <a class="dropdown-item"
+                href="/tags/go">
+                Go
+              </a>
+            </li><li>
+              <a class="dropdown-item"
+                href="/tags/gc">
+                GC
+              </a>
+            </li><li>
+              <a class="dropdown-item"
+                href="/tags/kernel">
+                Kernel
+              </a>
+            </li><li>
+              <a class="dropdown-item"
+                href="/tags/cheatsheet">
+                Cheatsheet
+              </a>
+            </li><li>
+              <a class="dropdown-item"
+                href="/tags/troubleshooting">
+                排障实战记录
+              </a>
+            </li></ul>
+        </li><li class="nav-item">
+          <a class="nav-link" href="/tags/">
+            <i class="fas fa-fw fa-tags"></i>标签
+          </a>
+        </li><li class="nav-item">
+          <a class="nav-link" href="/archives/">
+            <i class="fas fa-fw fa-file-archive"></i>归档
+          </a>
+        </li></ul>
+    </div>
+  </div>
+</nav>
+</header>
+<main role="main" class="container">
+      <div class="row content">
+<div class="col-lg-8">
+  <div class="container"><nav class="row card component" aria-label="breadcrumb">
+  <div class="card-body">
+    <ol class="breadcrumb "><li class="breadcrumb-item"><a href="/">主页</a></li><li class="breadcrumb-item"><a href="/post/">文章</a></li><li class="breadcrumb-item active">Jps Jstat Jstack...的工作原理</li></ol>
+  </div>
+</nav><div class="post-panel-wrapper">
+  <div class="d-flex flex-column component rounded post-panel">
+    
+    <a class="action action-panel-toggler" role="button" title="Panel toggler">
+      <i class="fas fa-fw fa-chevron-circle-down"></i>
+    </a>
+    <a id="sidebarToggler" class="action d-none d-lg-block" role="button" title="Sidebar toggler">
+  <i class="fas fa-fw fa-expand-alt" data-fa-transform="rotate-45"></i>
+</a>
+
+    
+
+    
+    <a class="action" href="#post-copyright" role="button" aria-label="Copyright" title="Copyright">
+  <i class="fas fa-fw fa-copyright"></i>
+</a>
+    <a class="action" href="#post-comments" role="button" aria-label="Comments" title="Comments">
+  <i class="fas fa-fw fa-comments"></i>
+</a>
+    <a class="action" href="#postTOC" aria-controls="Table of contents" role="button" title="Table of contents">
+  <i class="fas fa-fw fa-list-alt"></i>
+</a>
+    
+  </div>
+</div>
+<article class="row card component mb-4 post">
+  <div class="card-header ">
+    <h1 class="card-title post-title">Jps Jstat Jstack...的工作原理
+</h1>
+  </div>
+  <div class="card-body"><div class="post-meta">
+  <span class="post-date" title="创建于 2021-12-07 13:12:18 &#43;0800 CST。">
+    2021-12-07
+  </span><span class="post-reading-time">
+    3 分钟阅读
+  </span><span class="post-taxonomies"><a href="/tags/jvm/" class="badge post-taxonomy">jvm</a></span>
+</div>
+<div class="post-content mb-3"><p>本文介绍JDK 8的jps、jstat、jstack &hellip; 的工作原理。</p>
+<h2 id="jvmstat-performance-counters">Jvmstat Performance Counters<a class="anchor ms-1" href="#jvmstat-performance-counters"><i class="fas fa-link"></i></a></h2>
+<p>jps和jstat命令使用的是<a href="http://openjdk.java.net/groups/serviceability/svcjdk.html#bjvmstat" target="_blank" rel="noopener noreferrer">Jvmstat Performance Counters</a>。</p>
+<h3 id="jps">jps<a class="anchor ms-1" href="#jps"><i class="fas fa-link"></i></a></h3>
+<p>先说结论：</p>
+<ul>
+<li>jps命令扫描的是 <code>$TMPDIR/hsperfdata_$usr</code> 下的PID文件。比如在 Linux 系统下，<code>/tmp/hsperfdata_foo/2121</code>，这体现两个信息，JVM进程的PID是2121，启动这个进程的是<code>foo</code>用户。</li>
+</ul>
+<p>源码脉络：</p>
+<ul>
+<li><a href="https://github.com/openjdk/jdk8u-dev/blob/master/jdk/src/share/classes/sun/tools/jps/Jps.java#L58" target="_blank" rel="noopener noreferrer">Jps.java</a></li>
+<li><a href="https://github.com/openjdk/jdk8u-dev/blob/master/jdk/src/share/classes/sun/jvmstat/monitor/MonitoredHost.java" target="_blank" rel="noopener noreferrer">MonitoredHost</a> (<a href="http://openjdk.java.net/groups/serviceability/jvmstat/sun/jvmstat/monitor/MonitoredHost.html" target="_blank" rel="noopener noreferrer">javadoc</a>) 有三子类。</li>
+<li>看local实现：<a href="https://github.com/openjdk/jdk8u-dev/blob/master/jdk/src/share/classes/sun/jvmstat/perfdata/monitor/protocol/local/MonitoredHostProvider.java#L47" target="_blank" rel="noopener noreferrer">MonitoredHostProvider.java</a></li>
+<li><a href="https://github.com/openjdk/jdk8u-dev/blob/master/jdk/src/share/classes/sun/jvmstat/perfdata/monitor/protocol/local/LocalVmManager.java#L81" target="_blank" rel="noopener noreferrer">LocalVmManager.java</a></li>
+<li><a href="https://github.com/openjdk/jdk8u-dev/blob/master/jdk/src/share/classes/sun/jvmstat/perfdata/monitor/protocol/local/PerfDataFile.java#L57-L79" target="_blank" rel="noopener noreferrer">PerfDataFile.java</a> 规定了PID文件的匹配模式，<a href="https://github.com/openjdk/jdk8u-dev/blob/master/jdk/src/share/classes/sun/jvmstat/perfdata/monitor/protocol/local/PerfDataFile.java#L294-L305" target="_blank" rel="noopener noreferrer">tmpDirName</a> 属性是平台相关的</li>
+<li><a href="https://github.com/openjdk/jdk8u-dev/blob/master/jdk/src/share/native/sun/misc/VMSupport.c#L59" target="_blank" rel="noopener noreferrer">VMSupport.c</a> -&gt; <a href="https://github.com/openjdk/jdk8u-dev/blob/master/jdk/src/share/javavm/export/jvm.h#L1359" target="_blank" rel="noopener noreferrer">jvm.h</a> -&gt; <a href="https://github.com/openjdk/jdk8u-dev/blob/master/hotspot/src/share/vm/prims/jvm.cpp#L424" target="_blank" rel="noopener noreferrer">jvm.cpp</a> 规定了 <code>JVM_GetTemporaryDirectory</code>的返回值</li>
+</ul>
+<p>所以说，如果你把别的机器的<code>/tmp/hsperfdata_&lt;usr&gt;/&lt;pid&gt;</code> 复制到你本地，jps也是能够返回结果的。</p>
+<p><strong>但是</strong>，前提是PID得在你的机器上存在，比如别的机器上PID是2121，那么你的机器上也必须有PID=2121的进程，无论这个进程是什么。否则jps会返回<code> -- process information unavailable</code> 这样的信息。</p>
+<p>如果你这样执行jps（其实所有命令都可以这样执行），可以看到异常：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">java -cp <span class="nv">$JAVA_HOME</span>/lib/tools.jar -Djps.debug<span class="o">=</span><span class="nb">true</span> -Djps.printStackTrace<span class="o">=</span><span class="nb">true</span> sun.tools.jps.Jps
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">sun.jvmstat.monitor.MonitorException: <span class="m">2121</span> not found
+</span></span><span class="line"><span class="cl">        at sun.jvmstat.perfdata.monitor.protocol.local.PerfDataBuffer.&lt;init&gt;<span class="o">(</span>PerfDataBuffer.java:84<span class="o">)</span>
+</span></span><span class="line"><span class="cl">        at sun.jvmstat.perfdata.monitor.protocol.local.LocalMonitoredVm.&lt;init&gt;<span class="o">(</span>LocalMonitoredVm.java:68<span class="o">)</span>
+</span></span><span class="line"><span class="cl">        at sun.jvmstat.perfdata.monitor.protocol.local.MonitoredHostProvider.getMonitoredVm<span class="o">(</span>MonitoredHostProvider.java:77<span class="o">)</span>
+</span></span><span class="line"><span class="cl">        at sun.tools.jps.Jps.main<span class="o">(</span>Jps.java:92<span class="o">)</span>
+</span></span><span class="line"><span class="cl">Caused by: java.lang.IllegalArgumentException: Process not found
+</span></span><span class="line"><span class="cl">        at sun.misc.Perf.attach<span class="o">(</span>Native Method<span class="o">)</span>
+</span></span><span class="line"><span class="cl">        at sun.misc.Perf.attachImpl<span class="o">(</span>Perf.java:270<span class="o">)</span>
+</span></span><span class="line"><span class="cl">        at sun.misc.Perf.attach<span class="o">(</span>Perf.java:200<span class="o">)</span>
+</span></span><span class="line"><span class="cl">        at sun.jvmstat.perfdata.monitor.protocol.local.PerfDataBuffer.&lt;init&gt;<span class="o">(</span>PerfDataBuffer.java:64<span class="o">)</span>
+</span></span><span class="line"><span class="cl">        ... <span class="m">3</span> more
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>顺着这个错误分析<a href="https://github.com/openjdk/jdk8u-dev/blob/master/jdk/src/share/classes/sun/jvmstat/perfdata/monitor/protocol/local/PerfDataBuffer.java" target="_blank" rel="noopener noreferrer">PerfDataBuffer.java</a>，可以发现解决的办法就是创建一个<code>/tmp/hsperfdata_&lt;pid&gt;</code>的文件。</p>
+<h2 id="jstat">jstat<a class="anchor ms-1" href="#jstat"><i class="fas fa-link"></i></a></h2>
+<p>先说结论：</p>
+<ul>
+<li>jstat和jps一样，读取的是 <code>$TMPDIR/hsperfdata_$usr</code> 下的PID文件，这个文件准确来说应该是 perfdata。这里面有 jstat 所想要的一切。</li>
+<li>JVM在运行过程中会更新 perfdata，perfdata 采用的是mmap机制（内存映射文件），详见<a href="https://zhuanlan.zhihu.com/p/113673963" target="_blank" rel="noopener noreferrer">JVM源码分析之jstat工具原理完全解读</a></li>
+<li>顺带一提，mmap文件内容的修改是无法通过 <a href="https://man7.org/linux/man-pages/man7/inotify.7.html" target="_blank" rel="noopener noreferrer">inotify(7)</a> 探测到的（见Limitations and caveats）。</li>
+</ul>
+<p>源码脉络：</p>
+<ul>
+<li><a href="https://github.com/openjdk/jdk8u-dev/blob/master/jdk/src/share/classes/sun/tools/jstat/Jstat.java#L70" target="_blank" rel="noopener noreferrer">Jstat.java</a>，你可以看到两个隐藏参数<code>-list</code>和<code>-snap</code>，这不是我们的主题，关键看<a href="https://github.com/openjdk/jdk8u-dev/blob/master/jdk/src/share/classes/sun/tools/jstat/Jstat.java#L114" target="_blank" rel="noopener noreferrer">logSamples()</a>方法</li>
+<li>可以看到同样依赖于 <a href="https://github.com/openjdk/jdk8u-dev/blob/master/jdk/src/share/classes/sun/jvmstat/monitor/MonitoredHost.java" target="_blank" rel="noopener noreferrer">MonitoredHost</a> (<a href="http://openjdk.java.net/groups/serviceability/jvmstat/sun/jvmstat/monitor/MonitoredHost.html" target="_blank" rel="noopener noreferrer">javadoc</a>)</li>
+<li>然后得到 <a href="https://github.com/openjdk/jdk8u-dev/blob/master/jdk/src/share/classes/sun/jvmstat/monitor/MonitoredVm.java" target="_blank" rel="noopener noreferrer">MonitoredVm</a>，类层级结构是 <a href="https://github.com/openjdk/jdk8u-dev/blob/master/jdk/src/share/classes/sun/jvmstat/monitor/remote/BufferedMonitoredVm.java" target="_blank" rel="noopener noreferrer">BufferedMonitoredVm</a> -&gt; <a href="https://github.com/openjdk/jdk8u-dev/blob/master/jdk/src/share/classes/sun/jvmstat/perfdata/monitor/AbstractMonitoredVm.java" target="_blank" rel="noopener noreferrer">AbstractMonitoredVm</a> -&gt; <a href="https://github.com/openjdk/jdk8u-dev/blob/master/jdk/src/share/classes/sun/jvmstat/perfdata/monitor/protocol/local/LocalMonitoredVm.java" target="_blank" rel="noopener noreferrer">LocalMonitoredVm</a></li>
+<li><a href="https://github.com/openjdk/jdk8u-dev/blob/master/jdk/src/share/classes/sun/jvmstat/perfdata/monitor/protocol/local/LocalMonitoredVm.java#L68" target="_blank" rel="noopener noreferrer">LocalMonitoredVm</a> 用到了 <a href="https://github.com/openjdk/jdk8u-dev/blob/master/jdk/src/share/classes/sun/jvmstat/perfdata/monitor/protocol/local/PerfDataBuffer.java#L61" target="_blank" rel="noopener noreferrer">PerfDataBuffer</a></li>
+</ul>
+<h2 id="dynamic-attach-mechanism">Dynamic Attach Mechanism<a class="anchor ms-1" href="#dynamic-attach-mechanism"><i class="fas fa-link"></i></a></h2>
+<p>jstack和jmap命令使用的是<a href="http://openjdk.java.net/groups/serviceability/svcjdk.html#battach" target="_blank" rel="noopener noreferrer">Dynamic Attach Mechanism</a>。</p>
+<h3 id="jstack">jstack<a class="anchor ms-1" href="#jstack"><i class="fas fa-link"></i></a></h3>
+<p>先说结论：</p>
+<ul>
+<li>和socket文件 <code>/tmp/.java_pid$pid</code> 通信</li>
+<li>如果这个文件不存在，则 <code>touch /proc/$pid/cwd/.attach_pid$pid</code>文件</li>
+<li>然后 <code>kill -3 $pid</code>，JVM就会创建socket文件</li>
+<li>然后把<code>attach_pid$pid</code>文件可以删掉</li>
+</ul>
+<p>源码脉络：</p>
+<ul>
+<li><a href="https://github.com/openjdk/jdk8u-dev/blob/master/jdk/src/share/classes/sun/tools/jstack/JStack.java#L160" target="_blank" rel="noopener noreferrer">Jstack.java</a> 使用 <a href="https://github.com/openjdk/jdk8u-dev/blob/master/jdk/src/share/classes/com/sun/tools/attach/VirtualMachine.java#L195" target="_blank" rel="noopener noreferrer">VirtualMachine.attach()</a></li>
+<li><a href="https://github.com/openjdk/jdk8u-dev/blob/master/jdk/src/share/classes/com/sun/tools/attach/VirtualMachine.java" target="_blank" rel="noopener noreferrer">VirtualMachine</a>，有一个子类<a href="https://github.com/openjdk/jdk8u-dev/blob/master/jdk/src/share/classes/sun/tools/attach/HotSpotVirtualMachine.java" target="_blank" rel="noopener noreferrer">HotSpotVirtualMachine</a></li>
+<li><a href="https://github.com/openjdk/jdk8u-dev/blob/master/jdk/src/share/classes/com/sun/tools/attach/VirtualMachine.java#L195" target="_blank" rel="noopener noreferrer">VirtualMachine.attach()</a> 依赖 <a href="https://github.com/openjdk/jdk8u-dev/blob/master/jdk/src/share/classes/com/sun/tools/attach/spi/AttachProvider.java" target="_blank" rel="noopener noreferrer">AttachProvider</a> <a href="https://docs.oracle.com/javase/8/docs/jdk/api/attach/spec/com/sun/tools/attach/spi/AttachProvider.html" target="_blank" rel="noopener noreferrer">javadoc</a></li>
+<li><a href="https://github.com/openjdk/jdk8u-dev/blob/master/jdk/src/share/classes/com/sun/tools/attach/spi/AttachProvider.java" target="_blank" rel="noopener noreferrer">AttachProvider</a>  子类 <a href="https://github.com/openjdk/jdk8u-dev/blob/master/jdk/src/share/classes/sun/tools/attach/HotSpotAttachProvider.java" target="_blank" rel="noopener noreferrer">HotSpotAttachProvider</a> 子类 <a href="https://github.com/openjdk/jdk8u-dev/blob/master/jdk/src/solaris/classes/sun/tools/attach/LinuxAttachProvider.java" target="_blank" rel="noopener noreferrer">LinuxAttachProvider</a></li>
+<li>然后用到了 <a href="https://github.com/openjdk/jdk8u-dev/blob/master/jdk/src/solaris/classes/sun/tools/attach/LinuxVirtualMachine.java" target="_blank" rel="noopener noreferrer">LinuxVirtualMachine</a>，这里描述了上述逻辑。</li>
+</ul>
+<h3 id="jmap">jmap<a class="anchor ms-1" href="#jmap"><i class="fas fa-link"></i></a></h3>
+<p>jmap的机制和jstack一摸一样，不做赘述。</p>
+<h2 id="参考资料">参考资料<a class="anchor ms-1" href="#参考资料"><i class="fas fa-link"></i></a></h2>
+<ul>
+<li><a href="http://openjdk.java.net/groups/serviceability/svcjdk.html" target="_blank" rel="noopener noreferrer">Serviceability in the J2SE Repository</a></li>
+</ul></div></div>
+  <div class="card-footer"><div class="post-navs d-flex justify-content-evenly"><div class="post-nav post-prev">
+    <i class="fas fa-fw fa-chevron-left"></i>
+    <a href="/post/mysql/opt-big-transaction-lock/">SQL优化:大事务中的行锁获取超时
+</a>
+  </div><div class="post-nav post-next">
+    <a href="/post/linux/namespace/simple-intro/">Linux命名空间一些笔记
+</a>
+    <i class="fas fa-fw fa-chevron-right"></i>
+  </div></div></div>
+</article><div class="post-copyright mb-3 row card component" id="post-copyright">
+    <div class="card-header">
+        <h2 class="card-title">版权</h2>
+    </div>
+    <div class="card-body"><a class="d-flex align-items-center flex-column" target="_blank" rel="license noopener noreferrer" href="https://creativecommons.org/licenses/by-nc-nd/4.0/deed.zh">
+  <span><i class="fab fa-fw fa-2x fa-creative-commons"></i><i class="fab fa-fw fa-2x fa-creative-commons-by"></i><i class="fab fa-fw fa-2x fa-creative-commons-nc"></i><i class="fab fa-fw fa-2x fa-creative-commons-nd"></i></span>
+  CC BY-NC-ND 4.0 
+</a>
+
+
+    </div>
+</div><section class="related-posts row card component">
+    <div class="card-header">
+      <h2 class="card-title">相关文章</h2>
+    </div>
+    <div class="card-body">
+      <ul class="post-list"><li>
+          <a href="/post/jvm/jvm-options/">JVM 参数
+</a>
+          <span class="float-end post-date">2021-01-04
+</span>
+        </li><li>
+          <a href="/post/jvm/string-in-9/">JVM - String对象在Java 9中的变化
+</a>
+          <span class="float-end post-date">2020-05-21
+</span>
+        </li><li>
+          <a href="/post/jvm/reference-types-reachability-fence/">JVM - 强软弱虚引用以及Reachability Fence
+</a>
+          <span class="float-end post-date">2020-05-19
+</span>
+        </li><li>
+          <a href="/post/jvm/tri-color/">JVM - 并发标记之三色标记法和Pre-Write Barriers
+</a>
+          <span class="float-end post-date">2020-05-15
+</span>
+        </li><li>
+          <a href="/post/jvm/card-table/">JVM - Card Table和Post-Write Barriers
+</a>
+          <span class="float-end post-date">2020-05-15
+</span>
+        </li></ul>
+    </div>
+  </section><div class="card component row post-comments" id="post-comments">
+  <div class="card-header">
+    <h2 class="card-title">评论</h2>
+  </div>
+  <div class="card-body"></div>
+</div></div>
+</div><aside class="col-lg-4 sidebar d-flex">
+  <div class="container d-flex flex-column">
+    
+    <section class="card row text-center profile component">
+  <div class="card-body">
+    <div class="col-12 d-flex align-items-center justify-content-center"><img class="profile-avatar rounded-circle" alt="颇忒脱" src="/images/avatar.jpg" loading="lazy"
+   width="455" height="455"
+   />
+</div>
+    <div class="col-12 profile-meta"><div class="profile-name">颇忒脱</div><nav class="social-links nav justify-content-center"><a class="nav-link social-link" target="_blank" href="https://github.com/chanjarster" title="GitHub" rel="noopener noreferrer">
+        <i class="fa-fw fa-2x fab fa-github"></i>
+      </a></nav>
+</div>
+  </div>
+</section>
+  <div class="post-toc row mb-4 card component" id="postTOC">
+  <div class="card-header">
+    <h2 class="card-title">目录</h2>
+  </div>
+  <div class="card-body">
+    <nav id="TableOfContents">
+  <ul>
+    <li><a href="#jvmstat-performance-counters">Jvmstat Performance Counters</a>
+      <ul>
+        <li><a href="#jps">jps</a></li>
+      </ul>
+    </li>
+    <li><a href="#jstat">jstat</a></li>
+    <li><a href="#dynamic-attach-mechanism">Dynamic Attach Mechanism</a>
+      <ul>
+        <li><a href="#jstack">jstack</a></li>
+        <li><a href="#jmap">jmap</a></li>
+      </ul>
+    </li>
+    <li><a href="#参考资料">参考资料</a></li>
+  </ul>
+</nav>
+  </div>
+</div><section class="featured-posts row card component">
+    <div class="card-header">
+      <h2 class="card-title">精选文章</h2>
+    </div>
+    <div class="card-body">
+      <ul class="post-list"><li>
+          <a href="/post/redis-cluster-ops/index-page/">Redis 集群运维笔记
+</a>
+        </li><li>
+          <a href="/post/linux/namespace/index-page/">Linux Namespace系列
+</a>
+        </li><li>
+          <a href="/post/network/index-page/">Networking系列
+</a>
+        </li><li>
+          <a href="/post/mysql/index-page/">MySQL系列
+</a>
+        </li><li>
+          <a href="/post/concurrent-programming/index-page/">并发编程系列
+</a>
+        </li></ul>
+    </div>
+  </section><section class="recent-posts row card component">
+  <div class="card-header">
+    <h2 class="card-title">最近文章</h2>
+  </div>
+  <div class="card-body">
+    <ul class="post-list"><li>
+        <a href="/post/qoder-switch-session/">QoderCN 切换账号后迁移会话历史
+</a>
+      </li><li>
+        <a href="/post/spring-boot-jdk-comp-table-copy/">Spring Boot 3.4 升级过程记录
+</a>
+      </li><li>
+        <a href="/post/redis-cluster-ops/index-page/">Redis 集群运维笔记
+</a>
+      </li><li>
+        <a href="/post/spring-boot-jdk-comp-table/">Spring、JDK、Maven 版本兼容性表格
+</a>
+      </li><li>
+        <a href="/post/network/calico-firewall-k8s/">Calico 配置 K8s 防火墙
+</a>
+      </li></ul>
+  </div>
+</section><section class="tags-taxonomies row card component">
+      <div class="card-header">
+        <h2 class="card-title">
+          <a href="/tags">标签</a>
+        </h2>
+      </div>
+      <div class="card-body">
+        <div class="py-2"><a href="/tags/arts-a/" class="badge rounded post-taxonomy" title="ARTS-A">
+            ARTS-A<span class="badge badge-sm text-white bg-accent ms-1">125</span></a><a href="/tags/k8s/" class="badge rounded post-taxonomy" title="k8s">
+            k8s<span class="badge badge-sm text-white bg-accent ms-1">52</span></a><a href="/tags/troubleshooting/" class="badge rounded post-taxonomy" title="troubleshooting">
+            troubleshooting<span class="badge badge-sm text-white bg-accent ms-1">40</span></a><a href="/tags/jvm/" class="badge rounded post-taxonomy" title="jvm">
+            jvm<span class="badge badge-sm text-white bg-accent ms-1">39</span></a><a href="/tags/docker/" class="badge rounded post-taxonomy" title="docker">
+            docker<span class="badge badge-sm text-white bg-accent ms-1">30</span></a><a href="/tags/mysql/" class="badge rounded post-taxonomy" title="mysql">
+            mysql<span class="badge badge-sm text-white bg-accent ms-1">25</span></a><a href="/tags/network/" class="badge rounded post-taxonomy" title="network">
+            network<span class="badge badge-sm text-white bg-accent ms-1">25</span></a><a href="/tags/%E5%B9%B6%E5%8F%91%E7%BC%96%E7%A8%8B/" class="badge rounded post-taxonomy" title="并发编程">
+            并发编程<span class="badge badge-sm text-white bg-accent ms-1">21</span></a><a href="/tags/cheatsheet/" class="badge rounded post-taxonomy" title="cheatsheet">
+            cheatsheet<span class="badge badge-sm text-white bg-accent ms-1">20</span></a><a href="/tags/java/" class="badge rounded post-taxonomy" title="java">
+            java<span class="badge badge-sm text-white bg-accent ms-1">20</span></a><a href="/tags/kernel/" class="badge rounded post-taxonomy" title="kernel">
+            kernel<span class="badge badge-sm text-white bg-accent ms-1">19</span></a><a href="/tags/linux/" class="badge rounded post-taxonomy" title="linux">
+            linux<span class="badge badge-sm text-white bg-accent ms-1">19</span></a><a href="/tags/redis/" class="badge rounded post-taxonomy" title="redis">
+            redis<span class="badge badge-sm text-white bg-accent ms-1">17</span></a><a href="/tags/prometheus/" class="badge rounded post-taxonomy" title="prometheus">
+            prometheus<span class="badge badge-sm text-white bg-accent ms-1">13</span></a><a href="/tags/%E6%80%A7%E8%83%BD%E8%B0%83%E4%BC%98/" class="badge rounded post-taxonomy" title="性能调优">
+            性能调优<span class="badge badge-sm text-white bg-accent ms-1">13</span></a><a href="/tags/go/" class="badge rounded post-taxonomy" title="go">
+            go<span class="badge badge-sm text-white bg-accent ms-1">10</span></a><a href="/tags/%E5%BE%AE%E6%9C%8D%E5%8A%A1/" class="badge rounded post-taxonomy" title="微服务">
+            微服务<span class="badge badge-sm text-white bg-accent ms-1">10</span></a><a href="/tags/rancher/" class="badge rounded post-taxonomy" title="rancher">
+            rancher<span class="badge badge-sm text-white bg-accent ms-1">9</span></a><a href="/tags/debug/" class="badge rounded post-taxonomy" title="debug">
+            debug<span class="badge badge-sm text-white bg-accent ms-1">7</span></a><a href="/tags/gc/" class="badge rounded post-taxonomy" title="gc">
+            gc<span class="badge badge-sm text-white bg-accent ms-1">7</span></a><a href="/tags/nginx/" class="badge rounded post-taxonomy" title="nginx">
+            nginx<span class="badge badge-sm text-white bg-accent ms-1">7</span></a><a href="/tags/ingress/" class="badge rounded post-taxonomy" title="ingress">
+            ingress<span class="badge badge-sm text-white bg-accent ms-1">6</span></a><a href="/tags/%E8%BF%90%E7%BB%B4/" class="badge rounded post-taxonomy" title="运维">
+            运维<span class="badge badge-sm text-white bg-accent ms-1">6</span></a><a href="/tags/ci_cd/" class="badge rounded post-taxonomy" title="CI_CD">
+            CI_CD<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/interview/" class="badge rounded post-taxonomy" title="interview">
+            interview<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/jmx/" class="badge rounded post-taxonomy" title="jmx">
+            jmx<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/openssl/" class="badge rounded post-taxonomy" title="openssl">
+            openssl<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/tls/" class="badge rounded post-taxonomy" title="tls">
+            tls<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/%E5%88%86%E5%B8%83%E5%BC%8F%E4%BA%8B%E5%8A%A1/" class="badge rounded post-taxonomy" title="分布式事务">
+            分布式事务<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/%E5%88%86%E5%B8%83%E5%BC%8F%E7%AE%97%E6%B3%95/" class="badge rounded post-taxonomy" title="分布式算法">
+            分布式算法<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/%E6%94%B6%E8%97%8F%E5%A4%B9/" class="badge rounded post-taxonomy" title="收藏夹">
+            收藏夹<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/%E9%AB%98%E5%B9%B6%E5%8F%91/" class="badge rounded post-taxonomy" title="高并发">
+            高并发<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/visualvm/" class="badge rounded post-taxonomy" title="visualvm">
+            visualvm<span class="badge badge-sm text-white bg-accent ms-1">4</span></a><a href="/tags/%E6%97%A5%E5%BF%97/" class="badge rounded post-taxonomy" title="日志">
+            日志<span class="badge badge-sm text-white bg-accent ms-1">4</span></a><a href="/tags/arts/" class="badge rounded post-taxonomy" title="arts">
+            arts<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/arts-r/" class="badge rounded post-taxonomy" title="arts-r">
+            arts-r<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/classloader/" class="badge rounded post-taxonomy" title="ClassLoader">
+            ClassLoader<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/container/" class="badge rounded post-taxonomy" title="container">
+            container<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/ios/" class="badge rounded post-taxonomy" title="ios">
+            ios<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/iphone/" class="badge rounded post-taxonomy" title="iphone">
+            iphone<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/jenkins/" class="badge rounded post-taxonomy" title="Jenkins">
+            Jenkins<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/namespace/" class="badge rounded post-taxonomy" title="namespace">
+            namespace<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/scheduling/" class="badge rounded post-taxonomy" title="scheduling">
+            scheduling<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/springboot/" class="badge rounded post-taxonomy" title="springboot">
+            springboot<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/thread/" class="badge rounded post-taxonomy" title="thread">
+            thread<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/%E5%88%86%E5%B8%83%E5%BC%8F%E6%9E%B6%E6%9E%84/" class="badge rounded post-taxonomy" title="分布式架构">
+            分布式架构<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/%E5%8D%8E%E4%B8%BA/" class="badge rounded post-taxonomy" title="华为">
+            华为<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/%E8%8B%B9%E6%9E%9C/" class="badge rounded post-taxonomy" title="苹果">
+            苹果<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/bash/" class="badge rounded post-taxonomy" title="bash">
+            bash<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/etcd/" class="badge rounded post-taxonomy" title="etcd">
+            etcd<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/grafana/" class="badge rounded post-taxonomy" title="grafana">
+            grafana<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/iptables/" class="badge rounded post-taxonomy" title="iptables">
+            iptables<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/jdbc/" class="badge rounded post-taxonomy" title="JDBC">
+            JDBC<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/jmeter/" class="badge rounded post-taxonomy" title="jmeter">
+            jmeter<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/%E6%95%B0%E6%8D%AE%E5%BA%93%E6%97%B6%E5%8C%BA%E9%82%A3%E4%BA%9B%E4%BA%8B%E5%84%BF/" class="badge rounded post-taxonomy" title="数据库时区那些事儿">
+            数据库时区那些事儿<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/%E7%9B%91%E6%8E%A7/" class="badge rounded post-taxonomy" title="监控">
+            监控<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/%E9%99%90%E6%B5%81/" class="badge rounded post-taxonomy" title="限流">
+            限流<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/acloud/" class="badge rounded post-taxonomy" title="acloud">
+            acloud<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/agent/" class="badge rounded post-taxonomy" title="agent">
+            agent<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/akka/" class="badge rounded post-taxonomy" title="Akka">
+            Akka<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/alertmanager/" class="badge rounded post-taxonomy" title="alertmanager">
+            alertmanager<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/calico/" class="badge rounded post-taxonomy" title="calico">
+            calico<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/chrome/" class="badge rounded post-taxonomy" title="chrome">
+            chrome<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/coredns/" class="badge rounded post-taxonomy" title="coredns">
+            coredns<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/elasticsearch/" class="badge rounded post-taxonomy" title="elasticsearch">
+            elasticsearch<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/fluentd/" class="badge rounded post-taxonomy" title="fluentd">
+            fluentd<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/harbor/" class="badge rounded post-taxonomy" title="harbor">
+            harbor<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/helm/" class="badge rounded post-taxonomy" title="helm">
+            helm<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/hystrix/" class="badge rounded post-taxonomy" title="hystrix">
+            hystrix<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/io/" class="badge rounded post-taxonomy" title="io">
+            io<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/jdpa/" class="badge rounded post-taxonomy" title="jdpa">
+            jdpa<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/jwt/" class="badge rounded post-taxonomy" title="jwt">
+            jwt<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/kafka/" class="badge rounded post-taxonomy" title="kafka">
+            kafka<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/kibana/" class="badge rounded post-taxonomy" title="kibana">
+            kibana<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/mq/" class="badge rounded post-taxonomy" title="MQ">
+            MQ<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/nfs/" class="badge rounded post-taxonomy" title="nfs">
+            nfs<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/oauth/" class="badge rounded post-taxonomy" title="oauth">
+            oauth<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/oracle/" class="badge rounded post-taxonomy" title="Oracle">
+            Oracle<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/pprof/" class="badge rounded post-taxonomy" title="pprof">
+            pprof<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/qoder/" class="badge rounded post-taxonomy" title="qoder">
+            qoder<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/reactor/" class="badge rounded post-taxonomy" title="reactor">
+            reactor<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/spring-boot/" class="badge rounded post-taxonomy" title="spring-boot">
+            spring-boot<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/spring-cloud/" class="badge rounded post-taxonomy" title="Spring Cloud">
+            Spring Cloud<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/ssl/" class="badge rounded post-taxonomy" title="ssl">
+            ssl<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/systemtap/" class="badge rounded post-taxonomy" title="systemtap">
+            systemtap<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/tiller/" class="badge rounded post-taxonomy" title="tiller">
+            tiller<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/tomcat/" class="badge rounded post-taxonomy" title="tomcat">
+            tomcat<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/ubuntu/" class="badge rounded post-taxonomy" title="ubuntu">
+            ubuntu<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/vtable/" class="badge rounded post-taxonomy" title="vtable">
+            vtable<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/%E6%B6%88%E6%81%AF%E9%98%9F%E5%88%97/" class="badge rounded post-taxonomy" title="消息队列">
+            消息队列<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/%E6%B7%B1%E4%BF%A1%E6%9C%8D/" class="badge rounded post-taxonomy" title="深信服">
+            深信服<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/%E7%BC%93%E5%AD%98/" class="badge rounded post-taxonomy" title="缓存">
+            缓存<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/%E8%99%9A%E6%8B%9F%E5%8C%96/" class="badge rounded post-taxonomy" title="虚拟化">
+            虚拟化<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/%E8%B0%83%E7%94%A8%E9%93%BE%E8%BF%BD%E8%B8%AA/" class="badge rounded post-taxonomy" title="调用链追踪">
+            调用链追踪<span class="badge badge-sm text-white bg-accent ms-1">1</span></a></div>
+      </div>
+    </section>
+    
+  </div>
+</aside>
+</div>
+    </main><footer class="footer mt-auto py-3 text-center container"><nav class="social-links nav justify-content-center mb-2"><a class="nav-link social-link" target="_blank" href="https://github.com/chanjarster" title="GitHub" rel="noopener noreferrer">
+        <i class="fa-fw fa-2x fab fa-github"></i>
+      </a></nav>
+<div class="copyright mb-2">
+  Copyright © 2010-2026 Daniel Qian. All Rights Reserved.
+</div>
+<div class="powered-by mb-2">
+  Powered by <a href="https://gohugo.io" target="_blank" rel="noopener noreferrer">Hugo</a> and the <a href="https://github.com/razonyang/hugo-theme-bootstrap" target="_blank" rel="noopener noreferrer">Bootstrap</a> theme.
+</div>
+<a href="https://www.netlify.com" target="_blank" rel="noopener noreferrer">
+    <img src="https://www.netlify.com/img/global/badges/netlify-color-accent.svg" alt="Deploys by Netlify" width="114" height="51" />
+</a>
+</footer>
+<script src="/js/main.2cdce25f280f570596c88888d6af930fe5e15ea030005291dad293defbb231d3.js" integrity="sha256-LNziXygPVwWWyIiI1q&#43;TD&#43;XhXqAwAFKR2tKT3vuyMdM=" crossorigin="anonymous" defer></script><script src="/js/icons.min.7b1f27dfde35467d03350938b2e41dbffd06347009b97ab913edfaca01a07814.js" integrity="sha256-ex8n3941Rn0DNQk4suQdv/0GNHAJuXq5E&#43;36ygGgeBQ=" crossorigin="anonymous" defer></script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('\/service-worker.js').then(function(reg) {
+      console.log('Successfully registered service worker', reg);
+    }).catch(function(err) {
+      console.warn('Error whilst registering service worker', err);
+    });
+  });
+}
+</script><script src="/js/viewer.min.1ec1fa5aa3a66267222a44fe1cd51856ad4a92be48ede579fb36d70a6d4c28e9.js" integrity="sha256-HsH6WqOmYmciKkT&#43;HNUYVq1Kkr5I7eV5&#43;zbXCm1MKOk=" crossorigin="anonymous" defer></script>
+</body>
+</html>

@@ -1,0 +1,693 @@
+<!doctype html><html lang="zh-cn" data-palette="blue"
+  >
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>What every programmer should know about memory, Part 3: Virtual Memory - 颇忒脱的技术博客</title><link rel="apple-touch-icon" href="/images/icons/icon-180x180.png" sizes="180x180">
+<link rel="icon" href="/images/icons/icon-32x32.png" sizes="32x32" type="image/png">
+<link rel="icon" href="/images/icons/icon-16x16.png" sizes="16x16" type="image/png">
+<link rel="icon" href="/images/icons/favicon.ico">
+<link rel="manifest" href="/manifest.json">
+<meta name="keywords" content="" />
+<meta name="description" content="" /><meta name="robots" content="index, follow" /><meta itemprop="name" content="What every programmer should know about memory, Part 3: Virtual Memory">
+<meta itemprop="description" content=""><meta itemprop="datePublished" content="2019-03-10T22:20:48+08:00" />
+<meta itemprop="dateModified" content="2019-03-10T22:20:48+08:00" />
+<meta itemprop="wordCount" content="4273">
+<meta itemprop="keywords" content="kernel," /><meta property="og:title" content="What every programmer should know about memory, Part 3: Virtual Memory" />
+<meta property="og:description" content="" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="/post/kernel/know-memory-cpu-virtual-memory/" /><meta property="article:section" content="post" />
+<meta property="article:published_time" content="2019-03-10T22:20:48+08:00" />
+<meta property="article:modified_time" content="2019-03-10T22:20:48+08:00" />
+
+<meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="What every programmer should know about memory, Part 3: Virtual Memory"/>
+<meta name="twitter:description" content=""/>
+<meta property="og:image" content="/images/avatar.jpg"/>
+  <meta name="twitter:image" content="/images/avatar.jpg"/><link rel="stylesheet" href="/css/main.min.24196952817c68c8b90d8fa573d560fa62766baa0622bdc0e862255f4a4d1307.css" integrity="sha256-JBlpUoF8aMi5DY&#43;lc9Vg&#43;mJ2a6oGIr3A6GIlX0pNEwc=" crossorigin="anonymous"><link rel="stylesheet" href="/css/viewer.min.3d228794bcedbbfa0412beb8fbc1ec6973202945e42af7004f742a4d7bd620ab.css" integrity="sha256-PSKHlLztu/oEEr64&#43;8HsaXMgKUXkKvcAT3QqTXvWIKs=" crossorigin="anonymous"></head>
+  <body><script>const items=["mode","palette"];items.forEach(function(e){const t=localStorage.getItem("hbs-"+e);t&&document.body.parentElement.setAttribute("data-"+e,t)})</script><header><nav class="navbar top-app-bar top-app-bar-expand-lg fixed-top">
+  <div class="container">
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent"
+      aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <i class="fas fa-bars"></i>
+    </button><a class="navbar-brand flex-grow-1 flex-lg-grow-0 text-center text-lg-start mx-auto me-lg-3" href="/"><img class="logo" alt="Logo" src="/images/avatar.jpg" loading="lazy"
+   width="455" height="455"
+   />
+颇忒脱的技术博客
+    </a>
+    
+    <button class="navbar-settings" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvasSettings"
+  aria-controls="offcanvasSettings" aria-label="Toggle settings">
+  <i class="fas fa-ellipsis-v"></i>
+</button>
+
+<div class="offcanvas offcanvas-end surface h-100" tabindex="-1" id="offcanvasSettings" aria-labelledby="offcanvasSettings">
+  <div class="offcanvas-header">
+    <h3 class="offcanvas-title">设置</h3>
+    <button type="button" class="btn btn-sm btn-outline-primary" data-bs-dismiss="offcanvas" aria-label="Close">
+      <i class="fas fa-times"></i>
+    </button>
+  </div>
+  <div class="offcanvas-body d-flex flex-column">
+
+<section class="setting">
+  <form class="row">
+    <div class="col-auto">
+      <label><i class="fas fa-fw fa-adjust"></i> 模式</label>
+    </div>
+    <div class="col-auto ms-auto">
+      <div class="form-check form-switch">
+        <input class="form-check-input" type="checkbox" id="modeSwitcher">
+      </div>
+    </div>
+  </form>
+</section>
+
+<section class="setting">
+  <form class="font-size-switcher-form row">
+    <div class="col-auto">
+      <label for="fontSize" class="form-label"><i class="fas fa-fw fa-font"></i> 字体大小</label>
+    </div>
+    <div class="col-auto ms-auto">
+      <input type="range" class="form-range" min="-2" max="2" id="fontSize">
+    </div>
+  </form>
+</section>
+
+
+<section class="setting palettes">
+  <form class="row">
+    <div class="col-auto">
+      <label><i class="fas fa-fw fa-palette"></i> 配色</label>
+    </div>
+    <div class="col-auto ms-auto">
+      <a id="btnPalette" class="btn btn-sm btn-outline-primary" role="button" aria-label="palettePicker">
+        <i class="fas fa-eye-dropper"></i>
+      </a>
+    </div>
+  </form>
+  <div class="mt-2 d-flex justify-content-between visually-hidden" id="palettePicker"><button type="button" id="palette-blue" aria-label="蓝色"
+        class="btn btn-sm w-100 palette" data-palette="blue">
+      </button><button type="button" id="palette-blue-gray" aria-label="蓝灰色"
+        class="btn btn-sm w-100 palette" data-palette="blue-gray">
+      </button><button type="button" id="palette-brown" aria-label="棕色"
+        class="btn btn-sm w-100 palette" data-palette="brown">
+      </button><button type="button" id="palette-cyan" aria-label="青色"
+        class="btn btn-sm w-100 palette" data-palette="cyan">
+      </button><button type="button" id="palette-green" aria-label="绿色"
+        class="btn btn-sm w-100 palette" data-palette="green">
+      </button><button type="button" id="palette-indigo" aria-label="靛青色"
+        class="btn btn-sm w-100 palette" data-palette="indigo">
+      </button><button type="button" id="palette-orange" aria-label="橙色"
+        class="btn btn-sm w-100 palette" data-palette="orange">
+      </button><button type="button" id="palette-pink" aria-label="粉色"
+        class="btn btn-sm w-100 palette" data-palette="pink">
+      </button><button type="button" id="palette-purple" aria-label="紫色"
+        class="btn btn-sm w-100 palette" data-palette="purple">
+      </button><button type="button" id="palette-red" aria-label="红色"
+        class="btn btn-sm w-100 palette" data-palette="red">
+      </button><button type="button" id="palette-teal" aria-label="蓝绿色"
+        class="btn btn-sm w-100 palette" data-palette="teal">
+      </button><button type="button" id="palette-yellow" aria-label="黄色"
+        class="btn btn-sm w-100 palette" data-palette="yellow">
+      </button></div>
+</section>
+<section class="setting actions d-flex justify-content-around mt-auto overflow-auto">
+  <a role="button" class="action action-go-back" href="javascript: window.history.back();">
+    <span class="action-icon"><i class="fas fa-2x fa-arrow-left"></i></span> 返回
+  </a>
+  <a role="button" class="action action-reload-page">
+    <span class="action-icon"><i class="fas fa-2x fa-redo-alt"></i></span> 刷新
+  </a>
+  <a role="button" class="action action-copy-url">
+    <span class="action-icon"><i class="fas fa-2x fa-link"></i></span> 复制链接
+  </a></section>
+
+</div>
+</div>
+
+    <div class="collapse navbar-collapse" tabindex="-1" id="navbarSupportedContent" aria-labelledby="navbarSupportedContent">
+      <form class="search-bar my-1" action="/search">
+  <div class="input-group input-group-sm">
+    <span class="btn btn-search disabled position-absolute left-0"><i class="fas fa-fw fa-search"></i></span>
+    <input class="form-control rounded-pill" name="q" type="search" aria-label="Search">
+  </div>
+</form>
+      <ul class="navbar-nav ms-auto"><li class="nav-item">
+          <a class="nav-link" href="/series/">
+            <i class="fas fa-fw fa-columns"></i>专栏
+          </a>
+        </li><li class="nav-item dropdown">
+          <a class="nav-link" id="navbarDropdownIndex" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+            <i class="fas fa-fw fa-chevron-circle-down"></i>快速索引
+          </a>
+          <ul class="dropdown-menu" aria-labelledby="navbarDropdownIndex"><li>
+              <a class="dropdown-item"
+                href="/tags/go">
+                Go
+              </a>
+            </li><li>
+              <a class="dropdown-item"
+                href="/tags/gc">
+                GC
+              </a>
+            </li><li>
+              <a class="dropdown-item"
+                href="/tags/kernel">
+                Kernel
+              </a>
+            </li><li>
+              <a class="dropdown-item"
+                href="/tags/cheatsheet">
+                Cheatsheet
+              </a>
+            </li><li>
+              <a class="dropdown-item"
+                href="/tags/troubleshooting">
+                排障实战记录
+              </a>
+            </li></ul>
+        </li><li class="nav-item">
+          <a class="nav-link" href="/tags/">
+            <i class="fas fa-fw fa-tags"></i>标签
+          </a>
+        </li><li class="nav-item">
+          <a class="nav-link" href="/archives/">
+            <i class="fas fa-fw fa-file-archive"></i>归档
+          </a>
+        </li></ul>
+    </div>
+  </div>
+</nav>
+</header>
+<main role="main" class="container">
+      <div class="row content">
+<div class="col-lg-8">
+  <div class="container"><nav class="row card component" aria-label="breadcrumb">
+  <div class="card-body">
+    <ol class="breadcrumb "><li class="breadcrumb-item"><a href="/">主页</a></li><li class="breadcrumb-item"><a href="/post/">文章</a></li><li class="breadcrumb-item active">What Every Programmer Should Know About Memory, Part 3: Virtual Memory</li></ol>
+  </div>
+</nav><div class="post-panel-wrapper">
+  <div class="d-flex flex-column component rounded post-panel">
+    
+    <a class="action action-panel-toggler" role="button" title="Panel toggler">
+      <i class="fas fa-fw fa-chevron-circle-down"></i>
+    </a>
+    <a id="sidebarToggler" class="action d-none d-lg-block" role="button" title="Sidebar toggler">
+  <i class="fas fa-fw fa-expand-alt" data-fa-transform="rotate-45"></i>
+</a>
+
+    
+
+    
+    <a class="action" href="#post-copyright" role="button" aria-label="Copyright" title="Copyright">
+  <i class="fas fa-fw fa-copyright"></i>
+</a>
+    <a class="action" href="#post-comments" role="button" aria-label="Comments" title="Comments">
+  <i class="fas fa-fw fa-comments"></i>
+</a>
+    <a class="action" href="#postTOC" aria-controls="Table of contents" role="button" title="Table of contents">
+  <i class="fas fa-fw fa-list-alt"></i>
+</a>
+    
+  </div>
+</div>
+<article class="row card component mb-4 post">
+  <div class="card-header ">
+    <h1 class="card-title post-title">What Every Programmer Should Know About Memory, Part 3: Virtual Memory
+</h1>
+  </div>
+  <div class="card-body"><div class="post-meta">
+  <span class="post-date" title="创建于 2019-03-10 22:20:48 &#43;0800 CST。">
+    2019-03-10
+  </span><span class="post-reading-time">
+    9 分钟阅读
+  </span><span class="post-taxonomies"><a href="/tags/kernel/" class="badge post-taxonomy">kernel</a></span>
+</div>
+<div class="post-content mb-3"><p>原文：<a href="https://lwn.net/Articles/253361/" target="_blank" rel="noopener noreferrer">What every programmer should know about memory, Part 3: Virtual Memory</a></p>
+<h1 id="4-virtual-memory">4 Virtual Memory<a class="anchor ms-1" href="#4-virtual-memory"><i class="fas fa-link"></i></a></h1>
+<p>虚拟内存（virtual memory）是处理器的一个子系统，它给<strong>每个进程</strong>提供虚拟地址空间（virtual address space）。这让每个进程以为自己在系统中是独自一人。</p>
+<p><a href="https://en.wikipedia.org/wiki/Virtual_memory" target="_blank" rel="noopener noreferrer">wiki词条</a>：</p>
+<blockquote>
+<p>虚拟内存的作用在于为进程提供“看上去”连续的地址空间，这么做的好处在于程序不需要处理内存碎片的问题了。</p>
+</blockquote>
+<p>虚拟地址空间由CPU的Memory Management Unit（MMU）实现，操作系统必须填写页表数据结构（page table data structures，见<a href="https://en.wikipedia.org/wiki/Page_table" target="_blank" rel="noopener noreferrer">wiki词条</a>），大多数CPU自己完成余下的工作。</p>
+<p>把虚拟地址（virtual address）作为输入交给MMU做翻译。在32位系统中虚拟地址是32位的，在64位系统中是64位的。</p>
+<h2 id="41-simplest-address-translation">4.1 Simplest Address Translation<a class="anchor ms-1" href="#41-simplest-address-translation"><i class="fas fa-link"></i></a></h2>
+<p>MMU可以逐页（page）的将虚拟地址翻译成物理地址的，和cache line一样，虚拟地址被分割成多个部分，这些部分则被索引到不同的表（table）里，这些表用来构造最终的物理地址。最简单的模型则只拥有一个级别的表（only one level of tables）。</p>
+<p><img class="img-fluid" alt="" src="https://static.lwn.net/images/cpumemory/cpumemory.18.png" loading="lazy"
+  
+   />
+
+</p>
+<p><strong>Figure 4.1: 1-Level Address Translation</strong></p>
+<p>虚拟地址的结构：</p>
+<ul>
+<li>虚拟地址的头部被用来在一个页目录（Page Directory）中选择条目（entry），</li>
+<li>页目录中存储的是条目（entry），每个条目可由操作系统单独设置。</li>
+<li>条目决定了物理内存页的地址，即页的物理地址</li>
+<li>虚拟地址的尾部是页内的偏移量</li>
+<li>所以页的物理地址+偏移量=物理地址</li>
+<li>页目录的条目还包含一些辅助信息，比如访问权限</li>
+</ul>
+<p>页目录的存储：</p>
+<ul>
+<li>页目录是存在内存里的，</li>
+<li>操纵系统为其分配一段连续的物理内存空间，并将基地址（base address）存在一个特殊的寄存器里</li>
+<li>而条目在目录里就是一个数组（记住这是数组，这对于理解下面多级目录，多级索引很重要）</li>
+</ul>
+<p>先弄个速算表，下面会用得着：</p>
+<ul>
+<li>2<sup>9</sup>=512</li>
+<li>2<sup>10</sup>=512 * 2=1024=1K</li>
+<li>2<sup>20</sup>=1024 * 1024=1MB</li>
+</ul>
+<p>拿x86系统，4MB页举例：</p>
+<ul>
+<li>虚拟地址的偏移量部分占用22位（可以覆盖4MB的空间）</li>
+<li>目录部分则还剩10位，即可以存放1024个条目</li>
+<li>每个条目存了10位的物理页内存的基地址</li>
+<li>10位+22位=32位，形成了完整的物理内存地址</li>
+</ul>
+<h2 id="42-multi-level-page-tables">4.2 Multi-Level Page Tables<a class="anchor ms-1" href="#42-multi-level-page-tables"><i class="fas fa-link"></i></a></h2>
+<p>多级页表（page table），注意原文写到这里用页表（page table）而不是页目录（page directory），这两个实际上是一个东西。</p>
+<p>上面的例子拿4MB页来举例的，不过4MB页表不常见，这是因为操作系统执行的很多操作是按照页来对齐的，意思是每个页的基地址之间都差4MB的倍数，就算你要用1k内存也要申请了一个4MB的页，这造成了大量的浪费。</p>
+<p>真实世界里32位机器大多用4kB页，同样多见于64位机器。</p>
+<p>为啥4kB页，单级页表不行：</p>
+<ul>
+<li>虚拟地址偏移量占12位</li>
+<li>虚拟地址页目录部分占20位（64位机器就是52位）</li>
+<li>页表条目数=2<sup>20</sup>，就算每个条目只占4 bytes（32位）那整个页表页要占4MB</li>
+<li>然后<strong>每个进程会拥有自己的页表</strong>，那么大量的物理内存就会被用在页表上。</li>
+<li>实际上不光是物理内存用量太大的问题，因页表就是一个数组，需要连续的内存空间，到时候很难分配。</li>
+</ul>
+<p>解决办法是使用多级页表。它们能够代表一个稀疏的巨大的页表，可以做到对没有被使用的区域（原文没有讲区域是啥）不需要分配内存。这种形式跟为紧凑，可以为许多进程提供页表，同时又不对性能产生太大影响。</p>
+<p><img class="img-fluid" alt="" src="https://static.lwn.net/images/cpumemory/cpumemory.19-sm.png" loading="lazy"
+  
+   />
+
+</p>
+<p><strong>Figure 4.2: 4-Level Address Translation</strong></p>
+<p>上面是一个4级页表：</p>
+<ul>
+<li>虚拟地址被分割成5个部分，其中4个部分是不同页表的索引</li>
+<li>第4级页表通过CPU里的一个特殊目的的register来引用</li>
+<li>第4级-第2级的页表的内容是对下一级页表引用（我觉得应该就是物理内存地址，因为前面讲过页表存在物理内存中的）</li>
+<li>第1级页表存储的物理地址的一部分（应该就是去掉偏移量的那一部分）和辅助数据，比如访问权限</li>
+<li>所以整个形成了一个页表树（page table tree），稀疏又紧凑（sparse and compact）</li>
+</ul>
+<p>得到物理地址的步骤，Page tree walking：</p>
+<ul>
+<li>先从register中得到第4级页表的地址，</li>
+<li>拿到第4级页表
+<ul>
+<li>拿虚拟地址中Level 4 Index取得页表中的条目，这个条目里存的是第3级页表的地址</li>
+</ul>
+</li>
+<li>拿到第3级页表
+<ul>
+<li>拿虚拟地址中Level 3 Index取得页表中的条目，这个条目里存的是第2级页表的地址</li>
+</ul>
+</li>
+<li>如此反复直到拿到第1级页表里的条目，这个条目里存的是物理地址的高位部分</li>
+<li>结合虚拟地址中的偏移量，得到最终的物理地址</li>
+<li>Page tree walking在x86、x86-64处理器里是发生在硬件层面的</li>
+</ul>
+<p>Page table tree尺寸对性能的影响：</p>
+<ul>
+<li>每个进程可能需要自己的page table tree，几个进程共享树的一部分是存在的，但这只是特例。</li>
+<li>如果页表树所需内存越小，那就越有利于性能和扩展性（performance and scalability）</li>
+<li>理想情况下，把使用的内存在虚拟地址空间里紧密的放在一起，就能够让page table tree占用的空间小（单独看这句没有办法明白，结合后面的内容看</li>
+<li>举例，4kB/页，512条目/页表，1页表/每级，那么可以寻址2MB连续的地址空间（512*4kB=2MB）</li>
+<li>举例，4kB/页，512条目/页表，4-2级只有1个页表，1级有512个页表，那么可以寻址1GB连续的地址空间（512 * 512 * 4KB=1G）</li>
+</ul>
+<p>Page table tree布局：</p>
+<ul>
+<li>假设所有内存都能够连续的被分配太过简单了</li>
+<li>比如，出于灵活性的考虑（flexibility），stack和heap分占地址空间的两端，所以极有可能有2个2级页表，每个二级页表有一个1级页表。</li>
+<li>显示中比上面这个更复杂，处于安全性考虑，不同的可执行部分（code、data、heap、stack、DSOs又称共享库）是被影射到随机地址上的。所以进程所使用的不同内存区域是遍布整个虚拟地址空间的。所以一个进程不可能只有一两个2级3级页表的。</li>
+</ul>
+<p>个人总结，前面讲的对于多少连续的寻址空间，各级别页表需要多少个是这么计算的：</p>
+<ul>
+<li>首先得知道前提，对于4-2级页表，在同一页表内，不同页表条目不会指向同一个下一级页表</li>
+<li>对于1级页表，不同页表条目不会指向相同的物理地址（准确的说是物理地址去掉offset的部分）</li>
+<li>对于4-2级页表，每个页表条目指向一个下级页表，即上级页表条目数目=下级页表数</li>
+<li>假设现在是32位系统，每个页表至多保存2<sup>9</sup>=512个页表项</li>
+</ul>
+<p>下面举连续的2MB寻址空间（页大小为4kB）：</p>
+<ul>
+<li>2MB=2<sup>10</sup> * 2<sup>10</sup> * 2=2<sup>21</sup> bytes</li>
+<li>所以需要：2MB / 4kB = 2<sup>21</sup> / 2<sup>12</sup> = 2<sup>9</sup>个1级页表条目</li>
+<li>所以需要：2<sup>9</sup> / 2<sup>9</sup>=1个一级页表=1个2级页表条目</li>
+<li>所以前面说，4kB/页，512条目/页表，1页表/每级，那么可以寻址2MB连续的地址空间</li>
+</ul>
+<p>下面举例连续的1GB寻址空间（页大小为4kB）：</p>
+<ul>
+<li>1GB=2<sup>10</sup> * 2<sup>10</sup> * 2<sup>10</sup>=2<sup>30</sup> bytes</li>
+<li>所以需要1级页表条目：1GB / 4kB = 2<sup>30</sup> / 2<sup>12</sup>=2<sup>18</sup>个1级页表条目</li>
+<li>所以需要：2<sup>18</sup> / 2<sup>9</sup>=2<sup>9</sup>个1级页表=2<sup>9</sup>个2级页表条目</li>
+<li>所以需要：2<sup>9</sup> / 2<sup>9</sup>=1个2级页表</li>
+<li>所以前面说，4kB/页，512条目/页表，4-2级只有1个页表，1级有512个页表，那么可以寻址1GB连续的地址空间（512 * 512 * 4KB=1G）</li>
+</ul>
+<p>同理如果是连续的2GB寻址空间（页大小为4kB）：</p>
+<ul>
+<li>1GB=2<sup>10</sup> * 2<sup>10</sup> * 2<sup>10</sup> * 2=2<sup>31</sup> bytes</li>
+<li>所以需要：1GB / 4kB = 2<sup>31</sup> / 2<sup>12</sup>=2<sup>19</sup>个1级页表条目</li>
+<li>所以需要：2<sup>19</sup> / 2<sup>9</sup>=2<sup>10</sup>个1级页表=2<sup>10</sup>个2级页表条目</li>
+<li>所以需要：2<sup>10</sup> / 2<sup>9</sup>=2个二级页表=2个3级页表条目</li>
+</ul>
+<h2 id="43-optimizing-page-table-access">4.3 Optimizing Page Table Access<a class="anchor ms-1" href="#43-optimizing-page-table-access"><i class="fas fa-link"></i></a></h2>
+<ul>
+<li>所有页表是存在main memory中的，操作系统负责构建和更新页表</li>
+<li>创建进程或更新页表时CPU会收到通知</li>
+<li>页表被用来每一次解析虚拟地址到物理地址的工作，采用的方式是page tree walking</li>
+<li>当解析虚拟地址的时候，每级都至少有一个页表在page tree walking中被使用</li>
+<li>所以每次解析虚拟地址要访问4次内存，这很慢</li>
+</ul>
+<p>TLB：</p>
+<ul>
+<li>现代CPU将虚拟地址的计算结果保存在一个叫做TLB（Tranlsation Look-Aside Buffer）的cache中。</li>
+<li>TLB是一个很小的cache，而且速度极快</li>
+<li>现代CPU提供多级TLB，级别越高尺寸越大同时越慢。也分为数据和指令两种，ITLB和DTLB。高层级TLB比如2LTLB通常是统一的。（和前一篇文章讲的cache结构类似）</li>
+<li>因为虚拟地址的offset不参与page tree walking，所以使用其余部分作为cache的tag</li>
+<li>通过软件或硬件prefetch code/data会隐式的prefetch TLB条目，如果地址是在另一个page上时</li>
+</ul>
+<h3 id="431-caveats-of-using-a-tlb">4.3.1 Caveats Of Using A TLB<a class="anchor ms-1" href="#431-caveats-of-using-a-tlb"><i class="fas fa-link"></i></a></h3>
+<p>讲了几种优化TLB cache flush的手段，不过没有讲现代CPU使用的是哪一种。</p>
+<p>个人认为这段不用太仔细读，只需要知道存在一种手段可以最少范围的flush TLB cache entry就行了。</p>
+<h3 id="432-influencing-tlb-performance">4.3.2 Influencing TLB Performance<a class="anchor ms-1" href="#432-influencing-tlb-performance"><i class="fas fa-link"></i></a></h3>
+<p>使用大页：</p>
+<ul>
+<li>页尺寸越大，则页表需要存储的条目就越少，则需要做的虚拟地址-&gt;物理地址翻译工作就越少，则需要TLB的条目就越少。有些x86/x86-64支持4kB、2MB、4MB的页尺寸。</li>
+<li>不过大页存在问题，给大页使用的内存区域必须是连续的。</li>
+<li>如果物理内存的管理基本单位和虚拟内存页一样大的话，浪费的内存就会变多（因为内存申请是以页为单位的，不管你用多少，都会占用1页）。</li>
+<li>2MB的页对于x86-64系统来说也还是太大了，如果要实现则必须用几个小页组成大页来实现。如果小页是4kB，那么就意味着要在物理内存中连续地分配512个小页。要做到这个比较困难，而且系统运行一段时间物理内存就会变得碎片化。</li>
+<li>Linux系统在操作系统启动时遇险分配了一块内存区域存放大页（<code>hugetlbs</code>文件系统），固定数量的物理页被保留给虚拟大页使用。</li>
+<li>所以大页适合在以下场景：性能优先、资源充足、不怕配置繁琐，比如数据库应用。</li>
+</ul>
+<p>提高虚拟页最小尺寸（前面讲的大页是可选的）也会产生问题：</p>
+<ul>
+<li>内存影射操作（比如加载应用程序）必须能够适配页尺寸。比页尺寸更小的映射是不允许的。</li>
+<li>一个可执行程序的各个部分，在大多数架构中，的关系是固定的。</li>
+<li>如果页尺寸变得太大，以至于超出了可执行程序所适配的大小，那么就无法加载了。看下图：</li>
+</ul>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-txt" data-lang="txt"><span class="line"><span class="cl">$ eu-readelf -l /bin/ls
+</span></span><span class="line"><span class="cl">Program Headers:
+</span></span><span class="line"><span class="cl">  Type   Offset   VirtAddr           PhysAddr           FileSiz  MemSiz   Flg Align
+</span></span><span class="line"><span class="cl">...
+</span></span><span class="line"><span class="cl">  LOAD   0x000000 0x0000000000400000 0x0000000000400000 0x0132ac 0x0132ac R E 0x200000
+</span></span><span class="line"><span class="cl">  LOAD   0x0132b0 0x00000000006132b0 0x00000000006132b0 0x001a71 0x001a71 RW  0x200000
+</span></span><span class="line"><span class="cl">...
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p><strong>Figure 4.3: ELF Program Header Indicating Alignment Requirements</strong></p>
+<p>这是一个x86-64可执行二进制的头，里面规定了内存对齐单位是0x200000 = 2,097,152 = 2MB，如果页尺寸比这个大就不行了。</p>
+<p>另一个使用大页的影响是减少page table tree的层级，因为offset变大了，那么剩下的留给页表的部分就变少了，那么page tree walking就更快了，那么TLB missing所要产生的工作就变少了。</p>
+<p>下面这段没有看懂：</p>
+<blockquote>
+<p>Beyond using large page sizes, it is possible to reduce the number of TLB entries needed by moving data which is used at the same time to fewer pages. This is similar to some optimizations for cache use we talked about above. Only now the alignment required is large. Given that the number of TLB entries is quite small this can be an important optimization.</p>
+</blockquote>
+<h2 id="44-impact-of-virtualization">4.4 Impact Of Virtualization<a class="anchor ms-1" href="#44-impact-of-virtualization"><i class="fas fa-link"></i></a></h2>
+<p>大致意思是现代虚拟化技术能够消解大部分因虚拟化导致的TLB性能损失，但是这个开销不会完全消失。</p></div></div>
+  <div class="card-footer"><div class="post-navs d-flex justify-content-evenly"><div class="post-nav post-prev">
+    <i class="fas fa-fw fa-chevron-left"></i>
+    <a href="/post/kernel/know-memory-cpu-cache/">What Every Programmer Should Know About Memory, Part 2: CPU Caches
+</a>
+  </div><div class="post-nav post-next">
+    <a href="/post/kernel/know-memory-cpu-numa-support/">What Every Programmer Should Know About Memory, Part 4: NUMA Support
+</a>
+    <i class="fas fa-fw fa-chevron-right"></i>
+  </div></div></div>
+</article><div class="post-copyright mb-3 row card component" id="post-copyright">
+    <div class="card-header">
+        <h2 class="card-title">版权</h2>
+    </div>
+    <div class="card-body"><a class="d-flex align-items-center flex-column" target="_blank" rel="license noopener noreferrer" href="https://creativecommons.org/licenses/by-nc-nd/4.0/deed.zh">
+  <span><i class="fab fa-fw fa-2x fa-creative-commons"></i><i class="fab fa-fw fa-2x fa-creative-commons-by"></i><i class="fab fa-fw fa-2x fa-creative-commons-nc"></i><i class="fab fa-fw fa-2x fa-creative-commons-nd"></i></span>
+  CC BY-NC-ND 4.0 
+</a>
+
+
+    </div>
+</div><section class="related-posts row card component">
+    <div class="card-header">
+      <h2 class="card-title">相关文章</h2>
+    </div>
+    <div class="card-body">
+      <ul class="post-list"><li>
+          <a href="/post/kernel/know-memory-cpu-cache/">What Every Programmer Should Know About Memory, Part 2: CPU Caches
+</a>
+          <span class="float-end post-date">2019-03-05
+</span>
+        </li><li>
+          <a href="/post/kernel/know-memory-ram/">What Every Programmer Should Know About Memory, Part 1, RAM
+</a>
+          <span class="float-end post-date">2019-03-03
+</span>
+        </li><li>
+          <a href="/post/kernel/cpu-kernel-mode-user-mode/">操作系统Kernel Mode和User Mode
+</a>
+          <span class="float-end post-date">2019-02-27
+</span>
+        </li><li>
+          <a href="/post/kernel/virtual-memory-kernel-space-user-space/">Virtual Memory Kernel Space User Space
+</a>
+          <span class="float-end post-date">2019-02-27
+</span>
+        </li><li>
+          <a href="/post/vtable/">虚函数表（vtable/Virtual Table/Virtual Method Table）
+</a>
+          <span class="float-end post-date">2019-02-25
+</span>
+        </li></ul>
+    </div>
+  </section><div class="card component row post-comments" id="post-comments">
+  <div class="card-header">
+    <h2 class="card-title">评论</h2>
+  </div>
+  <div class="card-body"></div>
+</div></div>
+</div><aside class="col-lg-4 sidebar d-flex">
+  <div class="container d-flex flex-column">
+    
+    <section class="card row text-center profile component">
+  <div class="card-body">
+    <div class="col-12 d-flex align-items-center justify-content-center"><img class="profile-avatar rounded-circle" alt="颇忒脱" src="/images/avatar.jpg" loading="lazy"
+   width="455" height="455"
+   />
+</div>
+    <div class="col-12 profile-meta"><div class="profile-name">颇忒脱</div><nav class="social-links nav justify-content-center"><a class="nav-link social-link" target="_blank" href="https://github.com/chanjarster" title="GitHub" rel="noopener noreferrer">
+        <i class="fa-fw fa-2x fab fa-github"></i>
+      </a></nav>
+</div>
+  </div>
+</section>
+  <div class="post-toc row mb-4 card component" id="postTOC">
+  <div class="card-header">
+    <h2 class="card-title">目录</h2>
+  </div>
+  <div class="card-body">
+    <nav id="TableOfContents">
+  <ul>
+    <li><a href="#41-simplest-address-translation">4.1 Simplest Address Translation</a></li>
+    <li><a href="#42-multi-level-page-tables">4.2 Multi-Level Page Tables</a></li>
+    <li><a href="#43-optimizing-page-table-access">4.3 Optimizing Page Table Access</a>
+      <ul>
+        <li><a href="#431-caveats-of-using-a-tlb">4.3.1 Caveats Of Using A TLB</a></li>
+        <li><a href="#432-influencing-tlb-performance">4.3.2 Influencing TLB Performance</a></li>
+      </ul>
+    </li>
+    <li><a href="#44-impact-of-virtualization">4.4 Impact Of Virtualization</a></li>
+  </ul>
+</nav>
+  </div>
+</div><section class="featured-posts row card component">
+    <div class="card-header">
+      <h2 class="card-title">精选文章</h2>
+    </div>
+    <div class="card-body">
+      <ul class="post-list"><li>
+          <a href="/post/redis-cluster-ops/index-page/">Redis 集群运维笔记
+</a>
+        </li><li>
+          <a href="/post/linux/namespace/index-page/">Linux Namespace系列
+</a>
+        </li><li>
+          <a href="/post/network/index-page/">Networking系列
+</a>
+        </li><li>
+          <a href="/post/mysql/index-page/">MySQL系列
+</a>
+        </li><li>
+          <a href="/post/concurrent-programming/index-page/">并发编程系列
+</a>
+        </li></ul>
+    </div>
+  </section><section class="recent-posts row card component">
+  <div class="card-header">
+    <h2 class="card-title">最近文章</h2>
+  </div>
+  <div class="card-body">
+    <ul class="post-list"><li>
+        <a href="/post/qoder-switch-session/">QoderCN 切换账号后迁移会话历史
+</a>
+      </li><li>
+        <a href="/post/spring-boot-jdk-comp-table-copy/">Spring Boot 3.4 升级过程记录
+</a>
+      </li><li>
+        <a href="/post/redis-cluster-ops/index-page/">Redis 集群运维笔记
+</a>
+      </li><li>
+        <a href="/post/spring-boot-jdk-comp-table/">Spring、JDK、Maven 版本兼容性表格
+</a>
+      </li><li>
+        <a href="/post/network/calico-firewall-k8s/">Calico 配置 K8s 防火墙
+</a>
+      </li></ul>
+  </div>
+</section><section class="tags-taxonomies row card component">
+      <div class="card-header">
+        <h2 class="card-title">
+          <a href="/tags">标签</a>
+        </h2>
+      </div>
+      <div class="card-body">
+        <div class="py-2"><a href="/tags/arts-a/" class="badge rounded post-taxonomy" title="ARTS-A">
+            ARTS-A<span class="badge badge-sm text-white bg-accent ms-1">125</span></a><a href="/tags/k8s/" class="badge rounded post-taxonomy" title="k8s">
+            k8s<span class="badge badge-sm text-white bg-accent ms-1">52</span></a><a href="/tags/troubleshooting/" class="badge rounded post-taxonomy" title="troubleshooting">
+            troubleshooting<span class="badge badge-sm text-white bg-accent ms-1">40</span></a><a href="/tags/jvm/" class="badge rounded post-taxonomy" title="jvm">
+            jvm<span class="badge badge-sm text-white bg-accent ms-1">39</span></a><a href="/tags/docker/" class="badge rounded post-taxonomy" title="docker">
+            docker<span class="badge badge-sm text-white bg-accent ms-1">30</span></a><a href="/tags/mysql/" class="badge rounded post-taxonomy" title="mysql">
+            mysql<span class="badge badge-sm text-white bg-accent ms-1">25</span></a><a href="/tags/network/" class="badge rounded post-taxonomy" title="network">
+            network<span class="badge badge-sm text-white bg-accent ms-1">25</span></a><a href="/tags/%E5%B9%B6%E5%8F%91%E7%BC%96%E7%A8%8B/" class="badge rounded post-taxonomy" title="并发编程">
+            并发编程<span class="badge badge-sm text-white bg-accent ms-1">21</span></a><a href="/tags/cheatsheet/" class="badge rounded post-taxonomy" title="cheatsheet">
+            cheatsheet<span class="badge badge-sm text-white bg-accent ms-1">20</span></a><a href="/tags/java/" class="badge rounded post-taxonomy" title="java">
+            java<span class="badge badge-sm text-white bg-accent ms-1">20</span></a><a href="/tags/kernel/" class="badge rounded post-taxonomy" title="kernel">
+            kernel<span class="badge badge-sm text-white bg-accent ms-1">19</span></a><a href="/tags/linux/" class="badge rounded post-taxonomy" title="linux">
+            linux<span class="badge badge-sm text-white bg-accent ms-1">19</span></a><a href="/tags/redis/" class="badge rounded post-taxonomy" title="redis">
+            redis<span class="badge badge-sm text-white bg-accent ms-1">17</span></a><a href="/tags/prometheus/" class="badge rounded post-taxonomy" title="prometheus">
+            prometheus<span class="badge badge-sm text-white bg-accent ms-1">13</span></a><a href="/tags/%E6%80%A7%E8%83%BD%E8%B0%83%E4%BC%98/" class="badge rounded post-taxonomy" title="性能调优">
+            性能调优<span class="badge badge-sm text-white bg-accent ms-1">13</span></a><a href="/tags/go/" class="badge rounded post-taxonomy" title="go">
+            go<span class="badge badge-sm text-white bg-accent ms-1">10</span></a><a href="/tags/%E5%BE%AE%E6%9C%8D%E5%8A%A1/" class="badge rounded post-taxonomy" title="微服务">
+            微服务<span class="badge badge-sm text-white bg-accent ms-1">10</span></a><a href="/tags/rancher/" class="badge rounded post-taxonomy" title="rancher">
+            rancher<span class="badge badge-sm text-white bg-accent ms-1">9</span></a><a href="/tags/debug/" class="badge rounded post-taxonomy" title="debug">
+            debug<span class="badge badge-sm text-white bg-accent ms-1">7</span></a><a href="/tags/gc/" class="badge rounded post-taxonomy" title="gc">
+            gc<span class="badge badge-sm text-white bg-accent ms-1">7</span></a><a href="/tags/nginx/" class="badge rounded post-taxonomy" title="nginx">
+            nginx<span class="badge badge-sm text-white bg-accent ms-1">7</span></a><a href="/tags/ingress/" class="badge rounded post-taxonomy" title="ingress">
+            ingress<span class="badge badge-sm text-white bg-accent ms-1">6</span></a><a href="/tags/%E8%BF%90%E7%BB%B4/" class="badge rounded post-taxonomy" title="运维">
+            运维<span class="badge badge-sm text-white bg-accent ms-1">6</span></a><a href="/tags/ci_cd/" class="badge rounded post-taxonomy" title="CI_CD">
+            CI_CD<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/interview/" class="badge rounded post-taxonomy" title="interview">
+            interview<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/jmx/" class="badge rounded post-taxonomy" title="jmx">
+            jmx<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/openssl/" class="badge rounded post-taxonomy" title="openssl">
+            openssl<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/tls/" class="badge rounded post-taxonomy" title="tls">
+            tls<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/%E5%88%86%E5%B8%83%E5%BC%8F%E4%BA%8B%E5%8A%A1/" class="badge rounded post-taxonomy" title="分布式事务">
+            分布式事务<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/%E5%88%86%E5%B8%83%E5%BC%8F%E7%AE%97%E6%B3%95/" class="badge rounded post-taxonomy" title="分布式算法">
+            分布式算法<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/%E6%94%B6%E8%97%8F%E5%A4%B9/" class="badge rounded post-taxonomy" title="收藏夹">
+            收藏夹<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/%E9%AB%98%E5%B9%B6%E5%8F%91/" class="badge rounded post-taxonomy" title="高并发">
+            高并发<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/visualvm/" class="badge rounded post-taxonomy" title="visualvm">
+            visualvm<span class="badge badge-sm text-white bg-accent ms-1">4</span></a><a href="/tags/%E6%97%A5%E5%BF%97/" class="badge rounded post-taxonomy" title="日志">
+            日志<span class="badge badge-sm text-white bg-accent ms-1">4</span></a><a href="/tags/arts/" class="badge rounded post-taxonomy" title="arts">
+            arts<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/arts-r/" class="badge rounded post-taxonomy" title="arts-r">
+            arts-r<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/classloader/" class="badge rounded post-taxonomy" title="ClassLoader">
+            ClassLoader<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/container/" class="badge rounded post-taxonomy" title="container">
+            container<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/ios/" class="badge rounded post-taxonomy" title="ios">
+            ios<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/iphone/" class="badge rounded post-taxonomy" title="iphone">
+            iphone<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/jenkins/" class="badge rounded post-taxonomy" title="Jenkins">
+            Jenkins<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/namespace/" class="badge rounded post-taxonomy" title="namespace">
+            namespace<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/scheduling/" class="badge rounded post-taxonomy" title="scheduling">
+            scheduling<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/springboot/" class="badge rounded post-taxonomy" title="springboot">
+            springboot<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/thread/" class="badge rounded post-taxonomy" title="thread">
+            thread<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/%E5%88%86%E5%B8%83%E5%BC%8F%E6%9E%B6%E6%9E%84/" class="badge rounded post-taxonomy" title="分布式架构">
+            分布式架构<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/%E5%8D%8E%E4%B8%BA/" class="badge rounded post-taxonomy" title="华为">
+            华为<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/%E8%8B%B9%E6%9E%9C/" class="badge rounded post-taxonomy" title="苹果">
+            苹果<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/bash/" class="badge rounded post-taxonomy" title="bash">
+            bash<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/etcd/" class="badge rounded post-taxonomy" title="etcd">
+            etcd<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/grafana/" class="badge rounded post-taxonomy" title="grafana">
+            grafana<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/iptables/" class="badge rounded post-taxonomy" title="iptables">
+            iptables<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/jdbc/" class="badge rounded post-taxonomy" title="JDBC">
+            JDBC<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/jmeter/" class="badge rounded post-taxonomy" title="jmeter">
+            jmeter<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/%E6%95%B0%E6%8D%AE%E5%BA%93%E6%97%B6%E5%8C%BA%E9%82%A3%E4%BA%9B%E4%BA%8B%E5%84%BF/" class="badge rounded post-taxonomy" title="数据库时区那些事儿">
+            数据库时区那些事儿<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/%E7%9B%91%E6%8E%A7/" class="badge rounded post-taxonomy" title="监控">
+            监控<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/%E9%99%90%E6%B5%81/" class="badge rounded post-taxonomy" title="限流">
+            限流<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/acloud/" class="badge rounded post-taxonomy" title="acloud">
+            acloud<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/agent/" class="badge rounded post-taxonomy" title="agent">
+            agent<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/akka/" class="badge rounded post-taxonomy" title="Akka">
+            Akka<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/alertmanager/" class="badge rounded post-taxonomy" title="alertmanager">
+            alertmanager<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/calico/" class="badge rounded post-taxonomy" title="calico">
+            calico<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/chrome/" class="badge rounded post-taxonomy" title="chrome">
+            chrome<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/coredns/" class="badge rounded post-taxonomy" title="coredns">
+            coredns<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/elasticsearch/" class="badge rounded post-taxonomy" title="elasticsearch">
+            elasticsearch<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/fluentd/" class="badge rounded post-taxonomy" title="fluentd">
+            fluentd<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/harbor/" class="badge rounded post-taxonomy" title="harbor">
+            harbor<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/helm/" class="badge rounded post-taxonomy" title="helm">
+            helm<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/hystrix/" class="badge rounded post-taxonomy" title="hystrix">
+            hystrix<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/io/" class="badge rounded post-taxonomy" title="io">
+            io<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/jdpa/" class="badge rounded post-taxonomy" title="jdpa">
+            jdpa<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/jwt/" class="badge rounded post-taxonomy" title="jwt">
+            jwt<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/kafka/" class="badge rounded post-taxonomy" title="kafka">
+            kafka<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/kibana/" class="badge rounded post-taxonomy" title="kibana">
+            kibana<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/mq/" class="badge rounded post-taxonomy" title="MQ">
+            MQ<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/nfs/" class="badge rounded post-taxonomy" title="nfs">
+            nfs<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/oauth/" class="badge rounded post-taxonomy" title="oauth">
+            oauth<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/oracle/" class="badge rounded post-taxonomy" title="Oracle">
+            Oracle<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/pprof/" class="badge rounded post-taxonomy" title="pprof">
+            pprof<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/qoder/" class="badge rounded post-taxonomy" title="qoder">
+            qoder<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/reactor/" class="badge rounded post-taxonomy" title="reactor">
+            reactor<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/spring-boot/" class="badge rounded post-taxonomy" title="spring-boot">
+            spring-boot<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/spring-cloud/" class="badge rounded post-taxonomy" title="Spring Cloud">
+            Spring Cloud<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/ssl/" class="badge rounded post-taxonomy" title="ssl">
+            ssl<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/systemtap/" class="badge rounded post-taxonomy" title="systemtap">
+            systemtap<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/tiller/" class="badge rounded post-taxonomy" title="tiller">
+            tiller<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/tomcat/" class="badge rounded post-taxonomy" title="tomcat">
+            tomcat<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/ubuntu/" class="badge rounded post-taxonomy" title="ubuntu">
+            ubuntu<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/vtable/" class="badge rounded post-taxonomy" title="vtable">
+            vtable<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/%E6%B6%88%E6%81%AF%E9%98%9F%E5%88%97/" class="badge rounded post-taxonomy" title="消息队列">
+            消息队列<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/%E6%B7%B1%E4%BF%A1%E6%9C%8D/" class="badge rounded post-taxonomy" title="深信服">
+            深信服<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/%E7%BC%93%E5%AD%98/" class="badge rounded post-taxonomy" title="缓存">
+            缓存<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/%E8%99%9A%E6%8B%9F%E5%8C%96/" class="badge rounded post-taxonomy" title="虚拟化">
+            虚拟化<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/%E8%B0%83%E7%94%A8%E9%93%BE%E8%BF%BD%E8%B8%AA/" class="badge rounded post-taxonomy" title="调用链追踪">
+            调用链追踪<span class="badge badge-sm text-white bg-accent ms-1">1</span></a></div>
+      </div>
+    </section>
+    
+  </div>
+</aside>
+</div>
+    </main><footer class="footer mt-auto py-3 text-center container"><nav class="social-links nav justify-content-center mb-2"><a class="nav-link social-link" target="_blank" href="https://github.com/chanjarster" title="GitHub" rel="noopener noreferrer">
+        <i class="fa-fw fa-2x fab fa-github"></i>
+      </a></nav>
+<div class="copyright mb-2">
+  Copyright © 2010-2026 Daniel Qian. All Rights Reserved.
+</div>
+<div class="powered-by mb-2">
+  Powered by <a href="https://gohugo.io" target="_blank" rel="noopener noreferrer">Hugo</a> and the <a href="https://github.com/razonyang/hugo-theme-bootstrap" target="_blank" rel="noopener noreferrer">Bootstrap</a> theme.
+</div>
+<a href="https://www.netlify.com" target="_blank" rel="noopener noreferrer">
+    <img src="https://www.netlify.com/img/global/badges/netlify-color-accent.svg" alt="Deploys by Netlify" width="114" height="51" />
+</a>
+</footer>
+<script src="/js/main.2cdce25f280f570596c88888d6af930fe5e15ea030005291dad293defbb231d3.js" integrity="sha256-LNziXygPVwWWyIiI1q&#43;TD&#43;XhXqAwAFKR2tKT3vuyMdM=" crossorigin="anonymous" defer></script><script src="/js/icons.min.7b1f27dfde35467d03350938b2e41dbffd06347009b97ab913edfaca01a07814.js" integrity="sha256-ex8n3941Rn0DNQk4suQdv/0GNHAJuXq5E&#43;36ygGgeBQ=" crossorigin="anonymous" defer></script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('\/service-worker.js').then(function(reg) {
+      console.log('Successfully registered service worker', reg);
+    }).catch(function(err) {
+      console.warn('Error whilst registering service worker', err);
+    });
+  });
+}
+</script><script src="/js/viewer.min.1ec1fa5aa3a66267222a44fe1cd51856ad4a92be48ede579fb36d70a6d4c28e9.js" integrity="sha256-HsH6WqOmYmciKkT&#43;HNUYVq1Kkr5I7eV5&#43;zbXCm1MKOk=" crossorigin="anonymous" defer></script>
+</body>
+</html>

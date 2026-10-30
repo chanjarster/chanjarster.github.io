@@ -1,0 +1,1094 @@
+<!doctype html><html lang="zh-cn" data-palette="blue"
+  >
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>What every programmer should know about memory, Part 2: CPU caches - 颇忒脱的技术博客</title><link rel="apple-touch-icon" href="/images/icons/icon-180x180.png" sizes="180x180">
+<link rel="icon" href="/images/icons/icon-32x32.png" sizes="32x32" type="image/png">
+<link rel="icon" href="/images/icons/icon-16x16.png" sizes="16x16" type="image/png">
+<link rel="icon" href="/images/icons/favicon.ico">
+<link rel="manifest" href="/manifest.json">
+<meta name="keywords" content="" />
+<meta name="description" content="" /><meta name="robots" content="index, follow" /><meta itemprop="name" content="What every programmer should know about memory, Part 2: CPU caches">
+<meta itemprop="description" content=""><meta itemprop="datePublished" content="2019-03-05T21:22:12+08:00" />
+<meta itemprop="dateModified" content="2019-03-05T21:22:12+08:00" />
+<meta itemprop="wordCount" content="13353">
+<meta itemprop="keywords" content="kernel," /><meta property="og:title" content="What every programmer should know about memory, Part 2: CPU caches" />
+<meta property="og:description" content="" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="/post/kernel/know-memory-cpu-cache/" /><meta property="article:section" content="post" />
+<meta property="article:published_time" content="2019-03-05T21:22:12+08:00" />
+<meta property="article:modified_time" content="2019-03-05T21:22:12+08:00" />
+
+<meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="What every programmer should know about memory, Part 2: CPU caches"/>
+<meta name="twitter:description" content=""/>
+<meta property="og:image" content="/images/avatar.jpg"/>
+  <meta name="twitter:image" content="/images/avatar.jpg"/><link rel="stylesheet" href="/css/main.min.24196952817c68c8b90d8fa573d560fa62766baa0622bdc0e862255f4a4d1307.css" integrity="sha256-JBlpUoF8aMi5DY&#43;lc9Vg&#43;mJ2a6oGIr3A6GIlX0pNEwc=" crossorigin="anonymous"><link rel="stylesheet" href="/css/viewer.min.3d228794bcedbbfa0412beb8fbc1ec6973202945e42af7004f742a4d7bd620ab.css" integrity="sha256-PSKHlLztu/oEEr64&#43;8HsaXMgKUXkKvcAT3QqTXvWIKs=" crossorigin="anonymous"></head>
+  <body><script>const items=["mode","palette"];items.forEach(function(e){const t=localStorage.getItem("hbs-"+e);t&&document.body.parentElement.setAttribute("data-"+e,t)})</script><header><nav class="navbar top-app-bar top-app-bar-expand-lg fixed-top">
+  <div class="container">
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent"
+      aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <i class="fas fa-bars"></i>
+    </button><a class="navbar-brand flex-grow-1 flex-lg-grow-0 text-center text-lg-start mx-auto me-lg-3" href="/"><img class="logo" alt="Logo" src="/images/avatar.jpg" loading="lazy"
+   width="455" height="455"
+   />
+颇忒脱的技术博客
+    </a>
+    
+    <button class="navbar-settings" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvasSettings"
+  aria-controls="offcanvasSettings" aria-label="Toggle settings">
+  <i class="fas fa-ellipsis-v"></i>
+</button>
+
+<div class="offcanvas offcanvas-end surface h-100" tabindex="-1" id="offcanvasSettings" aria-labelledby="offcanvasSettings">
+  <div class="offcanvas-header">
+    <h3 class="offcanvas-title">设置</h3>
+    <button type="button" class="btn btn-sm btn-outline-primary" data-bs-dismiss="offcanvas" aria-label="Close">
+      <i class="fas fa-times"></i>
+    </button>
+  </div>
+  <div class="offcanvas-body d-flex flex-column">
+
+<section class="setting">
+  <form class="row">
+    <div class="col-auto">
+      <label><i class="fas fa-fw fa-adjust"></i> 模式</label>
+    </div>
+    <div class="col-auto ms-auto">
+      <div class="form-check form-switch">
+        <input class="form-check-input" type="checkbox" id="modeSwitcher">
+      </div>
+    </div>
+  </form>
+</section>
+
+<section class="setting">
+  <form class="font-size-switcher-form row">
+    <div class="col-auto">
+      <label for="fontSize" class="form-label"><i class="fas fa-fw fa-font"></i> 字体大小</label>
+    </div>
+    <div class="col-auto ms-auto">
+      <input type="range" class="form-range" min="-2" max="2" id="fontSize">
+    </div>
+  </form>
+</section>
+
+
+<section class="setting palettes">
+  <form class="row">
+    <div class="col-auto">
+      <label><i class="fas fa-fw fa-palette"></i> 配色</label>
+    </div>
+    <div class="col-auto ms-auto">
+      <a id="btnPalette" class="btn btn-sm btn-outline-primary" role="button" aria-label="palettePicker">
+        <i class="fas fa-eye-dropper"></i>
+      </a>
+    </div>
+  </form>
+  <div class="mt-2 d-flex justify-content-between visually-hidden" id="palettePicker"><button type="button" id="palette-blue" aria-label="蓝色"
+        class="btn btn-sm w-100 palette" data-palette="blue">
+      </button><button type="button" id="palette-blue-gray" aria-label="蓝灰色"
+        class="btn btn-sm w-100 palette" data-palette="blue-gray">
+      </button><button type="button" id="palette-brown" aria-label="棕色"
+        class="btn btn-sm w-100 palette" data-palette="brown">
+      </button><button type="button" id="palette-cyan" aria-label="青色"
+        class="btn btn-sm w-100 palette" data-palette="cyan">
+      </button><button type="button" id="palette-green" aria-label="绿色"
+        class="btn btn-sm w-100 palette" data-palette="green">
+      </button><button type="button" id="palette-indigo" aria-label="靛青色"
+        class="btn btn-sm w-100 palette" data-palette="indigo">
+      </button><button type="button" id="palette-orange" aria-label="橙色"
+        class="btn btn-sm w-100 palette" data-palette="orange">
+      </button><button type="button" id="palette-pink" aria-label="粉色"
+        class="btn btn-sm w-100 palette" data-palette="pink">
+      </button><button type="button" id="palette-purple" aria-label="紫色"
+        class="btn btn-sm w-100 palette" data-palette="purple">
+      </button><button type="button" id="palette-red" aria-label="红色"
+        class="btn btn-sm w-100 palette" data-palette="red">
+      </button><button type="button" id="palette-teal" aria-label="蓝绿色"
+        class="btn btn-sm w-100 palette" data-palette="teal">
+      </button><button type="button" id="palette-yellow" aria-label="黄色"
+        class="btn btn-sm w-100 palette" data-palette="yellow">
+      </button></div>
+</section>
+<section class="setting actions d-flex justify-content-around mt-auto overflow-auto">
+  <a role="button" class="action action-go-back" href="javascript: window.history.back();">
+    <span class="action-icon"><i class="fas fa-2x fa-arrow-left"></i></span> 返回
+  </a>
+  <a role="button" class="action action-reload-page">
+    <span class="action-icon"><i class="fas fa-2x fa-redo-alt"></i></span> 刷新
+  </a>
+  <a role="button" class="action action-copy-url">
+    <span class="action-icon"><i class="fas fa-2x fa-link"></i></span> 复制链接
+  </a></section>
+
+</div>
+</div>
+
+    <div class="collapse navbar-collapse" tabindex="-1" id="navbarSupportedContent" aria-labelledby="navbarSupportedContent">
+      <form class="search-bar my-1" action="/search">
+  <div class="input-group input-group-sm">
+    <span class="btn btn-search disabled position-absolute left-0"><i class="fas fa-fw fa-search"></i></span>
+    <input class="form-control rounded-pill" name="q" type="search" aria-label="Search">
+  </div>
+</form>
+      <ul class="navbar-nav ms-auto"><li class="nav-item">
+          <a class="nav-link" href="/series/">
+            <i class="fas fa-fw fa-columns"></i>专栏
+          </a>
+        </li><li class="nav-item dropdown">
+          <a class="nav-link" id="navbarDropdownIndex" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+            <i class="fas fa-fw fa-chevron-circle-down"></i>快速索引
+          </a>
+          <ul class="dropdown-menu" aria-labelledby="navbarDropdownIndex"><li>
+              <a class="dropdown-item"
+                href="/tags/go">
+                Go
+              </a>
+            </li><li>
+              <a class="dropdown-item"
+                href="/tags/gc">
+                GC
+              </a>
+            </li><li>
+              <a class="dropdown-item"
+                href="/tags/kernel">
+                Kernel
+              </a>
+            </li><li>
+              <a class="dropdown-item"
+                href="/tags/cheatsheet">
+                Cheatsheet
+              </a>
+            </li><li>
+              <a class="dropdown-item"
+                href="/tags/troubleshooting">
+                排障实战记录
+              </a>
+            </li></ul>
+        </li><li class="nav-item">
+          <a class="nav-link" href="/tags/">
+            <i class="fas fa-fw fa-tags"></i>标签
+          </a>
+        </li><li class="nav-item">
+          <a class="nav-link" href="/archives/">
+            <i class="fas fa-fw fa-file-archive"></i>归档
+          </a>
+        </li></ul>
+    </div>
+  </div>
+</nav>
+</header>
+<main role="main" class="container">
+      <div class="row content">
+<div class="col-lg-8">
+  <div class="container"><nav class="row card component" aria-label="breadcrumb">
+  <div class="card-body">
+    <ol class="breadcrumb "><li class="breadcrumb-item"><a href="/">主页</a></li><li class="breadcrumb-item"><a href="/post/">文章</a></li><li class="breadcrumb-item active">What Every Programmer Should Know About Memory, Part 2: CPU Caches</li></ol>
+  </div>
+</nav><div class="post-panel-wrapper">
+  <div class="d-flex flex-column component rounded post-panel">
+    
+    <a class="action action-panel-toggler" role="button" title="Panel toggler">
+      <i class="fas fa-fw fa-chevron-circle-down"></i>
+    </a>
+    <a id="sidebarToggler" class="action d-none d-lg-block" role="button" title="Sidebar toggler">
+  <i class="fas fa-fw fa-expand-alt" data-fa-transform="rotate-45"></i>
+</a>
+
+    
+
+    
+    <a class="action" href="#post-copyright" role="button" aria-label="Copyright" title="Copyright">
+  <i class="fas fa-fw fa-copyright"></i>
+</a>
+    <a class="action" href="#post-comments" role="button" aria-label="Comments" title="Comments">
+  <i class="fas fa-fw fa-comments"></i>
+</a>
+    <a class="action" href="#postTOC" aria-controls="Table of contents" role="button" title="Table of contents">
+  <i class="fas fa-fw fa-list-alt"></i>
+</a>
+    
+  </div>
+</div>
+<article class="row card component mb-4 post">
+  <div class="card-header ">
+    <h1 class="card-title post-title">What Every Programmer Should Know About Memory, Part 2: CPU Caches
+</h1>
+  </div>
+  <div class="card-body"><div class="post-meta">
+  <span class="post-date" title="创建于 2019-03-05 21:22:12 &#43;0800 CST。">
+    2019-03-05
+  </span><span class="post-reading-time">
+    27 分钟阅读
+  </span><span class="post-taxonomies"><a href="/tags/kernel/" class="badge post-taxonomy">kernel</a></span>
+</div>
+<div class="post-content mb-3"><p>原文：<a href="https://lwn.net/Articles/252125/" target="_blank" rel="noopener noreferrer">What every programmer should know about memory, Part 2: CPU caches</a></p>
+<p>关键词：Cache prefetching、TLB cache missing、MESI protocol、Cache types（L1d、L1i、L2、L3）</p>
+<h2 id="31-cpu-caches-in-the-big-picture">3.1 CPU Caches in the Big Picture<a class="anchor ms-1" href="#31-cpu-caches-in-the-big-picture"><i class="fas fa-link"></i></a></h2>
+<p>内存很慢，这就是为何CPU cache存在的原因，CPU cache内置在CPU内部，SRAM。
+CPU cache尺寸不大。</p>
+<p><img class="img-fluid" alt="" src="https://static.lwn.net/images/cpumemory/cpumemory.1.png" loading="lazy"
+  
+   />
+
+</p>
+<p>CPU cache处于CPU和内存之间，默认情况下CPU所读写的数据都存在cache中。</p>
+<p>Intel将CPU cache分为data cache和code cache，这样会有性能提升。</p>
+<p>随着CPU cache和内存的速度差异增大，在两者之间增加了更大但是更慢的CPU cache，为何不扩大原CPU cache的尺寸？答案是不经济。</p>
+<p>现代CPU core拥有三级缓存。</p>
+<p><img class="img-fluid" alt="" src="https://static.lwn.net/images/cpumemory/cpumemory.2.png" loading="lazy"
+  
+   />
+
+</p>
+<p>L1d是data cache，L1i是instruction cache（code cache）。上图只是概要，现实中从CPU core到内存的数据流一路上可以通过、也可以不通过各个高层cache，这取决于CPU的设计者，这部分对于程序员是不可见的。</p>
+<p>每个处理器拥有多个core，每个core几乎拥有所有硬件资源的copy，每个core可以独立运行，除非它们用到了相同的资源。
+每个core有用多个thread，每个thread共享其所属处理器的所有资源，Intel的thread仅对reigster做分离，甚至这个也是有限制的，有些register依然是共享的。</p>
+<p><img class="img-fluid" alt="" src="https://static.lwn.net/images/cpumemory/cpumemory.3.png" loading="lazy"
+  
+   />
+
+</p>
+<p>上面这张图：</p>
+<ol>
+<li>两个处理器，processors，大的灰色矩形</li>
+<li>每个处理器有一个L3 cache和L2 cache（从上往下看第一个深绿色L3 cache，第二个较浅绿色L2 cache）</li>
+<li>每个处理器有两个core（小的灰色矩形）</li>
+<li>每个core有一个L1d cache和L1i cache（两个浅绿色矩形）</li>
+<li>每个core有两个thread，红色矩形，同一个processor的所有core都共享相同的L2/L3 cache</li>
+</ol>
+<h2 id="32-cache-operation-at-high-level">3.2 Cache Operation at High Level<a class="anchor ms-1" href="#32-cache-operation-at-high-level"><i class="fas fa-link"></i></a></h2>
+<p>插播概念<a href="https://en.wikipedia.org/wiki/Word_%28computer_architecture%29" target="_blank" rel="noopener noreferrer">word</a>：</p>
+<blockquote>
+<p><strong>Word</strong>，数据的自然单位，CPU指令集所能处理的数据单位。在x86-64架构中，word size=64 bits=8 bytes。</p>
+</blockquote>
+<p>CPU cache中存储的条目（entry）不是word，而是cache line，如今一条cache line大小为64 bytes。每次从RAM中抓取数据的时候不仅会将目标数据抓过来，还会将其附近的数据一并抓过来，构成64 bytes大小的cache line。</p>
+<p>当一个cache line被修改了，但是还没有被写到内存（main memory），则这个cache line被标记为dirty。一旦被写到内存，则dirty标记被清除。</p>
+<p>对于多处理器系统，处理器之间会互相监视写动作，并维持以下规则：</p>
+<ul>
+<li>A dirty cache line is not present in any other processor&rsquo;s cache.</li>
+<li>Clean copies of the same cache line can reside in arbitrarily many caches.</li>
+</ul>
+<p>Cache eviction类型：</p>
+<ul>
+<li>exclusive，当要加载新数据的时候，如果L1d已满，则需要将cache line推到L2，L2转而推到L3，最终推到main memory。优点：加载新数据的时候只需要碰L1d。缺点：eviction发生时代价逐级增高。</li>
+<li>inclusive，L1d中的所有cache line同样存在于L2中。优点：L1d eviction快，因为只需要碰L2。缺点：浪费了一些L2的空间。</li>
+</ul>
+<p>下表是Intel奔腾M处理访问不同组件所需的CPU周期：</p>
+<table>
+<thead>
+<tr>
+<th>To Where</th>
+<th>Cycles</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Register</td>
+<td>&lt;= 1</td>
+</tr>
+<tr>
+<td>L1d</td>
+<td>~3</td>
+</tr>
+<tr>
+<td>L2</td>
+<td>~14</td>
+</tr>
+<tr>
+<td>Main Memory</td>
+<td>~240</td>
+</tr>
+</tbody>
+</table>
+<p>下图是写不同尺寸数据下的性能表现：</p>
+<p><img class="img-fluid" alt="" src="https://static.lwn.net/images/cpumemory/cpumemory.21.png" loading="lazy"
+  
+   />
+
+</p>
+<p>根据经验可以推测出L1d size=2^12=4K，L2 size=2^20=1M。当数据&lt;=4K时，正好能够放进L1d中，操作的CPU周期&lt;10个。当数据&gt;4K and &lt;=1M时，会利用到L2，操作的CPU周期&lt;75。当数据&gt;1M时，CPU操作周期&gt;400，则说明没有L3，此时是直接访问内存了。</p>
+<p><strong>非常重要：下面的例子里CPU访问数据是按照以下逻辑：</strong></p>
+<ul>
+<li>CPU只能从L1d cache访问数据</li>
+<li>如果L1d没有数据，则得先从L2把数据加载到L1d</li>
+<li>如果L2没有数据，则得先从main memory（RAM）加载数据</li>
+</ul>
+<p>也就是说如果这个数据一开始在L1d、L2都不存在，那么就得先从main memory加载到L2，然后从L2加载到L1d，最后CPU才可以访问。</p>
+<h2 id="33-cpu-cache-implementation-details">3.3 CPU Cache Implementation Details<a class="anchor ms-1" href="#33-cpu-cache-implementation-details"><i class="fas fa-link"></i></a></h2>
+<h3 id="331-associativity">3.3.1 Associativity<a class="anchor ms-1" href="#331-associativity"><i class="fas fa-link"></i></a></h3>
+<p>没看懂。略。</p>
+<h3 id="332-measurements-of-cache-effects">3.3.2 Measurements of Cache Effects<a class="anchor ms-1" href="#332-measurements-of-cache-effects"><i class="fas fa-link"></i></a></h3>
+<p>keyword：cache prefetching、TLB cache miss</p>
+<p>测试方法是顺序读一个<code>l</code>的数组：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c" data-lang="c"><span class="line"><span class="cl"><span class="k">struct</span> <span class="n">l</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="k">struct</span> <span class="n">l</span> <span class="o">*</span><span class="n">n</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">  <span class="kt">long</span> <span class="kt">int</span> <span class="n">pad</span><span class="p">[</span><span class="n">NPAD</span><span class="p">];</span>
+</span></span><span class="line"><span class="cl"><span class="p">};</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>根据NPAD不同，元素的大小也不同：</p>
+<ul>
+<li>NPAD=0，element size=8 bytes，element间隔 0 bytes</li>
+<li>NAPD=7，element size=64 bytes，element间隔 56 bytes</li>
+<li>NPAD=15，element size=128 bytes，element间隔 120 bytes</li>
+<li>NPAD=31，element size=256 bytes，element间隔 248 bytes</li>
+</ul>
+<p>被测CPU L1d cache=16K、L2 cache=1M、cache line=64 bytes。</p>
+<h4 id="single-threaded-sequential-access">Single Threaded Sequential Access<a class="anchor ms-1" href="#single-threaded-sequential-access"><i class="fas fa-link"></i></a></h4>
+<h5 id="case-1-element-size8-bytes">case 1: element size=8 bytes<a class="anchor ms-1" href="#case-1-element-size8-bytes"><i class="fas fa-link"></i></a></h5>
+<p>下面是NPAD=0（element size=8 bytes，element间隔0 bytes），read 单个 element的平均时钟周期：</p>
+<p><img class="img-fluid" alt="" src="https://static.lwn.net/images/cpumemory/cpumemory.22.png" loading="lazy"
+  
+   />
+
+</p>
+<p><strong>Figure 3.10: Sequential Read Access, NPAD=0</strong></p>
+<p>上面的Working set size是指数组的总尺寸（bytes）。</p>
+<p>可以看到就算数据尺寸超过了16K（L1d size），对每个元素的读的CPU周期也没有到达14，甚至当数据尺寸超过1M（L2 size）时也是这样，这就是因为<strong>cache prefetching</strong>的功劳：</p>
+<ul>
+<li>当你在读L1d cache line的时候，处理器预先从L2 cache抓取到L1d cache，当你读L1d next cache line的时候这条cache line已经准备好了。</li>
+<li>而L2也会做prefetching动作</li>
+</ul>
+<p>Cache prefetching是一项重要的优化手段，在使用连续的内存区域的时候，处理器会将后续数据预先加载到cache line中，也就是说当在访问当前cache line的时候，下一个cache line的数据已经在半路上了。</p>
+<p>Prefetching发生既会发生在L1中也会发生在L2中。</p>
+<h5 id="case-2-element-size--cache-line-总尺寸--l2">case 2: element size >= cache line, 总尺寸 <= L2<a class="anchor ms-1" href="#case-2-element-size--cache-line-总尺寸--l2"><i class="fas fa-link"></i></a></h5>
+<p>各个尺寸element的情况：</p>
+<ul>
+<li>NPAD=7（element size=64 bytes，element间隔56 bytes）</li>
+<li>NPAD=15，element size=128 bytes，element间隔 120 bytes</li>
+<li>NPAD=31，element size=256 bytes，element间隔 248 bytes</li>
+</ul>
+<p><img class="img-fluid" alt="" src="https://static.lwn.net/images/cpumemory/cpumemory.23.png" loading="lazy"
+  
+   />
+
+</p>
+<p><strong>Figure 3.11: Sequential Read for Several Sizes</strong></p>
+<p>观察working set size &lt;= L2，看（2<sup>10</sup>～2<sup>19</sup>区段）：</p>
+<ul>
+<li>当working set size &lt;= L1d的时候，时钟周期和NPAD=0持平。</li>
+<li>当working set size &gt; L1d &lt;= L2的时候，时钟周期和L2本身的周期吻合，在28左右</li>
+</ul>
+<p>这是为什么呢？此时prefetching没有起到作用了吗？这是因为：</p>
+<ul>
+<li>prefetching本身需要时钟周期</li>
+<li>顺序read array实际上就是在顺序read cache line</li>
+<li>当NPAD=0时，element size=8，就意味着你要read多次才会用光cache line，那么prefetching可以穿插在read之间进行，将next cache line准备好</li>
+<li>当NPAD=7,15,31时，element size&gt;=cache line，那么就意味着每次read都把一条cache line用完，没有留给prefetching的时钟周期了，下一次read的时候就只能老实从L2加载，所以时钟周期在28左右。</li>
+</ul>
+<h5 id="case-3-selement-size--cache-line-总尺寸--l2">case 3: selement size >= cache line, 总尺寸 > L2<a class="anchor ms-1" href="#case-3-selement-size--cache-line-总尺寸--l2"><i class="fas fa-link"></i></a></h5>
+<p>还是看各个尺寸element的情况：</p>
+<ul>
+<li>NPAD=7（element size=64 bytes，element间隔56 bytes）</li>
+<li>NPAD=15，element size=128 bytes，element间隔 120 bytes</li>
+<li>NPAD=31，element size=256 bytes，element间隔 248 bytes</li>
+</ul>
+<p><img class="img-fluid" alt="" src="https://static.lwn.net/images/cpumemory/cpumemory.23.png" loading="lazy"
+  
+   />
+
+</p>
+<p><strong>Figure 3.11: Sequential Read for Several Sizes</strong></p>
+<p>观察working set size &gt; L2，看（2<sup>19</sup>之后的区段）：</p>
+<ul>
+<li>NPAD=7（element size=64），依然有prefetching的迹象</li>
+<li>NPAD=15（element size=128）、NPAD=31（element size=256）则没有prefetching的迹象</li>
+</ul>
+<p>这是因为处理器从<a href="https://en.wikipedia.org/wiki/Stride_of_an_array" target="_blank" rel="noopener noreferrer">size of the strides</a>判断NPAD=15和31，小于prefetching window（具体后面会讲），因此没有启用prefetching。而元素大小妨碍prefetching的硬件上的原因是：prefetching无法跨过page boundaries。</p>
+<p>而NPAD=15与31的差别很大则是因为<strong>TLB cache miss</strong>。</p>
+<h5 id="测量tlb效果">测量TLB效果<a class="anchor ms-1" href="#测量tlb效果"><i class="fas fa-link"></i></a></h5>
+<p>TLB是用来存放virtual memory address到physical memory address的计算结果的（虚拟内存地址和物理内存地址在后面会讲）。</p>
+<p>测试NPAD=7（element size=64），每个元素按照下列两种方式排列的性能表现：</p>
+<ul>
+<li>On cache line，数组中的每个元素连续。也就是每次迭代需要新的cache line，每64个元素需要一个新page。</li>
+<li>On page，数组中的每个元素在独立的Page中。每次迭代需要新的cache line。</li>
+</ul>
+<p><img class="img-fluid" alt="" src="https://static.lwn.net/images/cpumemory/cpumemory.59.png" loading="lazy"
+  
+   />
+
+</p>
+<p><strong>Figure 3.12: TLB Influence for Sequential Read</strong></p>
+<ul>
+<li>蓝色曲线看到，当数据量超过2<sup>12</sup> bytes（4K），曲线开始飙升。因此可以推测TLB的大小为4K。</li>
+<li>因为每个元素大小为64 bytes，因此可以推测TLB的entry数目为64.</li>
+<li>从虚拟内存地址计算物理内存地址，并将结果放到TLB cache中是很耗时的。</li>
+<li>main memory读取或从L2读取数据到cache line之前，必须先计算物理内存地址。</li>
+<li>可以看到越大的NPAD就越会降低TLB cache的效率。换句话说，越大的元素尺寸就越会降低TLB cache的效率。</li>
+<li>所以address translation（地址翻译）的惩罚会叠加到内存访问上，所以Figure 3.11的NPAD=31（element size=256）周期数会比其他更高，而且也比理论上访问RAM的周期高。</li>
+</ul>
+<h5 id="case-4-sequential-read-and-write-npad1">case 4: Sequential Read and Write, NPAD=1<a class="anchor ms-1" href="#case-4-sequential-read-and-write-npad1"><i class="fas fa-link"></i></a></h5>
+<p>测试NPAD=1，element size=16 bytes，顺序读与写：</p>
+<ul>
+<li>Follow，和之前一样是顺序读的测试结果，作为baseline</li>
+<li>Inc，每次迭代对pad[0]++</li>
+<li>Addnext0，每次迭代读取下一个元素的pad[0]，把值加到自己的pad[0]上</li>
+</ul>
+<p><img class="img-fluid" alt="" src="https://static.lwn.net/images/cpumemory/cpumemory.24.png" loading="lazy"
+  
+   />
+
+</p>
+<p><strong>Figure 3.13: Sequential Read and Write, NPAD=1</strong></p>
+<p>按照常理来说，Addnext0应该比较慢因为它做的工组比较多，然而在某些working set size下反而比Inc要好，这是因为：</p>
+<ul>
+<li>Addnext0的读取下一个元素的pad[0]这个动作实际上是force prefetch。当程序读取下一个元素的pad[0]的时候，数据已经存在于cache line之中了。</li>
+<li>所以只要working set size符合能够放到L2中，Addnext0的表现和Follow一样好</li>
+</ul>
+<p>下面这段没看懂，也许这不重要。</p>
+<blockquote>
+<p>The “Addnext0” test runs out of L2 faster than the “Inc” test, though. It needs more data loaded from main memory. This is why the “Addnext0” test reaches the 28 cycles level for a working set size of 2<sup>21</sup> bytes. The 28 cycles level is twice as high as the 14 cycles level the “Follow” test reaches. This is easy to explain, too. Since the other two tests modify memory an L2 cache eviction to make room for new cache lines cannot simply discard the data. Instead it has to be written to memory. This means the available bandwidth on the FSB is cut in half, hence doubling the time it takes to transfer the data from main memory to L2.</p>
+</blockquote>
+<h5 id="case-4-sequential-read-on-larger-l2l3">case 4: Sequential Read on larger L2/L3<a class="anchor ms-1" href="#case-4-sequential-read-on-larger-l2l3"><i class="fas fa-link"></i></a></h5>
+<p>测试NPAD=15，element size=128 bytes。</p>
+<p><img class="img-fluid" alt="" src="https://static.lwn.net/images/cpumemory/cpumemory.25.png" loading="lazy"
+  
+   />
+
+</p>
+<p><strong>Figure 3.14: Advantage of Larger L2/L3 Caches</strong></p>
+<ul>
+<li>最后一级cache越大，则曲线逗留于L2访问开销对应的低等级的时间越长</li>
+<li>第二个处理器在2<sup>20</sup>时比第一个处理快一倍，是因为它的L3</li>
+<li>第三个处理器表现的更好则是因为它的4M L2</li>
+</ul>
+<p>所以缓存越大越能得到性能上的提升。</p>
+<h4 id="single-threaded-random-access-measurements">Single Threaded Random Access Measurements<a class="anchor ms-1" href="#single-threaded-random-access-measurements"><i class="fas fa-link"></i></a></h4>
+<p>之前已经看到处理器通过prefetching cache line到L2和L1d的方法，可以隐藏main memory的访问开销，甚至L2的访问开销。但是，只有在内存访问可预测的情况下，这才能工作良好。</p>
+<p>下图是顺序访问和随机访问的对比：</p>
+<p><img class="img-fluid" alt="" src="https://static.lwn.net/images/cpumemory/cpumemory.26.png" loading="lazy"
+  
+   />
+
+</p>
+<p><strong>Figure 3.15: Sequential vs Random Read, NPAD=0</strong></p>
+<p>后面的没有看懂。</p>
+<h3 id="333-write-behavior">3.3.3 Write behavior<a class="anchor ms-1" href="#333-write-behavior"><i class="fas fa-link"></i></a></h3>
+<p>cache应该是coherent的，cache的coherency对于userlevel 代码应该是完全透明的，内核代码除外。</p>
+<p>如果一个cache line被修改了，那么自此时间点之后的系统的结果和压根没有cache并且main memory被修改的结果是一样。有两个实现策略：</p>
+<p><strong>Write-through：</strong></p>
+<ul>
+<li>一旦cache line被写，则马上将cache line写到main memory</li>
+<li>总是保证main memory和cache保持一致，无论什么时候cache line被替换，所cache的内容可以随时丢弃</li>
+<li>优点：实现起来最简单</li>
+<li>缺点：虽然简单但是不快。如果一个程序不停的修改一个本地变量，会占用FSB带宽。</li>
+</ul>
+<p><strong>Write-back：</strong></p>
+<ul>
+<li>cache line被写不马上写到main memory，仅标记为dirty。</li>
+<li>当cache line在之后的某个时间点被drop，dirty标记会指导处理器把内容写到main memory</li>
+<li>绝大多数系统采用的是这个策略</li>
+<li>处理器甚至可以在驱散cache line之前，利用FSB的空闲空间存储cache line的内容。这样一来就允许清除dirty标记，当需要新空间的时候，处理器就能够直接丢弃cache line。</li>
+</ul>
+<p>还有另外两个策略，它们都用于地址空间的特殊区域，这些区域不由实际的RAM支持。</p>
+<p><strong>Write-combining：</strong></p>
+<ul>
+<li>Write-combining是一种首先的cache优化策略，更多的用于设备的RAM上，比如显卡。</li>
+<li>传输数据到设备的开销比访问本地RAM要大得多，所以要尽可能避免传输次数太多。</li>
+<li>如果仅因为cache line的一个<a href="https://en.wikipedia.org/wiki/Word_%28computer_architecture%29" target="_blank" rel="noopener noreferrer">word</a>的修改而要把整个cache line都传输太浪费。</li>
+<li>因此，write-combining把多个写访问合并在一起，然后再把cache line写出去。</li>
+<li>这可以加速访问设备RAM的速度。</li>
+</ul>
+<p>个人插播：</p>
+<blockquote>
+<p>这个策略牺牲了一定的latency，但是提高了throughput，类似于批处理。</p>
+</blockquote>
+<p><strong>Uncacheable：</strong></p>
+<ul>
+<li>内存地址压根就不存在RAM里，这些地址一般都是硬编码的。</li>
+<li>在商业机器上，一般来说这些地址会被翻译成访问card和连接到某个总线的设备（PCIe）。</li>
+<li>这些内存不应该被缓存。</li>
+</ul>
+<h3 id="334-multi-processor-support">3.3.4 Multi-processor support<a class="anchor ms-1" href="#334-multi-processor-support"><i class="fas fa-link"></i></a></h3>
+<p>在多处理器系统和多核处理器中，对于所有不共享的cache，都会存在cache内容不一致的问题。两个处理器之间不会共享L1d、L1i、L2、L3，同一处理器的两个核之间至少不会共享L1d。</p>
+<p>提供一条能从A处理器直接访问B处理器的cache的通道是不切实际的，因为速度不够快。所以比较实际的做法是将cache内容传输到其他处理器以备不时之需。对于多核处理器也采用这种做法。</p>
+<p>那什么时候传输呢？当一个处理器需要一条cache line做读/写，但是它在其他处理器里是dirty时。</p>
+<p>那么一个处理器是如何决定一条cache line在另外一个处理器里是否dirty呢？通常来说内存访问是读，而读不会把一个cache line变成dirty。处理器每次对cache line的写访问之后都把cache line信息广播出去是不切实际的。</p>
+<h4 id="mesi-cache-coherency-protocol">MESI cache coherency protocol<a class="anchor ms-1" href="#mesi-cache-coherency-protocol"><i class="fas fa-link"></i></a></h4>
+<p>开发了MESI缓存协同协议（MESI cache coherency protocol），规定了一条cache line的状态有四种：Modified、Exclusive、Shared、Invalid。</p>
+<ul>
+<li><em><strong>Modified</strong></em>: 本地处理器刚修改cache line，也意味着它是所有cache中的唯一copy。</li>
+<li><em><strong>Exclusive</strong></em>: cache line没有被修改，但已知没有被加载到任何其他处理的cache中。</li>
+<li><em><strong>Shared</strong></em>: cache line没有被修改，可能存在于其他处理器的cache中。</li>
+<li><em><strong>Invalid</strong></em>: cache line无效，比如还未被使用。</li>
+</ul>
+<blockquote>
+<p>MESI所解决的问题和分布式缓存中数据同步的问题是一致的，好好看看，这能够带来一些启发</p>
+</blockquote>
+<p>使用这四个状态有可能有效率地实现write-back策略，同时支持多处理器并发使用read-only数据。</p>
+<p><img class="img-fluid" alt="" src="https://static.lwn.net/images/cpumemory/cpumemory.13.png" loading="lazy"
+  
+   />
+
+</p>
+<p><strong>Figure 3.18: MESI Protocol Transitions</strong></p>
+<p>下面是四种状态变化的解读：</p>
+<p><strong>Invalid</strong>：</p>
+<ul>
+<li>最开始所有的cache line都是空的，也即Invalid</li>
+<li>如果数据加载到cache line的目的是为了写，变成Modified</li>
+<li>如果数据加载到cache line的目的是为了读，
+<ul>
+<li>若其他处理器是否也加载了相同的cache line，变成Shared</li>
+<li>如果没有，变成Exclusive</li>
+</ul>
+</li>
+</ul>
+<p><strong>Modified</strong></p>
+<ul>
+<li>如果一条Modified cache line被本地处理器读or写，状态不变。</li>
+<li>如果B处理器要读A处理器的Modified cache line，则A处理器必须将内容发送给B处理器，然后状态变成Shared。
+<ul>
+<li>发送给B处理器的数据同样也被memory controller接收和处理，然后存到main memory里。</li>
+<li>如果这一步没有做，那么状态就不能变成Shared。</li>
+</ul>
+</li>
+<li>如果B处理器要写A处理器的Modified cache line，则A处理器要把数据传给B，然后标记为Invalid。
+<ul>
+<li>这就是臭名昭著的<em><strong>Request For Ownership（RFO）</strong></em>（通过address bus）。在最后一级缓存执行这个操作和I-&gt;M一样，代价相对来说是比较高的</li>
+<li>对于write-through cache，则必须加上在高一级cache写新的cache line，或者写到main memory的时间，进一步增加了代价</li>
+</ul>
+</li>
+</ul>
+<p><strong>Shared</strong></p>
+<ul>
+<li>如果本地处理器读一条Shared cache line，状态不变。</li>
+<li>如果本地写一条Shared cache line，则变成Modified。
+<ul>
+<li>所有其他处理器的cache line copy变成Invalid。</li>
+<li>所以写操作必须通过<em><strong>RFO</strong></em>广播到其他处理器。</li>
+</ul>
+</li>
+<li>如果B处理器要读A处理器的Shared cache line，状态不变。</li>
+<li>如果B处理器要写A处理器的Shared cache line，则变成Invalid，不牵涉到bus operation。</li>
+</ul>
+<p><strong>Exclusive</strong></p>
+<ul>
+<li>Exlusive和Shared一样除了一个区别：本地写不需要RFO。</li>
+<li>所以处理器会尽可能把多的cache line维持在Exclusive状态，而不是Shared状态。
+<ul>
+<li>当信息不足的时候，Shared状态作为一种fallback——<em>原文没有说明白是什么信息，猜测应该是当无法知道其他处理器是否拥有相同cache line的时候，就把它设为Shared，这样做会比较安全</em>。</li>
+<li>E-&gt;M 比 S-&gt;M 快得多</li>
+</ul>
+</li>
+</ul>
+<blockquote>
+<p>所以在多处理器系统中，除了填充cache line之外，我们还得关注RFO消息对性能的影响。只要出现了RFO消息，就会变慢。</p>
+</blockquote>
+<p>有两种场景RFO消息是必须的：</p>
+<ol>
+<li>一个线程从一个处理器迁移到另一个处理器，所有的cache line都必须一次性移动到新处理器</li>
+<li>同一条cache line是真的被两个处理器需要。</li>
+</ol>
+<ul>
+<li>在稍小一点的尺度上，多核处理器内部就存在这样的情况，只是代价小一点而已，RFO可能会被发送很多次。</li>
+</ul>
+<p>影响Coherency protocol速度的因素：</p>
+<ul>
+<li>
+<p>RFO出现的频率，应该越低越好</p>
+</li>
+<li>
+<p>一次MESI状态变化必须等所有处理器都应答之后才能成功，所以最长的可能应答时间决定了coherency protocol的速度。</p>
+</li>
+<li>
+<p>FSB是共享资源，大多数系统所有处理器通过同一条bus连到memory controller。如果一个处理器饱和了FSB，则共享同一bus的两个或四个处理器将进一步限制每个处理器可用的带宽。</p>
+</li>
+<li>
+<p>就算每个处理器有自己的bus连接memory controller（Figure 2.2），那么处理器到memory module的bus还是会被共享的。</p>
+</li>
+<li>
+<p>在多线程/多进程程序里，总有一些synchronization的需求，这些synchronization则是使用memory实现的，所以就会有一些RFO消息。</p>
+</li>
+<li>
+<p>所以concurrency严重地受限于可供synchronization的有限带宽。</p>
+</li>
+<li>
+<p>程序应该最小化从不同处理器、不同核访问同一块内存区域的操作。</p>
+</li>
+</ul>
+<h4 id="multi-threaded-measurements">Multi Threaded Measurements<a class="anchor ms-1" href="#multi-threaded-measurements"><i class="fas fa-link"></i></a></h4>
+<p>用之前相同的程序测试多线程的表现，采用用例中最快的线程的数据。所有的处理器共享同一个bus到memory controller，并且只有一条到memory modules的bus。</p>
+<h5 id="case-1-sequential-read-access-multiple-threads">case 1: Sequential Read Access, Multiple Threads<a class="anchor ms-1" href="#case-1-sequential-read-access-multiple-threads"><i class="fas fa-link"></i></a></h5>
+<p><img class="img-fluid" alt="Figure 3.19: Sequential Read Access, Multiple Threads" src="https://static.lwn.net/images/cpumemory/cpumemory.30.png" loading="lazy"
+  
+   />
+
+</p>
+<p><strong>Figure 3.19: Sequential Read Access, Multiple Threads</strong></p>
+<p>这个测试里没有修改数据，所有cache line都是shared，没有发生RFO。但是即便如此2线程的时候有18%的性能损失，在4线程的时候则是34%。那么可能的原因就只可能是一个或两个瓶颈所造成的：处理器到memory controller的bus、memory controller到memory modules的bus。一旦working set超过L3尺寸之后，就要从main memory prefetch数据了，带宽就不够用了</p>
+<h5 id="case-2-sequential-increment-multiple-threads">case 2: Sequential Increment, Multiple Threads<a class="anchor ms-1" href="#case-2-sequential-increment-multiple-threads"><i class="fas fa-link"></i></a></h5>
+<p>这个测试用的是 “Sequential Read and Write, NPAD=1，Inc”，会修改内存。</p>
+<p><img class="img-fluid" alt="Figure 3.20: Sequential Increment, Multiple Threads" src="https://static.lwn.net/images/cpumemory/cpumemory.29.png" loading="lazy"
+  
+   />
+
+</p>
+<p><strong>Figure 3.20: Sequential Increment, Multiple Threads</strong></p>
+<p>注意图中的Y轴不是线性增加的，所以看上去很小的差异实际上差别很大。</p>
+<p>2线程依然有18%的性能损失，而4线程则有93%的性能损失，这意味4线程的时候prefetch流量核write-back流量饱和了bus。</p>
+<p>图中也可以发现只要有多个线程，L1d基本上就很低效了。</p>
+<p>L2倒不像L1d，似乎没有什么影响。这个测试修改了内存，我们预期会有很多RFO消息，但是并没有看见2、4线程相比单线程有什么性能损失。这是因为测试程序的关系。</p>
+<h5 id="case-3-random-addnextlast-multiple-threads">case 3: Random Addnextlast, Multiple Threads<a class="anchor ms-1" href="#case-3-random-addnextlast-multiple-threads"><i class="fas fa-link"></i></a></h5>
+<p>下面这张图主要是为了展现令人吃惊的高数字，在极端情况下处理list中的单个元素居然要花费1500个周期。</p>
+<p><img class="img-fluid" alt="" src="https://static.lwn.net/images/cpumemory/cpumemory.31.png" loading="lazy"
+  
+   />
+
+</p>
+<p><strong>Figure 3.21: Random Addnextlast, Multiple Threads</strong></p>
+<h5 id="总结case-123">总结case 1、2、3<a class="anchor ms-1" href="#总结case-123"><i class="fas fa-link"></i></a></h5>
+<p>把case 1、2、3中的最大working set size的值总结出多线程效率：</p>
+<table>
+<thead>
+<tr>
+<th>#Threads</th>
+<th>Seq Read</th>
+<th>Seq Inc</th>
+<th>Rand Add</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>2</td>
+<td>1.69</td>
+<td>1.69</td>
+<td>1.54</td>
+</tr>
+<tr>
+<td>4</td>
+<td>2.98</td>
+<td>2.07</td>
+<td>1.65</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Table 3.3: Efficiency for Multiple Threads</strong></p>
+<p>这个表显示了在最大working set size，使用多线程能获得的可能的最好的加速。理论上2线程应该加速2，4线程应该加速4。好好观察这个表里的数字和理论值的差异。</p>
+<p>下面这张图显示了Rand Add测试，在不同working set size下，多线程的加速效果：</p>
+<p><img class="img-fluid" alt="" src="https://static.lwn.net/images/cpumemory/cpumemory.28.png" loading="lazy"
+  
+   />
+
+</p>
+<p><strong>Figure 3.22: Speed-Up Through Parallelism</strong></p>
+<p>L1d尺寸的测试结果，在L2和L3范围内，加速效果基本上是线性的，一旦当尺寸超过L3时，数字开始下坠，并且2线程和4线程的数字下坠到同一点上。这也就是为什么很难看到大于4个处理器的系统使用同一个memory controller，这些系统必须采用不同的构造。</p>
+<p>不同情况下上图的数字是不一样的，这个取决于程序到底是怎么写的。在某些情况下，就算working set size能套进最后一级cache，也无法获得线性加速。但是另一方面依然有可能在大于两个线程、更大working set size的情况下获得线性加速。这个需要程序员做一些考量，后面会讲。</p>
+<h4 id="special-case-hyper-threads">special case: hyper-threads<a class="anchor ms-1" href="#special-case-hyper-threads"><i class="fas fa-link"></i></a></h4>
+<p>Hyper-Threads(有时候也被称为Symmetric Multi-Threading, SMT)，是CPU实现的一项技术，同时也是一个特殊情况，因为各个线程并不能够真正的同时运行。超线程共享了CPU的所有资源除了register。各个core和CPU依然是并行运行的，但是hyper-threads不是。CPU负责hyper-threads的分时复用（time-multiplexing），当当前运行的hyper-thread发生延迟的时候，就调度令一个hyper-thread运行，而发生延迟的原因大部分都是因内存访问导致的。</p>
+<p>当程序的运行2线程在一个hyper-thread核的时候，只有在以下情况才会比单线程更有效率：2个线程的<em>运行时间之和</em>低于单线程版本的运行时间。这是因为当一个线程在等待内存的时候可以安排另一个线程工作，而原本这个是串形的。</p>
+<p>一个程序的运行时间大致可以用下面这个简单模型+单级cache来计算：</p>
+<p>T<sub>exe</sub> = N[(1-F<sub>mem</sub>)T<sub>proc</sub> + F<sub>mem</sub>(G<sub>hit</sub>T<sub>cache</sub> + (1-G<sub>hit</sub>)T<sub>miss</sub>)]</p>
+<ul>
+<li>N      = Number of instructions. 指令数</li>
+<li>F<sub>mem</sub>   = Fraction of N that access memory. N的几分之几访问内存</li>
+<li>G<sub>hit</sub>   = Fraction of loads that hit the cache. 加载次数的几分之几命中cache</li>
+<li>T<sub>proc</sub>  = Number of cycles per instruction. 每条指令的周期数</li>
+<li>T<sub>cache</sub> = Number of cycles for cache hit. 命中cache的周期数</li>
+<li>T<sub>miss</sub>  = Number of cycles for cache miss. 没命中cache的周期数</li>
+<li>T<sub>exe</sub>   = Execution time for program. 程序的执行时间</li>
+</ul>
+<p>为了使用两个线程有​​意义，两个线程中每个线程的执行时间必须至多是单线程代码的一半。如果把单线程和双线程放到等式的两遍，那么唯一的变量就是cache命中率。不使线程执行速度降低50%或更多（降低超过50%就比单线程慢了），然后计算所需的最小cache命中率，得到下面这张图：</p>
+<p><img class="img-fluid" alt="" src="https://static.lwn.net/images/cpumemory/cpumemory.14.png" loading="lazy"
+  
+   />
+
+</p>
+<p><strong>Figure 3.23: Minimum Cache Hit Rate For Speed-Up</strong></p>
+<p>X轴代表了单线程代码的G<sub>hit</sub>，Y代表了双线程代码所需的G<sub>hit</sub>，双线程的值永远不能比单线程高，否则的话就意味着单线程可以用同样的方法改进代码了。单线程G<sub>hit</sub> &lt; 55%的时候，程序总是能够从多线程得到好处。</p>
+<p>绿色代表的是目标区域，如果一个线程的降速低于50%且每个线程的工作量减半，那么运行时间是有可能低于单线程的运行时间的。看上图，单线程G<sub>hit</sub>=60%时，如果要得到好处，双线程程序必须在10%以上。如果单线程G<sub>hit</sub>=95%，多线程则必须在80%以上，这就难了。特别地，这个问题是关于hyper-threads本身的，实际上给每个hyper-thread的cache尺寸是减半的（L1d、L2、L3都是）。两个hyper-thread使用相同的cache来加载数据。如果两个线程的工作集不重叠，那么原95%也可能减半，那么就远低于要求的80%。</p>
+<p>所以Hyper-threads只在有限范围的场景下有用。单线程下的cache命中率必须足够低，而且就算减半cache大小新的cache命中率在等式中依然能够达到目标。也只有这样使用Hyper-thread才有意义。在实践中是否能够更快取决于处理器是否能够充分交叠一个线程的等待和另一个线程的执行。而代码为了并行处理所引入的其他开销也是要考虑进去的。</p>
+<p>所以很明白的就是，如果两个hyper-threads运行的是两个完全不同的代码，那么肯定不会带来什么好处的，除非cache足够大到能够抵消因cache减半导致的cache miss率的提高。除非操作系统的工作负载由一堆在设计上真正能够从hyper-thread获益的进程组成，可能还是在BIOS里关掉hyper-thread比较好。</p>
+<h3 id="335-other-details">3.3.5 Other Details<a class="anchor ms-1" href="#335-other-details"><i class="fas fa-link"></i></a></h3>
+<p>现代处理器提供给进程的虚拟地址空间（virtual address space），也就是说有两种地址：虚拟的和物理的。</p>
+<p>虚拟地址不是唯一的：</p>
+<ul>
+<li>一个虚拟地址在不同时间可以指向不同的物理地址。</li>
+<li>不同进程的相同的地址也可能指向不同的物理地址。</li>
+</ul>
+<p>处理器使用虚拟地址，虚拟地址必须在Memory Management Unit（MMU）的帮助下才能翻译成物理地址。不过这个步骤是很耗时的（注：前面提到的TLB cache缓存的是虚拟-&gt;物理地址的翻译结果）。</p>
+<p>现代处理器被设计成为L1d、L1i使用虚拟地址，更高层的cache则使用物理地址。</p>
+<p>通常来说不必关心cache地址处理的细节，因为这些是不能改变的。</p>
+<p>Overflowing the cache capacity是一件坏事情；如果大多数使用的cache line都属于同一个set，则所有缓存都会提前遇到问题。第二个问题可以通过virtual address来解决，但是无法避免user-level进程使用物理地址来缓存。<strong>唯一需要记住的事情是，要尽一切可能，不要在同一个进程里把相同的物理地址位置映射到两个或更多虚拟地址</strong>。</p>
+<p>Cache replacement策略，目前使用的是LRU策略。关于cache replacement程序员没有什么事情可做。程序员能做的事情是：</p>
+<ul>
+<li>完全使用逻辑内存页（logical memory pages）</li>
+<li>使用尽可能大的页面大小来尽可能多样化物理地址</li>
+</ul>
+<h2 id="34-instruction-cache">3.4 Instruction Cache<a class="anchor ms-1" href="#34-instruction-cache"><i class="fas fa-link"></i></a></h2>
+<p>指令cache比数据cache问题更少，原因是：</p>
+<ul>
+<li>被执行的代码量取决于所需代码的大小，而代码大小通常取决于问题复杂度，而问题复杂度是固定的。</li>
+<li>程序的指令是由编译器生成的，编译器知道怎么生成好代码。</li>
+<li>程序流程比数据访问内存更容易预测，现代处理器非常擅长预测模式，这有助于prefetching</li>
+<li>代码总是具有良好的空间、时间局部性。</li>
+</ul>
+<p>CPU核心和cache（甚至第一级cache）的速度差异在增加。CPU已被流水线化，所谓流水线指一条指令的执行是分阶段的。首先指令被解码，参数被准备，最后被执行。有时候这个pipeline会很长，长pipeline就意味着如果pipeline停止（比如一条指令的执行被中断了），那它得花一些时间才能重新找回速度。pipeline停止总是会发生的，比如无法正确预测下一条指令，或者花太长时间加载下一条指令（比如从内存里加载）。</p>
+<p>现代CPU设计师花费了大量时间和芯片资产在分支预测上，为了尽可能不频繁的发生pipeline停止。</p>
+<h3 id="341-self-modifying-code">3.4.1 Self Modifying Code<a class="anchor ms-1" href="#341-self-modifying-code"><i class="fas fa-link"></i></a></h3>
+<p>早些时候为了降低内存使用（内存那个时候很贵），人们使用一种叫做Self Modifing Code（SMC）的技术来减少程序数据的尺寸。</p>
+<p>不过现在应该避免SMC，因为如果处理器加载一条指令到流水线中，而这条指令在却又被修改了，那么整个工作就要从头来过。</p>
+<p>所以现在到处理器假设code pages是不可变的，所以L1i没有使用MESI，而是使用更简单的SI</p>
+<h2 id="35-cache-miss-factors">3.5 Cache Miss Factors<a class="anchor ms-1" href="#35-cache-miss-factors"><i class="fas fa-link"></i></a></h2>
+<p>我们已经看到内存访问cache miss导致的开销极具增大，但是有时候这个问题是无法避免的，所以理解实际的开销以及如何缓解这个问题是很重要的。</p>
+<h3 id="351-cache-and-memory-bandwidth">3.5.1 Cache and Memory Bandwidth<a class="anchor ms-1" href="#351-cache-and-memory-bandwidth"><i class="fas fa-link"></i></a></h3>
+<p>测试程序使用x86和x86-64处理器的SSE指令每次加载16 bytes，working set size从1K到512M，测试的是每个周期能够加载/存储多少个bytes。</p>
+<p><img class="img-fluid" alt="" src="https://static.lwn.net/images/cpumemory/cpumemory.60.png" loading="lazy"
+  
+   />
+
+</p>
+<p><strong>Figure 3.24: Pentium 4 Bandwidth</strong></p>
+<p>这个图是64-bit Intel Netburst处理器的测试结果。</p>
+<p>先看读的测试可以看到：</p>
+<ul>
+<li>当working set size在L1d以内的时候，16 bytes/cycle</li>
+<li>当L1d不够用的时候，性能下降很快，6 bytes/cycle</li>
+<li>到2<sup>18</sup>的时候又下降了一小段是因为DTLB耗尽了，意思是对每个新page需要额外工作。</li>
+<li>这个测试是顺序读的，很利于prefetching，而在任何working set size下都能够达到5.3/cycle，记住这些数字，它们是上限，因为真实程序永远无法达到这个值。</li>
+</ul>
+<p>在看写和copy的测试：</p>
+<ul>
+<li>就算是最小的working set size，也不超过4 bytes/cycle。这说明Netburst处理器使用的Write-through策略，L1d的速度显然受制于L2的速度。</li>
+<li>copy测试是把一块内存区域copy到另一个不重叠的内存区域，因为上述原因它的结果也没有显著变差。</li>
+<li>当L2不够用的时候，下降到0.5 bytes/cycle。</li>
+</ul>
+<p>下面是两个线程分别钉在同一核心的两个Hyper-thread上的测试情况：</p>
+<p><img class="img-fluid" alt="" src="https://static.lwn.net/images/cpumemory/cpumemory.61.png" loading="lazy"
+  
+   />
+
+</p>
+<p><strong>Figure 3.25: P4 Bandwidth with 2 Hyper-Threads</strong></p>
+<p>这个结果符合预期，因为Hyper-thread除了不共享register之外，其他资源都是共享的，cache和带宽都被减半了。这意味着就算一个线程在在等待内存的时候可以让另一个线程执行，但是另一个线程实际上也在等待，所以并没有什么区别。</p>
+<p>下图是Intel Core2处理器的测试结果（对比Figure 3.24）：</p>
+<p><img class="img-fluid" alt="" src="https://static.lwn.net/images/cpumemory/cpumemory.62.png" loading="lazy"
+  
+   />
+
+</p>
+<p><strong>Figure 3.26: Core 2 Bandwidth</strong></p>
+<p>Core 2 L2是P4 L2的四倍。这延迟了write和copy测试的性能下跌。read测试在所有的working set size里都维持在16 bytes/cycle左右，在2<sup>20</sup>处下跌了一点点是因为DTLB放不下working set。能够有这么好的性能表现不仅意味着处理器能够及时地prefetching和传输数据，也意味着数据是被prefetch到L1d的。</p>
+<p>看write和copy的表现，Core 2处理器的L1d cache没有采用Write-through策略，只有当必要的时候L1d才会evict，所以能够获得和read接近的表现。当L1d不够用的时候，性能开始下降。当L2不够用的时候再下跌很多。</p>
+<p>下图是Intel Core2处理器双线程跑在两个核心上：</p>
+<p><img class="img-fluid" alt="" src="https://static.lwn.net/images/cpumemory/cpumemory.63.png" loading="lazy"
+  
+   />
+
+</p>
+<p><strong>Figure 3.27: Core 2 Bandwidth with 2 Threads</strong></p>
+<p>这个测试两个线程分别跑在两个核心上，两个线程访问相同的内存，没有完美地同步。read性能和Figure 3.26没有什么差别。</p>
+<p>看write和copy的表现，有意思的是在working set能够放进L1d的表现和直接从main memory读取的表现一样。两个线程访问相同的内存区域，针对cache line的RFO消息肯定会被发出。这里可以看到一个问题，RFO的处理速度没有L2快。当L1d不够用的时候，会将修改的cache line flush到共享的L2，这是性能有显著提升是因为L1d中的数据被flush到L2，那就没有RFO了。而且因为两个核心共享FSB，每个核心只拥有一半的FSB带宽，意味着每个线程的性能大约是单线程的一半。</p>
+<p>厂商的不同版本CPU和不同厂商的CPU的表现都是不同的。原文里后面比较了AMD Opteron处理器，这里就不写了。</p>
+<h3 id="325-critical-word-load">3.2.5 Critical Word Load<a class="anchor ms-1" href="#325-critical-word-load"><i class="fas fa-link"></i></a></h3>
+<p>数据是一block为单位从main memory传输到cache line的，一个block大小为64 bits（记得前面说的word也是64 bits），一条cache line的大小是64/128 bytes，所以填满一个cache line要传输8/16次。</p>
+<p>后面没有看懂，大致意思是Critical word是cache line中的关键word，程序要读到它之后才能继续运行，但是如果critical word不是cache line的第一个，那么就得等前面的word都加载完了之后才行。blah blah blah，不过这个理解可能也是不对的。</p>
+<h3 id="353-cache-placement">3.5.3 Cache Placement<a class="anchor ms-1" href="#353-cache-placement"><i class="fas fa-link"></i></a></h3>
+<p>cache和hyper-thread、core、处理器的关系是程序员无法控制的，但是程序员可以决定线程在哪里执行，所以cache和CPU是如何关联的就显得重要了。</p>
+<p>后面没仔细看，大致讲了由于不同的CPU架构，决定如何调度线程是比较复杂的。</p>
+<h3 id="354-fsb-influence">3.5.4 FSB Influence<a class="anchor ms-1" href="#354-fsb-influence"><i class="fas fa-link"></i></a></h3>
+<p>不细讲了，对比了667MHz DDR2和800 MHz DDR2（20%的提升），测试下来性能有18%的提升接近理论值（20%）。</p>
+<p><img class="img-fluid" alt="" src="https://static.lwn.net/images/cpumemory/cpumemory.27.png" loading="lazy"
+  
+   />
+
+</p>
+<p><strong>Figure 3.32: Influence of FSB Speed</strong></p>
+<p>所以更快的FSB的确能够带来好处。要注意CPU可能支持更高的FSB，但是主板/北桥可能不支持的情况。</p></div></div>
+  <div class="card-footer"><div class="post-navs d-flex justify-content-evenly"><div class="post-nav post-prev">
+    <i class="fas fa-fw fa-chevron-left"></i>
+    <a href="/post/kernel/know-memory-ram/">What Every Programmer Should Know About Memory, Part 1, RAM
+</a>
+  </div><div class="post-nav post-next">
+    <a href="/post/kernel/know-memory-cpu-virtual-memory/">What Every Programmer Should Know About Memory, Part 3: Virtual Memory
+</a>
+    <i class="fas fa-fw fa-chevron-right"></i>
+  </div></div></div>
+</article><div class="post-copyright mb-3 row card component" id="post-copyright">
+    <div class="card-header">
+        <h2 class="card-title">版权</h2>
+    </div>
+    <div class="card-body"><a class="d-flex align-items-center flex-column" target="_blank" rel="license noopener noreferrer" href="https://creativecommons.org/licenses/by-nc-nd/4.0/deed.zh">
+  <span><i class="fab fa-fw fa-2x fa-creative-commons"></i><i class="fab fa-fw fa-2x fa-creative-commons-by"></i><i class="fab fa-fw fa-2x fa-creative-commons-nc"></i><i class="fab fa-fw fa-2x fa-creative-commons-nd"></i></span>
+  CC BY-NC-ND 4.0 
+</a>
+
+
+    </div>
+</div><section class="related-posts row card component">
+    <div class="card-header">
+      <h2 class="card-title">相关文章</h2>
+    </div>
+    <div class="card-body">
+      <ul class="post-list"><li>
+          <a href="/post/kernel/know-memory-ram/">What Every Programmer Should Know About Memory, Part 1, RAM
+</a>
+          <span class="float-end post-date">2019-03-03
+</span>
+        </li><li>
+          <a href="/post/kernel/cpu-kernel-mode-user-mode/">操作系统Kernel Mode和User Mode
+</a>
+          <span class="float-end post-date">2019-02-27
+</span>
+        </li><li>
+          <a href="/post/kernel/virtual-memory-kernel-space-user-space/">Virtual Memory Kernel Space User Space
+</a>
+          <span class="float-end post-date">2019-02-27
+</span>
+        </li><li>
+          <a href="/post/vtable/">虚函数表（vtable/Virtual Table/Virtual Method Table）
+</a>
+          <span class="float-end post-date">2019-02-25
+</span>
+        </li><li>
+          <a href="/post/docker-image-build-strategy-for-different-version-type/">稳定与非稳定版本软件的Docker Image构建策略
+</a>
+          <span class="float-end post-date">2019-02-27
+</span>
+        </li></ul>
+    </div>
+  </section><div class="card component row post-comments" id="post-comments">
+  <div class="card-header">
+    <h2 class="card-title">评论</h2>
+  </div>
+  <div class="card-body"></div>
+</div></div>
+</div><aside class="col-lg-4 sidebar d-flex">
+  <div class="container d-flex flex-column">
+    
+    <section class="card row text-center profile component">
+  <div class="card-body">
+    <div class="col-12 d-flex align-items-center justify-content-center"><img class="profile-avatar rounded-circle" alt="颇忒脱" src="/images/avatar.jpg" loading="lazy"
+   width="455" height="455"
+   />
+</div>
+    <div class="col-12 profile-meta"><div class="profile-name">颇忒脱</div><nav class="social-links nav justify-content-center"><a class="nav-link social-link" target="_blank" href="https://github.com/chanjarster" title="GitHub" rel="noopener noreferrer">
+        <i class="fa-fw fa-2x fab fa-github"></i>
+      </a></nav>
+</div>
+  </div>
+</section>
+  <div class="post-toc row mb-4 card component" id="postTOC">
+  <div class="card-header">
+    <h2 class="card-title">目录</h2>
+  </div>
+  <div class="card-body">
+    <nav id="TableOfContents">
+  <ul>
+    <li><a href="#31-cpu-caches-in-the-big-picture">3.1 CPU Caches in the Big Picture</a></li>
+    <li><a href="#32-cache-operation-at-high-level">3.2 Cache Operation at High Level</a></li>
+    <li><a href="#33-cpu-cache-implementation-details">3.3 CPU Cache Implementation Details</a>
+      <ul>
+        <li><a href="#331-associativity">3.3.1 Associativity</a></li>
+        <li><a href="#332-measurements-of-cache-effects">3.3.2 Measurements of Cache Effects</a></li>
+        <li><a href="#333-write-behavior">3.3.3 Write behavior</a></li>
+        <li><a href="#334-multi-processor-support">3.3.4 Multi-processor support</a></li>
+        <li><a href="#335-other-details">3.3.5 Other Details</a></li>
+      </ul>
+    </li>
+    <li><a href="#34-instruction-cache">3.4 Instruction Cache</a>
+      <ul>
+        <li><a href="#341-self-modifying-code">3.4.1 Self Modifying Code</a></li>
+      </ul>
+    </li>
+    <li><a href="#35-cache-miss-factors">3.5 Cache Miss Factors</a>
+      <ul>
+        <li><a href="#351-cache-and-memory-bandwidth">3.5.1 Cache and Memory Bandwidth</a></li>
+        <li><a href="#325-critical-word-load">3.2.5 Critical Word Load</a></li>
+        <li><a href="#353-cache-placement">3.5.3 Cache Placement</a></li>
+        <li><a href="#354-fsb-influence">3.5.4 FSB Influence</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+  </div>
+</div><section class="featured-posts row card component">
+    <div class="card-header">
+      <h2 class="card-title">精选文章</h2>
+    </div>
+    <div class="card-body">
+      <ul class="post-list"><li>
+          <a href="/post/redis-cluster-ops/index-page/">Redis 集群运维笔记
+</a>
+        </li><li>
+          <a href="/post/linux/namespace/index-page/">Linux Namespace系列
+</a>
+        </li><li>
+          <a href="/post/network/index-page/">Networking系列
+</a>
+        </li><li>
+          <a href="/post/mysql/index-page/">MySQL系列
+</a>
+        </li><li>
+          <a href="/post/concurrent-programming/index-page/">并发编程系列
+</a>
+        </li></ul>
+    </div>
+  </section><section class="recent-posts row card component">
+  <div class="card-header">
+    <h2 class="card-title">最近文章</h2>
+  </div>
+  <div class="card-body">
+    <ul class="post-list"><li>
+        <a href="/post/qoder-switch-session/">QoderCN 切换账号后迁移会话历史
+</a>
+      </li><li>
+        <a href="/post/spring-boot-jdk-comp-table-copy/">Spring Boot 3.4 升级过程记录
+</a>
+      </li><li>
+        <a href="/post/redis-cluster-ops/index-page/">Redis 集群运维笔记
+</a>
+      </li><li>
+        <a href="/post/spring-boot-jdk-comp-table/">Spring、JDK、Maven 版本兼容性表格
+</a>
+      </li><li>
+        <a href="/post/network/calico-firewall-k8s/">Calico 配置 K8s 防火墙
+</a>
+      </li></ul>
+  </div>
+</section><section class="tags-taxonomies row card component">
+      <div class="card-header">
+        <h2 class="card-title">
+          <a href="/tags">标签</a>
+        </h2>
+      </div>
+      <div class="card-body">
+        <div class="py-2"><a href="/tags/arts-a/" class="badge rounded post-taxonomy" title="ARTS-A">
+            ARTS-A<span class="badge badge-sm text-white bg-accent ms-1">125</span></a><a href="/tags/k8s/" class="badge rounded post-taxonomy" title="k8s">
+            k8s<span class="badge badge-sm text-white bg-accent ms-1">52</span></a><a href="/tags/troubleshooting/" class="badge rounded post-taxonomy" title="troubleshooting">
+            troubleshooting<span class="badge badge-sm text-white bg-accent ms-1">40</span></a><a href="/tags/jvm/" class="badge rounded post-taxonomy" title="jvm">
+            jvm<span class="badge badge-sm text-white bg-accent ms-1">39</span></a><a href="/tags/docker/" class="badge rounded post-taxonomy" title="docker">
+            docker<span class="badge badge-sm text-white bg-accent ms-1">30</span></a><a href="/tags/mysql/" class="badge rounded post-taxonomy" title="mysql">
+            mysql<span class="badge badge-sm text-white bg-accent ms-1">25</span></a><a href="/tags/network/" class="badge rounded post-taxonomy" title="network">
+            network<span class="badge badge-sm text-white bg-accent ms-1">25</span></a><a href="/tags/%E5%B9%B6%E5%8F%91%E7%BC%96%E7%A8%8B/" class="badge rounded post-taxonomy" title="并发编程">
+            并发编程<span class="badge badge-sm text-white bg-accent ms-1">21</span></a><a href="/tags/cheatsheet/" class="badge rounded post-taxonomy" title="cheatsheet">
+            cheatsheet<span class="badge badge-sm text-white bg-accent ms-1">20</span></a><a href="/tags/java/" class="badge rounded post-taxonomy" title="java">
+            java<span class="badge badge-sm text-white bg-accent ms-1">20</span></a><a href="/tags/kernel/" class="badge rounded post-taxonomy" title="kernel">
+            kernel<span class="badge badge-sm text-white bg-accent ms-1">19</span></a><a href="/tags/linux/" class="badge rounded post-taxonomy" title="linux">
+            linux<span class="badge badge-sm text-white bg-accent ms-1">19</span></a><a href="/tags/redis/" class="badge rounded post-taxonomy" title="redis">
+            redis<span class="badge badge-sm text-white bg-accent ms-1">17</span></a><a href="/tags/prometheus/" class="badge rounded post-taxonomy" title="prometheus">
+            prometheus<span class="badge badge-sm text-white bg-accent ms-1">13</span></a><a href="/tags/%E6%80%A7%E8%83%BD%E8%B0%83%E4%BC%98/" class="badge rounded post-taxonomy" title="性能调优">
+            性能调优<span class="badge badge-sm text-white bg-accent ms-1">13</span></a><a href="/tags/go/" class="badge rounded post-taxonomy" title="go">
+            go<span class="badge badge-sm text-white bg-accent ms-1">10</span></a><a href="/tags/%E5%BE%AE%E6%9C%8D%E5%8A%A1/" class="badge rounded post-taxonomy" title="微服务">
+            微服务<span class="badge badge-sm text-white bg-accent ms-1">10</span></a><a href="/tags/rancher/" class="badge rounded post-taxonomy" title="rancher">
+            rancher<span class="badge badge-sm text-white bg-accent ms-1">9</span></a><a href="/tags/debug/" class="badge rounded post-taxonomy" title="debug">
+            debug<span class="badge badge-sm text-white bg-accent ms-1">7</span></a><a href="/tags/gc/" class="badge rounded post-taxonomy" title="gc">
+            gc<span class="badge badge-sm text-white bg-accent ms-1">7</span></a><a href="/tags/nginx/" class="badge rounded post-taxonomy" title="nginx">
+            nginx<span class="badge badge-sm text-white bg-accent ms-1">7</span></a><a href="/tags/ingress/" class="badge rounded post-taxonomy" title="ingress">
+            ingress<span class="badge badge-sm text-white bg-accent ms-1">6</span></a><a href="/tags/%E8%BF%90%E7%BB%B4/" class="badge rounded post-taxonomy" title="运维">
+            运维<span class="badge badge-sm text-white bg-accent ms-1">6</span></a><a href="/tags/ci_cd/" class="badge rounded post-taxonomy" title="CI_CD">
+            CI_CD<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/interview/" class="badge rounded post-taxonomy" title="interview">
+            interview<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/jmx/" class="badge rounded post-taxonomy" title="jmx">
+            jmx<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/openssl/" class="badge rounded post-taxonomy" title="openssl">
+            openssl<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/tls/" class="badge rounded post-taxonomy" title="tls">
+            tls<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/%E5%88%86%E5%B8%83%E5%BC%8F%E4%BA%8B%E5%8A%A1/" class="badge rounded post-taxonomy" title="分布式事务">
+            分布式事务<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/%E5%88%86%E5%B8%83%E5%BC%8F%E7%AE%97%E6%B3%95/" class="badge rounded post-taxonomy" title="分布式算法">
+            分布式算法<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/%E6%94%B6%E8%97%8F%E5%A4%B9/" class="badge rounded post-taxonomy" title="收藏夹">
+            收藏夹<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/%E9%AB%98%E5%B9%B6%E5%8F%91/" class="badge rounded post-taxonomy" title="高并发">
+            高并发<span class="badge badge-sm text-white bg-accent ms-1">5</span></a><a href="/tags/visualvm/" class="badge rounded post-taxonomy" title="visualvm">
+            visualvm<span class="badge badge-sm text-white bg-accent ms-1">4</span></a><a href="/tags/%E6%97%A5%E5%BF%97/" class="badge rounded post-taxonomy" title="日志">
+            日志<span class="badge badge-sm text-white bg-accent ms-1">4</span></a><a href="/tags/arts/" class="badge rounded post-taxonomy" title="arts">
+            arts<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/arts-r/" class="badge rounded post-taxonomy" title="arts-r">
+            arts-r<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/classloader/" class="badge rounded post-taxonomy" title="ClassLoader">
+            ClassLoader<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/container/" class="badge rounded post-taxonomy" title="container">
+            container<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/ios/" class="badge rounded post-taxonomy" title="ios">
+            ios<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/iphone/" class="badge rounded post-taxonomy" title="iphone">
+            iphone<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/jenkins/" class="badge rounded post-taxonomy" title="Jenkins">
+            Jenkins<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/namespace/" class="badge rounded post-taxonomy" title="namespace">
+            namespace<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/scheduling/" class="badge rounded post-taxonomy" title="scheduling">
+            scheduling<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/springboot/" class="badge rounded post-taxonomy" title="springboot">
+            springboot<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/thread/" class="badge rounded post-taxonomy" title="thread">
+            thread<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/%E5%88%86%E5%B8%83%E5%BC%8F%E6%9E%B6%E6%9E%84/" class="badge rounded post-taxonomy" title="分布式架构">
+            分布式架构<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/%E5%8D%8E%E4%B8%BA/" class="badge rounded post-taxonomy" title="华为">
+            华为<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/%E8%8B%B9%E6%9E%9C/" class="badge rounded post-taxonomy" title="苹果">
+            苹果<span class="badge badge-sm text-white bg-accent ms-1">3</span></a><a href="/tags/bash/" class="badge rounded post-taxonomy" title="bash">
+            bash<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/etcd/" class="badge rounded post-taxonomy" title="etcd">
+            etcd<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/grafana/" class="badge rounded post-taxonomy" title="grafana">
+            grafana<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/iptables/" class="badge rounded post-taxonomy" title="iptables">
+            iptables<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/jdbc/" class="badge rounded post-taxonomy" title="JDBC">
+            JDBC<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/jmeter/" class="badge rounded post-taxonomy" title="jmeter">
+            jmeter<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/%E6%95%B0%E6%8D%AE%E5%BA%93%E6%97%B6%E5%8C%BA%E9%82%A3%E4%BA%9B%E4%BA%8B%E5%84%BF/" class="badge rounded post-taxonomy" title="数据库时区那些事儿">
+            数据库时区那些事儿<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/%E7%9B%91%E6%8E%A7/" class="badge rounded post-taxonomy" title="监控">
+            监控<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/%E9%99%90%E6%B5%81/" class="badge rounded post-taxonomy" title="限流">
+            限流<span class="badge badge-sm text-white bg-accent ms-1">2</span></a><a href="/tags/acloud/" class="badge rounded post-taxonomy" title="acloud">
+            acloud<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/agent/" class="badge rounded post-taxonomy" title="agent">
+            agent<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/akka/" class="badge rounded post-taxonomy" title="Akka">
+            Akka<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/alertmanager/" class="badge rounded post-taxonomy" title="alertmanager">
+            alertmanager<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/calico/" class="badge rounded post-taxonomy" title="calico">
+            calico<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/chrome/" class="badge rounded post-taxonomy" title="chrome">
+            chrome<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/coredns/" class="badge rounded post-taxonomy" title="coredns">
+            coredns<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/elasticsearch/" class="badge rounded post-taxonomy" title="elasticsearch">
+            elasticsearch<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/fluentd/" class="badge rounded post-taxonomy" title="fluentd">
+            fluentd<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/harbor/" class="badge rounded post-taxonomy" title="harbor">
+            harbor<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/helm/" class="badge rounded post-taxonomy" title="helm">
+            helm<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/hystrix/" class="badge rounded post-taxonomy" title="hystrix">
+            hystrix<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/io/" class="badge rounded post-taxonomy" title="io">
+            io<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/jdpa/" class="badge rounded post-taxonomy" title="jdpa">
+            jdpa<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/jwt/" class="badge rounded post-taxonomy" title="jwt">
+            jwt<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/kafka/" class="badge rounded post-taxonomy" title="kafka">
+            kafka<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/kibana/" class="badge rounded post-taxonomy" title="kibana">
+            kibana<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/mq/" class="badge rounded post-taxonomy" title="MQ">
+            MQ<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/nfs/" class="badge rounded post-taxonomy" title="nfs">
+            nfs<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/oauth/" class="badge rounded post-taxonomy" title="oauth">
+            oauth<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/oracle/" class="badge rounded post-taxonomy" title="Oracle">
+            Oracle<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/pprof/" class="badge rounded post-taxonomy" title="pprof">
+            pprof<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/qoder/" class="badge rounded post-taxonomy" title="qoder">
+            qoder<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/reactor/" class="badge rounded post-taxonomy" title="reactor">
+            reactor<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/spring-boot/" class="badge rounded post-taxonomy" title="spring-boot">
+            spring-boot<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/spring-cloud/" class="badge rounded post-taxonomy" title="Spring Cloud">
+            Spring Cloud<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/ssl/" class="badge rounded post-taxonomy" title="ssl">
+            ssl<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/systemtap/" class="badge rounded post-taxonomy" title="systemtap">
+            systemtap<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/tiller/" class="badge rounded post-taxonomy" title="tiller">
+            tiller<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/tomcat/" class="badge rounded post-taxonomy" title="tomcat">
+            tomcat<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/ubuntu/" class="badge rounded post-taxonomy" title="ubuntu">
+            ubuntu<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/vtable/" class="badge rounded post-taxonomy" title="vtable">
+            vtable<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/%E6%B6%88%E6%81%AF%E9%98%9F%E5%88%97/" class="badge rounded post-taxonomy" title="消息队列">
+            消息队列<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/%E6%B7%B1%E4%BF%A1%E6%9C%8D/" class="badge rounded post-taxonomy" title="深信服">
+            深信服<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/%E7%BC%93%E5%AD%98/" class="badge rounded post-taxonomy" title="缓存">
+            缓存<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/%E8%99%9A%E6%8B%9F%E5%8C%96/" class="badge rounded post-taxonomy" title="虚拟化">
+            虚拟化<span class="badge badge-sm text-white bg-accent ms-1">1</span></a><a href="/tags/%E8%B0%83%E7%94%A8%E9%93%BE%E8%BF%BD%E8%B8%AA/" class="badge rounded post-taxonomy" title="调用链追踪">
+            调用链追踪<span class="badge badge-sm text-white bg-accent ms-1">1</span></a></div>
+      </div>
+    </section>
+    
+  </div>
+</aside>
+</div>
+    </main><footer class="footer mt-auto py-3 text-center container"><nav class="social-links nav justify-content-center mb-2"><a class="nav-link social-link" target="_blank" href="https://github.com/chanjarster" title="GitHub" rel="noopener noreferrer">
+        <i class="fa-fw fa-2x fab fa-github"></i>
+      </a></nav>
+<div class="copyright mb-2">
+  Copyright © 2010-2026 Daniel Qian. All Rights Reserved.
+</div>
+<div class="powered-by mb-2">
+  Powered by <a href="https://gohugo.io" target="_blank" rel="noopener noreferrer">Hugo</a> and the <a href="https://github.com/razonyang/hugo-theme-bootstrap" target="_blank" rel="noopener noreferrer">Bootstrap</a> theme.
+</div>
+<a href="https://www.netlify.com" target="_blank" rel="noopener noreferrer">
+    <img src="https://www.netlify.com/img/global/badges/netlify-color-accent.svg" alt="Deploys by Netlify" width="114" height="51" />
+</a>
+</footer>
+<script src="/js/main.2cdce25f280f570596c88888d6af930fe5e15ea030005291dad293defbb231d3.js" integrity="sha256-LNziXygPVwWWyIiI1q&#43;TD&#43;XhXqAwAFKR2tKT3vuyMdM=" crossorigin="anonymous" defer></script><script src="/js/icons.min.7b1f27dfde35467d03350938b2e41dbffd06347009b97ab913edfaca01a07814.js" integrity="sha256-ex8n3941Rn0DNQk4suQdv/0GNHAJuXq5E&#43;36ygGgeBQ=" crossorigin="anonymous" defer></script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('\/service-worker.js').then(function(reg) {
+      console.log('Successfully registered service worker', reg);
+    }).catch(function(err) {
+      console.warn('Error whilst registering service worker', err);
+    });
+  });
+}
+</script><script src="/js/viewer.min.1ec1fa5aa3a66267222a44fe1cd51856ad4a92be48ede579fb36d70a6d4c28e9.js" integrity="sha256-HsH6WqOmYmciKkT&#43;HNUYVq1Kkr5I7eV5&#43;zbXCm1MKOk=" crossorigin="anonymous" defer></script>
+</body>
+</html>
